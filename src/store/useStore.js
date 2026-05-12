@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
 
+const uuid = () => crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16))
+
 // ─── Demo data (used when Supabase is not configured) ────────────────────────
 // Camila Fernanda é a dona do sistema (owner): toda despesa importada é paga por ela
 // e pode receber atribuição parcial/total para outras pessoas.
@@ -290,7 +292,7 @@ const useStore = create(
 
   // ── People ──
   addPerson: async (person) => {
-    const newPerson = { ...person, id: Date.now().toString(), avatar: person.nome[0].toUpperCase() }
+    const newPerson = { ...person, id: uuid(), avatar: person.nome[0].toUpperCase() }
     if (supabase) {
       const { data, error } = await supabase.from('pessoas').insert([{ id: newPerson.id, nome: newPerson.nome, apelido: newPerson.apelido, cor: newPerson.cor }]).select().single()
       if (!error && data) { set(s => ({ people: [...s.people, { ...newPerson, ...data }] })); return }
@@ -308,7 +310,7 @@ const useStore = create(
 
   // ── Groups ──
   addGroup: async (group) => {
-    const newGroup = { ...group, id: Date.now().toString() }
+    const newGroup = { ...group, id: uuid() }
     if (supabase) {
       const { data, error } = await supabase.from('grupos').insert([{ id: newGroup.id, nome: newGroup.nome, cor: newGroup.cor, icone: newGroup.icone, descricao: newGroup.descricao }]).select().single()
       if (!error && data) { set(s => ({ groups: [...s.groups, { ...newGroup, ...data }] })); return }
@@ -326,7 +328,7 @@ const useStore = create(
 
   // ── Expenses ──
   addExpense: async (expense) => {
-    const newExp = { ...expense, id: Date.now().toString() }
+    const newExp = { ...expense, id: uuid() }
     if (supabase) {
       const row = { id: newExp.id, descricao: newExp.descricao, valor: newExp.valor, data: newExp.data, categoria: newExp.categoria, grupo_id: newExp.group_id || null, pago_por: newExp.paid_by || null, participantes: newExp.participants || [], tipo_divisao: newExp.split_type || 'igual', porcentagens: newExp.percentages || {}, valores_fixos: newExp.fixed_values || {}, parcelas: newExp.installments || 1, parcela_atual: newExp.current_installment || 1, recorrente: newExp.recurring || false, status: newExp.status || 'pendente', observacoes: newExp.notes || null }
       const { data, error } = await supabase.from('despesas').insert([row]).select().single()
@@ -377,7 +379,7 @@ const useStore = create(
 
   // ── Cards ──
   addCard: async (card) => {
-    const newCard = { ...card, id: Date.now().toString() }
+    const newCard = { ...card, id: uuid() }
     if (supabase) {
       const row = { id: newCard.id, nome: newCard.nome, bandeira: newCard.bandeira, limite: newCard.limite || 0, dia_fechamento: newCard.dia_fechamento || 15, dia_vencimento: newCard.dia_vencimento || 22, cor: newCard.cor || '#6366f1' }
       const { data, error } = await supabase.from('cartoes').insert([row]).select().single()
