@@ -32,10 +32,13 @@ export default function App() {
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('cartoes').select('*'),
       ])
-      if (pessoas?.length) set({ people: pessoas.map(p => ({ ...p, avatar: p.nome[0].toUpperCase() })) })
-      if (grupos?.length) set({ groups: grupos })
-      if (despesas?.length) set({ expenses: despesas })
-      if (cartoes?.length) set({ cards: cartoes })
+      // Quando Supabase está ativo, dados da nuvem sempre têm prioridade
+      set({
+        people: pessoas?.length ? pessoas.map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' })) : [],
+        groups: grupos || [],
+        expenses: despesas || [],
+        cards: cartoes || [],
+      })
     }
     load()
   }, [])
