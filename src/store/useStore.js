@@ -268,8 +268,9 @@ const useStore = create(
 
   pagarFaturaCartao: async (cardId) => {
     const ids = get().expenses.filter(e => e.card_id === cardId && e.status !== 'pago').map(e => e.id)
-    if (supabase && ids.length > 0) {
-      await supabase.from('despesas').update({ status: 'pago' }).in('id', ids)
+    const uuidIds = ids.filter(isUUID)
+    if (supabase && uuidIds.length > 0) {
+      await supabase.from('despesas').update({ status: 'pago' }).in('id', uuidIds)
     }
     set(s => ({
       expenses: s.expenses.map(e =>
@@ -470,6 +471,7 @@ const useStore = create(
   updateVehicle: async (id, data) => {
     const patch = { ...data }
     if (patch.placa) patch.placa = String(patch.placa).toUpperCase().replace(/\s+/g, '')
+    if ('pessoa_id' in patch && (patch.pessoa_id === '' || patch.pessoa_id === undefined)) patch.pessoa_id = null
     if (supabase) await supabase.from('veiculos').update(patch).eq('id', id)
     set(s => ({ vehicles: s.vehicles.map(v => v.id === id ? { ...v, ...patch } : v) }))
   },
@@ -578,9 +580,9 @@ const useStore = create(
 
   // ── Recurring ──
   addRecurring: async (item) => {
-    const newItem = { ...item, id: uuid() }
+    const newItem = { ...item, id: uuid(), grupo_id: isUUID(item.grupo_id) ? item.grupo_id : null }
     if (supabase) {
-      const row = { id: newItem.id, descricao: newItem.descricao, valor: newItem.valor, dia_vencimento: newItem.dia_vencimento || 5, categoria: newItem.categoria || 'Serviços', grupo_id: isUUID(newItem.grupo_id) ? newItem.grupo_id : null, ativo: newItem.ativo !== false, pagos_meses: newItem.pagos_meses || [] }
+      const row = { id: newItem.id, descricao: newItem.descricao, valor: newItem.valor, dia_vencimento: newItem.dia_vencimento || 5, categoria: newItem.categoria || 'Serviços', grupo_id: newItem.grupo_id, ativo: newItem.ativo !== false, pagos_meses: newItem.pagos_meses || [] }
       const { data, error } = await supabase.from('recorrentes').insert([row]).select().single()
       if (error) console.error('[Supabase] addRecurring error:', error.message)
       if (!error && data) { set(s => ({ recurring: [...s.recurring, { ...newItem, ...data }] })); return }
@@ -588,8 +590,10 @@ const useStore = create(
     set(s => ({ recurring: [...s.recurring, newItem] }))
   },
   updateRecurring: async (id, data) => {
-    if (supabase && isUUID(id)) await supabase.from('recorrentes').update(data).eq('id', id)
-    set(s => ({ recurring: s.recurring.map(r => r.id === id ? { ...r, ...data } : r) }))
+    const patch = { ...data }
+    if ('grupo_id' in patch) patch.grupo_id = isUUID(patch.grupo_id) ? patch.grupo_id : null
+    if (supabase && isUUID(id)) await supabase.from('recorrentes').update(patch).eq('id', id)
+    set(s => ({ recurring: s.recurring.map(r => r.id === id ? { ...r, ...patch } : r) }))
   },
   deleteRecurring: async (id) => {
     if (supabase && isUUID(id)) await supabase.from('recorrentes').delete().eq('id', id)
