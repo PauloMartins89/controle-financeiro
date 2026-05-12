@@ -40,6 +40,17 @@ export default function App() {
       if (Object.keys(patch).length) set(patch)
     }
     load()
+
+    // Tempo real — atualiza automaticamente em todos os dispositivos
+    const channel = supabase
+      .channel('db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'despesas' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cartoes' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pessoas' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'grupos' }, () => load())
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [])
 
   return (
