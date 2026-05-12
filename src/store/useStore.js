@@ -297,7 +297,8 @@ const useStore = create(
   addPerson: async (person) => {
     const newPerson = { ...person, id: uuid(), avatar: person.nome[0].toUpperCase() }
     if (supabase) {
-      const { data, error } = await supabase.from('pessoas').insert([{ id: newPerson.id, nome: newPerson.nome, apelido: newPerson.apelido, cor: newPerson.cor }]).select().single()
+      const { data, error } = await supabase.from('pessoas').insert([{ id: newPerson.id, nome: newPerson.nome, apelido: newPerson.apelido, cor: newPerson.cor, is_owner: newPerson.is_owner || false }]).select().single()
+      if (error) console.error('[Supabase] addPerson error:', error.message)
       if (!error && data) { set(s => ({ people: [...s.people, { ...newPerson, ...data }] })); return }
     }
     set(s => ({ people: [...s.people, newPerson] }))
@@ -352,6 +353,7 @@ const useStore = create(
         recorrente: newExp.recorrente || false,
         status: newExp.status || 'pendente',
         observacoes: newExp.observacoes || newExp.notas || null,
+        card_id: isUUID(newExp.card_id) ? newExp.card_id : null,
       }
       const { data, error } = await supabase.from('despesas').insert([row]).select().single()
       if (error) console.error('[Supabase] addExpense error:', error.message, row)

@@ -10,6 +10,7 @@ create table if not exists pessoas (
   apelido     text,
   cor         text default '#6366f1',
   avatar      text,
+  is_owner    boolean default false,
   created_at  timestamptz default now()
 );
 
@@ -40,6 +41,7 @@ create table if not exists despesas (
   parcela_atual   int default 1,
   recorrente      boolean default false,
   status          text default 'pendente', -- pendente | pago | cancelado
+  card_id         uuid references cartoes(id) on delete set null,
   observacoes     text,
   comprovante_url text,
   created_at      timestamptz default now(),
