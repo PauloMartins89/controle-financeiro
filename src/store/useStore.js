@@ -646,10 +646,13 @@ const useStore = create(
   storage: createJSONStorage(() => localStorage),
   // Only persist the data arrays and currentUser; skip computed/loading state
   partialize: (state) => ({
-    people:      state.people,
-    groups:      state.groups,
-    expenses:    state.expenses,
-    cards:       state.cards,
+    // Se Supabase está ativo, não salvar no localStorage os dados que vêm do banco
+    ...(supabase ? {} : {
+      people:   state.people,
+      groups:   state.groups,
+      expenses: state.expenses,
+      cards:    state.cards,
+    }),
     vehicles:    state.vehicles,
     closures:    state.closures,
     recurring:   state.recurring,

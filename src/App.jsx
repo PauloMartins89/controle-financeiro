@@ -32,12 +32,13 @@ export default function App() {
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('cartoes').select('*'),
       ])
-      const patch = {}
-      if (pessoas?.length) patch.people = pessoas.map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
-      if (grupos?.length) patch.groups = grupos
-      if (despesas?.length) patch.expenses = despesas
-      if (cartoes?.length) patch.cards = cartoes
-      if (Object.keys(patch).length) set(patch)
+      // Supabase é fonte única de verdade — sempre sobrescreve estado local
+      set({
+        people:   (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' })),
+        groups:   grupos || [],
+        expenses: despesas || [],
+        cards:    cartoes || [],
+      })
     }
     load()
 
