@@ -287,7 +287,7 @@ const useStore = create(
     const pagosMeses = r.pagos_meses || []
     if (pagosMeses.includes(mes)) return
     const novosPagos = [...pagosMeses, mes]
-    if (supabase) await supabase.from('recorrentes').update({ pagos_meses: novosPagos }).eq('id', recurringId)
+    if (supabase && isUUID(recurringId)) await supabase.from('recorrentes').update({ pagos_meses: novosPagos }).eq('id', recurringId)
     set(s => ({
       recurring: s.recurring.map(x =>
         x.id === recurringId ? { ...x, pagos_meses: novosPagos } : x
@@ -313,11 +313,11 @@ const useStore = create(
     set(s => ({ people: [...s.people, newPerson] }))
   },
   updatePerson: async (id, data) => {
-    if (supabase) await supabase.from('pessoas').update(data).eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('pessoas').update(data).eq('id', id)
     set(s => ({ people: s.people.map(p => p.id === id ? { ...p, ...data } : p) }))
   },
   deletePerson: async (id) => {
-    if (supabase) await supabase.from('pessoas').delete().eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('pessoas').delete().eq('id', id)
     set(s => ({ people: s.people.filter(p => p.id !== id) }))
   },
 
@@ -331,11 +331,11 @@ const useStore = create(
     set(s => ({ groups: [...s.groups, newGroup] }))
   },
   updateGroup: async (id, data) => {
-    if (supabase) await supabase.from('grupos').update(data).eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('grupos').update(data).eq('id', id)
     set(s => ({ groups: s.groups.map(g => g.id === id ? { ...g, ...data } : g) }))
   },
   deleteGroup: async (id) => {
-    if (supabase) await supabase.from('grupos').delete().eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('grupos').delete().eq('id', id)
     set(s => ({ groups: s.groups.filter(g => g.id !== id) }))
   },
 
@@ -371,19 +371,19 @@ const useStore = create(
     set(s => ({ expenses: [...s.expenses, newExp] }))
   },
   updateExpense: async (id, data) => {
-    if (supabase) await supabase.from('despesas').update(data).eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('despesas').update(data).eq('id', id)
     set(s => ({ expenses: s.expenses.map(e => e.id === id ? { ...e, ...data } : e) }))
   },
   deleteExpense: async (id) => {
-    if (supabase) await supabase.from('despesas').delete().eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('despesas').delete().eq('id', id)
     set(s => ({ expenses: s.expenses.filter(e => e.id !== id) }))
   },
   markAsPaid: async (id) => {
-    if (supabase) await supabase.from('despesas').update({ status: 'pago' }).eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('despesas').update({ status: 'pago' }).eq('id', id)
     set(s => ({ expenses: s.expenses.map(e => e.id === id ? { ...e, status: 'pago' } : e) }))
   },
   markAsPending: async (id) => {
-    if (supabase) await supabase.from('despesas').update({ status: 'pendente' }).eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('despesas').update({ status: 'pendente' }).eq('id', id)
     set(s => ({ expenses: s.expenses.map(e => e.id === id ? { ...e, status: 'pendente' } : e) }))
   },
 
@@ -422,11 +422,11 @@ const useStore = create(
     set(s => ({ cards: [...s.cards, newCard] }))
   },
   updateCard: async (id, data) => {
-    if (supabase) await supabase.from('cartoes').update(data).eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('cartoes').update(data).eq('id', id)
     set(s => ({ cards: s.cards.map(c => c.id === id ? { ...c, ...data } : c) }))
   },
   deleteCard: async (id) => {
-    if (supabase) await supabase.from('cartoes').delete().eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('cartoes').delete().eq('id', id)
     set(s => ({ cards: s.cards.filter(c => c.id !== id) }))
   },
 
@@ -556,7 +556,7 @@ const useStore = create(
 
   // ── Recurring ──
   addRecurring: async (item) => {
-    const newItem = { ...item, id: `rec_${Date.now()}` }
+    const newItem = { ...item, id: uuid() }
     if (supabase) {
       const row = { id: newItem.id, descricao: newItem.descricao, valor: newItem.valor, dia_vencimento: newItem.dia_vencimento || 5, categoria: newItem.categoria || 'Serviços', grupo_id: isUUID(newItem.grupo_id) ? newItem.grupo_id : null, ativo: newItem.ativo !== false, pagos_meses: newItem.pagos_meses || [] }
       const { data, error } = await supabase.from('recorrentes').insert([row]).select().single()
@@ -566,11 +566,11 @@ const useStore = create(
     set(s => ({ recurring: [...s.recurring, newItem] }))
   },
   updateRecurring: async (id, data) => {
-    if (supabase) await supabase.from('recorrentes').update(data).eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('recorrentes').update(data).eq('id', id)
     set(s => ({ recurring: s.recurring.map(r => r.id === id ? { ...r, ...data } : r) }))
   },
   deleteRecurring: async (id) => {
-    if (supabase) await supabase.from('recorrentes').delete().eq('id', id)
+    if (supabase && isUUID(id)) await supabase.from('recorrentes').delete().eq('id', id)
     set(s => ({ recurring: s.recurring.filter(r => r.id !== id) }))
   },
 
