@@ -541,7 +541,7 @@ export default function Despesas() {
                                 <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.descricao}</div>
                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
                                   <span>{exp.categoria}</span>
-                                  {pagador && <><span>· por</span><span style={{ fontWeight: 600, color: pagador.cor }}>{pagador.nome.split(' ')[0]}</span></>}
+                                  {pagador && pagador.nome && pagador.nome.trim().length > 1 && <><span>· por</span><span style={{ fontWeight: 600, color: pagador.cor }}>{pagador.nome.split(' ')[0]}</span></>}
                                   {exp.parcelas > 1 && <span style={{ color: '#818cf8' }}>· {exp.parcela_atual ?? 1}/{exp.parcelas}x</span>}
                                   {exp._veiculo && <span style={{ color: '#06b6d4' }}>🚗 {exp._veiculo}</span>}
                                 </div>

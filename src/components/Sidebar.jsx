@@ -32,8 +32,15 @@ export default function Sidebar({ collapsed, onToggle }) {
   // Total de fatura pendente em cartões
   const totalFatura = cards.reduce((sum, c) =>
     sum + expenses.filter(e => e.card_id === c.id && e.status !== 'pago').reduce((s, e) => s + e.valor, 0), 0)
-  // "Pagar" = dívidas entre pessoas + faturas de cartão pendentes
-  const totalPagar = getMeusDividas() + totalFatura
+  // Despesas pessoais pendentes (sem cartão, sem participantes além do dono)
+  const uid = currentUser?.id
+  const totalPessoal = expenses.filter(e =>
+    e.status !== 'pago' &&
+    !e.card_id &&
+    (e.pago_por === uid || (!e.pago_por && (!e.participantes || e.participantes.length === 0)))
+  ).reduce((s, e) => s + e.valor, 0)
+  // "Pagar" = dívidas entre pessoas + faturas de cartão + despesas pessoais pendentes
+  const totalPagar = getMeusDividas() + totalFatura + totalPessoal
 
   return (
     <aside
