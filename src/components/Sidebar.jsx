@@ -27,7 +27,13 @@ const navItems = [
 ]
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { currentUser, people, setCurrentUser, getMeusDividas, getMinhasReceitas } = useStore()
+  const { currentUser, people, expenses, cards, setCurrentUser, getMeusDividas, getMinhasReceitas } = useStore()
+
+  // Total de fatura pendente em cartões
+  const totalFatura = cards.reduce((sum, c) =>
+    sum + expenses.filter(e => e.card_id === c.id && e.status !== 'pago').reduce((s, e) => s + e.valor, 0), 0)
+  // "Pagar" = dívidas entre pessoas + faturas de cartão pendentes
+  const totalPagar = getMeusDividas() + totalFatura
 
   return (
     <aside
@@ -78,7 +84,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, color: '#ef4444' }}>Pagar</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{formatCurrency(getMeusDividas())}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{formatCurrency(totalPagar)}</div>
               </div>
             </div>
           </div>
