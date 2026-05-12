@@ -33,12 +33,20 @@ export default function App() {
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('cartoes').select('*'),
       ])
-      set({
-        people:   (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' })),
+      const loadedPeople = (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
+      const update = {
+        people:   loadedPeople,
         groups:   grupos || [],
         expenses: despesas || [],
         cards:    cartoes || [],
-      })
+      }
+      // Sincroniza currentUser: se o currentUser do localStorage não existe mais
+      // nas pessoas do Supabase, atualiza para a primeira pessoa da lista (ou owner)
+      const currentUser = useStore.getState().currentUser
+      if (loadedPeople.length > 0 && !loadedPeople.find(p => p.id === currentUser?.id)) {
+        update.currentUser = loadedPeople.find(p => p.is_owner) || loadedPeople[0]
+      }
+      set(update)
       setReady(true)
     }
     load()

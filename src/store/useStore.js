@@ -4,6 +4,9 @@ import { supabase } from '../lib/supabase'
 
 const uuid = () => crypto.randomUUID ? crypto.randomUUID() : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16))
 
+// Garante que o valor é um UUID válido (evita FK violations no Supabase)
+const isUUID = (v) => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+
 // ─── Demo data (used when Supabase is not configured) ────────────────────────
 // Camila Fernanda é a dona do sistema (owner): toda despesa importada é paga por ela
 // e pode receber atribuição parcial/total para outras pessoas.
@@ -330,8 +333,28 @@ const useStore = create(
   addExpense: async (expense) => {
     const newExp = { ...expense, id: uuid() }
     if (supabase) {
-      const row = { id: newExp.id, descricao: newExp.descricao, valor: newExp.valor, data: newExp.data, categoria: newExp.categoria, grupo_id: newExp.grupo_id || null, pago_por: newExp.pago_por || null, participantes: newExp.participantes || [], tipo_divisao: newExp.tipo_divisao || 'igual', porcentagens: newExp.porcentagens || {}, valores_fixos: newExp.valores_fixos || {}, parcelas: newExp.parcelas || 1, parcela_atual: newExp.parcela_atual || 1, recorrente: newExp.recorrente || false, status: newExp.status || 'pendente', observacoes: newExp.observacoes || null }
+      // Sanitiza campos UUID: IDs de demo (não-UUID) são convertidos para null
+      // para evitar FK violation / erro de tipo no Supabase
+      const row = {
+        id: newExp.id,
+        descricao: newExp.descricao,
+        valor: newExp.valor,
+        data: newExp.data,
+        categoria: newExp.categoria,
+        grupo_id: isUUID(newExp.grupo_id) ? newExp.grupo_id : null,
+        pago_por: isUUID(newExp.pago_por) ? newExp.pago_por : null,
+        participantes: (newExp.participantes || []).filter(isUUID),
+        tipo_divisao: newExp.tipo_divisao || 'igual',
+        porcentagens: newExp.porcentagens || {},
+        valores_fixos: newExp.valores_fixos || {},
+        parcelas: newExp.parcelas || 1,
+        parcela_atual: newExp.parcela_atual || 1,
+        recorrente: newExp.recorrente || false,
+        status: newExp.status || 'pendente',
+        observacoes: newExp.observacoes || newExp.notas || null,
+      }
       const { data, error } = await supabase.from('despesas').insert([row]).select().single()
+      if (error) console.error('[Supabase] addExpense error:', error.message, row)
       if (!error && data) { set(s => ({ expenses: [...s.expenses, { ...newExp, ...data }] })); return }
     }
     set(s => ({ expenses: [...s.expenses, newExp] }))
