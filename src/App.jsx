@@ -27,13 +27,28 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return
     const load = async () => {
-      const [{ data: pessoas }, { data: grupos }, { data: despesas }, { data: cartoes }, { data: configs }, { data: veiculos }] = await Promise.all([
+      const [
+        { data: pessoas },
+        { data: grupos },
+        { data: despesas },
+        { data: cartoes },
+        { data: configs },
+        { data: veiculos },
+        { data: recorrentes },
+        { data: negocios },
+        { data: proventos },
+        { data: closures },
+      ] = await Promise.all([
         supabase.from('pessoas').select('*'),
         supabase.from('grupos').select('*'),
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('cartoes').select('*'),
         supabase.from('configuracoes').select('*'),
         supabase.from('veiculos').select('*'),
+        supabase.from('recorrentes').select('*'),
+        supabase.from('negocios').select('*'),
+        supabase.from('proventos').select('*').order('data', { ascending: false }),
+        supabase.from('closures').select('*').order('mes', { ascending: true }),
       ])
       const loadedPeople = (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
       // Auto-migra veículos do localStorage para o Supabase se a tabela estiver vazia
@@ -48,11 +63,15 @@ export default function App() {
         }
       }
       const update = {
-        people:   loadedPeople,
-        groups:   grupos || [],
-        expenses: despesas || [],
-        cards:    cartoes || [],
-        vehicles: vehiclesData,
+        people:    loadedPeople,
+        groups:    grupos || [],
+        expenses:  despesas || [],
+        cards:     cartoes || [],
+        vehicles:  vehiclesData,
+        recurring: recorrentes || [],
+        negocios:  negocios || [],
+        proventos: proventos || [],
+        closures:  closures || [],
       }
       // Sincroniza saldoCaixa do banco
       const cfgSaldo = configs?.find(c => c.chave === 'saldoCaixa')
@@ -77,6 +96,10 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'grupos' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'veiculos' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'recorrentes' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'negocios' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'proventos' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'closures' }, () => load())
       .subscribe()
 
     return () => supabase.removeChannel(channel)

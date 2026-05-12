@@ -266,7 +266,11 @@ const useStore = create(
     }
   },
 
-  pagarFaturaCartao: (cardId) => {
+  pagarFaturaCartao: async (cardId) => {
+    const ids = get().expenses.filter(e => e.card_id === cardId && e.status !== 'pago').map(e => e.id)
+    if (supabase && ids.length > 0) {
+      await supabase.from('despesas').update({ status: 'pago' }).in('id', ids)
+    }
     set(s => ({
       expenses: s.expenses.map(e =>
         e.card_id === cardId && e.status !== 'pago'
@@ -276,20 +280,19 @@ const useStore = create(
     }))
   },
 
-  pagarContaRecorrente: (recurringId) => {
-    // Mark as paid this month by storing paid months list
-    set(s => {
-      const r = s.recurring.find(x => x.id === recurringId)
-      if (!r) return {}
-      const mes = new Date().toISOString().slice(0, 7) // 'YYYY-MM'
-      const pagosMeses = r.pagos_meses || []
-      if (pagosMeses.includes(mes)) return {}
-      return {
-        recurring: s.recurring.map(x =>
-          x.id === recurringId ? { ...x, pagos_meses: [...pagosMeses, mes] } : x
-        )
-      }
-    })
+  pagarContaRecorrente: async (recurringId) => {
+    const r = get().recurring.find(x => x.id === recurringId)
+    if (!r) return
+    const mes = new Date().toISOString().slice(0, 7)
+    const pagosMeses = r.pagos_meses || []
+    if (pagosMeses.includes(mes)) return
+    const novosPagos = [...pagosMeses, mes]
+    if (supabase) await supabase.from('recorrentes').update({ pagos_meses: novosPagos }).eq('id', recurringId)
+    set(s => ({
+      recurring: s.recurring.map(x =>
+        x.id === recurringId ? { ...x, pagos_meses: novosPagos } : x
+      )
+    }))
   },
 
   isPagaEsseMes: (recurringId) => {
@@ -463,7 +466,7 @@ const useStore = create(
   // e LIBERA os cartões marcando todas as despesas do mês como pagas.
   // O status anterior de cada despesa é guardado no snapshot para permitir
   // reabrir o mês e reverter os pagamentos automáticos.
-  fecharMes: (mes) => {
+  fecharMes: async (mes) => {
     const s = get()
     const targetMes = mes || new Date().toISOString().slice(0, 7)
     const expensesDoMes = s.expenses.filter(e => (e.data || '').startsWith(targetMes))
@@ -512,6 +515,13 @@ const useStore = create(
     }
     // Substitui se já existe fechamento para o mesmo mês + libera cartões
     const idsParaPagar = new Set(expensesAlteradas.map(x => x.id))
+    if (supabase) {
+      // Persiste o snapshot e marca despesas como pagas no banco
+      await supabase.from('closures').upsert(snapshot, { onConflict: 'mes' })
+      if (idsParaPagar.size > 0) {
+        await supabase.from('despesas').update({ status: 'pago' }).in('id', Array.from(idsParaPagar))
+      }
+    }
     set(st => ({
       closures: [...st.closures.filter(c => c.mes !== targetMes), snapshot]
         .sort((a, b) => a.mes.localeCompare(b.mes)),
@@ -519,12 +529,24 @@ const useStore = create(
     }))
     return snapshot
   },
-  reabrirMes: (mes) => {
+  reabrirMes: async (mes) => {
     const s = get()
     const closure = s.closures.find(c => c.mes === mes)
     if (!closure) return
     // Reverte status de cada despesa alterada no fechamento
     const revertMap = new Map((closure.expenses_alteradas || []).map(x => [x.id, x.status_anterior]))
+    if (supabase) {
+      await supabase.from('closures').delete().eq('mes', mes)
+      // Reverte status individualmente (status_anterior pode ser diferente para cada uma)
+      const grupos = {}
+      revertMap.forEach((status, id) => {
+        if (!grupos[status]) grupos[status] = []
+        grupos[status].push(id)
+      })
+      for (const [status, ids] of Object.entries(grupos)) {
+        if (ids.length > 0) await supabase.from('despesas').update({ status }).in('id', ids)
+      }
+    }
     set(st => ({
       closures: st.closures.filter(c => c.mes !== mes),
       expenses: st.expenses.map(e => revertMap.has(e.id) ? { ...e, status: revertMap.get(e.id) } : e),
@@ -534,13 +556,21 @@ const useStore = create(
 
   // ── Recurring ──
   addRecurring: async (item) => {
-    const newItem = { ...item, id: Date.now().toString() }
+    const newItem = { ...item, id: `rec_${Date.now()}` }
+    if (supabase) {
+      const row = { id: newItem.id, descricao: newItem.descricao, valor: newItem.valor, dia_vencimento: newItem.dia_vencimento || 5, categoria: newItem.categoria || 'Serviços', grupo_id: isUUID(newItem.grupo_id) ? newItem.grupo_id : null, ativo: newItem.ativo !== false, pagos_meses: newItem.pagos_meses || [] }
+      const { data, error } = await supabase.from('recorrentes').insert([row]).select().single()
+      if (error) console.error('[Supabase] addRecurring error:', error.message)
+      if (!error && data) { set(s => ({ recurring: [...s.recurring, { ...newItem, ...data }] })); return }
+    }
     set(s => ({ recurring: [...s.recurring, newItem] }))
   },
   updateRecurring: async (id, data) => {
+    if (supabase) await supabase.from('recorrentes').update(data).eq('id', id)
     set(s => ({ recurring: s.recurring.map(r => r.id === id ? { ...r, ...data } : r) }))
   },
   deleteRecurring: async (id) => {
+    if (supabase) await supabase.from('recorrentes').delete().eq('id', id)
     set(s => ({ recurring: s.recurring.filter(r => r.id !== id) }))
   },
 
@@ -558,29 +588,46 @@ const useStore = create(
   },
 
   // ── Negócios ──
-  addNegocio: (negocio) => {
+  addNegocio: async (negocio) => {
     const n = { ...negocio, id: `n${Date.now()}` }
+    if (supabase) {
+      const row = { id: n.id, nome: n.nome, descricao: n.descricao || null, cor: n.cor || '#6366f1', icone: n.icone || '🏢', ativo: n.ativo !== false, tipo: n.tipo || 'empresa', socios: n.socios || [] }
+      const { data, error } = await supabase.from('negocios').insert([row]).select().single()
+      if (error) console.error('[Supabase] addNegocio error:', error.message)
+      if (!error && data) { set(s => ({ negocios: [...s.negocios, { ...n, ...data }] })); return }
+    }
     set(s => ({ negocios: [...s.negocios, n] }))
   },
-  updateNegocio: (id, data) => {
+  updateNegocio: async (id, data) => {
+    if (supabase) await supabase.from('negocios').update(data).eq('id', id)
     set(s => ({ negocios: s.negocios.map(n => n.id === id ? { ...n, ...data } : n) }))
   },
-  deleteNegocio: (id) => {
+  deleteNegocio: async (id) => {
+    if (supabase) await supabase.from('negocios').delete().eq('id', id)
     set(s => ({ negocios: s.negocios.filter(n => n.id !== id) }))
   },
 
   // ── Proventos ──
-  addProvento: (provento) => {
+  addProvento: async (provento) => {
     const p = { ...provento, id: `p${Date.now()}` }
+    if (supabase) {
+      const row = { id: p.id, negocio_id: p.negocio_id, descricao: p.descricao, valor: p.valor, data: p.data, categoria: p.categoria || 'Receita', tipo: p.tipo || 'receita', status: p.status || 'pendente', observacoes: p.observacoes || null }
+      const { data, error } = await supabase.from('proventos').insert([row]).select().single()
+      if (error) console.error('[Supabase] addProvento error:', error.message)
+      if (!error && data) { set(s => ({ proventos: [...s.proventos, { ...p, ...data }] })); return }
+    }
     set(s => ({ proventos: [...s.proventos, p] }))
   },
-  updateProvento: (id, data) => {
+  updateProvento: async (id, data) => {
+    if (supabase) await supabase.from('proventos').update(data).eq('id', id)
     set(s => ({ proventos: s.proventos.map(p => p.id === id ? { ...p, ...data } : p) }))
   },
-  deleteProvento: (id) => {
+  deleteProvento: async (id) => {
+    if (supabase) await supabase.from('proventos').delete().eq('id', id)
     set(s => ({ proventos: s.proventos.filter(p => p.id !== id) }))
   },
-  distribuirProvento: (id) => {
+  distribuirProvento: async (id) => {
+    if (supabase) await supabase.from('proventos').update({ status: 'distribuido' }).eq('id', id)
     set(s => ({ proventos: s.proventos.map(p => p.id === id ? { ...p, status: 'distribuido' } : p) }))
   },
 
@@ -705,16 +752,16 @@ const useStore = create(
   partialize: (state) => ({
     // Se Supabase está ativo, não salvar no localStorage os dados que vêm do banco
     ...(supabase ? {} : {
-      people:   state.people,
-      groups:   state.groups,
-      expenses: state.expenses,
-      cards:    state.cards,
-      vehicles: state.vehicles,
+      people:    state.people,
+      groups:    state.groups,
+      expenses:  state.expenses,
+      cards:     state.cards,
+      vehicles:  state.vehicles,
+      recurring: state.recurring,
+      negocios:  state.negocios,
+      proventos: state.proventos,
+      closures:  state.closures,
     }),
-    closures:    state.closures,
-    recurring:   state.recurring,
-    negocios:    state.negocios,
-    proventos:   state.proventos,
     currentUser: state.currentUser,
     saldoCaixa:  state.saldoCaixa,
     ownerId:     state.ownerId,
