@@ -32,13 +32,12 @@ export default function App() {
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('cartoes').select('*'),
       ])
-      // Quando Supabase está ativo, dados da nuvem sempre têm prioridade
-      set({
-        people: pessoas?.length ? pessoas.map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' })) : [],
-        groups: grupos || [],
-        expenses: despesas || [],
-        cards: cartoes || [],
-      })
+      const patch = {}
+      if (pessoas !== null) patch.people = pessoas.map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
+      if (grupos !== null) patch.groups = grupos
+      if (despesas !== null) patch.expenses = despesas
+      if (cartoes !== null) patch.cards = cartoes
+      if (Object.keys(patch).length) set(patch)
     }
     load()
   }, [])
