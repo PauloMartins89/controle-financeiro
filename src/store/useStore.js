@@ -379,7 +379,7 @@ const useStore = create(
   addCard: async (card) => {
     const newCard = { ...card, id: Date.now().toString() }
     if (supabase) {
-      const row = { id: newCard.id, nome: newCard.nome, bandeira: newCard.bandeira, limite: newCard.limit || 0, dia_fechamento: newCard.closing_day || 15, dia_vencimento: newCard.due_day || 22, cor: newCard.color || '#6366f1' }
+      const row = { id: newCard.id, nome: newCard.nome, bandeira: newCard.bandeira, limite: newCard.limite || 0, dia_fechamento: newCard.dia_fechamento || 15, dia_vencimento: newCard.dia_vencimento || 22, cor: newCard.cor || '#6366f1' }
       const { data, error } = await supabase.from('cartoes').insert([row]).select().single()
       if (!error && data) { set(s => ({ cards: [...s.cards, { ...newCard, ...data }] })); return }
     }

@@ -33,10 +33,10 @@ export default function App() {
         supabase.from('cartoes').select('*'),
       ])
       const patch = {}
-      if (pessoas !== null) patch.people = pessoas.map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
-      if (grupos !== null) patch.groups = grupos
-      if (despesas !== null) patch.expenses = despesas
-      if (cartoes !== null) patch.cards = cartoes
+      if (pessoas?.length) patch.people = pessoas.map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
+      if (grupos?.length) patch.groups = grupos
+      if (despesas?.length) patch.expenses = despesas
+      if (cartoes?.length) patch.cards = cartoes
       if (Object.keys(patch).length) set(patch)
     }
     load()
