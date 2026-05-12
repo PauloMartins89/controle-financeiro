@@ -21,6 +21,7 @@ import Importar from './pages/Importar'
 
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [ready, setReady] = useState(!supabase) // se não tem Supabase, já está pronto
   const set = useStore.setState
 
   useEffect(() => {
@@ -32,13 +33,13 @@ export default function App() {
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('cartoes').select('*'),
       ])
-      // Supabase é fonte única de verdade — sempre sobrescreve estado local
       set({
         people:   (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' })),
         groups:   grupos || [],
         expenses: despesas || [],
         cards:    cartoes || [],
       })
+      setReady(true)
     }
     load()
 
@@ -53,6 +54,14 @@ export default function App() {
 
     return () => supabase.removeChannel(channel)
   }, [])
+
+  if (!ready) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)', color: '#6366f1', flexDirection: 'column', gap: 16 }}>
+      <div style={{ width: 48, height: 48, border: '4px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <span style={{ color: '#94a3b8', fontSize: 14 }}>Carregando dados...</span>
+    </div>
+  )
 
   return (
     <BrowserRouter>
