@@ -363,15 +363,37 @@ const useStore = create(
         status: newExp.status || 'pendente',
         observacoes: newExp.observacoes || newExp.notas || null,
         card_id: isUUID(newExp.card_id) ? newExp.card_id : null,
+        valor_total: newExp.valor_total ?? null,
+        lote_parcelamento: newExp.lote_parcelamento || null,
+        veiculo_placa: newExp._veiculo || newExp.veiculo_placa || null,
       }
       const { data, error } = await supabase.from('despesas').insert([row]).select().single()
       if (error) console.error('[Supabase] addExpense error:', error.message, row)
-      if (!error && data) { set(s => ({ expenses: [...s.expenses, { ...newExp, ...data }] })); return }
+      if (!error && data) {
+        // Mantém _veiculo no estado local em sincronia com veiculo_placa
+        const merged = { ...newExp, ...data, _veiculo: data.veiculo_placa || newExp._veiculo || null }
+        set(s => ({ expenses: [...s.expenses, merged] }))
+        return
+      }
     }
     set(s => ({ expenses: [...s.expenses, newExp] }))
   },
   updateExpense: async (id, data) => {
-    if (supabase && isUUID(id)) await supabase.from('despesas').update(data).eq('id', id)
+    if (supabase && isUUID(id)) {
+      // Sanitiza payload: filtra apenas colunas conhecidas e converte IDs inválidos para null
+      const allowed = ['descricao','valor','data','categoria','tipo_divisao','porcentagens','valores_fixos','parcelas','parcela_atual','recorrente','status','observacoes','valor_total','lote_parcelamento']
+      const payload = {}
+      for (const k of allowed) if (k in data) payload[k] = data[k]
+      if ('grupo_id' in data) payload.grupo_id = isUUID(data.grupo_id) ? data.grupo_id : null
+      if ('pago_por' in data) payload.pago_por = isUUID(data.pago_por) ? data.pago_por : null
+      if ('card_id'  in data) payload.card_id  = isUUID(data.card_id)  ? data.card_id  : null
+      if ('participantes' in data) payload.participantes = (data.participantes || []).filter(isUUID)
+      if ('_veiculo' in data || 'veiculo_placa' in data) payload.veiculo_placa = data._veiculo || data.veiculo_placa || null
+      if (Object.keys(payload).length > 0) {
+        const { error } = await supabase.from('despesas').update(payload).eq('id', id)
+        if (error) console.error('[Supabase] updateExpense error:', error.message, payload)
+      }
+    }
     set(s => ({ expenses: s.expenses.map(e => e.id === id ? { ...e, ...data } : e) }))
   },
   deleteExpense: async (id) => {

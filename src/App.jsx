@@ -65,7 +65,7 @@ export default function App() {
       const update = {
         people:    loadedPeople,
         groups:    grupos || [],
-        expenses:  despesas || [],
+        expenses:  (despesas || []).map(d => ({ ...d, _veiculo: d.veiculo_placa || d._veiculo || null })),
         cards:     cartoes || [],
         vehicles:  vehiclesData,
         recurring: recorrentes || [],
