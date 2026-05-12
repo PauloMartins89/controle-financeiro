@@ -428,20 +428,28 @@ const useStore = create(
   },
 
   // ── Vehicles ──
-  addVehicle: (vehicle) => {
+  addVehicle: async (vehicle) => {
     const v = {
       ...vehicle,
       placa: String(vehicle.placa || '').toUpperCase().replace(/\s+/g, ''),
       id: `veh_${Date.now()}`,
     }
+    if (supabase) {
+      const row = { id: v.id, placa: v.placa, apelido: v.apelido || null, pessoa_id: v.pessoa_id || null, cor: v.cor || '#6366f1' }
+      const { data, error } = await supabase.from('veiculos').insert([row]).select().single()
+      if (error) console.error('[Supabase] addVehicle error:', error.message)
+      if (!error && data) { set(s => ({ vehicles: [...s.vehicles, { ...v, ...data }] })); return }
+    }
     set(s => ({ vehicles: [...s.vehicles, v] }))
   },
-  updateVehicle: (id, data) => {
+  updateVehicle: async (id, data) => {
     const patch = { ...data }
     if (patch.placa) patch.placa = String(patch.placa).toUpperCase().replace(/\s+/g, '')
+    if (supabase) await supabase.from('veiculos').update(patch).eq('id', id)
     set(s => ({ vehicles: s.vehicles.map(v => v.id === id ? { ...v, ...patch } : v) }))
   },
-  deleteVehicle: (id) => {
+  deleteVehicle: async (id) => {
+    if (supabase) await supabase.from('veiculos').delete().eq('id', id)
     set(s => ({ vehicles: s.vehicles.filter(v => v.id !== id) }))
   },
   getVehicleByPlate: (placa) => {
@@ -673,6 +681,22 @@ const useStore = create(
     const saldos = get().getSaldos()
     return saldos[uid] < 0 ? Math.abs(saldos[uid]) : 0
   },
+
+  // Total que o usuário atual precisa pagar: faturas de cartão + despesas pessoais + dívidas interpessoais
+  getTotalPagar: () => {
+    const s = get()
+    const uid = s.currentUser?.id
+    const saldos = calcularSaldos(s.expenses, s.people)
+    const dividas = (saldos[uid] || 0) < 0 ? Math.abs(saldos[uid]) : 0
+    const totalFatura = s.cards.reduce((sum, c) =>
+      sum + s.expenses.filter(e => e.card_id === c.id && e.status !== 'pago').reduce((acc, e) => acc + (e.valor || 0), 0), 0)
+    const totalPessoal = s.expenses.filter(e =>
+      e.status !== 'pago' &&
+      !e.card_id &&
+      (e.pago_por === uid || (!e.pago_por && (!e.participantes || e.participantes.length === 0)))
+    ).reduce((acc, e) => acc + (e.valor || 0), 0)
+    return dividas + totalFatura + totalPessoal
+  },
 }),
 {
   name: 'rateiopro-storage',
@@ -685,8 +709,8 @@ const useStore = create(
       groups:   state.groups,
       expenses: state.expenses,
       cards:    state.cards,
+      vehicles: state.vehicles,
     }),
-    vehicles:    state.vehicles,
     closures:    state.closures,
     recurring:   state.recurring,
     negocios:    state.negocios,

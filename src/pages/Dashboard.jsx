@@ -11,15 +11,14 @@ export default function Dashboard() {
   const {
     expenses, people, groups, recurring,
     currentUser, getSaldos, getDebitos,
-    getMinhasReceitas, getMeusDividas,
+    getMinhasReceitas, getMeusDividas, getTotalPagar,
     negocios, proventos,
   } = useStore()
 
   const debitos = useMemo(() => getDebitos(), [expenses])
   const saldos = useMemo(() => getSaldos(), [expenses])
 
-  const pendentes = expenses.filter(e => e.status === 'pendente')
-  const totalPendente = pendentes.reduce((s, e) => s + e.valor, 0)
+  const totalPendente = useMemo(() => getTotalPagar(), [expenses, currentUser])
   const rateiosAtivos = expenses.filter(e => e.status === 'pendente' && e.participantes?.length > 1).length
   const proximasFaturas = recurring.filter(r => r.ativo)
 

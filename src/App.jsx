@@ -27,19 +27,32 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return
     const load = async () => {
-      const [{ data: pessoas }, { data: grupos }, { data: despesas }, { data: cartoes }, { data: configs }] = await Promise.all([
+      const [{ data: pessoas }, { data: grupos }, { data: despesas }, { data: cartoes }, { data: configs }, { data: veiculos }] = await Promise.all([
         supabase.from('pessoas').select('*'),
         supabase.from('grupos').select('*'),
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('cartoes').select('*'),
         supabase.from('configuracoes').select('*'),
+        supabase.from('veiculos').select('*'),
       ])
       const loadedPeople = (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
+      // Auto-migra veículos do localStorage para o Supabase se a tabela estiver vazia
+      let vehiclesData = veiculos || []
+      if (vehiclesData.length === 0) {
+        const localVehicles = useStore.getState().vehicles || []
+        if (localVehicles.length > 0) {
+          const rows = localVehicles.map(v => ({ id: v.id, placa: v.placa, apelido: v.apelido || null, pessoa_id: v.pessoa_id || null, cor: v.cor || '#6366f1' }))
+          const { data: inserted } = await supabase.from('veiculos').upsert(rows, { onConflict: 'id' }).select()
+          if (inserted) vehiclesData = inserted
+          else vehiclesData = localVehicles
+        }
+      }
       const update = {
         people:   loadedPeople,
         groups:   grupos || [],
         expenses: despesas || [],
         cards:    cartoes || [],
+        vehicles: vehiclesData,
       }
       // Sincroniza saldoCaixa do banco
       const cfgSaldo = configs?.find(c => c.chave === 'saldoCaixa')
@@ -63,6 +76,7 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pessoas' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'grupos' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'veiculos' }, () => load())
       .subscribe()
 
     return () => supabase.removeChannel(channel)
