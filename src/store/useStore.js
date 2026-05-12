@@ -330,7 +330,7 @@ const useStore = create(
   addExpense: async (expense) => {
     const newExp = { ...expense, id: uuid() }
     if (supabase) {
-      const row = { id: newExp.id, descricao: newExp.descricao, valor: newExp.valor, data: newExp.data, categoria: newExp.categoria, grupo_id: newExp.group_id || null, pago_por: newExp.paid_by || null, participantes: newExp.participants || [], tipo_divisao: newExp.split_type || 'igual', porcentagens: newExp.percentages || {}, valores_fixos: newExp.fixed_values || {}, parcelas: newExp.installments || 1, parcela_atual: newExp.current_installment || 1, recorrente: newExp.recurring || false, status: newExp.status || 'pendente', observacoes: newExp.notes || null }
+      const row = { id: newExp.id, descricao: newExp.descricao, valor: newExp.valor, data: newExp.data, categoria: newExp.categoria, grupo_id: newExp.grupo_id || null, pago_por: newExp.pago_por || null, participantes: newExp.participantes || [], tipo_divisao: newExp.tipo_divisao || 'igual', porcentagens: newExp.porcentagens || {}, valores_fixos: newExp.valores_fixos || {}, parcelas: newExp.parcelas || 1, parcela_atual: newExp.parcela_atual || 1, recorrente: newExp.recorrente || false, status: newExp.status || 'pendente', observacoes: newExp.observacoes || null }
       const { data, error } = await supabase.from('despesas').insert([row]).select().single()
       if (!error && data) { set(s => ({ expenses: [...s.expenses, { ...newExp, ...data }] })); return }
     }
