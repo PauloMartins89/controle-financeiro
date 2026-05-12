@@ -27,11 +27,12 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return
     const load = async () => {
-      const [{ data: pessoas }, { data: grupos }, { data: despesas }, { data: cartoes }] = await Promise.all([
+      const [{ data: pessoas }, { data: grupos }, { data: despesas }, { data: cartoes }, { data: configs }] = await Promise.all([
         supabase.from('pessoas').select('*'),
         supabase.from('grupos').select('*'),
         supabase.from('despesas').select('*').order('data', { ascending: false }),
         supabase.from('cartoes').select('*'),
+        supabase.from('configuracoes').select('*'),
       ])
       const loadedPeople = (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
       const update = {
@@ -40,6 +41,9 @@ export default function App() {
         expenses: despesas || [],
         cards:    cartoes || [],
       }
+      // Sincroniza saldoCaixa do banco
+      const cfgSaldo = configs?.find(c => c.chave === 'saldoCaixa')
+      if (cfgSaldo) update.saldoCaixa = parseFloat(cfgSaldo.valor) || 0
       // Sincroniza currentUser: se o currentUser do localStorage não existe mais
       // nas pessoas do Supabase, atualiza para a primeira pessoa da lista (ou owner)
       const currentUser = useStore.getState().currentUser
@@ -58,6 +62,7 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cartoes' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pessoas' }, () => load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'grupos' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes' }, () => load())
       .subscribe()
 
     return () => supabase.removeChannel(channel)

@@ -258,7 +258,13 @@ const useStore = create(
     return s.people.find(p => p.id === s.ownerId) || s.people.find(p => p.is_owner) || s.people[0]
   },
 
-  setSaldoCaixa: (valor) => set({ saldoCaixa: parseFloat(valor) || 0 }),
+  setSaldoCaixa: async (valor) => {
+    const v = parseFloat(valor) || 0
+    set({ saldoCaixa: v })
+    if (supabase) {
+      await supabase.from('configuracoes').upsert({ chave: 'saldoCaixa', valor: v, updated_at: new Date().toISOString() }, { onConflict: 'chave' })
+    }
+  },
 
   pagarFaturaCartao: (cardId) => {
     set(s => ({
