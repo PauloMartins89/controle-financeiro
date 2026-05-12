@@ -575,7 +575,14 @@ const useStore = create(
   },
 
   // ── Settlement ──
-  settleDebt: (de, para) => {
+  settleDebt: async (de, para) => {
+    const ids = get().expenses
+      .filter(exp => exp.status !== 'pago' && exp.pago_por === para && exp.participantes?.includes(de))
+      .map(exp => exp.id)
+      .filter(isUUID)
+    if (supabase && ids.length > 0) {
+      await supabase.from('despesas').update({ status: 'pago' }).in('id', ids)
+    }
     set(s => ({
       expenses: s.expenses.map(exp => {
         if (exp.status === 'pago') return exp
