@@ -238,7 +238,7 @@ const useStore = create(
   negocios: demoNegocios,
   proventos: demoProventos,
   loading: false,
-  useSupabase: false,
+  useSupabase: !!supabase,
   currentUser: demoPeople[0],
   saldoCaixa: 0,
   ownerId: OWNER_ID,
@@ -291,42 +291,63 @@ const useStore = create(
   // ── People ──
   addPerson: async (person) => {
     const newPerson = { ...person, id: Date.now().toString(), avatar: person.nome[0].toUpperCase() }
+    if (supabase) {
+      const { data, error } = await supabase.from('pessoas').insert([{ id: newPerson.id, nome: newPerson.nome, apelido: newPerson.apelido, cor: newPerson.cor }]).select().single()
+      if (!error && data) { set(s => ({ people: [...s.people, { ...newPerson, ...data }] })); return }
+    }
     set(s => ({ people: [...s.people, newPerson] }))
   },
   updatePerson: async (id, data) => {
+    if (supabase) await supabase.from('pessoas').update(data).eq('id', id)
     set(s => ({ people: s.people.map(p => p.id === id ? { ...p, ...data } : p) }))
   },
   deletePerson: async (id) => {
+    if (supabase) await supabase.from('pessoas').delete().eq('id', id)
     set(s => ({ people: s.people.filter(p => p.id !== id) }))
   },
 
   // ── Groups ──
   addGroup: async (group) => {
     const newGroup = { ...group, id: Date.now().toString() }
+    if (supabase) {
+      const { data, error } = await supabase.from('grupos').insert([{ id: newGroup.id, nome: newGroup.nome, cor: newGroup.cor, icone: newGroup.icone, descricao: newGroup.descricao }]).select().single()
+      if (!error && data) { set(s => ({ groups: [...s.groups, { ...newGroup, ...data }] })); return }
+    }
     set(s => ({ groups: [...s.groups, newGroup] }))
   },
   updateGroup: async (id, data) => {
+    if (supabase) await supabase.from('grupos').update(data).eq('id', id)
     set(s => ({ groups: s.groups.map(g => g.id === id ? { ...g, ...data } : g) }))
   },
   deleteGroup: async (id) => {
+    if (supabase) await supabase.from('grupos').delete().eq('id', id)
     set(s => ({ groups: s.groups.filter(g => g.id !== id) }))
   },
 
   // ── Expenses ──
   addExpense: async (expense) => {
     const newExp = { ...expense, id: Date.now().toString() }
+    if (supabase) {
+      const row = { id: newExp.id, descricao: newExp.descricao, valor: newExp.valor, data: newExp.data, categoria: newExp.categoria, grupo_id: newExp.group_id || null, pago_por: newExp.paid_by || null, participantes: newExp.participants || [], tipo_divisao: newExp.split_type || 'igual', porcentagens: newExp.percentages || {}, valores_fixos: newExp.fixed_values || {}, parcelas: newExp.installments || 1, parcela_atual: newExp.current_installment || 1, recorrente: newExp.recurring || false, status: newExp.status || 'pendente', observacoes: newExp.notes || null }
+      const { data, error } = await supabase.from('despesas').insert([row]).select().single()
+      if (!error && data) { set(s => ({ expenses: [...s.expenses, { ...newExp, ...data }] })); return }
+    }
     set(s => ({ expenses: [...s.expenses, newExp] }))
   },
   updateExpense: async (id, data) => {
+    if (supabase) await supabase.from('despesas').update(data).eq('id', id)
     set(s => ({ expenses: s.expenses.map(e => e.id === id ? { ...e, ...data } : e) }))
   },
   deleteExpense: async (id) => {
+    if (supabase) await supabase.from('despesas').delete().eq('id', id)
     set(s => ({ expenses: s.expenses.filter(e => e.id !== id) }))
   },
   markAsPaid: async (id) => {
+    if (supabase) await supabase.from('despesas').update({ status: 'pago' }).eq('id', id)
     set(s => ({ expenses: s.expenses.map(e => e.id === id ? { ...e, status: 'pago' } : e) }))
   },
   markAsPending: async (id) => {
+    if (supabase) await supabase.from('despesas').update({ status: 'pendente' }).eq('id', id)
     set(s => ({ expenses: s.expenses.map(e => e.id === id ? { ...e, status: 'pendente' } : e) }))
   },
 
@@ -357,12 +378,19 @@ const useStore = create(
   // ── Cards ──
   addCard: async (card) => {
     const newCard = { ...card, id: Date.now().toString() }
+    if (supabase) {
+      const row = { id: newCard.id, nome: newCard.nome, bandeira: newCard.bandeira, limite: newCard.limit || 0, dia_fechamento: newCard.closing_day || 15, dia_vencimento: newCard.due_day || 22, cor: newCard.color || '#6366f1' }
+      const { data, error } = await supabase.from('cartoes').insert([row]).select().single()
+      if (!error && data) { set(s => ({ cards: [...s.cards, { ...newCard, ...data }] })); return }
+    }
     set(s => ({ cards: [...s.cards, newCard] }))
   },
   updateCard: async (id, data) => {
+    if (supabase) await supabase.from('cartoes').update(data).eq('id', id)
     set(s => ({ cards: s.cards.map(c => c.id === id ? { ...c, ...data } : c) }))
   },
   deleteCard: async (id) => {
+    if (supabase) await supabase.from('cartoes').delete().eq('id', id)
     set(s => ({ cards: s.cards.filter(c => c.id !== id) }))
   },
 

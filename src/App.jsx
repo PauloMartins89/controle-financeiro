@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Sidebar from './components/Sidebar'
+import { supabase } from './lib/supabase'
+import useStore from './store/useStore'
 import Dashboard from './pages/Dashboard'
 import Despesas from './pages/Despesas'
 import QuemDeve from './pages/QuemDeve'
@@ -19,6 +21,24 @@ import Importar from './pages/Importar'
 
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const set = useStore.setState
+
+  useEffect(() => {
+    if (!supabase) return
+    const load = async () => {
+      const [{ data: pessoas }, { data: grupos }, { data: despesas }, { data: cartoes }] = await Promise.all([
+        supabase.from('pessoas').select('*'),
+        supabase.from('grupos').select('*'),
+        supabase.from('despesas').select('*').order('data', { ascending: false }),
+        supabase.from('cartoes').select('*'),
+      ])
+      if (pessoas?.length) set({ people: pessoas.map(p => ({ ...p, avatar: p.nome[0].toUpperCase() })) })
+      if (grupos?.length) set({ groups: grupos })
+      if (despesas?.length) set({ expenses: despesas })
+      if (cartoes?.length) set({ cards: cartoes })
+    }
+    load()
+  }, [])
 
   return (
     <BrowserRouter>
