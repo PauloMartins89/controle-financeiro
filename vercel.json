@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "api/whatsapp.js": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron-lembretes",
+      "schedule": "0 12 * * 1"
+    },
+    {
+      "path": "/api/cron-relatorio",
+      "schedule": "0 12 1 * *"
+    }
+  ],
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
