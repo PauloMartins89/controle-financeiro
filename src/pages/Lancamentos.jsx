@@ -1458,63 +1458,284 @@ export default function Lancamentos() {
   }
 
   function exportCSV() {
-    const rows = filtered.filter(l => selectedIds.has(l.id)).map(buildRow)
-    if (!rows.length) { toast('Selecione ao menos um lançamento.'); return }
-    const ws = XLSX.utils.json_to_sheet(rows)
+    const selecionados = filtered.filter(l => selectedIds.has(l.id))
+    if (!selecionados.length) { toast('Selecione ao menos um lançamento.'); return }
+    const rows = selecionados.map(buildRow)
+
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos')
-    XLSX.writeFile(wb, `lancamentos_${new Date().toISOString().slice(0,10)}.xlsx`)
-    toast.success(`${rows.length} lançamento(s) exportado(s) para Excel.`)
+
+    // ── Aba 1: Analítico ──────────────────────────────────────────────────────
+    const ws = XLSX.utils.json_to_sheet(rows)
+
+    // Larguras das colunas
+    ws['!cols'] = [
+      { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 22 }, { wch: 28 },
+      { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 22 }, { wch: 16 }, { wch: 14 },
+      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 40 }, { wch: 12 }, { wch: 12 },
+      { wch: 12 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 30 },
+    ]
+
+    // Estilo do header (verde corporativo)
+    const headerKeys = Object.keys(rows[0] || {})
+    const G = { // verde escuro corporativo
+      patternType: 'solid', fgColor: { rgb: '1A5C38' },
+    }
+    const headerFont = { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 }
+    const borderThin = { style: 'thin', color: { rgb: 'C7D8CC' } }
+    const allBorders = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin }
+
+    headerKeys.forEach((key, ci) => {
+      const addr = XLSX.utils.encode_cell({ r: 0, c: ci })
+      if (!ws[addr]) return
+      ws[addr].s = { fill: G, font: headerFont, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: allBorders }
+    })
+
+    // Estilo das linhas de dados (alternado)
+    const fillLight  = { patternType: 'solid', fgColor: { rgb: 'F0F7F3' } } // verde muito claro
+    const fillWhite  = { patternType: 'solid', fgColor: { rgb: 'FFFFFF' } }
+    const dataFont   = { sz: 9, color: { rgb: '1A2D23' } }
+    const totalKeys  = ['KM ASFALTO','KM TERRA','KM TOTAL','VALOR TOTAL']
+
+    rows.forEach((row, ri) => {
+      headerKeys.forEach((key, ci) => {
+        const addr = XLSX.utils.encode_cell({ r: ri + 1, c: ci })
+        if (!ws[addr]) return
+        const isNum = totalKeys.includes(key)
+        ws[addr].s = {
+          fill: ri % 2 === 0 ? fillLight : fillWhite,
+          font: isNum ? { ...dataFont, bold: true, color: { rgb: '1A5C38' } } : dataFont,
+          alignment: { horizontal: isNum ? 'right' : 'left', vertical: 'center' },
+          border: allBorders,
+        }
+      })
+    })
+
+    // Linha de totais no final
+    const totalValor  = selecionados.reduce((s, l) => s + (l.valor || 0), 0)
+    const totalKmAsf  = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras || {}).asfalto || 0), 0)
+    const totalKmTer  = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras || {}).terra || 0), 0)
+    const totalKmTot  = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras || {}).total || 0), 0)
+    const totalRow = {}
+    headerKeys.forEach(k => { totalRow[k] = '' })
+    totalRow['DATA']         = 'TOTAL'
+    totalRow['KM ASFALTO']   = totalKmAsf
+    totalRow['KM TERRA']     = totalKmTer
+    totalRow['KM TOTAL']     = totalKmTot
+    totalRow['VALOR TOTAL']  = totalValor
+    XLSX.utils.sheet_add_json(ws, [totalRow], { skipHeader: true, origin: -1 })
+    const totalRowIdx = rows.length + 1
+    const fillTotal = { patternType: 'solid', fgColor: { rgb: '1A5C38' } }
+    headerKeys.forEach((key, ci) => {
+      const addr = XLSX.utils.encode_cell({ r: totalRowIdx, c: ci })
+      if (!ws[addr]) return
+      ws[addr].s = { fill: fillTotal, font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 10 }, alignment: { horizontal: totalKeys.includes(key) ? 'right' : 'left' }, border: allBorders }
+    })
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Analítico')
+
+    // ── Aba 2: Resumo por cliente ─────────────────────────────────────────────
+    const porCliente = {}
+    selecionados.forEach(l => {
+      const d = l.dados_extras || {}
+      const cliente = d.cliente || d.empresa || l.descricao || 'Sem cliente'
+      if (!porCliente[cliente]) porCliente[cliente] = { qtd: 0, valor: 0, kmAsf: 0, kmTer: 0, kmTot: 0 }
+      porCliente[cliente].qtd++
+      porCliente[cliente].valor += l.valor || 0
+      const km = calcKmTotais(d)
+      porCliente[cliente].kmAsf += km.asfalto
+      porCliente[cliente].kmTer += km.terra
+      porCliente[cliente].kmTot += km.total
+    })
+    const resumoRows = Object.entries(porCliente).map(([cliente, v]) => ({
+      'CLIENTE': cliente,
+      'QTD LANÇAMENTOS': v.qtd,
+      'VALOR TOTAL': v.valor,
+      'KM ASFALTO': v.kmAsf,
+      'KM TERRA': v.kmTer,
+      'KM TOTAL': v.kmTot,
+    }))
+    const ws2 = XLSX.utils.json_to_sheet(resumoRows)
+    ws2['!cols'] = [{ wch: 30 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }]
+    Object.keys(resumoRows[0] || {}).forEach((key, ci) => {
+      const addr = XLSX.utils.encode_cell({ r: 0, c: ci })
+      if (!ws2[addr]) return
+      ws2[addr].s = { fill: G, font: headerFont, alignment: { horizontal: 'center' }, border: allBorders }
+    })
+    XLSX.utils.book_append_sheet(wb, ws2, 'Resumo por Cliente')
+
+    XLSX.writeFile(wb, `lancamentos_${new Date().toISOString().slice(0,10)}.xlsx`, { bookType: 'xlsx', bookSST: false, type: 'binary', cellStyles: true })
+    toast.success(`${selecionados.length} lançamento(s) exportado(s) para Excel.`)
   }
 
   function exportPDF() {
     const selecionados = filtered.filter(l => selectedIds.has(l.id))
     if (!selecionados.length) { toast('Selecione ao menos um lançamento.'); return }
+
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+    const PW = doc.internal.pageSize.getWidth()
+    const PH = doc.internal.pageSize.getHeight()
     const geradoEm = new Date().toLocaleString('pt-BR')
-    doc.setFontSize(14); doc.setFont('helvetica', 'bold')
-    doc.text('Relatório de Lançamentos', 40, 40)
-    doc.setFontSize(9); doc.setFont('helvetica', 'normal')
-    doc.text(`Gerado em: ${geradoEm}  |  Total: ${selecionados.length} registro(s)`, 40, 56)
-    const cols = ['DATA','Nº DM','CLIENTE','CONDUTOR','PLACA','ORIGEM','DESTINO','KM ASF','KM TER','KM TOT','VALOR','STATUS','OBSERVAÇÕES']
-    const rows = selecionados.map(l => {
+    const dataArq  = new Date().toISOString().slice(0, 10)
+
+    // ── Paleta verde corporativo ──────────────────────────────────────────────
+    const VERDE_ESCURO  = [26, 92, 56]   // #1A5C38
+    const VERDE_MEDIO   = [5, 150, 105]  // #059669
+    const VERDE_CLARO   = [209, 238, 218]// #D1EEDA
+    const BRANCO        = [255, 255, 255]
+    const CINZA_TEXTO   = [45, 55, 45]
+    const CINZA_LEVE    = [240, 247, 243]
+
+    // ── Função: cabeçalho e rodapé em cada página ─────────────────────────────
+    const addHeaderFooter = (pageNum, totalPages) => {
+      // Barra superior verde escura
+      doc.setFillColor(...VERDE_ESCURO)
+      doc.rect(0, 0, PW, 52, 'F')
+
+      // Faixa decorativa verde médio
+      doc.setFillColor(...VERDE_MEDIO)
+      doc.rect(0, 52, PW, 6, 'F')
+
+      // Título
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(16)
+      doc.setTextColor(...BRANCO)
+      doc.text('RELATÓRIO DE LANÇAMENTOS', 36, 24)
+
+      // Subtítulo / metadados
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(180, 220, 195)
+      doc.text(`Gerado em: ${geradoEm}   |   Total de registros: ${selecionados.length}`, 36, 38)
+
+      // Logo texto direito
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.setTextColor(...BRANCO)
+      doc.text('Dividi Aí', PW - 36, 24, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.setTextColor(180, 220, 195)
+      doc.text('Sistema de Controle Financeiro', PW - 36, 36, { align: 'right' })
+
+      // Rodapé
+      doc.setFillColor(...VERDE_ESCURO)
+      doc.rect(0, PH - 24, PW, 24, 'F')
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(...BRANCO)
+      doc.text(`Página ${pageNum} de ${totalPages}   |   Confidencial — uso interno`, PW / 2, PH - 8, { align: 'center' })
+      doc.text(dataArq, PW - 36, PH - 8, { align: 'right' })
+    }
+
+    // ── Dados da tabela ───────────────────────────────────────────────────────
+    const cols = ['DATA','Nº DM','CLIENTE / DESCRIÇÃO','CONDUTOR','PLACA','ORIGEM','DESTINO','KM ASF','KM TER','KM TOT','VALOR','STATUS']
+    const rows = selecionados.map((l, idx) => {
       const d = l.dados_extras || {}
       const isT = (l.tipo_formulario || 'padrao') === 'transporte'
       const km = isT ? calcKmTotais(d) : null
       const fmtK = v => v > 0 ? v.toLocaleString('pt-BR') : '—'
       return [
-        l.data || '—',
-        d.numero_diario || '—',
-        d.cliente || d.empresa || l.descricao || '—',
+        { content: l.data ? l.data.split('-').reverse().join('/') : '—', styles: { halign: 'center' } },
+        { content: d.numero_diario || '—', styles: { halign: 'center', fontStyle: 'bold' } },
+        { content: d.cliente || d.empresa || l.descricao || '—', styles: { fontStyle: 'bold' } },
         d.condutor || '—',
-        d.placa || '—',
+        { content: d.placa || '—', styles: { halign: 'center', font: 'courier' } },
         d.local_origem || '—',
         d.local_destino || '—',
-        fmtK(km?.asfalto),
-        fmtK(km?.terra),
-        fmtK(km?.total),
-        fmtCurrency(l.valor),
-        STATUS_CONF[l.status]?.label || l.status || '—',
-        (l.observacoes || d.observacao || '').slice(0, 60),
+        { content: fmtK(km?.asfalto), styles: { halign: 'right' } },
+        { content: fmtK(km?.terra),   styles: { halign: 'right' } },
+        { content: fmtK(km?.total),   styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: fmtCurrency(l.valor), styles: { halign: 'right', fontStyle: 'bold', textColor: [5,120,60] } },
+        { content: STATUS_CONF[l.status]?.label || l.status || '—', styles: { halign: 'center', fontSize: 7 } },
       ]
     })
-    autoTable(doc, {
-      head: [cols], body: rows, startY: 70,
-      styles: { fontSize: 7.5, cellPadding: 4 },
-      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [245, 245, 255] },
-      margin: { left: 40, right: 40 },
-    })
-    // Totais por km e valor
+
+    // ── Linha de totais ───────────────────────────────────────────────────────
     const totalValor = selecionados.reduce((s, l) => s + (l.valor || 0), 0)
-    const totalKmAsf = selecionados.reduce((s, l) => { const d = l.dados_extras || {}; return s + (calcKmTotais(d).asfalto || 0) }, 0)
-    const totalKmTer = selecionados.reduce((s, l) => { const d = l.dados_extras || {}; return s + (calcKmTotais(d).terra || 0) }, 0)
-    const totalKmTot = selecionados.reduce((s, l) => { const d = l.dados_extras || {}; return s + (calcKmTotais(d).total || 0) }, 0)
-    const finalY = doc.lastAutoTable?.finalY || 200
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold')
-    doc.text(`TOTAIS — Valor: ${fmtCurrency(totalValor)}  |  KM Asfalto: ${totalKmAsf.toLocaleString('pt-BR')}  |  KM Terra: ${totalKmTer.toLocaleString('pt-BR')}  |  KM Total: ${totalKmTot.toLocaleString('pt-BR')}`, 40, finalY + 20)
-    doc.save(`lancamentos_${new Date().toISOString().slice(0,10)}.pdf`)
-    toast.success(`PDF gerado com ${selecionados.length} lançamento(s).`)
+    const totalKmAsf = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras || {}).asfalto || 0), 0)
+    const totalKmTer = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras || {}).terra || 0), 0)
+    const totalKmTot = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras || {}).total || 0), 0)
+
+    const totalRowData = [
+      { content: 'TOTAIS', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold', fillColor: VERDE_ESCURO, textColor: BRANCO } },
+      { content: totalKmAsf.toLocaleString('pt-BR'), styles: { halign: 'right', fontStyle: 'bold', fillColor: VERDE_ESCURO, textColor: BRANCO } },
+      { content: totalKmTer.toLocaleString('pt-BR'), styles: { halign: 'right', fontStyle: 'bold', fillColor: VERDE_ESCURO, textColor: BRANCO } },
+      { content: totalKmTot.toLocaleString('pt-BR'), styles: { halign: 'right', fontStyle: 'bold', fillColor: VERDE_ESCURO, textColor: BRANCO } },
+      { content: fmtCurrency(totalValor), styles: { halign: 'right', fontStyle: 'bold', fillColor: VERDE_ESCURO, textColor: [134,255,178] } },
+      { content: '', styles: { fillColor: VERDE_ESCURO } },
+    ]
+
+    // ── Render tabela ─────────────────────────────────────────────────────────
+    autoTable(doc, {
+      head: [cols],
+      body: [...rows, totalRowData],
+      startY: 70,
+      margin: { left: 28, right: 28, bottom: 36 },
+      styles: {
+        fontSize: 7.5,
+        cellPadding: { top: 5, right: 5, bottom: 5, left: 5 },
+        textColor: CINZA_TEXTO,
+        lineColor: [200, 220, 210],
+        lineWidth: 0.3,
+        font: 'helvetica',
+        overflow: 'ellipsize',
+      },
+      headStyles: {
+        fillColor: VERDE_MEDIO,
+        textColor: BRANCO,
+        fontStyle: 'bold',
+        fontSize: 7.5,
+        halign: 'center',
+        minCellHeight: 20,
+      },
+      alternateRowStyles: { fillColor: CINZA_LEVE },
+      columnStyles: {
+        0:  { cellWidth: 48 },   // DATA
+        1:  { cellWidth: 36 },   // Nº DM
+        2:  { cellWidth: 100 },  // CLIENTE
+        3:  { cellWidth: 72 },   // CONDUTOR
+        4:  { cellWidth: 44 },   // PLACA
+        5:  { cellWidth: 75 },   // ORIGEM
+        6:  { cellWidth: 75 },   // DESTINO
+        7:  { cellWidth: 40 },   // KM ASF
+        8:  { cellWidth: 40 },   // KM TER
+        9:  { cellWidth: 44 },   // KM TOT
+        10: { cellWidth: 62 },   // VALOR
+        11: { cellWidth: 56 },   // STATUS
+      },
+      didDrawPage: (data) => {
+        const totalPages = doc.internal.getNumberOfPages()
+        addHeaderFooter(data.pageNumber, totalPages)
+      },
+    })
+
+    // Atualiza header/footer com total real de páginas
+    const totalPages = doc.internal.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      addHeaderFooter(i, totalPages)
+    }
+
+    // ── Bloco de assinatura (última página) ───────────────────────────────────
+    const lastY = doc.lastAutoTable?.finalY || 200
+    if (lastY + 80 < PH - 40) {
+      doc.setDrawColor(...VERDE_MEDIO)
+      doc.setLineWidth(0.5)
+      doc.line(28, lastY + 40, 200, lastY + 40)
+      doc.line(PW - 28, lastY + 40, PW - 200, lastY + 40)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.setTextColor(...CINZA_TEXTO)
+      doc.text('Responsável pela emissão', 28, lastY + 52)
+      doc.text('De acordo — Cliente', PW - 28, lastY + 52, { align: 'right' })
+      doc.setFontSize(6.5)
+      doc.setTextColor(130, 150, 140)
+      doc.text('Data: ___/___/______', 28, lastY + 64)
+      doc.text('Data: ___/___/______', PW - 28, lastY + 64, { align: 'right' })
+    }
+
+    doc.save(`lancamentos_${dataArq}.pdf`)
+    toast.success(`PDF corporativo gerado com ${selecionados.length} lançamento(s).`)
   }
 
   useEffect(() => {
