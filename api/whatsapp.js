@@ -488,26 +488,34 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       const valorFinal = f.valor_total || 0
       const fmtVal = formatBRL(valorFinal)
 
-      // Busca workspace_id via whatsapp_config (tabela de motoristas)
+      // Busca workspace_id via whatsapp_config — tenta todas as variantes do telefone
+      // (igual ao lookup de canais_mensagem, pois Z-API pode mandar 55XX ou XX)
       let wsId = null
       let wsUserId = ownerId
-      const { data: waConf } = await db.from('whatsapp_config')
-        .select('workspace_id, user_id')
-        .eq('phone_number', from)
-        .eq('ativo', true)
-        .maybeSingle()
+      let waConf = null
+      for (const v of fromVariants) {
+        const { data } = await db.from('whatsapp_config')
+          .select('workspace_id, user_id')
+          .eq('phone_number', v)
+          .eq('ativo', true)
+          .maybeSingle()
+        if (data) { waConf = data; break }
+      }
       if (waConf) {
         wsId = waConf.workspace_id
         wsUserId = waConf.user_id || ownerId
       } else if (ownerId) {
-        const { data: ws } = await db.from('workspaces')
-          .select('id')
-          .eq('owner_id', ownerId)
+        // workspaces não tem owner_id — usa workspace_members para achar o workspace do usuário
+        const { data: mem } = await db.from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', ownerId)
           .limit(1)
           .maybeSingle()
-        wsId = ws?.id || null
+        wsId = mem?.workspace_id || null
+        if (!wsUserId && wsId) wsUserId = ownerId
       }
 
+      // Garante user_id nunca null (lancamentos.user_id NOT NULL)
       if (wsId && !wsUserId) {
         const { data: membro } = await db.from('workspace_members')
           .select('user_id')
@@ -533,7 +541,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           data:         f.data || today,
           categoria:    'Transporte',
           centro_custo: f.cc || '',
-          status:       'aguardando_aprovacao',
+          status:       'rascunho',
           observacoes:  f.observacao || '',
           tipo_formulario: 'transporte',
           dados_extras:    f,
@@ -543,13 +551,13 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         if (dbErr) {
           console.error('[WA] insert lancamento error:', JSON.stringify(dbErr))
         } else if (inserted?.id) {
-          await db.from('lancamento_eventos').insert({
+          db.from('lancamento_eventos').insert({
             lancamento_id: inserted.id,
-            tipo:          'recebido_whatsapp',
-            status_para:   'aguardando_aprovacao',
-            descricao:     'Item entrou na base pela API WhatsApp.',
+            tipo:          'criado',
+            status_para:   'rascunho',
+            descricao:     'Recebido via WhatsApp — aguardando envio para aprovação.',
             usuario_nome:  from || null,
-          }).catch(() => {})
+          }).then(() => {}).catch(() => {})
         }
 
         // Monta resumo de KM para confirmação
@@ -558,24 +566,22 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         const kmAsf = kmRows.filter(r => r.tipo === 'ASFALTO').reduce((s, r) => s + parseKm(r.total), 0)
         const kmTer = kmRows.filter(r => r.tipo === 'TERRA').reduce((s, r) => s + parseKm(r.total), 0)
         const kmTotal = kmAsf + kmTer
-        const kmLinha = kmTotal > 0
-          ? `📏 *KM:* ${kmTotal.toLocaleString('pt-BR')}${kmAsf > 0 ? ` (ASF: ${kmAsf.toLocaleString('pt-BR')}` : ''}${kmTer > 0 ? ` / TER: ${kmTer.toLocaleString('pt-BR')}` : ''}${kmTotal > 0 ? ')' : ''}`
-          : null
 
-        reply = dbErr
-          ? `❌ Erro ao salvar. Contate o administrador.`
-          : [
-              `✅ *Diário do Motorista registrado!*`,
-              ``,
-              `📋 *Nº:* ${f.numero_diario || '—'}`,
-              `🏢 *Empresa:* ${f.empresa || '—'}`,
-              `📍 *Rota:* ${f.local_origem || '—'} → ${f.local_destino || '—'}`,
-              `🚗 *Placa:* ${f.placa || '—'}`,
-              kmLinha,
-              `💰 *Valor:* ${fmtVal}`,
-              ``,
-              `_Status: Pendente de aprovação_`,
-            ].filter(v => v !== null).join('\n')
+        if (dbErr) {
+          reply = `❌ Erro ao salvar. Contate o administrador.`
+        } else {
+          const linhas = [
+            `✅ *Imagem processada!*`,
+            ``,
+            `📋 Nº ${f.numero_diario || '—'} | ${f.empresa || '—'}`,
+            `💰 Valor: ${fmtVal}`,
+            kmTotal > 0 ? `📏 KM: ${kmTotal.toLocaleString('pt-BR')} (ASF: ${kmAsf.toLocaleString('pt-BR')} / TER: ${kmTer.toLocaleString('pt-BR')})` : null,
+            `🚗 Placa: ${f.placa || '—'}`,
+            ``,
+            `_Pendente de aprovação_`,
+          ].filter(v => v !== null)
+          reply = linhas.join('\n')
+        }
       } else {
         reply = `✅ *Diário do Motorista reconhecido!*\n\n💰 Valor: ${fmtVal}\n🏢 ${f.empresa || '—'}\n\n⚠️ Seu número não está configurado. Acesse *Lançamentos → WhatsApp* para ativar o registro automático.`
       }
@@ -903,7 +909,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
     return res.status(200).end()
   } catch (err) {
-    console.error('[WA] webhook error:', err.message, err.stack)
+    console.error('[WA] webhook error:', JSON.stringify({ msg: err.message, type: err.constructor?.name, stack: (err.stack || '').slice(0, 400) }))
     return res.status(200).end()
   }
 }
