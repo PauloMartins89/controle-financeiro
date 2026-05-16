@@ -1,23 +1,21 @@
 /**
  * POST /api/notify
  *
- * Envia notificação WhatsApp para o motorista quando o gestor
- * aprova, devolve ou reprova um lançamento no Faturamento.
+ * Envia notificações WhatsApp para todas as pessoas configuradas
+ * para receber mensagem quando um lançamento entrar em determinado status.
  *
  * Body: {
  *   lancamentoId : string (uuid)
- *   status       : 'aprovado' | 'devolvido' | 'reprovado'
- *   motivo?      : string   (obrigatório em 'devolvido'/'reprovado')
- *   gestorNome?  : string
+ *   status       : string  — status que foi aplicado (ex: 'aprovado', 'devolvido', ...)
+ *   motivo?      : string  — motivo (devolvido / reprovado)
+ *   gestorNome?  : string  — nome de quem executou a ação
  * }
  *
  * Fluxo:
  *  1. Busca o lançamento pelo ID
- *  2. Extrai o nome do condutor de dados_extras.condutor
- *  3. Busca o telefone em whatsapp_config WHERE nome_motorista ILIKE condutor
- *  4. Monta a mensagem conforme o status
- *  5. Envia via Z-API
- *  6. Registra em mensagens_whatsapp (direção: saida)
+ *  2. Busca todos os destinatários em status_notificacoes WHERE status = :status AND ativo = true
+ *  3. Para cada destinatário monta a mensagem e envia via Z-API
+ *  4. Registra cada envio em mensagens_whatsapp
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -55,45 +53,46 @@ function fmtDate(d) {
   return `${dia}/${m}/${y}`
 }
 
+const STATUS_LABELS = {
+  rascunho:             'Rascunho',
+  aguardando_aprovacao: 'Aguardando Aprovação',
+  aprovado:             'Aprovado',
+  devolvido:            'Devolvido para Correção',
+  corrigido:            'Corrigido / Reenviado',
+  reprovado:            'Reprovado',
+  cancelado:            'Cancelado',
+  faturado:             'Faturado',
+}
+
+const STATUS_EMOJI = {
+  rascunho:             '📝',
+  aguardando_aprovacao: '⏳',
+  aprovado:             '✅',
+  devolvido:            '⚠️',
+  corrigido:            '🔧',
+  reprovado:            '❌',
+  cancelado:            '🚫',
+  faturado:             '💰',
+}
+
 function buildMessage(status, dados, motivo, gestorNome) {
-  const num  = dados.numero_diario ? `Nº *${dados.numero_diario}*` : 'seu diário'
-  const data = dados.data ? ` de ${fmtDate(dados.data)}` : ''
-  const valor = dados.valor
-    ? `\nValor: *R$ ${Number(dados.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*`
-    : ''
-  const assinatura = gestorNome ? `\n— _${gestorNome}_` : ''
+  const num    = dados.numero_diario ? `Nº *${dados.numero_diario}*` : 'um diário'
+  const data   = dados.data ? ` de ${fmtDate(dados.data)}` : ''
+  const cond   = dados.condutor ? `\n🚛 Motorista: *${dados.condutor}*` : ''
+  const placa  = dados.placa    ? `\n🚗 Placa: *${dados.placa}*`        : ''
+  const valor  = dados.valor    ? `\n💵 Valor: *R$ ${Number(dados.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*` : ''
+  const emoji  = STATUS_EMOJI[status] || '🔔'
+  const label  = STATUS_LABELS[status] || status
+  const gestor = gestorNome ? `\n\n— _${gestorNome}_` : ''
+  const motivoLine = motivo ? `\n\n📝 *Motivo:* ${motivo}` : ''
 
-  if (status === 'aprovado') {
-    return (
-      `✅ *Diário Aprovado!*\n\n` +
-      `${num}${data} foi *aprovado*.\n` +
-      `${valor}\n\n` +
-      `Tudo certo! Em breve o pagamento será processado.` +
-      assinatura
-    )
-  }
-
-  if (status === 'devolvido') {
-    return (
-      `⚠️ *Diário Devolvido para Correção*\n\n` +
-      `${num}${data} foi devolvido.\n\n` +
-      `📝 *Motivo:* ${motivo || 'Sem motivo informado.'}\n\n` +
-      `Por favor, faça a correção e reenvie o diário.` +
-      assinatura
-    )
-  }
-
-  if (status === 'reprovado') {
-    return (
-      `❌ *Diário Reprovado*\n\n` +
-      `${num}${data} foi *reprovado*.\n\n` +
-      `📝 *Motivo:* ${motivo || 'Sem motivo informado.'}\n\n` +
-      `Entre em contato com o gestor para mais informações.` +
-      assinatura
-    )
-  }
-
-  return null
+  return (
+    `${emoji} *Lançamento — ${label}*\n\n` +
+    `Diário ${num}${data} mudou de status para *${label}*.` +
+    cond + placa + valor +
+    motivoLine +
+    gestor
+  )
 }
 
 export default async function handler(req, res) {
@@ -105,12 +104,6 @@ export default async function handler(req, res) {
 
   if (!lancamentoId || !status) {
     return res.status(400).json({ error: 'lancamentoId e status são obrigatórios' })
-  }
-
-  const NOTIFICAVEIS = ['aprovado', 'devolvido', 'reprovado']
-  if (!NOTIFICAVEIS.includes(status)) {
-    // Status sem notificação (ex: faturado, cancelado) — retorna ok silencioso
-    return res.status(200).json({ sent: false, reason: 'status não notificável' })
   }
 
   const db = getDb()
@@ -127,59 +120,46 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: 'Lançamento não encontrado' })
   }
 
-  const dados = lancamento.dados_extras || {}
-  const condutor = (dados.condutor || '').trim()
-
-  if (!condutor) {
-    return res.status(200).json({ sent: false, reason: 'sem condutor no lançamento' })
-  }
-
-  // 2. Busca telefone em whatsapp_config (match case-insensitive + parcial)
-  const { data: configs } = await db
-    .from('whatsapp_config')
-    .select('phone_number, nome_motorista, ativo')
+  // 2. Busca destinatários configurados para este status
+  const { data: destinatarios, error: errDest } = await db
+    .from('status_notificacoes')
+    .select('id, nome_destinatario, phone_number')
     .eq('workspace_id', lancamento.workspace_id)
+    .eq('status', status)
     .eq('ativo', true)
 
-  if (!configs || configs.length === 0) {
-    return res.status(200).json({ sent: false, reason: 'nenhum motorista cadastrado no whatsapp_config' })
+  if (errDest) {
+    console.error('[notify] erro ao buscar destinatários:', errDest)
+    return res.status(500).json({ error: 'Erro ao buscar destinatários' })
   }
 
-  // Match: nome_motorista contém partes do condutor ou vice-versa
-  const condutorLower = condutor.toLowerCase()
-  const match = configs.find(c => {
-    const nome = c.nome_motorista?.toLowerCase() || ''
-    return nome === condutorLower ||
-           nome.includes(condutorLower) ||
-           condutorLower.includes(nome)
-  })
-
-  if (!match) {
-    console.warn(`[notify] condutor "${condutor}" não encontrado em whatsapp_config`)
-    return res.status(200).json({ sent: false, reason: `condutor "${condutor}" não tem telefone cadastrado` })
+  if (!destinatarios || destinatarios.length === 0) {
+    return res.status(200).json({ sent: 0, reason: `Nenhum destinatário configurado para status "${status}"` })
   }
 
-  // 3. Monta e envia a mensagem
-  const dadosMsg = { ...dados, data: lancamento.data, valor: lancamento.valor }
-  const texto = buildMessage(status, dadosMsg, motivo, gestorNome)
-
-  if (!texto) {
-    return res.status(200).json({ sent: false, reason: 'mensagem não montada' })
+  // 3. Monta a mensagem (igual para todos os destinatários deste status)
+  const dados = {
+    ...(lancamento.dados_extras || {}),
+    data:  lancamento.data,
+    valor: lancamento.valor,
   }
+  const texto = buildMessage(status, dados, motivo || null, gestorNome || null)
 
-  const enviado = await sendWA(match.phone_number, texto)
+  // 4. Envia para cada destinatário
+  const resultados = await Promise.all(
+    destinatarios.map(async dest => {
+      const enviado = await sendWA(dest.phone_number, texto)
+      // Registra no log
+      db.from('mensagens_whatsapp').insert({
+        workspace_id: lancamento.workspace_id,
+        telefone:     dest.phone_number,
+        direcao:      enviado ? 'saida' : 'saida_erro',
+        conteudo:     texto,
+      }).then(() => {}).catch(() => {})
+      return { nome: dest.nome_destinatario, phone: dest.phone_number, enviado }
+    })
+  )
 
-  // 4. Registra saída no log de mensagens
-  db.from('mensagens_whatsapp').insert({
-    workspace_id: lancamento.workspace_id,
-    telefone:     match.phone_number,
-    direcao:      enviado ? 'saida' : 'saida_erro',
-    conteudo:     texto,
-  }).then(() => {}).catch(() => {})
-
-  return res.status(200).json({
-    sent:  enviado,
-    phone: match.phone_number,
-    nome:  match.nome_motorista,
-  })
+  const totalEnviado = resultados.filter(r => r.enviado).length
+  return res.status(200).json({ sent: totalEnviado, total: resultados.length, resultados })
 }
