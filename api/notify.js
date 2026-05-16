@@ -128,9 +128,11 @@ export default async function handler(req, res) {
     .eq('status', status)
     .eq('ativo', true)
 
+  console.log(`[notify] workspace=${lancamento.workspace_id} status=${status} destinatários=${destinatarios?.length ?? 'ERR'} errDest=${errDest?.message || 'none'}`)
+
   if (errDest) {
     console.error('[notify] erro ao buscar destinatários:', errDest)
-    return res.status(500).json({ error: 'Erro ao buscar destinatários' })
+    return res.status(500).json({ error: 'Erro ao buscar destinatários', detail: errDest.message })
   }
 
   if (!destinatarios || destinatarios.length === 0) {
@@ -151,10 +153,9 @@ export default async function handler(req, res) {
       const enviado = await sendWA(dest.phone_number, texto)
       // Registra no log
       db.from('mensagens_whatsapp').insert({
-        workspace_id: lancamento.workspace_id,
-        telefone:     dest.phone_number,
-        direcao:      enviado ? 'saida' : 'saida_erro',
-        conteudo:     texto,
+        telefone: dest.phone_number,
+        direcao:  enviado ? 'saida' : 'saida_erro',
+        conteudo: texto,
       }).then(() => {}).catch(() => {})
       return { nome: dest.nome_destinatario, phone: dest.phone_number, enviado }
     })
