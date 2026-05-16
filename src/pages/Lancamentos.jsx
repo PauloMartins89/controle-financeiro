@@ -1479,9 +1479,7 @@ export default function Lancamentos() {
       {/* Abas */}
       <div style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
         {[
-          { key: 'lancamentos', label: 'Lançamentos',    Icon: DocumentTextIcon },
-          { key: 'whatsapp',    label: 'WhatsApp',       Icon: PhoneIcon },
-          { key: 'notificacoes', label: 'Notificações',  Icon: BellAlertIcon },
+          { key: 'lancamentos', label: 'Lançamentos', Icon: DocumentTextIcon },
         ].map(({ key, label, Icon }) => (
           <button key={key} onClick={() => setTab(key)} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '12px 16px',
@@ -1496,12 +1494,6 @@ export default function Lancamentos() {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-
-        {/* ── ABA WHATSAPP ── */}
-        {tab === 'whatsapp' && <WhatsAppPanel workspaceId={workspaceId} />}
-
-        {/* ── ABA NOTIFICAÇÕES ── */}
-        {tab === 'notificacoes' && <StatusNotifPanel workspaceId={workspaceId} />}
 
         {/* ── ABA LANÇAMENTOS ── */}
         {tab === 'lancamentos' && <>
