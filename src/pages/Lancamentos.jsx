@@ -1424,36 +1424,46 @@ export default function Lancamentos() {
     const d = l.dados_extras || {}
     const isT = (l.tipo_formulario || 'padrao') === 'transporte'
     const km = isT ? calcKmTotais(d) : null
-    const parseKm = v => { const n = parseFloat(String(v || '').replace(/[^\d.,]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
     const kmRows = (d.km_rows || [])
-    const kmDetail = kmRows.map(r => `${r.tipo} S:${r.saida||'-'} E:${r.entrada||'-'} T:${r.total||'-'}`).join(' | ')
+
+    // Expande cada linha de KM em colunas individuais (até 8 linhas)
+    const kmCols = {}
+    for (let i = 0; i < 8; i++) {
+      const r = kmRows[i] || {}
+      const label = `KM${i + 1}`
+      kmCols[`${label} TIPO`]    = r.tipo    || ''
+      kmCols[`${label} SAÍDA`]   = r.saida   || ''
+      kmCols[`${label} ENTRADA`] = r.entrada || ''
+      kmCols[`${label} TOTAL`]   = r.total   || ''
+    }
+
     return {
-      'DATA':             l.data || '',
-      'Nº DIÁRIO':        d.numero_diario || '',
-      'TIPO FORMULÁRIO':  l.tipo_formulario || 'padrao',
-      'STATUS':           (STATUS_CONF[l.status]?.label || l.status || ''),
-      'CLIENTE':          d.cliente || d.empresa || '',
-      'DESCRIÇÃO':        l.descricao || '',
-      'CONDUTOR':         d.condutor || '',
-      'PLACA':            d.placa || '',
-      'ORIGEM':           d.local_origem || '',
-      'DESTINO':          d.local_destino || '',
-      'SOLICITANTE':      d.solicitante || '',
-      'CC/EMPRESA':       l.centro_custo || '',
-      'KM ASFALTO':       km ? km.asfalto : '',
-      'KM TERRA':         km ? km.terra : '',
-      'KM TOTAL':         km ? km.total : '',
-      'DETALHE KM':       kmDetail,
-      'PEDÁGIO':          d.pedagio != null ? d.pedagio : '',
-      'PERNOITE':         d.pernoite != null ? d.pernoite : '',
-      'REFEIÇÃO':         d.refeicao != null ? d.refeicao : '',
+      'DATA':              l.data || '',
+      'Nº DIÁRIO':         d.numero_diario || '',
+      'TIPO FORMULÁRIO':   l.tipo_formulario || 'padrao',
+      'STATUS':            (STATUS_CONF[l.status]?.label || l.status || ''),
+      'CLIENTE':           d.cliente || d.empresa || '',
+      'DESCRIÇÃO':         l.descricao || '',
+      'CONDUTOR':          d.condutor || '',
+      'PLACA':             d.placa || '',
+      'ORIGEM':            d.local_origem || '',
+      'DESTINO':           d.local_destino || '',
+      'SOLICITANTE':       d.solicitante || '',
+      'CC/EMPRESA':        l.centro_custo || '',
+      'KM ASFALTO TOTAL':  km ? km.asfalto : '',
+      'KM TERRA TOTAL':    km ? km.terra : '',
+      'KM TOTAL GERAL':    km ? km.total : '',
+      ...kmCols,
+      'PEDÁGIO':           d.pedagio != null ? d.pedagio : '',
+      'PERNOITE':          d.pernoite != null ? d.pernoite : '',
+      'REFEIÇÃO':          d.refeicao != null ? d.refeicao : '',
       'OUTROS ADICIONAIS': d.outros_adicionais != null ? d.outros_adicionais : '',
-      'DESCONTO':         d.desconto != null ? d.desconto : '',
-      'VALOR TOTAL':      l.valor || 0,
-      'TIPO':             l.tipo || '',
-      'CATEGORIA':        l.categoria || '',
-      'OBSERVAÇÕES':      l.observacoes || d.observacao || '',
-      'CRIADO EM':        l.created_at ? l.created_at.slice(0, 19).replace('T', ' ') : '',
+      'DESCONTO':          d.desconto != null ? d.desconto : '',
+      'VALOR TOTAL':       l.valor || 0,
+      'TIPO':              l.tipo || '',
+      'CATEGORIA':         l.categoria || '',
+      'OBSERVAÇÕES':       l.observacoes || d.observacao || '',
+      'CRIADO EM':         l.created_at ? l.created_at.slice(0, 19).replace('T', ' ') : '',
     }
   }
 
@@ -1494,7 +1504,7 @@ export default function Lancamentos() {
     const fillLight  = { patternType: 'solid', fgColor: { rgb: 'F0F7F3' } } // verde muito claro
     const fillWhite  = { patternType: 'solid', fgColor: { rgb: 'FFFFFF' } }
     const dataFont   = { sz: 9, color: { rgb: '1A2D23' } }
-    const totalKeys  = ['KM ASFALTO','KM TERRA','KM TOTAL','VALOR TOTAL']
+    const totalKeys  = ['KM ASFALTO TOTAL','KM TERRA TOTAL','KM TOTAL GERAL','VALOR TOTAL','KM1 TOTAL','KM2 TOTAL','KM3 TOTAL','KM4 TOTAL','KM5 TOTAL','KM6 TOTAL','KM7 TOTAL','KM8 TOTAL']
 
     rows.forEach((row, ri) => {
       headerKeys.forEach((key, ci) => {
@@ -1517,11 +1527,11 @@ export default function Lancamentos() {
     const totalKmTot  = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras || {}).total || 0), 0)
     const totalRow = {}
     headerKeys.forEach(k => { totalRow[k] = '' })
-    totalRow['DATA']         = 'TOTAL'
-    totalRow['KM ASFALTO']   = totalKmAsf
-    totalRow['KM TERRA']     = totalKmTer
-    totalRow['KM TOTAL']     = totalKmTot
-    totalRow['VALOR TOTAL']  = totalValor
+    totalRow['DATA']              = 'TOTAL'
+    totalRow['KM ASFALTO TOTAL']  = totalKmAsf
+    totalRow['KM TERRA TOTAL']    = totalKmTer
+    totalRow['KM TOTAL GERAL']    = totalKmTot
+    totalRow['VALOR TOTAL']       = totalValor
     XLSX.utils.sheet_add_json(ws, [totalRow], { skipHeader: true, origin: -1 })
     const totalRowIdx = rows.length + 1
     const fillTotal = { patternType: 'solid', fgColor: { rgb: '1A5C38' } }
