@@ -395,6 +395,14 @@ function PagamentoModal({ selecionados, workspaceId, userId, onClose, onSave }) 
         })
       }
       toast.success(`${selecionados.length} lançamento(s) faturado(s)!`)
+      // Notificações WhatsApp para cada lançamento faturado (fire-and-forget)
+      for (const l of selecionados) {
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lancamentoId: l.id, status: 'faturado' }),
+        }).catch(() => {})
+      }
       onSave()
     } catch (e) {
       toast.error('Erro ao registrar pagamento: ' + e.message)
