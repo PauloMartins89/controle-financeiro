@@ -564,6 +564,15 @@ export default function Faturamento() {
     })
     const msgs = { aprovado: 'Aprovado!', devolvido: 'Devolvido para correção.', reprovado: 'Reprovado.', faturado: 'Marcado como faturado!' }
     toast.success(msgs[newStatus] || 'Status atualizado.')
+
+    // Notificação WhatsApp para o motorista (fire-and-forget)
+    if (['aprovado', 'devolvido', 'reprovado'].includes(newStatus)) {
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lancamentoId: id, status: newStatus, motivo: motivo || null }),
+      }).catch(() => {})
+    }
   }
 
   async function handleDevolverConfirm() {
