@@ -96,6 +96,20 @@ function buildMessage(status, dados, motivo, gestorNome) {
 }
 
 export default async function handler(req, res) {
+  // GET ?lancamentoId=xxx&status=faturado  → diagnóstico sem envio
+  if (req.method === 'GET') {
+    const { lancamentoId, status } = req.query || {}
+    if (!lancamentoId || !status) {
+      return res.status(400).json({ error: 'lancamentoId e status são obrigatórios' })
+    }
+    const db = getDb()
+    const { data: lanc, error: errL } = await db.from('lancamentos').select('id, workspace_id, status').eq('id', lancamentoId).single()
+    if (errL || !lanc) return res.status(404).json({ error: 'Lançamento não encontrado', detail: errL?.message })
+    const { data: dests, error: errD } = await db.from('status_notificacoes').select('*').eq('workspace_id', lanc.workspace_id).eq('status', status).eq('ativo', true)
+    const { data: allNotif, error: errAll } = await db.from('status_notificacoes').select('*').eq('workspace_id', lanc.workspace_id)
+    return res.status(200).json({ lancamento_workspace_id: lanc.workspace_id, lancamento_status_atual: lanc.status, destinatarios_para_status: dests, errD: errD?.message, todos_para_workspace: allNotif, errAll: errAll?.message })
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }

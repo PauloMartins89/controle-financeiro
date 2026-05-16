@@ -395,13 +395,15 @@ function PagamentoModal({ selecionados, workspaceId, userId, onClose, onSave }) 
         })
       }
       toast.success(`${selecionados.length} lançamento(s) faturado(s)!`)
-      // Notificações WhatsApp para cada lançamento faturado (fire-and-forget)
+      // Notificações WhatsApp para cada lançamento faturado
       for (const l of selecionados) {
         fetch('/api/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ lancamentoId: l.id, status: 'faturado' }),
-        }).catch(() => {})
+        })
+          .then(r => r.json().then(data => console.log('[notify faturado]', l.id, r.status, data)))
+          .catch(err => console.error('[notify faturado] fetch error:', err))
       }
       onSave()
     } catch (e) {
