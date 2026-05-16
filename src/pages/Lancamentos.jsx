@@ -3,6 +3,9 @@ import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import * as XLSX from 'xlsx'
 import {
   PlusIcon, DocumentArrowUpIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XCircleIcon, ClockIcon, PencilIcon,
@@ -11,7 +14,7 @@ import {
   Cog6ToothIcon, PhoneIcon, UserPlusIcon, QrCodeIcon,
   PaperAirplaneIcon, ArrowUturnLeftIcon, WrenchScrewdriverIcon,
   NoSymbolIcon, BanknotesIcon, ArrowPathIcon, MapPinIcon,
-  BellAlertIcon,
+  BellAlertIcon, TableCellsIcon, DocumentChartBarIcon,
 } from '@heroicons/react/24/outline'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1407,6 +1410,112 @@ export default function Lancamentos() {
   const [editItem, setEditItem]         = useState(null)
   const [rotaItem, setRotaItem]         = useState(null)
   const [expandedId, setExpandedId]     = useState(null)
+  const [selectedIds, setSelectedIds]   = useState(new Set())
+
+  function toggleSelect(id) {
+    setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function toggleSelectAll() {
+    if (filtered.every(l => selectedIds.has(l.id))) setSelectedIds(new Set())
+    else setSelectedIds(new Set(filtered.map(l => l.id)))
+  }
+
+  function buildRow(l) {
+    const d = l.dados_extras || {}
+    const isT = (l.tipo_formulario || 'padrao') === 'transporte'
+    const km = isT ? calcKmTotais(d) : null
+    const parseKm = v => { const n = parseFloat(String(v || '').replace(/[^\d.,]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
+    const kmRows = (d.km_rows || [])
+    const kmDetail = kmRows.map(r => `${r.tipo} S:${r.saida||'-'} E:${r.entrada||'-'} T:${r.total||'-'}`).join(' | ')
+    return {
+      'DATA':             l.data || '',
+      'Nº DIÁRIO':        d.numero_diario || '',
+      'TIPO FORMULÁRIO':  l.tipo_formulario || 'padrao',
+      'STATUS':           (STATUS_CONF[l.status]?.label || l.status || ''),
+      'CLIENTE':          d.cliente || d.empresa || '',
+      'DESCRIÇÃO':        l.descricao || '',
+      'CONDUTOR':         d.condutor || '',
+      'PLACA':            d.placa || '',
+      'ORIGEM':           d.local_origem || '',
+      'DESTINO':          d.local_destino || '',
+      'SOLICITANTE':      d.solicitante || '',
+      'CC/EMPRESA':       l.centro_custo || '',
+      'KM ASFALTO':       km ? km.asfalto : '',
+      'KM TERRA':         km ? km.terra : '',
+      'KM TOTAL':         km ? km.total : '',
+      'DETALHE KM':       kmDetail,
+      'PEDÁGIO':          d.pedagio != null ? d.pedagio : '',
+      'PERNOITE':         d.pernoite != null ? d.pernoite : '',
+      'REFEIÇÃO':         d.refeicao != null ? d.refeicao : '',
+      'OUTROS ADICIONAIS': d.outros_adicionais != null ? d.outros_adicionais : '',
+      'DESCONTO':         d.desconto != null ? d.desconto : '',
+      'VALOR TOTAL':      l.valor || 0,
+      'TIPO':             l.tipo || '',
+      'CATEGORIA':        l.categoria || '',
+      'OBSERVAÇÕES':      l.observacoes || d.observacao || '',
+      'CRIADO EM':        l.created_at ? l.created_at.slice(0, 19).replace('T', ' ') : '',
+    }
+  }
+
+  function exportCSV() {
+    const rows = filtered.filter(l => selectedIds.has(l.id)).map(buildRow)
+    if (!rows.length) { toast('Selecione ao menos um lançamento.'); return }
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos')
+    XLSX.writeFile(wb, `lancamentos_${new Date().toISOString().slice(0,10)}.xlsx`)
+    toast.success(`${rows.length} lançamento(s) exportado(s) para Excel.`)
+  }
+
+  function exportPDF() {
+    const selecionados = filtered.filter(l => selectedIds.has(l.id))
+    if (!selecionados.length) { toast('Selecione ao menos um lançamento.'); return }
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+    const geradoEm = new Date().toLocaleString('pt-BR')
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold')
+    doc.text('Relatório de Lançamentos', 40, 40)
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal')
+    doc.text(`Gerado em: ${geradoEm}  |  Total: ${selecionados.length} registro(s)`, 40, 56)
+    const cols = ['DATA','Nº DM','CLIENTE','CONDUTOR','PLACA','ORIGEM','DESTINO','KM ASF','KM TER','KM TOT','VALOR','STATUS','OBSERVAÇÕES']
+    const rows = selecionados.map(l => {
+      const d = l.dados_extras || {}
+      const isT = (l.tipo_formulario || 'padrao') === 'transporte'
+      const km = isT ? calcKmTotais(d) : null
+      const fmtK = v => v > 0 ? v.toLocaleString('pt-BR') : '—'
+      return [
+        l.data || '—',
+        d.numero_diario || '—',
+        d.cliente || d.empresa || l.descricao || '—',
+        d.condutor || '—',
+        d.placa || '—',
+        d.local_origem || '—',
+        d.local_destino || '—',
+        fmtK(km?.asfalto),
+        fmtK(km?.terra),
+        fmtK(km?.total),
+        fmtCurrency(l.valor),
+        STATUS_CONF[l.status]?.label || l.status || '—',
+        (l.observacoes || d.observacao || '').slice(0, 60),
+      ]
+    })
+    autoTable(doc, {
+      head: [cols], body: rows, startY: 70,
+      styles: { fontSize: 7.5, cellPadding: 4 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 255] },
+      margin: { left: 40, right: 40 },
+    })
+    // Totais por km e valor
+    const totalValor = selecionados.reduce((s, l) => s + (l.valor || 0), 0)
+    const totalKmAsf = selecionados.reduce((s, l) => { const d = l.dados_extras || {}; return s + (calcKmTotais(d).asfalto || 0) }, 0)
+    const totalKmTer = selecionados.reduce((s, l) => { const d = l.dados_extras || {}; return s + (calcKmTotais(d).terra || 0) }, 0)
+    const totalKmTot = selecionados.reduce((s, l) => { const d = l.dados_extras || {}; return s + (calcKmTotais(d).total || 0) }, 0)
+    const finalY = doc.lastAutoTable?.finalY || 200
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold')
+    doc.text(`TOTAIS — Valor: ${fmtCurrency(totalValor)}  |  KM Asfalto: ${totalKmAsf.toLocaleString('pt-BR')}  |  KM Terra: ${totalKmTer.toLocaleString('pt-BR')}  |  KM Total: ${totalKmTot.toLocaleString('pt-BR')}`, 40, finalY + 20)
+    doc.save(`lancamentos_${new Date().toISOString().slice(0,10)}.pdf`)
+    toast.success(`PDF gerado com ${selecionados.length} lançamento(s).`)
+  }
 
   useEffect(() => {
     supabase?.auth.getUser().then(({ data }) => setUserId(data?.user?.id || null))
@@ -1533,6 +1642,16 @@ export default function Lancamentos() {
             <option value="cancelado">Cancelados</option>
             <option value="todos">Todos</option>
           </select>
+          {selectedIds.size > 0 && (
+            <>
+              <button onClick={exportCSV} title={`Exportar ${selectedIds.size} selecionado(s) para Excel/CSV`} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <TableCellsIcon style={{ width: 16, height: 16 }} /> Excel ({selectedIds.size})
+              </button>
+              <button onClick={exportPDF} title={`Exportar ${selectedIds.size} selecionado(s) para PDF`} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <DocumentChartBarIcon style={{ width: 16, height: 16 }} /> PDF ({selectedIds.size})
+              </button>
+            </>
+          )}
           <button onClick={() => setShowDigital(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
             <DocumentArrowUpIcon style={{ width: 16, height: 16 }} /> Digitalizar
           </button>
@@ -1554,6 +1673,13 @@ export default function Lancamentos() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                  <th style={{ padding: '10px 12px', width: 36, textAlign: 'center' }}>
+                    <input type="checkbox"
+                      checked={filtered.length > 0 && filtered.every(l => selectedIds.has(l.id))}
+                      onChange={toggleSelectAll}
+                      style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#818cf8' }}
+                    />
+                  </th>
                   {['DATA', 'Nº DM', 'CLIENTE / DESCRIÇÃO', 'ORIGEM', 'DESTINO', 'PLACA', 'KM ASF', 'KM TER', 'KM TOTAL', 'VALOR', 'STATUS', ''].map(h => (
                     <th key={h} style={{ padding: '10px 12px', textAlign: (h === 'VALOR' || h === 'KM ASF' || h === 'KM TER' || h === 'KM TOTAL') ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
@@ -1566,10 +1692,19 @@ export default function Lancamentos() {
                   const km = isTransporte ? calcKmTotais(d) : null
                   const fmtKm = v => v > 0 ? v.toLocaleString('pt-BR') : '—'
                   return (
-                    <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
-                      onMouseLeave={e => e.currentTarget.style.background = ''}
+                    <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s', background: selectedIds.has(l.id) ? 'rgba(99,102,241,0.07)' : '' }}
+                      onMouseEnter={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = 'rgba(255,255,255,0.025)' }}
+                      onMouseLeave={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = '' }}
                     >
+                      {/* CHECKBOX */}
+                      <td style={{ padding: '10px 12px', textAlign: 'center', width: 36 }}>
+                        <input type="checkbox"
+                          checked={selectedIds.has(l.id)}
+                          onChange={() => toggleSelect(l.id)}
+                          onClick={e => e.stopPropagation()}
+                          style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#818cf8' }}
+                        />
+                      </td>
                       {/* DATA */}
                       <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 12 }}>{fmtDate(l.data)}</td>
                       {/* Nº DM */}
