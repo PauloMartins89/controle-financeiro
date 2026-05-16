@@ -247,7 +247,7 @@ export default function App() {
     // Tempo real — cria o canal só após carregar (usuário autenticado)
     let channel = null
     function setupChannel() {
-      if (channel) supabase.removeChannel(channel)
+      if (channel) { try { supabase.removeChannel(channel) } catch (_) {} }
       channel = supabase
         .channel('db-changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'despesas' }, () => load())
@@ -266,7 +266,7 @@ export default function App() {
     // Limpa o store e recarrega ao trocar de usuário
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
-        if (channel) { supabase.removeChannel(channel); channel = null }
+        if (channel) { try { supabase.removeChannel(channel) } catch (_) {} channel = null }
         set({ ...EMPTY_STATE })
         setReady(true)
       }
@@ -279,7 +279,7 @@ export default function App() {
     load().then(() => setupChannel())
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
       subscription.unsubscribe()
     }
   }, [])
