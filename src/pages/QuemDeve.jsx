@@ -3,7 +3,63 @@ import Header from '../components/Header'
 import Avatar from '../components/Avatar'
 import useStore from '../store/useStore'
 import { formatCurrency, getCategoryIcon } from '../lib/utils'
-import { CheckCircleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon, ChevronDownIcon, ChevronUpIcon, LightBulbIcon } from '@heroicons/react/24/outline'
+
+function SplitInsights({ expenses, people }) {
+  // Para cada par (pagador, categoria), calcula quem paga mais
+  const pagadorPorCategoria = useMemo(() => {
+    const map = {}
+    expenses.filter(e => e.pago_por && e.participantes?.length > 1).forEach(e => {
+      const cat = e.categoria || 'Outros'
+      if (!map[cat]) map[cat] = {}
+      map[cat][e.pago_por] = (map[cat][e.pago_por] || 0) + (parseFloat(e.valor) || 0)
+    })
+    return Object.entries(map).map(([cat, pagadores]) => {
+      const [topId, topVal] = Object.entries(pagadores).sort((a, b) => b[1] - a[1])[0]
+      const total = Object.values(pagadores).reduce((s, v) => s + v, 0)
+      const pct = Math.round((topVal / total) * 100)
+      const pessoa = people.find(p => p.id === topId)
+      return { cat, pessoa, pct, total }
+    }).filter(r => r.pct > 60 && r.total > 0).sort((a, b) => b.total - a.total).slice(0, 4)
+  }, [expenses, people])
+
+  if (pagadorPorCategoria.length === 0) return null
+
+  return (
+    <div className="card" style={{ padding: 20, marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <LightBulbIcon style={{ width: 18, height: 18, color: '#f59e0b' }} />
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>Split Inteligente</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Quem costuma pagar em cada categoria (baseado no histórico)</div>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+        {pagadorPorCategoria.map(({ cat, pessoa, pct, total }) => (
+          <div key={cat} style={{ padding: 12, background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 20 }}>{getCategoryIcon(cat)}</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>{cat}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: pessoa?.cor || '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                {pessoa?.avatar || pessoa?.nome?.[0] || '?'}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>{pessoa?.apelido || pessoa?.nome || 'Desconhecido'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>paga {pct}% das vezes</div>
+              </div>
+            </div>
+            <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)' }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: pct > 80 ? '#ef4444' : '#f59e0b', borderRadius: 2 }} />
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{formatCurrency(total)} histórico</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function QuemDeve() {
   const { expenses, people, groups, getDebitos, settleDebt, getOwner, getDevedoresParaOwner } = useStore()

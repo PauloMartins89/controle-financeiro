@@ -23,6 +23,8 @@ import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
 import Faturamento from './pages/Faturamento'
 import Pagamentos from './pages/Pagamentos'
+import ContasPagar from './pages/ContasPagar'
+import LotesCliente from './pages/LotesCliente'
 import Login from './pages/Login'
 import Acessos from './pages/Acessos'
 import AdminPanel from './pages/AdminPanel'
@@ -148,7 +150,7 @@ export default function App() {
         { data: negocios },
         { data: proventos },
         { data: closures },
-        { data: wsMember },
+        { data: wsMembers },
       ] = await Promise.all([
         supabase.from('pessoas').select('*'),
         supabase.from('grupos').select('*'),
@@ -160,20 +162,23 @@ export default function App() {
         supabase.from('negocios').select('*'),
         supabase.from('proventos').select('*').order('data', { ascending: false }),
         supabase.from('closures').select('*').order('mes', { ascending: true }),
-        supabase.from('workspace_members').select('workspace_id').maybeSingle(),
+        supabase.from('workspace_members').select('workspace_id').limit(10),
       ])
-      // Carrega módulos habilitados do workspace
-      const workspaceId = wsMember?.workspace_id || null
+      // Usa o workspace com mais módulos configurados (usuário pode ter múltiplos)
+      const allWorkspaceIds = (wsMembers || []).map(m => m.workspace_id).filter(Boolean)
+      const workspaceId = allWorkspaceIds[0] || null
       let enabledModules = null
-      if (workspaceId) {
+      if (allWorkspaceIds.length > 0) {
         const { data: modulesData } = await supabase
           .from('workspace_modules')
-          .select('module_key, enabled')
-          .eq('workspace_id', workspaceId)
-        if (modulesData) {
-          enabledModules = modulesData
-            .filter(m => m.enabled)
-            .map(m => m.module_key)
+          .select('module_key, enabled, workspace_id')
+          .in('workspace_id', allWorkspaceIds)
+        if (modulesData && modulesData.length > 0) {
+          // Coleta módulos habilitados em QUALQUER workspace do usuário (union)
+          const allEnabled = [...new Set(
+            modulesData.filter(m => m.enabled).map(m => m.module_key)
+          )]
+          if (allEnabled.length > 0) enabledModules = allEnabled
         }
       }
       const loadedPeople = (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
@@ -321,8 +326,10 @@ export default function App() {
                   <Route path="/escanear" element={<EscanearRecibo />} />
                   <Route path="/notas-fiscais" element={<NotasFiscais />} />
                   <Route path="/lancamentos" element={<Lancamentos />} />
+                  <Route path="/lotes-cliente" element={<LotesCliente />} />
                   <Route path="/faturamento" element={<Faturamento />} />
                   <Route path="/pagamentos" element={<Pagamentos />} />
+                  <Route path="/contas-pagar" element={<ContasPagar />} />
                   <Route path="/acessos" element={<RequireAdmin><Acessos /></RequireAdmin>} />
                   <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
                 </Routes>

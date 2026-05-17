@@ -9,10 +9,15 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+      },
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
-        name: 'RateioPro — Controle Financeiro',
-        short_name: 'RateioPro',
+        name: 'Dividi Aí — Controle Financeiro',
+        short_name: 'Dividi Aí',
         description: 'Controle Financeiro Inteligente',
         theme_color: '#0f172a',
         background_color: '#0f172a',

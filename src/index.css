@@ -2,19 +2,36 @@
 
 @layer base {
   :root {
-    --bg-primary: #0a0f1e;
-    --bg-secondary: #111827;
-    --bg-card: #1a2035;
-    --bg-card-hover: #1e2745;
-    --accent: #6366f1;
-    --accent-hover: #818cf8;
-    --accent-glow: rgba(99, 102, 241, 0.3);
-    --success: #10b981;
+    --bg-primary: #0d0f12;
+    --bg-secondary: #13161a;
+    --bg-card: #1a1d22;
+    --bg-card-hover: #1f2329;
+    --accent: #00c896;
+    --accent-hover: #00e6aa;
+    --accent-glow: rgba(0, 200, 150, 0.25);
+    --accent-sidebar: #00c896;
+    --success: #00c896;
     --danger: #ef4444;
-    --warning: #f59e0b;
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
-    --border: rgba(255,255,255,0.07);
+    --warning: #f97316;
+    --text-primary: #e8eaed;
+    --text-secondary: #8a9099;
+    --border: rgba(255,255,255,0.06);
+  }
+
+  :root[data-theme="light"] {
+    --bg-primary: #e8eaf6;
+    --bg-secondary: #f0f1fa;
+    --bg-card: #f5f6ff;
+    --bg-card-hover: #eceeff;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-glow: rgba(99,102,241,0.2);
+    --success: #059669;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border: rgba(99,102,241,0.18);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,8 +45,10 @@
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.4); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.7); }
+  ::-webkit-scrollbar-thumb { background: rgba(0,200,150,0.3); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,200,150,0.6); }
+
+  /* Logo sempre visível — card verde fixo no sidebar */
 }
 
 @layer components {
@@ -39,24 +58,36 @@
     border-radius: 16px;
     transition: all 0.2s ease;
   }
-  .card:hover { background: var(--bg-card-hover); border-color: rgba(99,102,241,0.2); }
+  .card:hover { background: var(--bg-card-hover); border-color: rgba(0,200,150,0.15); }
+
+  /* Cards com gradiente sutil no modo claro */
+  :root[data-theme="light"] .card {
+    background: linear-gradient(145deg, #f5f6ff 0%, #eceeff 100%);
+    border-color: rgba(99,102,241,0.2);
+    box-shadow: 0 2px 6px rgba(99,102,241,0.1), 0 6px 20px rgba(99,102,241,0.08);
+  }
+  :root[data-theme="light"] .card:hover {
+    background: linear-gradient(145deg, #eceeff 0%, #e4e6ff 100%);
+    border-color: rgba(99,102,241,0.3);
+    box-shadow: 0 4px 12px rgba(99,102,241,0.15), 0 8px 24px rgba(99,102,241,0.1);
+  }
 
   .btn-primary {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: white;
+    background: linear-gradient(135deg, #00c896, #00a87a);
+    color: #0d0f12;
     border: none;
     border-radius: 10px;
     padding: 10px 20px;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+    box-shadow: 0 4px 15px rgba(0,200,150,0.25);
     display: inline-flex;
     align-items: center;
     gap: 6px;
   }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.45); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,200,150,0.4); }
   .btn-primary:active { transform: translateY(0); }
 
   .btn-ghost {
@@ -118,7 +149,7 @@
     outline: none;
     transition: border-color 0.2s;
   }
-  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+  .input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,200,150,0.12); }
   .input::placeholder { color: var(--text-secondary); }
   select.input option { background: #1a2035; color: var(--text-primary); }
   option { background: #1a2035; color: #f1f5f9; }
@@ -137,7 +168,7 @@
   .badge-danger { background: rgba(239,68,68,0.15); color: #ef4444; }
   .badge-warning { background: rgba(245,158,11,0.15); color: #f59e0b; }
   .badge-neutral { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
-  .badge-accent { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .badge-accent { background: rgba(0,200,150,0.12); color: #00c896; }
 
   .modal-overlay {
     position: fixed; inset: 0; z-index: 50;
@@ -159,18 +190,18 @@
     color: var(--text-secondary); font-size: 14px; font-weight: 500;
     cursor: pointer; transition: all 0.2s; text-decoration: none;
   }
-  .sidebar-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
-  .sidebar-item.active { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .sidebar-item:hover { background: rgba(0,200,150,0.07); color: var(--text-primary); }
+  .sidebar-item.active { background: rgba(0,200,150,0.12); color: #00c896; }
 
   .stat-card {
     background: var(--bg-card); border: 1px solid var(--border);
     border-radius: 16px; padding: 24px; position: relative; overflow: hidden;
     transition: all 0.2s;
   }
-  .stat-card:hover { border-color: rgba(99,102,241,0.25); transform: translateY(-2px); }
+  .stat-card:hover { border-color: rgba(0,200,150,0.2); transform: translateY(-2px); }
   .stat-card::before {
     content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent), #8b5cf6);
+    background: linear-gradient(90deg, #00c896, #f97316);
     opacity: 0;
     transition: opacity 0.2s;
   }

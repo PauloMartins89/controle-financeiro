@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { formatCurrency, getCategoryIcon, CATEGORIAS } from '../lib/utils'
+import { exportarBalancoPDF } from '../lib/exportPDF'
 import {
   LockClosedIcon, LockOpenIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon,
-  ExclamationTriangleIcon, LightBulbIcon, CheckCircleIcon
+  ExclamationTriangleIcon, LightBulbIcon, CheckCircleIcon, ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 
@@ -371,6 +372,14 @@ export default function Balanco() {
               <LockClosedIcon style={{ width: 16, height: 16 }} /> Fechar mês
             </button>
           )}
+          <button
+            className="btn-ghost"
+            onClick={() => exportarBalancoPDF({ expenses, people: [], groups: [], mes })}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            title="Exportar PDF"
+          >
+            <ArrowDownTrayIcon style={{ width: 16, height: 16 }} /> PDF
+          </button>
         </div>
 
         {/* KPIs */}

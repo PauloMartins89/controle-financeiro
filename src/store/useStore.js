@@ -245,14 +245,26 @@ const useStore = create(
   loading: false,
   useSupabase: !!supabase,
   currentUser: demoPeople[0],
+  authUserName: null,
   saldoCaixa: 0,
   ownerId: OWNER_ID,
+  workspaceId: null,
+  enabledModules: null, // null = sem restrição (admin / demo), array = módulos habilitados
 
   setCurrentUser: (person) => set({ currentUser: person }),
-  setOwnerId: (id) => set(s => ({
-    ownerId: id,
-    people: s.people.map(p => ({ ...p, is_owner: p.id === id }))
-  })),
+  setOwnerId: async (id) => {
+    // Garante exclusividade: só uma pessoa pode ser is_owner = true
+    if (supabase) {
+      // Remove flag de todos, depois marca o selecionado
+      await supabase.from('pessoas').update({ is_owner: false }).neq('id', id)
+      if (isUUID(id)) await supabase.from('pessoas').update({ is_owner: true }).eq('id', id)
+    }
+    set(s => ({
+      ownerId: id,
+      currentUser: s.people.find(p => p.id === id) || s.currentUser,
+      people: s.people.map(p => ({ ...p, is_owner: p.id === id }))
+    }))
+  },
   getOwner: () => {
     const s = get()
     return s.people.find(p => p.id === s.ownerId) || s.people.find(p => p.is_owner) || s.people[0]
@@ -262,7 +274,7 @@ const useStore = create(
     const v = parseFloat(valor) || 0
     set({ saldoCaixa: v })
     if (supabase) {
-      await supabase.from('configuracoes').upsert({ chave: 'saldoCaixa', valor: v, updated_at: new Date().toISOString() }, { onConflict: 'chave' })
+      await supabase.from('configuracoes').upsert({ chave: 'saldoCaixa', valor: v, updated_at: new Date().toISOString() }, { onConflict: 'user_id,chave' })
     }
   },
 
@@ -307,14 +319,30 @@ const useStore = create(
   addPerson: async (person) => {
     const newPerson = { ...person, id: uuid(), avatar: person.nome[0].toUpperCase() }
     if (supabase) {
-      const { data, error } = await supabase.from('pessoas').insert([{ id: newPerson.id, nome: newPerson.nome, apelido: newPerson.apelido, cor: newPerson.cor, is_owner: newPerson.is_owner || false }]).select().single()
+      const { data, error } = await supabase.from('pessoas').insert([{ id: newPerson.id, nome: newPerson.nome, apelido: newPerson.apelido, cor: newPerson.cor, avatar: person.avatar || null, telefone: person.telefone || null, is_owner: newPerson.is_owner || false }]).select().single()
       if (error) console.error('[Supabase] addPerson error:', error.message)
       if (!error && data) { set(s => ({ people: [...s.people, { ...newPerson, ...data }] })); return }
     }
     set(s => ({ people: [...s.people, newPerson] }))
   },
   updatePerson: async (id, data) => {
-    if (supabase && isUUID(id)) await supabase.from('pessoas').update(data).eq('id', id)
+    if (supabase && isUUID(id)) {
+      await supabase.from('pessoas').update(data).eq('id', id)
+      // Sincroniza canal do WhatsApp se o telefone mudou
+      if (data.telefone !== undefined) {
+        const tel = data.telefone?.replace(/\D/g, '') || null
+        // Remove canais antigos dessa pessoa
+        await supabase.from('canais_mensagem').delete().eq('pessoa_id', id)
+        // Cria novo canal se tem telefone
+        if (tel) {
+          const pessoa = useStore.getState().people.find(p => p.id === id)
+          await supabase.from('canais_mensagem').upsert(
+            { telefone: tel, pessoa_id: id, owner_id: pessoa?.owner_id || null, ativo: true },
+            { onConflict: 'telefone' }
+          )
+        }
+      }
+    }
     set(s => ({ people: s.people.map(p => p.id === id ? { ...p, ...data } : p) }))
   },
   deletePerson: async (id) => {
@@ -464,9 +492,10 @@ const useStore = create(
       const row = { id: v.id, placa: v.placa, apelido: v.apelido || null, pessoa_id: v.pessoa_id || null, cor: v.cor || '#6366f1' }
       const { data, error } = await supabase.from('veiculos').insert([row]).select().single()
       if (error) console.error('[Supabase] addVehicle error:', error.message)
-      if (!error && data) { set(s => ({ vehicles: [...s.vehicles, { ...v, ...data }] })); return }
+      if (!error && data) { set(s => ({ vehicles: [...s.vehicles, { ...v, ...data }] })); if (window.loadAppData) window.loadAppData(); return }
     }
     set(s => ({ vehicles: [...s.vehicles, v] }))
+    if (window.loadAppData) window.loadAppData();
   },
   updateVehicle: async (id, data) => {
     const patch = { ...data }
@@ -474,10 +503,12 @@ const useStore = create(
     if ('pessoa_id' in patch && (patch.pessoa_id === '' || patch.pessoa_id === undefined)) patch.pessoa_id = null
     if (supabase) await supabase.from('veiculos').update(patch).eq('id', id)
     set(s => ({ vehicles: s.vehicles.map(v => v.id === id ? { ...v, ...patch } : v) }))
+    if (window.loadAppData) window.loadAppData();
   },
   deleteVehicle: async (id) => {
     if (supabase) await supabase.from('veiculos').delete().eq('id', id)
     set(s => ({ vehicles: s.vehicles.filter(v => v.id !== id) }))
+    if (window.loadAppData) window.loadAppData();
   },
   getVehicleByPlate: (placa) => {
     if (!placa) return null
@@ -541,7 +572,7 @@ const useStore = create(
     const idsParaPagar = new Set(expensesAlteradas.map(x => x.id))
     if (supabase) {
       // Persiste o snapshot e marca despesas como pagas no banco
-      await supabase.from('closures').upsert(snapshot, { onConflict: 'mes' })
+      await supabase.from('closures').upsert(snapshot, { onConflict: 'user_id,mes' })
       if (idsParaPagar.size > 0) {
         await supabase.from('despesas').update({ status: 'pago' }).in('id', Array.from(idsParaPagar))
       }
@@ -762,20 +793,103 @@ const useStore = create(
     return saldos[uid] < 0 ? Math.abs(saldos[uid]) : 0
   },
 
-  // Total que o usuário atual precisa pagar: faturas de cartão + despesas pessoais + dívidas interpessoais
+  // Total que cabe ao usuário pagar = sua cota em cada despesa pendente (não-cartão)
+  // + total das faturas de cartão (o usuário paga o banco; outros reembolsam depois).
+  // BUG CORRIGIDO: antes somava o valor TOTAL de despesas que o usuário pagou,
+  // em vez de apenas a cota dele. Agora sempre calcula a parte proporcional correta.
   getTotalPagar: () => {
     const s = get()
     const uid = s.currentUser?.id
-    const saldos = calcularSaldos(s.expenses, s.people)
-    const dividas = (saldos[uid] || 0) < 0 ? Math.abs(saldos[uid]) : 0
+    if (!uid) return 0
+
+    // ── Cota do usuário em despesas não-cartão ──────────────────────────────
+    let minhaCota = 0
+    s.expenses
+      .filter(e => e.status !== 'pago' && !e.card_id)
+      .forEach(exp => {
+        const parts = exp.participantes || []
+        const envolvido = parts.includes(uid) || exp.pago_por === uid
+        if (!envolvido) return
+
+        const parcela = (exp.valor || 0) / (exp.parcelas || 1)
+        let share = 0
+
+        if (parts.length === 0) {
+          // Despesa solo sem participantes: responsabilidade total do pagador
+          if (exp.pago_por === uid) share = parcela
+        } else if (!parts.includes(uid)) {
+          // Usuário é apenas o credor (pago_por) mas não está nos participantes
+          // → ele vai receber tudo de volta, sua cota real = 0
+          share = 0
+        } else if (exp.tipo_divisao === 'igual') {
+          share = parcela / parts.length
+        } else if (exp.tipo_divisao === 'porcentagem' && exp.porcentagens) {
+          share = parcela * (exp.porcentagens[uid] || 0) / 100
+        } else if (exp.tipo_divisao === 'valor_fixo' && exp.valores_fixos) {
+          share = exp.valores_fixos[uid] || 0
+        } else {
+          share = parcela / parts.length
+        }
+
+        minhaCota += share
+      })
+
+    // ── Faturas de cartão (o usuário paga o banco integralmente) ───────────
     const totalFatura = s.cards.reduce((sum, c) =>
-      sum + s.expenses.filter(e => e.card_id === c.id && e.status !== 'pago').reduce((acc, e) => acc + (e.valor || 0), 0), 0)
-    const totalPessoal = s.expenses.filter(e =>
-      e.status !== 'pago' &&
-      !e.card_id &&
-      (e.pago_por === uid || (!e.pago_por && (!e.participantes || e.participantes.length === 0)))
-    ).reduce((acc, e) => acc + (e.valor || 0), 0)
-    return dividas + totalFatura + totalPessoal
+      sum + s.expenses
+        .filter(e => e.card_id === c.id && e.status !== 'pago')
+        .reduce((acc, e) => acc + (e.valor || 0), 0), 0)
+
+    return minhaCota + totalFatura
+  },
+
+  // Quanto cabe a OUTRAS pessoas pagar (soma das cotas alheias em despesas pendentes)
+  getTotalAlheio: () => {
+    const s = get()
+    const uid = s.currentUser?.id
+    if (!uid) return 0
+
+    let alheio = 0
+    s.expenses
+      .filter(e => e.status !== 'pago' && !e.card_id)
+      .forEach(exp => {
+        const parts = exp.participantes || []
+        // Caso: uid é pago_por e não está nos participantes → todos os parts devem para uid
+        // Caso: uid está nos participantes → iterar partes alheias
+        const uidEhCredorPuro = exp.pago_por === uid && !parts.includes(uid)
+        if (!uidEhCredorPuro && parts.length <= 1) return // sem rateio real
+        if (!uidEhCredorPuro && !parts.includes(uid) && exp.pago_por !== uid) return // uid não envolvido
+        const parcela = (exp.valor || 0) / (exp.parcelas || 1)
+
+        if (uidEhCredorPuro) {
+          // Todos os participantes devem para o uid — soma o total dos parts
+          parts.forEach(pid => {
+            let share = 0
+            if (exp.tipo_divisao === 'igual') share = parcela / parts.length
+            else if (exp.tipo_divisao === 'porcentagem' && exp.porcentagens) share = parcela * (exp.porcentagens[pid] || 0) / 100
+            else if (exp.tipo_divisao === 'valor_fixo' && exp.valores_fixos) share = exp.valores_fixos[pid] || 0
+            else share = parcela / parts.length
+            alheio += share
+          })
+          return
+        }
+
+        parts.forEach(pid => {
+          if (pid === uid) return
+          let share = 0
+          if (exp.tipo_divisao === 'igual') {
+            share = parcela / parts.length
+          } else if (exp.tipo_divisao === 'porcentagem' && exp.porcentagens) {
+            share = parcela * (exp.porcentagens[pid] || 0) / 100
+          } else if (exp.tipo_divisao === 'valor_fixo' && exp.valores_fixos) {
+            share = exp.valores_fixos[pid] || 0
+          } else {
+            share = parcela / parts.length
+          }
+          alheio += share
+        })
+      })
+    return alheio
   },
 }),
 {
@@ -794,10 +908,10 @@ const useStore = create(
       negocios:  state.negocios,
       proventos: state.proventos,
       closures:  state.closures,
+      saldoCaixa: state.saldoCaixa,
     }),
-    currentUser: state.currentUser,
-    saldoCaixa:  state.saldoCaixa,
-    ownerId:     state.ownerId,
+    currentUser: supabase ? null : state.currentUser,
+    ownerId:     supabase ? null : state.ownerId,
   }),
 }
   )

@@ -9,7 +9,7 @@ import {
   CheckIcon, ArrowUturnLeftIcon, WrenchScrewdriverIcon,
   NoSymbolIcon, BanknotesIcon, XMarkIcon, MapPinIcon,
   PhoneIcon, SparklesIcon, PencilIcon, PaperAirplaneIcon,
-  DocumentArrowUpIcon,
+  DocumentArrowUpIcon, UserGroupIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 
 async function registrarEvento({ lancamentoId, tipo, statusDe = null, statusPara = null, descricao = null, usuarioId = null, usuarioNome = null, dados = {} }) {
@@ -395,15 +395,26 @@ function PagamentoModal({ selecionados, workspaceId, userId, onClose, onSave }) 
         })
       }
       toast.success(`${selecionados.length} lançamento(s) faturado(s)!`)
-      // Notificações WhatsApp para cada lançamento faturado
-      for (const l of selecionados) {
+      // Notificação WhatsApp: 1 mensagem por lote (ou por item se sem lote)
+      const loteIdsFaturados = [...new Set(selecionados.map(l => l.lote_cliente_id).filter(Boolean))]
+      if (loteIdsFaturados.length === 1) {
         fetch('/api/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lancamentoId: l.id, status: 'faturado' }),
+          body: JSON.stringify({ loteId: loteIdsFaturados[0], status: 'faturado' }),
         })
-          .then(r => r.json().then(data => console.log('[notify faturado]', l.id, r.status, data)))
-          .catch(err => console.error('[notify faturado] fetch error:', err))
+          .then(r => r.json().then(data => console.log('[notify faturado lote]', loteIdsFaturados[0], r.status, data)))
+          .catch(err => console.error('[notify faturado lote] erro:', err))
+      } else {
+        for (const l of selecionados) {
+          fetch('/api/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lancamentoId: l.id, status: 'faturado' }),
+          })
+            .then(r => r.json().then(data => console.log('[notify faturado]', l.id, r.status, data)))
+            .catch(err => console.error('[notify faturado] fetch error:', err))
+        }
       }
       onSave()
     } catch (e) {
@@ -521,6 +532,182 @@ function PagamentoModal({ selecionados, workspaceId, userId, onClose, onSave }) 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Modal: Gerar Lotes por Cliente (automático)
+// ─────────────────────────────────────────────────────────────────────────────
+function GerarLotesModal({ lancamentos, workspaceId, userId, onClose, onSaved }) {
+  const grupos = (() => {
+    const mapa = {}
+    lancamentos.forEach(l => {
+      const key = (l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao || 'Sem Cliente').trim()
+      if (!mapa[key]) mapa[key] = []
+      mapa[key].push(l)
+    })
+    return Object.entries(mapa)
+      .map(([cliente, itens]) => ({ cliente, itens, total: itens.reduce((s, i) => s + (i.valor || 0), 0) }))
+      .sort((a, b) => a.cliente.localeCompare(b.cliente))
+  })()
+
+  const [desabilitados, setDesabilitados] = useState(new Set())
+  const [saving, setSaving] = useState(false)
+
+  function toggleGrupo(cliente) {
+    setDesabilitados(prev => {
+      const n = new Set(prev)
+      n.has(cliente) ? n.delete(cliente) : n.add(cliente)
+      return n
+    })
+  }
+
+  const gruposAtivos = grupos.filter(g => !desabilitados.has(g.cliente))
+  const totalItens = gruposAtivos.reduce((s, g) => s + g.itens.length, 0)
+  const totalValor = gruposAtivos.reduce((s, g) => s + g.total, 0)
+
+  async function handleConfirmar() {
+    if (gruposAtivos.length === 0) { toast.error('Selecione ao menos 1 grupo.'); return }
+    setSaving(true)
+    try {
+      let criados = 0, adicionados = 0
+      for (const grupo of gruposAtivos) {
+        const { data: existente } = await supabase
+          .from('lotes_cliente')
+          .select('id')
+          .eq('workspace_id', workspaceId)
+          .eq('cliente', grupo.cliente)
+          .eq('status', 'rascunho')
+          .maybeSingle()
+        let loteId
+        if (existente?.id) {
+          loteId = existente.id
+          adicionados++
+        } else {
+          const { data: novo, error: errNovo } = await supabase
+            .from('lotes_cliente')
+            .insert({ workspace_id: workspaceId, cliente: grupo.cliente, status: 'rascunho', created_by: userId })
+            .select('id')
+            .single()
+          if (errNovo) throw errNovo
+          loteId = novo.id
+          criados++
+        }
+        const ids = grupo.itens.filter(l => !l.lote_cliente_id).map(l => l.id)
+        if (ids.length > 0) {
+          const { error: errUp } = await supabase
+            .from('lancamentos')
+            .update({ lote_cliente_id: loteId })
+            .in('id', ids)
+          if (errUp) throw errUp
+        }
+      }
+      const msg = [
+        criados > 0 && `${criados} lote(s) criado(s)`,
+        adicionados > 0 && `${adicionados} já existente(s) atualizado(s)`,
+      ].filter(Boolean).join(' · ')
+      toast.success(msg || 'Lotes gerados!')
+      onSaved()
+    } catch (e) {
+      toast.error('Erro: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <UserGroupIcon style={{ width: 20, height: 20, color: '#818cf8' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Gerar Lotes por Cliente</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                {grupos.length} cliente(s) · {lancamentos.length} aprovado(s) sem lote
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', padding: 4 }}>
+            <XMarkIcon style={{ width: 20, height: 20 }} />
+          </button>
+        </div>
+
+        {/* Info */}
+        <div style={{ margin: '12px 22px 0', padding: '10px 14px', borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', fontSize: 12, color: '#818cf8', lineHeight: 1.6 }}>
+          1 lote por cliente em <strong>Lotes ao Cliente</strong>. Se já houver um lote em rascunho com o mesmo nome, os itens são adicionados. Desmarque clientes que não devem gerar lote agora.
+        </div>
+
+        {/* Grupos */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 22px' }}>
+          {grupos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)', fontSize: 13 }}>
+              Nenhum lançamento disponível para agrupar.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {grupos.map(grupo => {
+                const ativo = !desabilitados.has(grupo.cliente)
+                return (
+                  <div key={grupo.cliente} onClick={() => toggleGrupo(grupo.cliente)}
+                    style={{ borderRadius: 12, border: `1px solid ${ativo ? 'rgba(99,102,241,0.35)' : 'var(--border)'}`, background: ativo ? 'rgba(99,102,241,0.06)' : 'var(--bg-primary)', cursor: 'pointer', transition: 'all 0.15s', overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <input type="checkbox" checked={ativo} onChange={() => toggleGrupo(grupo.cliente)} onClick={e => e.stopPropagation()} style={{ width: 15, height: 15, accentColor: '#818cf8', cursor: 'pointer', flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: ativo ? 'var(--text-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grupo.cliente}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{grupo.itens.length} lançamento(s)</div>
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: ativo ? '#10b981' : 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>{fmtCurrency(grupo.total)}</div>
+                    </div>
+                    {ativo && (
+                      <div style={{ borderTop: '1px solid var(--border)' }}>
+                        {grupo.itens.slice(0, 4).map((l, i) => {
+                          const d = l.dados_extras || {}
+                          return (
+                            <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 14px 7px 38px', borderBottom: i < Math.min(grupo.itens.length, 4) - 1 ? '1px solid var(--border)' : 'none', fontSize: 12 }}>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
+                                {d.numero_diario && <span style={{ fontSize: 10, fontWeight: 800, color: '#818cf8', flexShrink: 0 }}>Nº {d.numero_diario}</span>}
+                                {d.placa && <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace', flexShrink: 0 }}>{d.placa}</span>}
+                                <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor || l.descricao || '—'}</span>
+                              </div>
+                              <span style={{ fontWeight: 700, color: '#10b981', whiteSpace: 'nowrap', marginLeft: 8 }}>{fmtCurrency(l.valor)}</span>
+                            </div>
+                          )
+                        })}
+                        {grupo.itens.length > 4 && (
+                          <div style={{ padding: '6px 14px 8px 38px', fontSize: 11, color: 'var(--text-secondary)' }}>+ {grupo.itens.length - 4} item(ns) adicional(is)</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+            {gruposAtivos.length > 0
+              ? <><strong style={{ color: 'var(--text-primary)' }}>{gruposAtivos.length}</strong> lote(s) · <strong style={{ color: '#10b981' }}>{fmtCurrency(totalValor)}</strong> · {totalItens} item(ns)</>
+              : 'Nenhum grupo selecionado'}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 9, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14 }}>Cancelar</button>
+            <button onClick={handleConfirmar} disabled={saving || gruposAtivos.length === 0}
+              style={{ padding: '9px 22px', borderRadius: 9, background: saving || gruposAtivos.length === 0 ? 'rgba(99,102,241,0.5)' : 'linear-gradient(135deg,#4f46e5,#818cf8)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7, opacity: gruposAtivos.length === 0 ? 0.6 : 1 }}>
+              <UserGroupIcon style={{ width: 15, height: 15 }} />
+              {saving ? 'Gerando...' : `Gerar ${gruposAtivos.length} Lote(s)`}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Página principal
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Faturamento() {
@@ -537,6 +724,11 @@ export default function Faturamento() {
   const [historicoItem, setHistoricoItem] = useState(null)
   const [selectedIds, setSelectedIds]       = useState(new Set())
   const [pagamentoModal, setPagamentoModal] = useState(false)
+  const [lotesMap, setLotesMap]             = useState({})
+  const [confirmacao, setConfirmacao]       = useState(null) // { id, acao: 'aprovado'|'reprovado', descricao }
+  const [viewMode, setViewMode]             = useState('por_item') // 'por_item' | 'por_lote'
+  const [aprovandoLote, setAprovandoLote]   = useState(null) // lote_id sendo aprovado
+  const [gerarLotesModal, setGerarLotesModal] = useState(false)
 
   useEffect(() => {
     supabase?.auth.getUser().then(({ data }) => setUserId(data?.user?.id || null))
@@ -551,7 +743,20 @@ export default function Faturamento() {
       .order('data', { ascending: false })
       .order('created_at', { ascending: false })
     if (error) { toast.error('Erro ao carregar lançamentos'); setLoading(false); return }
-    setLancamentos(data || [])
+    const items = data || []
+    setLancamentos(items)
+    // Carrega info dos lotes vinculados
+    const loteIds = [...new Set(items.map(l => l.lote_cliente_id).filter(Boolean))]
+    if (loteIds.length > 0) {
+      supabase.from('lotes_cliente').select('id, cliente, status').in('id', loteIds)
+        .then(({ data: ld }) => {
+          const m = {}
+          ;(ld || []).forEach(lt => { m[lt.id] = lt })
+          setLotesMap(m)
+        })
+    } else {
+      setLotesMap({})
+    }
     setLoading(false)
   }, [])
 
@@ -634,6 +839,56 @@ export default function Faturamento() {
     loadData()
   }
 
+  // ── Lotes agrupados (para view Por Lote) ─────────────────────────────────
+  const lotesAgrupados = (() => {
+    const mapa = {}
+    lancamentos.forEach(l => {
+      if (!l.lote_cliente_id) return
+      const lote = lotesMap[l.lote_cliente_id]
+      if (!lote) return
+      if (!mapa[l.lote_cliente_id]) {
+        mapa[l.lote_cliente_id] = { lote, itens: [] }
+      }
+      mapa[l.lote_cliente_id].itens.push(l)
+    })
+    return Object.values(mapa).sort((a, b) => a.lote.cliente.localeCompare(b.lote.cliente))
+  })()
+
+  async function handleAprovarLote(loteId) {
+    const grupo = lotesAgrupados.find(g => g.lote.id === loteId)
+    if (!grupo) return
+    const pendentes = grupo.itens.filter(l => isPendingReview(l.status))
+    if (pendentes.length === 0) { toast('Todos os itens deste lote já foram aprovados.'); return }
+    setAprovandoLote(loteId)
+    try {
+      const ids = pendentes.map(l => l.id)
+      const { error } = await supabase.from('lancamentos').update({ status: 'aprovado' }).in('id', ids)
+      if (error) throw error
+      setLancamentos(prev => prev.map(l => ids.includes(l.id) ? { ...l, status: 'aprovado' } : l))
+      for (const l of pendentes) registrarEvento({ lancamentoId: l.id, tipo: 'aprovado', statusDe: l.status, statusPara: 'aprovado', usuarioId: userId })
+      toast.success(`${pendentes.length} lançamento(s) do lote aprovados!`)
+      // 1 notificação resumida por lote
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ loteId, status: 'aprovado' }),
+      }).catch(() => {})
+    } catch (e) {
+      toast.error('Erro: ' + e.message)
+    } finally {
+      setAprovandoLote(null)
+    }
+  }
+
+  function handleFaturarLote(loteId) {
+    const grupo = lotesAgrupados.find(g => g.lote.id === loteId)
+    if (!grupo) return
+    const aprovados = grupo.itens.filter(l => l.status === 'aprovado')
+    if (aprovados.length === 0) { toast.error('Nenhum item aprovado neste lote para faturar.'); return }
+    setSelectedIds(new Set(aprovados.map(l => l.id)))
+    setPagamentoModal(true)
+  }
+
   // filtro 'revisao' também inclui legado 'pendente'
   const filtered = lancamentos.filter(l => {
     if (filterStatus === 'revisao') {
@@ -662,6 +917,9 @@ export default function Faturamento() {
   const totalFaturado = lancamentos.filter(l => l.status === 'faturado').reduce((s, l) => s + (l.valor || 0), 0)
   const totalReprovado = lancamentos.filter(l => l.status === 'reprovado').reduce((s, l) => s + (l.valor || 0), 0)
 
+  // Aprovados sem lote → candidatos para gerar lotes por cliente
+  const aprovadosSemLote = lancamentos.filter(l => l.status === 'aprovado' && !l.lote_cliente_id)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
       <Header title="Faturamento" subtitle="Aprovação e controle de lançamentos" />
@@ -683,6 +941,132 @@ export default function Faturamento() {
             </div>
           ))}
         </div>
+
+        {/* ── Tabs ────────────────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid var(--border)', paddingBottom: 0 }}>
+          {[
+            { key: 'por_item', label: 'Por Item' },
+            { key: 'por_lote', label: `Por Lote (${lotesAgrupados.length})` },
+          ].map(tab => (
+            <button key={tab.key} onClick={() => setViewMode(tab.key)} style={{
+              padding: '8px 20px', borderRadius: '8px 8px 0 0', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              border: 'none', background: viewMode === tab.key ? 'var(--bg-secondary)' : 'transparent',
+              color: viewMode === tab.key ? '#818cf8' : 'var(--text-secondary)',
+              borderBottom: viewMode === tab.key ? '2px solid #818cf8' : '2px solid transparent',
+              marginBottom: -2,
+            }}>{tab.label}</button>
+          ))}
+        </div>
+
+        {/* ── View Por Lote ───────────────────────────────────────────────── */}
+        {viewMode === 'por_lote' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {aprovadosSemLote.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 13, color: '#818cf8' }}>
+                  <strong>{aprovadosSemLote.length}</strong> aprovado(s) ainda não vinculado(s) a nenhum lote
+                </div>
+                <button onClick={() => setGerarLotesModal(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#4f46e5,#818cf8)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  <UserGroupIcon style={{ width: 15, height: 15 }} />
+                  Gerar Lotes por Cliente
+                </button>
+              </div>
+            )}
+            {lotesAgrupados.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
+                <UserGroupIcon style={{ width: 48, height: 48, margin: '0 auto 16px', opacity: 0.3 }} />
+                <p>Nenhum lançamento vinculado a lotes.</p>
+              </div>
+            ) : lotesAgrupados.map(({ lote, itens }) => {
+              const pendentes  = itens.filter(l => isPendingReview(l.status))
+              const aprovados  = itens.filter(l => l.status === 'aprovado')
+              const faturados  = itens.filter(l => l.status === 'faturado')
+              const devolvidos = itens.filter(l => l.status === 'devolvido')
+              const totalGeral = itens.reduce((s, l) => s + (l.valor || 0), 0)
+              const totalAprov = aprovados.reduce((s, l) => s + (l.valor || 0), 0)
+              const loteStatusConf = {
+                rascunho:         { color: '#6366f1', label: 'Rascunho' },
+                enviado_cliente:  { color: '#f59e0b', label: 'Aguardando Cliente' },
+                aprovado_cliente: { color: '#10b981', label: 'Aprovado pelo Cliente' },
+                recusado_cliente: { color: '#ef4444', label: 'Recusado pelo Cliente' },
+              }[lote.status] || { color: '#94a3b8', label: lote.status }
+
+              return (
+                <div key={lote.id} style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                  {/* Cabeçalho do lote */}
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(99,102,241,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <UserGroupIcon style={{ width: 18, height: 18, color: '#818cf8' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>{lote.cliente}</div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 20, background: `${loteStatusConf.color}20`, color: loteStatusConf.color }}>{loteStatusConf.label}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{itens.length} item(ns)</span>
+                          {pendentes.length > 0  && <span style={{ fontSize: 11, color: '#f59e0b' }}>⏳ {pendentes.length} pendente(s)</span>}
+                          {aprovados.length > 0  && <span style={{ fontSize: 11, color: '#10b981' }}>✅ {aprovados.length} aprovado(s)</span>}
+                          {faturados.length > 0  && <span style={{ fontSize: 11, color: '#8b5cf6' }}>💰 {faturados.length} faturado(s)</span>}
+                          {devolvidos.length > 0 && <span style={{ fontSize: 11, color: '#f97316' }}>↩ {devolvidos.length} devolvido(s)</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700 }}>TOTAL LOTE</div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>{fmtCurrency(totalGeral)}</div>
+                        {totalAprov > 0 && totalAprov !== totalGeral && <div style={{ fontSize: 11, color: '#10b981' }}>{fmtCurrency(totalAprov)} aprovado</div>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {pendentes.length > 0 && (
+                          <button onClick={() => handleAprovarLote(lote.id)} disabled={aprovandoLote === lote.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: aprovandoLote === lote.id ? 0.6 : 1 }}>
+                            <CheckCircleIcon style={{ width: 15, height: 15 }} />
+                            {aprovandoLote === lote.id ? 'Aprovando...' : `Aprovar (${pendentes.length})`}
+                          </button>
+                        )}
+                        {aprovados.length > 0 && (
+                          <button onClick={() => handleFaturarLote(lote.id)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#7c3aed,#8b5cf6)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+                            <BanknotesIcon style={{ width: 15, height: 15 }} />
+                            Faturar ({aprovados.length}) · {fmtCurrency(totalAprov)}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {/* Itens do lote */}
+                  <div>
+                    {itens.map((l, i) => {
+                      const d = l.dados_extras || {}
+                      const conf = STATUS_CONF[l.status] || STATUS_CONF.rascunho
+                      return (
+                        <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 20px', borderBottom: i < itens.length - 1 ? '1px solid var(--border)' : 'none', gap: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                            {d.numero_diario && <span style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', flexShrink: 0 }}>Nº {d.numero_diario}</span>}
+                            <span style={{ fontSize: 12, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.empresa || d.cliente || l.descricao}</span>
+                            {d.placa && <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace', flexShrink: 0 }}>{d.placa}</span>}
+                            {d.condutor && <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0 }}>{d.condutor}</span>}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: conf.bg, color: conf.color }}>
+                              <conf.icon style={{ width: 10, height: 10 }} />{conf.label}
+                            </span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#10b981', minWidth: 90, textAlign: 'right' }}>{fmtCurrency(l.valor)}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── View Por Item (existente) ────────────────────────────────────── */}
+        {viewMode === 'por_item' && (<>
 
         {/* ── Barra de ações ──────────────────────────────────────────────── */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -728,6 +1112,15 @@ export default function Faturamento() {
             >
               <BanknotesIcon style={{ width: 16, height: 16 }} />
               Registrar Pagamento ({selectedIds.size}) · {fmtCurrency(selecionados.reduce((s, l) => s + (l.valor || 0), 0))}
+            </button>
+          )}
+          {aprovadosSemLote.length > 0 && (
+            <button
+              onClick={() => setGerarLotesModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 8, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}
+            >
+              <UserGroupIcon style={{ width: 16, height: 16 }} />
+              Gerar Lotes ({aprovadosSemLote.length})
             </button>
           )}
         </div>
@@ -816,13 +1209,23 @@ export default function Faturamento() {
                       {/* VALOR */}
                       <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: '#10b981' }}>{fmtCurrency(l.valor)}</td>
                       {/* STATUS */}
-                      <td style={{ padding: '10px 12px' }}><StatusChip status={l.status} /></td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <StatusChip status={l.status} />
+                        {l.lote_cliente_id && lotesMap[l.lote_cliente_id] && (
+                          <div style={{ marginTop: 3 }}>
+                            <span title={`Lote: ${lotesMap[l.lote_cliente_id].cliente}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(16,185,129,0.15)', color: '#10b981', cursor: 'default' }}>
+                              <UserGroupIcon style={{ width: 10, height: 10 }} />
+                              {lotesMap[l.lote_cliente_id].cliente.length > 14 ? lotesMap[l.lote_cliente_id].cliente.slice(0, 14) + '…' : lotesMap[l.lote_cliente_id].cliente}
+                            </span>
+                          </div>
+                        )}
+                      </td>
                       {/* AÇÕES */}
                       <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                           {/* Aprovar — disponível para ag. aprovação e corrigido */}
                           {isPendingReview(l.status) && (
-                            <button title="Aprovar" onClick={() => handleStatus(l.id, 'aprovado')}
+                            <button title="Aprovar" onClick={() => setConfirmacao({ id: l.id, acao: 'aprovado', descricao: l.descricao })}
                               style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#10b981', display: 'flex', alignItems: 'center' }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.12)'}
                               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -840,7 +1243,7 @@ export default function Faturamento() {
                           )}
                           {/* Reprovar definitivo */}
                           {(isPendingReview(l.status) || l.status === 'aprovado') && (
-                            <button title="Reprovar definitivo" onClick={() => { if (window.confirm('Reprovar definitivamente este lançamento?')) handleStatus(l.id, 'reprovado') }}
+                            <button title="Reprovar definitivo" onClick={() => setConfirmacao({ id: l.id, acao: 'reprovado', descricao: l.descricao })}
                               style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}
                               onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
                               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -880,6 +1283,8 @@ export default function Faturamento() {
           </div>
         )}
 
+        </>)}
+
       </div>
 
       {/* ── Modal: Histórico de Eventos ── */}
@@ -893,6 +1298,17 @@ export default function Faturamento() {
           userId={userId}
           onClose={() => { setPagamentoModal(false); setSelectedIds(new Set()) }}
           onSave={handlePagamentoSalvo}
+        />
+      )}
+
+      {/* ── Modal: Gerar Lotes por Cliente ── */}
+      {gerarLotesModal && (
+        <GerarLotesModal
+          lancamentos={aprovadosSemLote}
+          workspaceId={workspaceId}
+          userId={userId}
+          onClose={() => setGerarLotesModal(false)}
+          onSaved={() => { setGerarLotesModal(false); loadData() }}
         />
       )}
 
@@ -929,6 +1345,37 @@ export default function Faturamento() {
               <button onClick={() => setDevolverItem(null)} style={{ flex: 1, padding: '11px', borderRadius: 10, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Cancelar</button>
               <button onClick={handleDevolverConfirm} style={{ flex: 2, padding: '11px', borderRadius: 10, background: 'rgba(249,115,22,0.15)', border: '1.5px solid rgba(249,115,22,0.4)', color: '#f97316', cursor: 'pointer', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <ArrowUturnLeftIcon style={{ width: 15, height: 15 }} /> Devolver
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmação de Ação */}
+      {confirmacao && (
+        <div onClick={() => setConfirmacao(null)} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 400, border: `1px solid ${confirmacao.acao === 'aprovado' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+            <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <ExclamationTriangleIcon style={{ width: 20, height: 20, color: confirmacao.acao === 'aprovado' ? '#10b981' : '#ef4444' }} />
+              <div style={{ fontWeight: 800, fontSize: 16, color: confirmacao.acao === 'aprovado' ? '#10b981' : '#ef4444' }}>
+                {confirmacao.acao === 'aprovado' ? 'Confirmar Aprovação' : 'Confirmar Reprovação'}
+              </div>
+            </div>
+            <div style={{ padding: '16px 22px' }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                {confirmacao.acao === 'aprovado'
+                  ? 'Deseja aprovar este lançamento? Ele irá para a fila de faturamento.'
+                  : 'Deseja reprovar definitivamente este lançamento? Esta ação não pode ser desfeita.'}
+              </p>
+              <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                {confirmacao.descricao}
+              </div>
+            </div>
+            <div style={{ padding: '12px 22px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmacao(null)} style={{ padding: '9px 18px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Cancelar</button>
+              <button onClick={() => { handleStatus(confirmacao.id, confirmacao.acao); setConfirmacao(null) }}
+                style={{ padding: '9px 20px', borderRadius: 8, background: confirmacao.acao === 'aprovado' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', border: `1.5px solid ${confirmacao.acao === 'aprovado' ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`, color: confirmacao.acao === 'aprovado' ? '#10b981' : '#ef4444', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>
+                {confirmacao.acao === 'aprovado' ? 'Sim, Aprovar' : 'Sim, Reprovar'}
               </button>
             </div>
           </div>

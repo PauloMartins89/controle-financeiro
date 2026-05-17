@@ -255,7 +255,7 @@ export default function Pagamentos() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
-      <Header title="Pagamentos" subtitle="Lotes faturados com Nota Fiscal" />
+      <Header title="Contas a Receber" subtitle="Lotes faturados com Nota Fiscal" />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 

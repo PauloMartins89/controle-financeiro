@@ -933,10 +933,50 @@ export default function Cartoes() {
   }
 
   function getCardUsage(card) {
-    const fatura = expenses
-      .filter(e => e.card_id === card.id && e.status !== 'pago')
-      .reduce((s, e) => s + e.valor, 0)
-    return { fatura, percentual: card.limite ? (fatura / card.limite) * 100 : 0 }
+    const ownerId = owner?.id
+    const cardExpenses = expenses.filter(e => e.card_id === card.id && e.status !== 'pago')
+    const fatura = cardExpenses.reduce((s, e) => s + (parseFloat(e.valor) || 0), 0)
+
+    const devedoresMap = {}
+    let ownerParte = 0
+
+    cardExpenses.forEach(e => {
+      const val = parseFloat(e.valor) || 0
+      if (e.tipo_divisao === 'pessoal' || !e.tipo_divisao) {
+        ownerParte += val
+      } else if (e.tipo_divisao === 'igual') {
+        const n = (e.participantes || []).length || 1
+        const share = val / n
+        ;(e.participantes || []).forEach(pid => {
+          if (pid === ownerId) ownerParte += share
+          else devedoresMap[pid] = (devedoresMap[pid] || 0) + share
+        })
+      } else if (e.tipo_divisao === 'valor_fixo') {
+        const vf = e.valores_fixos || {}
+        Object.entries(vf).forEach(([pid, v]) => {
+          const pval = parseFloat(v) || 0
+          if (pid === ownerId) ownerParte += pval
+          else devedoresMap[pid] = (devedoresMap[pid] || 0) + pval
+        })
+      } else {
+        ownerParte += val
+      }
+    })
+
+    const totalReceber = Object.values(devedoresMap).reduce((s, v) => s + v, 0)
+    const parteReal = Math.max(0, fatura - totalReceber)
+    const devedores = Object.entries(devedoresMap)
+      .map(([pid, val]) => ({ pessoaId: pid, valor: val, percentual: fatura > 0 ? (val / fatura) * 100 : 0 }))
+      .sort((a, b) => b.valor - a.valor)
+
+    return {
+      fatura,
+      percentual: card.limite ? (fatura / card.limite) * 100 : 0,
+      totalReceber,
+      parteReal,
+      ownerPercentual: fatura > 0 ? (parteReal / fatura) * 100 : 0,
+      devedores,
+    }
   }
 
   return (
@@ -944,7 +984,7 @@ export default function Cartoes() {
       <Header title="Cartões de Crédito" subtitle="Gerencie faturas e vencimentos" action={{ label: 'Novo Cartão', onClick: () => { setEditing(null); setShowModal(true) } }} />
 
       <div style={{ padding: '24px 28px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(314px, 1fr))', gap: 16 }}>
           {cards.map(card => {
             const usage = getCardUsage(card)
             // Auto-detecta banco pelo nome se ainda não foi escolhido manualmente
@@ -979,7 +1019,7 @@ export default function Cartoes() {
             return (
               <div key={card.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 {/* Card visual — proporção real (1.586:1, padrão ISO/IEC 7810 ID-1) */}
-                <div style={{ padding: '7% 8% 7%', background: cardBg, position: 'relative', overflow: 'hidden', aspectRatio: '2.636 / 1', borderRadius: '12px 12px 0 0' }}>
+                <div style={{ padding: '6% 7% 6%', background: cardBg, position: 'relative', overflow: 'hidden', aspectRatio: '2.636 / 1', borderRadius: '12px 12px 0 0' }}>
                   <div style={{ position: 'absolute', top: '-15%', right: '-10%', width: '40%', aspectRatio: '1', borderRadius: '50%', background: txt === 'white' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }} />
                   <div style={{ position: 'absolute', bottom: '-10%', left: '8%', width: '28%', aspectRatio: '1', borderRadius: '50%', background: txt === 'white' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }} />
                   {isPreset && banco.watermark && (
@@ -1022,58 +1062,114 @@ export default function Cartoes() {
                   )}
                   {/* Bandeira no canto superior direito (grande) */}
                   <div style={{ position: 'absolute', top: '8%', right: '6%', zIndex: 2 }}>
-                    <BandeiraIcon bandeira={card.bandeira} size={72} />
+                    <BandeiraIcon bandeira={card.bandeira} size={52} />
                   </div>
                   {/* Topo: chip + contactless */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', marginBottom: 14 }}>
-                    <ChipIcon size={32} />
-                    <ContactlessIcon size={16} color={txt === 'white' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)'} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, position: 'relative', marginBottom: 8 }}>
+                    <ChipIcon size={24} />
+                    <ContactlessIcon size={13} color={txt === 'white' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)'} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', position: 'relative' }}>
                     <div>
                       {isPreset
                         ? <BancoLogo banco={banco} size={22} />
-                        : <div style={{ fontSize: 11, color: txtSoft, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{card.bandeira}</div>}
-                      <div style={{ fontSize: 16, fontWeight: 700, color: txt === 'white' ? 'rgba(255,255,255,0.95)' : txt, marginTop: 8, letterSpacing: 0.3 }}>{card.nome}</div>
+                        : <div style={{ fontSize: 10, color: txtSoft, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{card.bandeira}</div>}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: txt === 'white' ? 'rgba(255,255,255,0.95)' : txt, marginTop: 5, letterSpacing: 0.3 }}>{card.nome}</div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 20, marginTop: 16 }}>
+                  <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
                     <div>
-                      <div style={{ fontSize: 10, color: txtDim }}>FECHA</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: txt }}>Dia {card.dia_fechamento}</div>
+                      <div style={{ fontSize: 9, color: txtDim }}>FECHA</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: txt }}>Dia {card.dia_fechamento}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, color: txtDim }}>VENCE</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: txt }}>Dia {card.dia_vencimento}</div>
+                      <div style={{ fontSize: 9, color: txtDim }}>VENCE</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: txt }}>Dia {card.dia_vencimento}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, color: txtDim }}>LIMITE</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: txt }}>{formatCurrency(card.limite)}</div>
+                      <div style={{ fontSize: 9, color: txtDim }}>LIMITE</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: txt }}>{formatCurrency(card.limite)}</div>
                     </div>
                   </div>
                 </div>
 
-                {/* Usage bar */}
-                <div style={{ padding: '16px 20px 0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                {/* Usage bar + breakdown */}
+                <div style={{ padding: '12px 16px 0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                     <div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Fatura estimada</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{formatCurrency(usage.fatura)}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Fatura estimada</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{formatCurrency(usage.fatura)}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Utilização</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: usage.percentual > 80 ? '#ef4444' : usage.percentual > 50 ? '#f59e0b' : '#10b981', marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Utilização</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: usage.percentual > 80 ? '#ef4444' : usage.percentual > 50 ? '#f59e0b' : '#10b981', marginTop: 2 }}>
                         {usage.percentual.toFixed(0)}%
                       </div>
                     </div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 6, overflow: 'hidden', marginBottom: 16 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 5, overflow: 'hidden', marginBottom: 12 }}>
                     <div style={{ height: '100%', borderRadius: 4, width: `${Math.min(usage.percentual, 100)}%`, background: usage.percentual > 80 ? '#ef4444' : usage.percentual > 50 ? '#f59e0b' : card.cor, transition: 'width 0.5s' }} />
                   </div>
+
+                  {/* Breakdown por pessoa */}
+                  {usage.fatura > 0 && (
+                    <div style={{ marginBottom: 12 }}>
+                      {/* 3 métricas */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 10 }}>
+                        {[
+                          { label: 'Total fatura', value: usage.fatura, color: '#ef4444' },
+                          { label: 'A receber', value: usage.totalReceber, color: '#10b981' },
+                          { label: 'Sua parte', value: usage.parteReal, color: '#6366f1' },
+                        ].map(m => (
+                          <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
+                            <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>{m.label}</div>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: m.color }}>{formatCurrency(m.value)}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Participação por pessoa */}
+                      {(usage.devedores.length > 0 || usage.parteReal > 0) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {/* Owner */}
+                          {owner && usage.parteReal > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ width: 22, height: 22, borderRadius: '50%', background: owner.cor || '#a855f7', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white' }}>
+                                {owner.avatar || owner.nome?.[0] || 'P'}
+                              </div>
+                              <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{owner.apelido || owner.nome}</div>
+                              <div style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', minWidth: 56, textAlign: 'right' }}>{formatCurrency(usage.parteReal)}</div>
+                              <div style={{ fontSize: 10, color: 'var(--text-secondary)', minWidth: 36, textAlign: 'right' }}>{usage.ownerPercentual.toFixed(0)}%</div>
+                              <div style={{ width: 50, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', flexShrink: 0 }}>
+                                <div style={{ height: '100%', width: `${usage.ownerPercentual}%`, background: '#6366f1', borderRadius: 2 }} />
+                              </div>
+                            </div>
+                          )}
+                          {/* Devedores */}
+                          {usage.devedores.map(({ pessoaId, valor, percentual }) => {
+                            const p = people.find(x => x.id === pessoaId)
+                            return (
+                              <div key={pessoaId} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ width: 22, height: 22, borderRadius: '50%', background: p?.cor || '#6366f1', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: 'white' }}>
+                                  {p?.avatar || p?.nome?.[0] || '?'}
+                                </div>
+                                <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{p?.apelido || p?.nome || 'Desconhecido'}</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', minWidth: 56, textAlign: 'right' }}>{formatCurrency(valor)}</div>
+                                <div style={{ fontSize: 10, color: 'var(--text-secondary)', minWidth: 36, textAlign: 'right' }}>{percentual.toFixed(0)}%</div>
+                                <div style={{ width: 50, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', flexShrink: 0 }}>
+                                  <div style={{ height: '100%', width: `${percentual}%`, background: p?.cor || '#f59e0b', borderRadius: 2 }} />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}
-                <div style={{ padding: '0 20px 16px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ padding: '0 16px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {(() => {
                     // Cor de ação legível: se o card.cor for muito escuro, usa accent indigo
                     const hex = (card.cor || '#6366f1').replace('#','')

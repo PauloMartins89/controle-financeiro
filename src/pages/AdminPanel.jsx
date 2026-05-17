@@ -34,12 +34,13 @@ const ALL_MODULES = [
 ]
 
 const TABS = [
-  { id: 'workspaces',  label: 'Workspaces',        icon: BuildingOffice2Icon },
-  { id: 'motoristas',  label: 'Motoristas WA',      icon: TruckIcon },
-  { id: 'conexoes',    label: 'Conexões WhatsApp',  icon: SignalIcon },
-  { id: 'mensagens',   label: 'Log de Mensagens',   icon: ChatBubbleLeftRightIcon },
-  { id: 'usuarios',   label: 'Usuários',            icon: UsersIcon },
-  { id: 'assinaturas', label: 'Assinaturas',         icon: CreditCardIcon },
+  { id: 'workspaces',     label: 'Workspaces',        icon: BuildingOffice2Icon },
+  { id: 'notificacoes',   label: 'Notificações',      icon: BellAlertIcon },
+  { id: 'motoristas',    label: 'Motoristas WA',     icon: TruckIcon },
+  { id: 'conexoes',      label: 'Conexões WhatsApp', icon: SignalIcon },
+  { id: 'mensagens',     label: 'Log de Mensagens',  icon: ChatBubbleLeftRightIcon },
+  { id: 'usuarios',      label: 'Usuários',           icon: UsersIcon },
+  { id: 'assinaturas',   label: 'Assinaturas',        icon: CreditCardIcon },
 ]
 
 function fmtDate(d) {
@@ -579,11 +580,6 @@ export default function AdminPanel() {
                             </div>
                           </div>
 
-                          {/* Notificações por Status */}
-                          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                            <WorkspaceNotifSection workspaceId={ws.id} />
-                          </div>
-
                           {/* Ações do workspace */}
                           <div style={{ display: 'flex', gap: 8, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
                             <button
@@ -604,6 +600,32 @@ export default function AdminPanel() {
                 })}
               </div>
             )}
+            {/* ── TAB: NOTIFICAÇÕES ──────────────────────────────────── */}
+            {tab === 'notificacoes' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <BellAlertIcon style={{ width: 20, height: 20, color: '#818cf8' }} />
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Notificações por Status (WhatsApp)</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Configure quem recebe mensagem automática quando um lançamento mudar de status</div>
+                  </div>
+                </div>
+                {wsLoading ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Carregando workspaces...</div>
+                ) : workspaces.length === 0 ? (
+                  <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum workspace encontrado.</div>
+                ) : workspaces.map(ws => (
+                  <div key={ws.id} className="card" style={{ padding: '20px 24px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <BuildingOffice2Icon style={{ width: 15, height: 15, color: 'var(--text-secondary)' }} />
+                      {ws.nome}
+                    </div>
+                    <WorkspaceNotifSection workspaceId={ws.id} />
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* ── TAB: MOTORISTAS WA ─────────────────────────────────── */}
             {tab === 'motoristas' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

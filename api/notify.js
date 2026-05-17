@@ -75,6 +75,23 @@ const STATUS_EMOJI = {
   faturado:             '💰',
 }
 
+function fmtCurrency(v) {
+  return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function buildLoteMessage(status, loteCliente, totalItens, totalValor, gestorNome) {
+  const emoji  = STATUS_EMOJI[status] || '🔔'
+  const label  = STATUS_LABELS[status] || status
+  const gestor = gestorNome ? `\n\n— _${gestorNome}_` : ''
+  return (
+    `${emoji} *Lote — ${label}*\n\n` +
+    `Lote *${loteCliente}* foi marcado como *${label}*.\n` +
+    `\n📦 Lançamentos: *${totalItens} ${totalItens === 1 ? 'item' : 'itens'}*` +
+    `\n💵 Total: *${fmtCurrency(totalValor)}*` +
+    gestor
+  )
+}
+
 function buildMessage(status, dados, motivo, gestorNome) {
   const num    = dados.numero_diario ? `Nº *${dados.numero_diario}*` : 'um diário'
   const data   = dados.data ? ` de ${fmtDate(dados.data)}` : ''
@@ -114,14 +131,67 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { lancamentoId, status, motivo, gestorNome } = req.body || {}
+  const { lancamentoId, loteId, status, motivo, gestorNome } = req.body || {}
 
-  if (!lancamentoId || !status) {
-    return res.status(400).json({ error: 'lancamentoId e status são obrigatórios' })
+  if ((!lancamentoId && !loteId) || !status) {
+    return res.status(400).json({ error: 'lancamentoId ou loteId, e status são obrigatórios' })
   }
 
   const db = getDb()
 
+  // ── Caminho LOTE: 1 mensagem resumida para o lote inteiro ──────────────────
+  if (loteId) {
+    const { data: lote, error: errLote } = await db
+      .from('lotes_cliente')
+      .select('id, cliente, workspace_id')
+      .eq('id', loteId)
+      .single()
+
+    if (errLote || !lote) {
+      console.error('[notify] lote não encontrado:', errLote)
+      return res.status(404).json({ error: 'Lote não encontrado' })
+    }
+
+    const { data: itens } = await db
+      .from('lancamentos')
+      .select('id, valor')
+      .eq('lote_cliente_id', loteId)
+
+    const totalItens = itens?.length || 0
+    const totalValor = (itens || []).reduce((s, l) => s + (Number(l.valor) || 0), 0)
+
+    const { data: destinatarios, error: errDest } = await db
+      .from('status_notificacoes')
+      .select('id, nome_destinatario, phone_number')
+      .eq('workspace_id', lote.workspace_id)
+      .eq('status', status)
+      .eq('ativo', true)
+
+    console.log(`[notify-lote] lote=${loteId} workspace=${lote.workspace_id} status=${status} destinatários=${destinatarios?.length ?? 'ERR'}`)
+
+    if (errDest || !destinatarios || destinatarios.length === 0) {
+      return res.status(200).json({ sent: 0, reason: `Nenhum destinatário configurado para status "${status}"` })
+    }
+
+    const texto = buildLoteMessage(status, lote.cliente, totalItens, totalValor, gestorNome || null)
+
+    const resultados = await Promise.all(
+      destinatarios.map(async dest => {
+        const enviado = await sendWA(dest.phone_number, texto)
+        db.from('mensagens_whatsapp').insert({
+          telefone: dest.phone_number,
+          direcao:  enviado ? 'saida' : 'saida_erro',
+          conteudo: texto,
+        }).then(() => {}).catch(() => {})
+        return { nome: dest.nome_destinatario, phone: dest.phone_number, enviado }
+      })
+    )
+
+    const totalEnviado = resultados.filter(r => r.enviado).length
+    return res.status(200).json({ sent: totalEnviado, total: resultados.length, resultados })
+  }
+
+  // ── Caminho ITEM: mensagem individual por lançamento ──────────────────────
   // 1. Busca o lançamento
   const { data: lancamento, error: errLanc } = await db
     .from('lancamentos')

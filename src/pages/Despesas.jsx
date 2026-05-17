@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Header from '../components/Header'
 import Avatar from '../components/Avatar'
+import MetasCategorias from '../components/MetasCategorias'
 import useStore from '../store/useStore'
 import { formatCurrency, formatDate, getCategoryIcon, CATEGORIAS, TIPOS_DIVISAO, STATUS_OPTIONS } from '../lib/utils'
 
@@ -21,9 +22,99 @@ import {
   PencilIcon, TrashIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XMarkIcon, Squares2X2Icon, ListBulletIcon,
   FunnelIcon, ChevronDownIcon, CreditCardIcon, BanknotesIcon,
-  ArrowUturnLeftIcon,
+  ArrowUturnLeftIcon, PhotoIcon,
 } from '@heroicons/react/24/outline'
 import { toast } from 'react-hot-toast'
+
+// ─── Comprovante Thumbnail ────────────────────────────────────────────────────
+function ComprovanteIcon({ url }) {
+  const [open, setOpen] = useState(false)
+  if (!url) return null
+  return (
+    <>
+      <button
+        title="Ver comprovante"
+        onClick={e => { e.stopPropagation(); setOpen(true) }}
+        style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: 6, padding: '3px 5px', cursor: 'pointer', color: '#06b6d4', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+      >
+        <PhotoIcon style={{ width: 13, height: 13 }} />
+      </button>
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
+            <img src={url} alt="Comprovante" style={{ maxWidth: '90vw', maxHeight: '90vh', borderRadius: 12, boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }} />
+            <button
+              onClick={() => setOpen(false)}
+              style={{ position: 'absolute', top: -12, right: -12, width: 32, height: 32, borderRadius: '50%', background: '#ef4444', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <XMarkIcon style={{ width: 16, height: 16 }} />
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// ─── NF Details expandível ───────────────────────────────────────────────────
+function NFDetails({ exp }) {
+  const [open, setOpen] = useState(false)
+  const temDados = exp.cnpj || exp.produto || exp.nfe_url || exp.forma_pagamento || exp.endereco
+  if (!temDados) return null
+  return (
+    <>
+      <button
+        title="Dados da nota fiscal"
+        onClick={e => { e.stopPropagation(); setOpen(v => !v) }}
+        style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 6, padding: '2px 6px', cursor: 'pointer', color: '#818cf8', fontSize: 10, fontWeight: 700, flexShrink: 0 }}
+      >
+        NF
+      </button>
+      {open && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClickCapture={() => setOpen(false)}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, minWidth: 320, maxWidth: 480, width: '90vw', position: 'relative' }}>
+            <button onClick={() => setOpen(false)} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+              <XMarkIcon style={{ width: 18, height: 18 }} />
+            </button>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>📄 Dados da Nota Fiscal</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, fontFamily: 'monospace' }}>
+              {[
+                ['cnpj',            exp.cnpj],
+                ['endereco',        exp.endereco],
+                ['telefone_local',  exp.telefone_local],
+                ['produto',         exp.produto],
+                ['quantidade',      exp.quantidade],
+                ['litros',          exp.litros],
+                ['valor_litro',     exp.valor_litro],
+                ['hora',            exp.hora],
+                ['forma_pagamento', exp.forma_pagamento],
+                ['nfe_url',         exp.nfe_url],
+                ['origem',          exp.origem],
+                ['observacoes',     exp.observacoes ?? 'null'],
+              ].map(([col, val]) => val !== undefined && (
+                <div key={col} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{ color: 'var(--text-secondary)', minWidth: 140, flexShrink: 0 }}>{col}</span>
+                  <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>:</span>
+                  {col === 'nfe_url' && val && val !== 'null'
+                    ? <a href={val} target="_blank" rel="noopener noreferrer" style={{ color: '#818cf8', wordBreak: 'break-all' }}>{val.length > 40 ? val.slice(0, 40) + '…' : val}</a>
+                    : <span style={{ color: val === 'null' || !val ? 'var(--text-secondary)' : 'var(--text-primary)', opacity: val === 'null' || !val ? 0.4 : 1 }}>{val || 'null'}</span>
+                  }
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
 
 const EMPTY_FORM = {
   descricao: '', valor: '', data: new Date().toISOString().slice(0, 10),
@@ -35,8 +126,18 @@ const EMPTY_FORM = {
 
 // ─── Expense Modal ────────────────────────────────────────────────────────────
 function ExpenseModal({ expense, onClose, onSave }) {
-  const { people, groups } = useStore()
-  const [form, setForm] = useState(expense ? { ...expense, valor: String(expense.valor) } : { ...EMPTY_FORM, pago_por: people[0]?.id || '', participantes: people.slice(0, 2).map(p => p.id) })
+  const people = useStore(s => s.people)
+  const groups = useStore(s => s.groups)
+  const ownerId = useStore(s => s.ownerId)
+  const owner = people.find(p => p.id === ownerId) || people.find(p => p.is_owner) || people[0]
+  const [form, setForm] = useState(expense ? { ...expense, valor: String(expense.valor) } : { ...EMPTY_FORM, pago_por: '', participantes: [] })
+  const initDone = useRef(false)
+  useEffect(() => {
+    if (!expense && ownerId && !initDone.current) {
+      initDone.current = true
+      setForm(f => ({ ...f, pago_por: ownerId, participantes: [ownerId] }))
+    }
+  }, [ownerId, expense])
 
   function toggle(arr, val) {
     return arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]
@@ -44,7 +145,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
 
   function handleSave() {
     if (!form.descricao || !form.valor) return
-    onSave({ ...form, valor: parseFloat(form.valor) || 0 })
+    onSave({ ...form, pago_por: ownerId || form.pago_por, valor: parseFloat(form.valor) || 0 })
   }
 
   const valorNum = parseFloat(form.valor) || 0
@@ -98,10 +199,13 @@ function ExpenseModal({ expense, onClose, onSave }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label className="label">Pago por</label>
-              <select className="input" value={form.pago_por} onChange={e => setForm(f => ({ ...f, pago_por: e.target.value }))}>
-                <option value="">Selecionar...</option>
-                {people.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', opacity: 0.85, userSelect: 'none' }}>
+                {owner && (
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: owner.cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0 }}>{owner.avatar}</div>
+                )}
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{owner?.nome || 'Você'}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: 'rgba(250,204,21,0.15)', color: '#fbbf24', border: '1px solid rgba(250,204,21,0.3)', marginLeft: 'auto' }}>👑 Você</span>
+              </div>
             </div>
             <div>
               <label className="label">Tipo de divisão</label>
@@ -113,30 +217,43 @@ function ExpenseModal({ expense, onClose, onSave }) {
 
           {/* Participantes */}
           <div>
-            <label className="label">Participantes</label>
+            <label className="label">Participantes <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: 11 }}>— quem entra no rateio (inclua-se se quiser dividir)</span></label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {people.map(p => {
                 const sel = form.participantes.includes(p.id)
+                const isOwnerPerson = p.id === ownerId
                 return (
                   <button
                     key={p.id} type="button"
                     onClick={() => setForm(f => ({ ...f, participantes: toggle(f.participantes, p.id) }))}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500, transition: 'all 0.15s',
-                      background: sel ? `${p.cor}33` : 'rgba(255,255,255,0.04)',
-                      border: sel ? `1px solid ${p.cor}` : '1px solid var(--border)',
-                      color: sel ? p.cor : 'var(--text-secondary)',
+                      display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
+                      background: sel ? `${p.cor}44` : 'rgba(255,255,255,0.04)',
+                      border: sel ? `2px solid ${p.cor}` : '1px solid var(--border)',
+                      color: sel ? '#fff' : 'var(--text-secondary)',
+                      outline: sel ? `3px solid ${p.cor}55` : 'none',
+                      outlineOffset: 1,
                     }}
                   >
-                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: p.cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white' }}>{p.avatar}</div>
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: sel ? p.cor : 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', flexShrink: 0 }}>
+                      {sel ? '✓' : p.avatar}
+                    </div>
                     {p.nome}
+                    {isOwnerPerson && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 8, background: 'rgba(250,204,21,0.2)', color: '#fbbf24', border: '1px solid rgba(250,204,21,0.4)' }}>👑</span>
+                    )}
                     {sel && form.tipo_divisao === 'igual' && valorNum > 0 && (
-                      <span style={{ fontSize: 11, opacity: 0.8 }}>({formatCurrency(shareIgual)})</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 6 }}>{formatCurrency(shareIgual)}</span>
                     )}
                   </button>
                 )
               })}
             </div>
+            {form.participantes.length > 0 && valorNum > 0 && form.tipo_divisao === 'igual' && (
+              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
+                {form.participantes.length} participante{form.participantes.length > 1 ? 's' : ''} · {formatCurrency(shareIgual)} cada
+              </div>
+            )}
           </div>
 
           {/* Parcelas + Recorrente + Status */}
@@ -211,7 +328,11 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }} title={exp.descricao}>{exp.descricao}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>{exp.categoria}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span>{exp.categoria}</span>
+                <ComprovanteIcon url={exp.comprovante_url} />
+                <NFDetails exp={exp} />
+              </div>
             </div>
           </div>
           <StatusBadge status={exp.status} />
@@ -544,6 +665,8 @@ export default function Despesas() {
                                   {pagador && pagador.nome && pagador.nome.trim().length > 1 && <><span>· por</span><span style={{ fontWeight: 600, color: pagador.cor }}>{pagador.nome.split(' ')[0]}</span></>}
                                   {exp.parcelas > 1 && <span style={{ color: '#818cf8' }}>· {exp.parcela_atual ?? 1}/{exp.parcelas}x</span>}
                                   {exp._veiculo && <span style={{ color: '#06b6d4' }}>🚗 {exp._veiculo}</span>}
+                                  <ComprovanteIcon url={exp.comprovante_url} />
+                                  <NFDetails exp={exp} />
                                 </div>
                               </div>
                             </div>
@@ -705,6 +828,8 @@ export default function Despesas() {
                         {pagador && <><span>por</span><span style={{ fontWeight: 600, color: pagador.cor }}>{pagador.nome.split(' ')[0]}</span></>}
                         {exp.parcelas > 1 && <span style={{ color: '#818cf8' }}>• {exp.parcela_atual ?? 1}/{exp.parcelas}x</span>}
                         {exp.recorrente && <span>🔁</span>}
+                        <ComprovanteIcon url={exp.comprovante_url} />
+                        <NFDetails exp={exp} />
                       </div>
                     </div>
                   </div>
@@ -785,6 +910,10 @@ export default function Despesas() {
             <span>Total: <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{formatCurrency(filtered.reduce((s, e) => s + valorEfetivo(e), 0))}</span></span>
           </div>
         )}
+
+        <div style={{ marginTop: 24 }}>
+          <MetasCategorias />
+        </div>
       </div>
 
       {showModal && (

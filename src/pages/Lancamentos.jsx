@@ -9,12 +9,13 @@ import * as XLSX from 'xlsx'
 import {
   PlusIcon, DocumentArrowUpIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XCircleIcon, ClockIcon, PencilIcon,
-  TrashIcon, XMarkIcon, PhotoIcon, ChevronDownIcon,
+  TrashIcon, XMarkIcon, PhotoIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon,
   DocumentTextIcon, TruckIcon, SparklesIcon,
   Cog6ToothIcon, PhoneIcon, UserPlusIcon, QrCodeIcon,
   PaperAirplaneIcon, ArrowUturnLeftIcon, WrenchScrewdriverIcon,
   NoSymbolIcon, BanknotesIcon, ArrowPathIcon, MapPinIcon,
-  BellAlertIcon, TableCellsIcon, DocumentChartBarIcon,
+  BellAlertIcon, TableCellsIcon, DocumentChartBarIcon, UserGroupIcon,
+  LockClosedIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -120,8 +121,16 @@ const EVENTO_CONF = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Chips
 // ─────────────────────────────────────────────────────────────────────────────
-function StatusChip({ status }) {
-  const conf = STATUS_CONF[status] || STATUS_CONF.rascunho
+const LOTE_STATUS_CONF = {
+  rascunho:          { icon: UserGroupIcon,      color: '#6366f1', label: 'Em Lote' },
+  enviado_cliente:   { icon: ClockIcon,          color: '#f59e0b', label: 'Ag. Aprovação Cliente' },
+  aprovado_cliente:  { icon: CheckCircleIcon,    color: '#10b981', label: 'Aprovado pelo Cliente' },
+  recusado_cliente:  { icon: XCircleIcon,        color: '#ef4444', label: 'Recusado pelo Cliente' },
+}
+
+function StatusChip({ status, lote }) {
+  const loteConf = lote ? LOTE_STATUS_CONF[lote.status] : null
+  const conf = loteConf || STATUS_CONF[status] || STATUS_CONF.rascunho
   const Icon = conf.icon
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: `${conf.color}20`, color: conf.color }}>
@@ -442,9 +451,33 @@ function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
           if (anterior !== novo) camposAlterados.push({ campo: label, de: anterior || '—', para: novo || '—' })
         })
 
+        // Se estava devolvido, ao editar volta automaticamente para aguardando_aprovacao
+        const eraDevolvido = item.status === 'devolvido'
+        if (eraDevolvido) payload.status = 'aguardando_aprovacao'
+
         const { error } = await supabase.from('lancamentos').update(payload).eq('id', item.id)
         if (error) throw error
-        await registrarEvento({ lancamentoId: item.id, tipo: 'editado', usuarioId: userId, dados: { campos_alterados: camposAlterados } })
+
+        if (eraDevolvido) {
+          // Registra evento de correção com histórico
+          await registrarEvento({
+            lancamentoId: item.id,
+            tipo: 'corrigido',
+            statusDe: 'devolvido',
+            statusPara: 'aguardando_aprovacao',
+            descricao: 'Lançamento corrigido pelo analista e reenviado para Faturamento.',
+            usuarioId: userId,
+            dados: { campos_alterados: camposAlterados },
+          })
+          // Alerta WA notify
+          fetch('/api/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lancamentoId: item.id, status: 'corrigido', motivo: 'Lançamento corrigido e reenviado para Faturamento.' }),
+          }).catch(() => {})
+        } else {
+          await registrarEvento({ lancamentoId: item.id, tipo: 'editado', usuarioId: userId, dados: { campos_alterados: camposAlterados } })
+        }
       } else {
         const { data: inserted, error } = await supabase.from('lancamentos').insert(payload).select('id').single()
         if (error) throw error
@@ -456,7 +489,7 @@ function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
           usuarioId: userId,
         })
       }
-      toast.success(item?.id ? 'Lançamento atualizado!' : statusOverride === 'aguardando_aprovacao' ? 'Enviado para aprovação!' : 'Rascunho salvo!')
+      toast.success(item?.id ? (item.status === 'devolvido' ? 'Corrigido e reenviado para Faturamento!' : 'Lançamento atualizado!') : statusOverride === 'aguardando_aprovacao' ? 'Enviado para aprovação!' : 'Rascunho salvo!')
       onSaved()
     } catch (e) {
       toast.error('Erro: ' + e.message)
@@ -473,12 +506,23 @@ function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
-            {item?.id ? 'Editar Lançamento' : 'Novo Lançamento'}
+            {item?.id ? (item.status === 'devolvido' ? '🔧 Corrigir Lançamento' : 'Editar Lançamento') : 'Novo Lançamento'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}>
             <XMarkIcon style={{ width: 22, height: 22 }} />
           </button>
         </div>
+
+        {/* Banner: item devolvido */}
+        {item?.status === 'devolvido' && (
+          <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.35)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <ArrowUturnLeftIcon style={{ width: 18, height: 18, color: '#f97316', flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#f97316' }}>Item devolvido para correção</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Após corrigir, clique em <strong>"Salvar alterações"</strong> — o item será reenviado automaticamente para o Faturamento.</div>
+            </div>
+          </div>
+        )}
 
         {/* Seletor de tipo de formulário */}
         <div style={{ marginBottom: 20 }}>
@@ -592,11 +636,6 @@ function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 10, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Cancelar</button>
-          {!item?.id && (
-            <button onClick={() => handleSave('aguardando_aprovacao')} disabled={saving} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px', borderRadius: 10, background: 'rgba(245,158,11,0.12)', border: '1.5px solid rgba(245,158,11,0.4)', color: '#f59e0b', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
-              <PaperAirplaneIcon style={{ width: 15, height: 15 }} />Enviar para Aprovação
-            </button>
-          )}
           <button onClick={() => handleSave()} disabled={saving} style={{ flex: 2, padding: '11px', borderRadius: 10, background: 'linear-gradient(135deg, #059669, #10b981)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>
             {saving ? 'Salvando...' : item?.id ? 'Salvar alterações' : 'Salvar Rascunho'}
           </button>
@@ -1396,6 +1435,144 @@ function StatusNotifPanel({ workspaceId }) {
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EditFieldModal — popup de edição de campo inline
+// ─────────────────────────────────────────────────────────────────────────────
+const FIELD_LABELS = {
+  data: 'Data',
+  valor: 'Valor',
+  numero_diario: 'Nº DM',
+  cliente: 'Cliente / Descrição',
+  local_origem: 'Origem',
+  local_destino: 'Destino',
+  placa: 'Placa',
+  km_asfalto: 'KM Asfalto',
+  km_terra: 'KM Terra',
+}
+
+function EditFieldModal({ editState, onSave, onCancel, saving }) {
+  const { field, value, origValue } = editState
+  const [val, setVal] = useState(value)
+  const inputRef = useRef(null)
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50) }, [])
+
+  const label = FIELD_LABELS[field] || field
+  const unchanged = val === origValue || (field === 'valor' && parseFloat(val) === parseFloat(origValue))
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !unchanged) onSave(val)
+    if (e.key === 'Escape') onCancel()
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)' }}
+      onMouseDown={e => { if (e.target === e.currentTarget) onCancel() }}>
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 380, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PencilIcon style={{ width: 17, height: 17, color: '#818cf8' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Editar campo</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</div>
+          </div>
+          <button onClick={onCancel} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, borderRadius: 6 }}>
+            <XMarkIcon style={{ width: 18, height: 18 }} />
+          </button>
+        </div>
+
+        {/* Valor anterior */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Valor atual</div>
+          <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-secondary)', fontFamily: field === 'placa' ? 'monospace' : undefined }}>
+            {origValue || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(vazio)</span>}
+          </div>
+        </div>
+
+        {/* Novo valor */}
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Novo valor</div>
+          <input
+            ref={inputRef}
+            type={field === 'valor' ? 'number' : field === 'data' ? 'date' : 'text'}
+            value={val}
+            onChange={e => setVal(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder={`Digite o novo ${label.toLowerCase()}…`}
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: 'var(--bg-primary)', border: '2px solid #818cf8', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: field === 'placa' ? 'monospace' : undefined }}
+          />
+        </div>
+
+        {/* Botões */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onCancel} disabled={saving}
+            style={{ flex: 1, padding: '10px 0', borderRadius: 10, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            Cancelar
+          </button>
+          <button onClick={() => onSave(val)} disabled={saving || unchanged}
+            style={{ flex: 2, padding: '10px 0', borderRadius: 10, background: saving || unchanged ? 'rgba(99,102,241,0.3)' : '#6366f1', border: 'none', color: saving || unchanged ? 'rgba(255,255,255,0.4)' : '#fff', cursor: saving || unchanged ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {saving ? <><ArrowPathIcon style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} /> Salvando…</> : 'Confirmar alteração'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ColFilterPopover — dropdown estilo Excel AutoFilter
+// ─────────────────────────────────────────────────────────────────────────────
+function ColFilterPopover({ label, values, current, onSelect, onClose }) {
+  const [search, setSearch] = useState('')
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [onClose])
+
+  const shown = values.filter(v => !search || String(v.label || v).toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <div ref={ref} onClick={e => e.stopPropagation()}
+      style={{ position: 'absolute', top: '100%', left: 0, zIndex: 3000, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 200, maxWidth: 280, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+      <div style={{ padding: '10px 10px 6px', borderBottom: '1px solid var(--border)', background: 'rgba(99,102,241,0.06)' }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{label}</div>
+        <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…"
+          style={{ width: '100%', padding: '6px 8px', borderRadius: 6, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
+      </div>
+      <div style={{ maxHeight: 240, overflowY: 'auto', padding: 4 }}>
+        {/* Opção "Todos" */}
+        <div onClick={() => { onSelect(''); onClose() }}
+          style={{ padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: current === '' ? 700 : 400, color: current === '' ? '#818cf8' : 'var(--text-primary)', background: current === '' ? 'rgba(99,102,241,0.12)' : 'transparent', display: 'flex', alignItems: 'center', gap: 8 }}
+          onMouseEnter={e => { if (current !== '') e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+          onMouseLeave={e => { if (current !== '') e.currentTarget.style.background = 'transparent' }}>
+          <span style={{ width: 14, textAlign: 'center', fontSize: 11 }}>{current === '' ? '✓' : ''}</span>
+          <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>(Todos)</span>
+        </div>
+        {shown.map((v, i) => {
+          const val = typeof v === 'object' ? v.value : v
+          const lbl = typeof v === 'object' ? v.label : v
+          const active = current === val
+          return (
+            <div key={i} onClick={() => { onSelect(val); onClose() }}
+              style={{ padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400, color: active ? '#818cf8' : 'var(--text-primary)', background: active ? 'rgba(99,102,241,0.12)' : 'transparent', display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
+              <span style={{ width: 14, textAlign: 'center', fontSize: 11, flexShrink: 0 }}>{active ? '✓' : ''}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lbl || '(vazio)'}</span>
+            </div>
+          )
+        })}
+        {shown.length === 0 && <div style={{ padding: '10px', fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>Sem resultados</div>}
+      </div>
+    </div>
+  )
+}
+
 export default function Lancamentos() {
   const { workspaceId } = useStore()
   const [tab, setTab]                   = useState('lancamentos')
@@ -1411,6 +1588,21 @@ export default function Lancamentos() {
   const [rotaItem, setRotaItem]         = useState(null)
   const [expandedId, setExpandedId]     = useState(null)
   const [selectedIds, setSelectedIds]   = useState(new Set())
+  const [lotesMap, setLotesMap]           = useState({})
+  const [criarLoteModal, setCriarLoteModal] = useState(false)
+  const [criarLoteCliente, setCriarLoteCliente] = useState('')
+  const [criarLoteSaving, setCriarLoteSaving] = useState(false)
+  const [loteConflito, setLoteConflito] = useState(null) // itens com lote já atribuído
+  const [colFilters, setColFilters] = useState({ data: '', numDm: '', cliente: '', placa: '', origem: '', destino: '', status: '' })
+  const [activeColFilter, setActiveColFilter] = useState(null)
+  const [sortKey, setSortKey] = useState(null)   // colKey ativo
+  const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
+  const [inlineEdit, setInlineEdit] = useState({ id: null, field: null, value: '', origValue: '' })
+  const [inlineSaving, setInlineSaving] = useState(false)
+
+  function setColFilter(key, val) { setColFilters(prev => ({ ...prev, [key]: val })) }
+  function clearColFilters() { setColFilters({ data: '', numDm: '', cliente: '', placa: '', origem: '', destino: '', status: '' }) }
+  const hasColFilters = Object.values(colFilters).some(v => v !== '')
 
   function toggleSelect(id) {
     setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -1419,6 +1611,91 @@ export default function Lancamentos() {
     if (filtered.every(l => selectedIds.has(l.id))) setSelectedIds(new Set())
     else setSelectedIds(new Set(filtered.map(l => l.id)))
   }
+
+  // ── Inline Editing ──────────────────────────────────────────
+  // Campos raiz (direto na linha lancamentos): 'data', 'valor'
+  // Campos em dados_extras: 'numero_diario', 'cliente', 'local_origem', 'local_destino', 'placa'
+  const ROOT_FIELDS = new Set(['data', 'valor'])
+
+  function startInlineEdit(lancamento, field, currentValue) {
+    setInlineEdit({ id: lancamento.id, field, value: String(currentValue ?? ''), origValue: String(currentValue ?? '') })
+  }
+
+  function cancelInlineEdit() {
+    setInlineEdit({ id: null, field: null, value: '', origValue: '' })
+  }
+
+  async function saveInlineEdit(newValue) {
+    const { id, field, origValue } = inlineEdit
+    if (!id || !field) return
+    const value = newValue !== undefined ? String(newValue) : inlineEdit.value
+    if (value === origValue) { cancelInlineEdit(); return }
+    setInlineSaving(true)
+    try {
+      const lancamento = lancamentos.find(l => l.id === id)
+      if (!lancamento) throw new Error('Lançamento não encontrado')
+
+      let payload
+      let valorFinal = value.trim()
+
+      if (ROOT_FIELDS.has(field)) {
+        if (field === 'valor') {
+          valorFinal = parseFloat(value.replace(',', '.')) || 0
+        }
+        payload = { [field]: valorFinal, updated_at: new Date().toISOString() }
+      } else if (field === 'km_asfalto' || field === 'km_terra') {
+        // Ajusta km_rows: coloca todo o valor no primeiro trecho do tipo, zera os demais
+        const tipoKm = field === 'km_asfalto' ? 'ASFALTO' : 'TERRA'
+        const novoTotal = parseFloat(String(valorFinal).replace(',', '.')) || 0
+        const kmRows = mergeKmRows(lancamento.dados_extras?.km_rows)
+        let first = true
+        const updatedRows = kmRows.map(r => {
+          if (r.tipo !== tipoKm) return r
+          if (first) { first = false; return { ...r, total: novoTotal > 0 ? String(novoTotal) : '' } }
+          return { ...r, saida: '', entrada: '', total: '' }
+        })
+        const extras = { ...(lancamento.dados_extras || {}), km_rows: updatedRows }
+        payload = { dados_extras: extras, updated_at: new Date().toISOString() }
+        valorFinal = novoTotal
+      } else {
+        // Campo dentro de dados_extras
+        const extras = { ...(lancamento.dados_extras || {}), [field]: valorFinal }
+        payload = { dados_extras: extras, updated_at: new Date().toISOString() }
+      }
+
+      const { error } = await supabase.from('lancamentos').update(payload).eq('id', id)
+      if (error) throw error
+
+      // Atualiza local
+      setLancamentos(prev => prev.map(l => {
+        if (l.id !== id) return l
+        if (ROOT_FIELDS.has(field)) return { ...l, [field]: valorFinal }
+        if (field === 'km_asfalto' || field === 'km_terra') {
+          return { ...l, dados_extras: payload.dados_extras }
+        }
+        return { ...l, dados_extras: { ...(l.dados_extras || {}), [field]: valorFinal } }
+      }))
+
+      // Registra no histórico
+      const { data: authData } = await supabase.auth.getUser()
+      const userEmail = authData?.user?.email || null
+      await registrarEvento({
+        lancamentoId: id,
+        tipo: 'editado',
+        usuarioId: userId,
+        usuarioNome: userEmail,
+        dados: { campo: field, valor_anterior: origValue, valor_novo: String(valorFinal), editado_inline: true },
+      })
+
+      toast.success('Campo atualizado')
+      cancelInlineEdit()
+    } catch (err) {
+      toast.error(`Erro ao salvar: ${err.message}`)
+    } finally {
+      setInlineSaving(false)
+    }
+  }
+
 
   function buildRow(l) {
     const d = l.dados_extras || {}
@@ -1720,7 +1997,20 @@ export default function Lancamentos() {
       .order('data', { ascending: false })
       .order('created_at', { ascending: false })
     if (error) { toast.error('Erro ao carregar lançamentos'); setLoading(false); return }
-    setLancamentos(data || [])
+    const items = data || []
+    setLancamentos(items)
+    // Carrega info dos lotes vinculados
+    const loteIds = [...new Set(items.map(l => l.lote_cliente_id).filter(Boolean))]
+    if (loteIds.length > 0) {
+      supabase.from('lotes_cliente').select('id, cliente, status').in('id', loteIds)
+        .then(({ data: ld }) => {
+          const m = {}
+          ;(ld || []).forEach(lt => { m[lt.id] = lt })
+          setLotesMap(m)
+        })
+    } else {
+      setLotesMap({})
+    }
     setLoading(false)
   }, [])
 
@@ -1764,12 +2054,79 @@ export default function Lancamentos() {
         !d.solicitante?.toLowerCase().includes(q)
       ) return false
     }
+    // Filtros por coluna
+    const d = l.dados_extras || {}
+    if (colFilters.data && !(l.data || '').startsWith(colFilters.data)) return false
+    if (colFilters.numDm && (d.numero_diario || '') !== colFilters.numDm) return false
+    if (colFilters.cliente && (d.cliente || d.empresa || l.descricao || '') !== colFilters.cliente) return false
+    if (colFilters.placa && (d.placa || '') !== colFilters.placa) return false
+    if (colFilters.origem && (d.local_origem || '') !== colFilters.origem) return false
+    if (colFilters.destino && (d.local_destino || '') !== colFilters.destino) return false
+    if (colFilters.status && l.status !== colFilters.status) return false
     return true
   })
+
+  // Ordenação
+  const sortedFiltered = sortKey ? [...filtered].sort((a, b) => {
+    const d = a.dados_extras || {}, e = b.dados_extras || {}
+    let va, vb
+    if (sortKey === 'data')    { va = a.data || '';          vb = b.data || '' }
+    else if (sortKey === 'numDm')   { va = Number(d.numero_diario) || 0; vb = Number(e.numero_diario) || 0 }
+    else if (sortKey === 'cliente') { va = (d.cliente || d.empresa || a.descricao || '').toLowerCase(); vb = (e.cliente || e.empresa || b.descricao || '').toLowerCase() }
+    else if (sortKey === 'origem')  { va = (d.local_origem || '').toLowerCase();  vb = (e.local_origem || '').toLowerCase() }
+    else if (sortKey === 'destino') { va = (d.local_destino || '').toLowerCase(); vb = (e.local_destino || '').toLowerCase() }
+    else if (sortKey === 'placa')   { va = (d.placa || '').toLowerCase();         vb = (e.placa || '').toLowerCase() }
+    else if (sortKey === 'valor')   { va = a.valor || 0;                          vb = b.valor || 0 }
+    else if (sortKey === 'status')  { va = a.status || '';                        vb = b.status || '' }
+    else if (sortKey === 'kmAsf')   { va = calcKmTotais(d).asfalto;               vb = calcKmTotais(e).asfalto }
+    else if (sortKey === 'kmTer')   { va = calcKmTotais(d).terra;                 vb = calcKmTotais(e).terra }
+    else if (sortKey === 'kmTotal') { va = calcKmTotais(d).total;                 vb = calcKmTotais(e).total }
+    else { va = ''; vb = '' }
+    if (va < vb) return sortDir === 'asc' ? -1 : 1
+    if (va > vb) return sortDir === 'asc' ? 1 : -1
+    return 0
+  }) : filtered
 
   const totalReceitas  = filtered.filter(l => l.tipo === 'receita'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const totalDespesas  = filtered.filter(l => l.tipo === 'despesa'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const pendentes = filtered.filter(l => ['rascunho','aguardando_aprovacao','devolvido','corrigido'].includes(l.status)).length
+
+  // Valores distintos para AutoFilter (calculados do dataset completo)
+  const colDistinct = {
+    data:    [...new Set(lancamentos.map(l => l.data?.slice(0, 7)).filter(Boolean))].sort().reverse(),
+    numDm:   [...new Set(lancamentos.map(l => l.dados_extras?.numero_diario).filter(Boolean))].sort((a,b) => Number(a)-Number(b) || a.localeCompare(b)),
+    cliente: [...new Set(lancamentos.map(l => l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao).filter(Boolean))].sort(),
+    placa:   [...new Set(lancamentos.map(l => l.dados_extras?.placa).filter(Boolean))].sort(),
+    origem:  [...new Set(lancamentos.map(l => l.dados_extras?.local_origem).filter(Boolean))].sort(),
+    destino: [...new Set(lancamentos.map(l => l.dados_extras?.local_destino).filter(Boolean))].sort(),
+    status:  Object.entries(STATUS_CONF).filter(([,v]) => v.label !== v.color).map(([k, v]) => ({ value: k, label: v.label })).filter((v, i, arr) => arr.findIndex(x => x.value === v.value) === i),
+  }
+
+  // Helper: cabeçalho de coluna com ordenação crescente/decrescente
+  function ColHead({ colKey, label, align = 'left' }) {
+    const isSorted = sortKey === colKey
+    const isAsc = isSorted && sortDir === 'asc'
+    const isDesc = isSorted && sortDir === 'desc'
+    function handleSort() {
+      if (!isSorted) { setSortKey(colKey); setSortDir('asc') }
+      else if (isAsc) { setSortDir('desc') }
+      else { setSortKey(null) }
+    }
+    return (
+      <th onClick={handleSort}
+        style={{ padding: '10px 8px 10px 12px', textAlign: align, fontSize: 11, fontWeight: 700,
+          color: isSorted ? '#818cf8' : 'var(--text-secondary)', textTransform: 'uppercase',
+          letterSpacing: 0.5, whiteSpace: 'nowrap', position: 'relative', userSelect: 'none',
+          cursor: 'pointer', background: isSorted ? 'rgba(99,102,241,0.06)' : undefined }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
+          <span>{label}</span>
+          {isAsc  && <span style={{ fontSize: 10, lineHeight: 1 }}>↑</span>}
+          {isDesc && <span style={{ fontSize: 10, lineHeight: 1 }}>↓</span>}
+          {!isSorted && <ArrowsUpDownIcon style={{ width: 10, height: 10, opacity: 0.35, flexShrink: 0 }} />}
+        </div>
+      </th>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
@@ -1834,6 +2191,14 @@ export default function Lancamentos() {
           </select>
           {selectedIds.size > 0 && (
             <>
+              <button onClick={() => {
+                const sels = filtered.filter(l => selectedIds.has(l.id))
+                const comLote = sels.filter(l => l.lote_cliente_id && lotesMap[l.lote_cliente_id])
+                if (comLote.length > 0) { setLoteConflito(comLote); return }
+                setCriarLoteCliente(''); setCriarLoteModal(true)
+              }} title={`Criar lote cliente com ${selectedIds.size} selecionado(s)`} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <UserGroupIcon style={{ width: 16, height: 16 }} /> Lote ({selectedIds.size})
+              </button>
               <button onClick={exportCSV} title={`Exportar ${selectedIds.size} selecionado(s) para Excel/CSV`} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
                 <TableCellsIcon style={{ width: 16, height: 16 }} /> Excel ({selectedIds.size})
               </button>
@@ -1845,6 +2210,11 @@ export default function Lancamentos() {
           <button onClick={() => setShowDigital(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
             <DocumentArrowUpIcon style={{ width: 16, height: 16 }} /> Digitalizar
           </button>
+          {hasColFilters && (
+            <button onClick={clearColFilters} title="Limpar filtros de coluna" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', color: '#f59e0b', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
+              <XMarkIcon style={{ width: 14, height: 14 }} /> Limpar filtros
+            </button>
+          )}
           <button onClick={() => { setEditItem(null); setShowModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#059669,#10b981)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
             <PlusIcon style={{ width: 16, height: 16 }} /> Novo
           </button>
@@ -1870,17 +2240,39 @@ export default function Lancamentos() {
                       style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#818cf8' }}
                     />
                   </th>
-                  {['DATA', 'Nº DM', 'CLIENTE / DESCRIÇÃO', 'ORIGEM', 'DESTINO', 'PLACA', 'KM ASF', 'KM TER', 'KM TOTAL', 'VALOR', 'STATUS', ''].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', textAlign: (h === 'VALOR' || h === 'KM ASF' || h === 'KM TER' || h === 'KM TOTAL') ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
+                  <ColHead colKey="data" label="DATA" />
+                  <ColHead colKey="numDm" label="Nº DM" />
+                  <ColHead colKey="cliente" label="CLIENTE / DESCRIÇÃO" />
+                  <ColHead colKey="origem" label="ORIGEM" />
+                  <ColHead colKey="destino" label="DESTINO" />
+                  <ColHead colKey="placa" label="PLACA" />
+                  <ColHead colKey="kmAsf" label="KM ASF" align="right" />
+                  <ColHead colKey="kmTer" label="KM TER" align="right" />
+                  <ColHead colKey="kmTotal" label="KM TOTAL" align="right" />
+                  <ColHead colKey="valor" label="VALOR" align="right" />
+                  <ColHead colKey="status" label="STATUS">{colDistinct.status}</ColHead>
+                  <th style={{ padding: '10px 12px', width: 80 }} />
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(l => {
+                {sortedFiltered.map(l => {
                   const isTransporte = (l.tipo_formulario || 'padrao') === 'transporte'
                   const d = l.dados_extras || {}
                   const km = isTransporte ? calcKmTotais(d) : null
                   const fmtKm = v => v > 0 ? v.toLocaleString('pt-BR') : '—'
+
+                  // abre popup de edição ao clicar
+                  function openEdit(field, currentValue) {
+                    startInlineEdit(l, field, currentValue)
+                  }
+                  const EDITABLE_TD = (field, currentValue, children, extraStyle = {}) => (
+                    <td onClick={() => openEdit(field, currentValue ?? '')}
+                      title={`Clique para editar ${FIELD_LABELS[field] || field}`}
+                      style={{ cursor: 'pointer', ...extraStyle }}>
+                      {children}
+                    </td>
+                  )
+
                   return (
                     <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s', background: selectedIds.has(l.id) ? 'rgba(99,102,241,0.07)' : '' }}
                       onMouseEnter={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = 'rgba(255,255,255,0.025)' }}
@@ -1896,68 +2288,96 @@ export default function Lancamentos() {
                         />
                       </td>
                       {/* DATA */}
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 12 }}>{fmtDate(l.data)}</td>
+                      {EDITABLE_TD('data', l.data, (
+                        <span style={{ padding: '10px 12px', display: 'block', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 12 }}>{fmtDate(l.data)}</span>
+                      ))}
                       {/* Nº DM */}
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                        {isTransporte && d.numero_diario
-                          ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>{d.numero_diario}</span>
-                          : <span style={{ color: 'var(--text-secondary)' }}>—</span>
-                        }
-                      </td>
-                      {/* CLIENTE + condutor */}
-                      <td style={{ padding: '10px 12px', maxWidth: 180 }}>
-                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--text-primary)' }}>
-                          {isTransporte ? (d.cliente || d.empresa || l.descricao) : l.descricao}
+                      {EDITABLE_TD('numero_diario', d.numero_diario, (
+                        <span style={{ padding: '10px 12px', display: 'block', whiteSpace: 'nowrap' }}>
+                          {isTransporte && d.numero_diario
+                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>{d.numero_diario}</span>
+                            : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                        </span>
+                      ))}
+                      {/* CLIENTE */}
+                      {EDITABLE_TD('cliente', d.cliente || d.empresa || l.descricao, (
+                        <div style={{ padding: '10px 12px', maxWidth: 180 }}>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {isTransporte ? (d.cliente || d.empresa || l.descricao) : l.descricao}
+                          </div>
+                          {d.condutor && <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor}</div>}
                         </div>
-                        {d.condutor && <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor}</div>}
-                      </td>
+                      ))}
                       {/* ORIGEM */}
-                      <td style={{ padding: '10px 12px', maxWidth: 160, fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {isTransporte ? (d.local_origem || '—') : '—'}
-                      </td>
+                      {EDITABLE_TD('local_origem', d.local_origem, (
+                        <span style={{ padding: '10px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isTransporte ? (d.local_origem || '—') : '—'}
+                        </span>
+                      ))}
                       {/* DESTINO */}
-                      <td style={{ padding: '10px 12px', maxWidth: 160, fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {isTransporte ? (d.local_destino || '—') : '—'}
-                      </td>
+                      {EDITABLE_TD('local_destino', d.local_destino, (
+                        <span style={{ padding: '10px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isTransporte ? (d.local_destino || '—') : '—'}
+                        </span>
+                      ))}
                       {/* PLACA */}
-                      <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap', letterSpacing: 0.5 }}>{d.placa || '—'}</td>
+                      {EDITABLE_TD('placa', d.placa, (
+                        <span style={{ padding: '10px 12px', display: 'block', fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap', letterSpacing: 0.5 }}>{d.placa || '—'}</span>
+                      ))}
                       {/* KM ASF */}
-                      <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.asfalto > 0 ? 700 : 400, color: km?.asfalto > 0 ? '#818cf8' : 'var(--text-secondary)', fontSize: 12 }}>{fmtKm(km?.asfalto)}</td>
+                      {isTransporte ? EDITABLE_TD('km_asfalto', km?.asfalto, (
+                        <span style={{ padding: '10px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.asfalto > 0 ? 700 : 400, color: km?.asfalto > 0 ? '#818cf8' : 'var(--text-secondary)', fontSize: 12 }}>{fmtKm(km?.asfalto)}</span>
+                      ), { textAlign: 'right' }) : <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: 12 }}>—</td>}
                       {/* KM TER */}
-                      <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.terra > 0 ? 700 : 400, color: km?.terra > 0 ? '#f59e0b' : 'var(--text-secondary)', fontSize: 12 }}>{fmtKm(km?.terra)}</td>
+                      {isTransporte ? EDITABLE_TD('km_terra', km?.terra, (
+                        <span style={{ padding: '10px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.terra > 0 ? 700 : 400, color: km?.terra > 0 ? '#f59e0b' : 'var(--text-secondary)', fontSize: 12 }}>{fmtKm(km?.terra)}</span>
+                      ), { textAlign: 'right' }) : <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: 12 }}>—</td>}
                       {/* KM TOTAL */}
                       <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.total > 0 ? 800 : 400, color: km?.total > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: 13 }}>{fmtKm(km?.total)}</td>
                       {/* VALOR */}
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#10b981' : l.tipo === 'despesa' ? '#ef4444' : '#818cf8' }}>
-                        {fmtCurrency(l.valor)}
-                      </td>
+                      {EDITABLE_TD('valor', l.valor, (
+                        <span style={{ padding: '10px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#10b981' : l.tipo === 'despesa' ? '#ef4444' : '#818cf8' }}>
+                          {fmtCurrency(l.valor)}
+                        </span>
+                      ), { textAlign: 'right' })}
                       {/* STATUS */}
-                      <td style={{ padding: '10px 12px' }}><StatusChip status={l.status} /></td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
+                        {l.lote_cliente_id && lotesMap[l.lote_cliente_id] && (
+                          <div style={{ marginTop: 3, fontSize: 10, color: 'var(--text-secondary)' }}>
+                            {lotesMap[l.lote_cliente_id].cliente.length > 18 ? lotesMap[l.lote_cliente_id].cliente.slice(0, 18) + '…' : lotesMap[l.lote_cliente_id].cliente}
+                          </div>
+                        )}
+                      </td>
                       {/* AÇÕES */}
                       <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                          {l.status === 'rascunho' && (
-                            <button title="Enviar para Aprovação" onClick={() => handleStatus(l.id, 'aguardando_aprovacao')}
-                              style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#f59e0b', display: 'flex', alignItems: 'center' }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.1)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                              <PaperAirplaneIcon style={{ width: 15, height: 15 }} />
-                            </button>
-                          )}
-                          {l.status === 'devolvido' && (
-                            <button title="Reenviar corrigido para Aprovação" onClick={() => handleStatus(l.id, 'corrigido')}
-                              style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#6366f1', display: 'flex', alignItems: 'center' }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                              <ArrowPathIcon style={{ width: 15, height: 15 }} />
-                            </button>
-                          )}
-                          <button title="Editar" onClick={() => { setEditItem(l); setShowModal(true) }}
-                            style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                            <PencilIcon style={{ width: 15, height: 15 }} />
-                          </button>
+                          {(() => {
+                            const podeEditar = l.status === 'rascunho' || l.status === 'devolvido'
+                            return (
+                              <>
+                                {l.status === 'devolvido' ? (
+                                  <button title="Corrigir e reenviar para Faturamento" onClick={() => { setEditItem(l); setShowModal(true) }}
+                                    style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)', cursor: 'pointer', color: '#f97316', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(249,115,22,0.2)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(249,115,22,0.12)'}>
+                                    <WrenchScrewdriverIcon style={{ width: 13, height: 13 }} /> Corrigir
+                                  </button>
+                                ) : podeEditar ? (
+                                  <button title="Editar" onClick={() => { setEditItem(l); setShowModal(true) }}
+                                    style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <PencilIcon style={{ width: 15, height: 15 }} />
+                                  </button>
+                                ) : (
+                                  <span title="Edição bloqueada — item em andamento" style={{ padding: 5, display: 'flex', alignItems: 'center', color: '#334155', cursor: 'not-allowed' }}>
+                                    <LockClosedIcon style={{ width: 14, height: 14 }} />
+                                  </span>
+                                )}
+                              </>
+                            )
+                          })()}
                           <button title="Ver trajetória do item" onClick={() => setRotaItem(l)}
                             style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
@@ -1972,12 +2392,14 @@ export default function Lancamentos() {
                               <PhotoIcon style={{ width: 15, height: 15 }} />
                             </button>
                           )}
-                          <button title="Excluir" onClick={() => handleDelete(l.id)}
-                            style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                            <TrashIcon style={{ width: 15, height: 15 }} />
-                          </button>
+                          {(l.status === 'rascunho') && (
+                            <button title="Excluir" onClick={() => handleDelete(l.id)}
+                              style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                              <TrashIcon style={{ width: 15, height: 15 }} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1999,6 +2421,17 @@ export default function Lancamentos() {
           onSaved={() => { setShowModal(false); setEditItem(null); loadData() }}
         />
       )}
+
+      {/* Popup de edição inline */}
+      {inlineEdit.id && (
+        <EditFieldModal
+          editState={inlineEdit}
+          saving={inlineSaving}
+          onSave={saveInlineEdit}
+          onCancel={cancelInlineEdit}
+        />
+      )}
+
       {showDigital && (
         <DigitalizacaoModal
           workspaceId={workspaceId}
@@ -2013,6 +2446,93 @@ export default function Lancamentos() {
           onClose={() => setRotaItem(null)}
         />
       )}
+
+      {/* Modal: Conflito de Lote */}
+      {loteConflito && (
+        <div onClick={() => setLoteConflito(null)} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 480, border: '1px solid rgba(239,68,68,0.3)' }}>
+            <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ExclamationTriangleIcon style={{ width: 20, height: 20 }} /> Itens já atribuídos a um Lote
+              </div>
+              <button onClick={() => setLoteConflito(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><XMarkIcon style={{ width: 20, height: 20 }} /></button>
+            </div>
+            <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>Os seguintes itens já pertencem a um lote ativo e não podem ser adicionados novamente:</p>
+              {loteConflito.map(l => (
+                <div key={l.id} style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{l.descricao}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Lote: <strong style={{ color: '#818cf8' }}>{lotesMap[l.lote_cliente_id]?.cliente}</strong> · Status: <strong>{lotesMap[l.lote_cliente_id]?.status?.replace(/_/g, ' ')}</strong></div>
+                  </div>
+                </div>
+              ))}
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>Remova esses itens da seleção ou aguarde a conclusão do lote atual.</p>
+            </div>
+            <div style={{ padding: '12px 22px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setLoteConflito(null)} style={{ padding: '9px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#818cf8)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>Entendi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Criar Lote Cliente */}
+      {criarLoteModal && (() => {
+        const selecionados = filtered.filter(l => selectedIds.has(l.id))
+        const fmtCurr = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+        const total = selecionados.reduce((s, l) => s + (l.valor || 0), 0)
+
+        async function confirmarLote() {
+          if (!criarLoteCliente.trim()) { toast.error('Informe o nome do cliente.'); return }
+          if (selecionados.length === 0) { toast.error('Nenhum lançamento selecionado.'); return }
+          setCriarLoteSaving(true)
+          try {
+            const { data: lote, error: errL } = await supabase
+              .from('lotes_cliente')
+              .insert({ workspace_id: workspaceId, cliente: criarLoteCliente.trim(), created_by: userId, status: 'rascunho' })
+              .select('id').single()
+            if (errL) throw errL
+            const { error: errUp } = await supabase.from('lancamentos').update({ lote_cliente_id: lote.id }).in('id', selecionados.map(l => l.id))
+            if (errUp) throw errUp
+            toast.success(`Lote criado com ${selecionados.length} lançamento(s).`)
+            setCriarLoteModal(false)
+            setSelectedIds(new Set())
+            loadData()
+          } catch (e) {
+            toast.error('Erro: ' + e.message)
+          } finally {
+            setCriarLoteSaving(false)
+          }
+        }
+
+        return (
+          <div onClick={() => setCriarLoteModal(false)} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 460, border: '1px solid var(--border)' }}>
+              <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>Criar Lote para Cliente</div>
+                <button onClick={() => setCriarLoteModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><XMarkIcon style={{ width: 20, height: 20 }} /></button>
+              </div>
+              <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700 }}>CLIENTE *</label>
+                  <input value={criarLoteCliente} onChange={e => setCriarLoteCliente(e.target.value)} placeholder="Nome do cliente" autoFocus
+                    style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ padding: 12, borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}><strong style={{ color: 'var(--text-primary)' }}>{selecionados.length}</strong> lançamento(s) selecionado(s)</span>
+                  <span style={{ fontWeight: 700, color: '#10b981' }}>{fmtCurr(total)}</span>
+                </div>
+              </div>
+              <div style={{ padding: '12px 22px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setCriarLoteModal(false)} style={{ padding: '9px 18px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14 }}>Cancelar</button>
+                <button onClick={confirmarLote} disabled={criarLoteSaving || !criarLoteCliente.trim()} style={{ padding: '9px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#818cf8)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, opacity: (criarLoteSaving || !criarLoteCliente.trim()) ? 0.6 : 1 }}>
+                  {criarLoteSaving ? 'Criando...' : 'Criar Lote'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

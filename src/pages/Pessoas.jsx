@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
-import { PencilIcon, TrashIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 const COLORS = ['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4','#3b82f6','#84cc16','#f97316']
 const AVATARS = ['😀','😎','🤩','🦁','🐸','🦊','🐼','🦄','🚀','⭐','🔥','💎']
 
 function PersonModal({ person, onClose, onSave }) {
-  const [form, setForm] = useState(person || { nome: '', apelido: '', cor: COLORS[0], avatar: '' })
+  const [form, setForm] = useState(person || { nome: '', apelido: '', cor: COLORS[0], avatar: '', telefone: '' })
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -19,7 +19,6 @@ function PersonModal({ person, onClose, onSave }) {
           </button>
         </div>
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Preview */}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: 72, height: 72, borderRadius: '50%', background: form.cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: form.avatar?.length > 1 ? 28 : 22, fontWeight: 700, color: 'white', border: '3px solid rgba(255,255,255,0.15)' }}>
               {form.avatar || form.nome?.[0]?.toUpperCase() || '?'}
@@ -34,6 +33,10 @@ function PersonModal({ person, onClose, onSave }) {
               <label className="label">Apelido</label>
               <input className="input" value={form.apelido} onChange={e => setForm(f => ({ ...f, apelido: e.target.value }))} placeholder="Como chamar" />
             </div>
+          </div>
+          <div>
+            <label className="label">WhatsApp <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 400 }}>— para usar pelo WhatsApp</span></label>
+            <input className="input" value={form.telefone || ''} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} placeholder="5511999999999 (com DDI e DDD)" />
           </div>
           <div>
             <label className="label">Cor</label>
@@ -64,9 +67,13 @@ function PersonModal({ person, onClose, onSave }) {
 }
 
 export default function Pessoas() {
-  const { people, addPerson, updatePerson, deletePerson, expenses } = useStore()
+  const { people, addPerson, updatePerson, deletePerson, setOwnerId, expenses } = useStore()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [confirmOwner, setConfirmOwner] = useState(null)
+
+  const owner = people.find(p => p.is_owner)
+  const amigos = people.filter(p => !p.is_owner)
 
   function handleSave(data) {
     if (editing) updatePerson(editing.id, data)
@@ -75,18 +82,61 @@ export default function Pessoas() {
   }
 
   function getPersonStats(personId) {
-    const paid = expenses.filter(e => e.pago_por === personId && e.status !== 'pago').reduce((s, e) => s + e.valor, 0)
     const participates = expenses.filter(e => e.participantes?.includes(personId)).length
-    return { paid, participates }
+    return { participates }
   }
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
-      <Header title="Pessoas" subtitle="Gerencie os participantes" action={{ label: 'Nova Pessoa', onClick: () => { setEditing(null); setShowModal(true) } }} />
+      <Header title="Pessoas" subtitle="Amigos e contatos para divisão de despesas" action={{ label: 'Novo Amigo', onClick: () => { setEditing(null); setShowModal(true) } }} />
 
       <div style={{ padding: '24px 28px' }}>
+
+        {/* Dono da conta */}
+        {owner && (
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+              👑 Dono da conta
+            </div>
+            <div className="card" style={{ padding: 20, border: `1.5px solid ${owner.cor}55`, background: `linear-gradient(135deg, ${owner.cor}12, ${owner.cor}04)`, maxWidth: 340 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: owner.cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: owner.avatar?.length > 1 ? 22 : 18, fontWeight: 700, color: 'white', border: `3px solid ${owner.cor}` }}>
+                    {owner.avatar || owner.nome[0]}
+                  </div>
+                  <div style={{ position: 'absolute', top: -6, right: -6, fontSize: 16 }}>👑</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{owner.nome}</div>
+                  {owner.apelido && owner.apelido !== owner.nome && (
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>"{owner.apelido}"</div>
+                  )}
+                  <div style={{ fontSize: 11, color: owner.cor, fontWeight: 600, marginTop: 3 }}>Dono da conta · todos os cálculos são na sua perspectiva</div>
+                </div>
+                <button
+                  onClick={() => { setEditing(owner); setShowModal(true) }}
+                  style={{ background: `${owner.cor}20`, border: `1px solid ${owner.cor}40`, borderRadius: 7, padding: 7, cursor: 'pointer', color: owner.cor, display: 'flex' }}
+                >
+                  <PencilIcon style={{ width: 14, height: 14 }} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Amigos */}
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+          Amigos e contatos
+        </div>
+        {amigos.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>👥</div>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Nenhum amigo cadastrado</div>
+            <div style={{ fontSize: 13, opacity: 0.6 }}>Adicione as pessoas com quem você divide despesas</div>
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-          {people.map(person => {
+          {amigos.map(person => {
             const stats = getPersonStats(person.id)
             return (
               <div key={person.id} className="card" style={{ padding: 20 }}>
@@ -101,6 +151,13 @@ export default function Pessoas() {
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      onClick={() => setConfirmOwner(person)}
+                      title="Definir como dono da conta"
+                      style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 7, padding: 6, cursor: 'pointer', color: '#f59e0b', display: 'flex', fontSize: 13 }}
+                    >
+                      👑
+                    </button>
                     <button onClick={() => { setEditing(person); setShowModal(true) }} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 7, padding: 6, cursor: 'pointer', color: '#818cf8', display: 'flex' }}>
                       <PencilIcon style={{ width: 14, height: 14 }} />
                     </button>
@@ -130,6 +187,28 @@ export default function Pessoas() {
       </div>
 
       {showModal && <PersonModal person={editing} onClose={() => { setShowModal(false); setEditing(null) }} onSave={handleSave} />}
+
+      {confirmOwner && (
+        <div className="modal-overlay" onClick={() => setConfirmOwner(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '24px 28px', textAlign: 'center' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>👑</div>
+              <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8 }}>Definir {confirmOwner.nome} como dono?</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5 }}>
+                Todos os cálculos — "você recebe", "sua parte", perspectiva das despesas — passarão a ser na visão de <strong>{confirmOwner.nome}</strong>.
+                <br />
+                {owner && <span>O papel de <strong>{owner.nome}</strong> como dono será removido.</span>}
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button className="btn-ghost" onClick={() => setConfirmOwner(null)}>Cancelar</button>
+                <button className="btn-primary" onClick={() => { setOwnerId(confirmOwner.id); setConfirmOwner(null) }}>
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

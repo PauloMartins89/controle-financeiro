@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import StatCard from '../components/StatCard'
 import Avatar from '../components/Avatar'
+import WelcomeDashboard from '../components/WelcomeDashboard'
+import NotificacoesRecorrentes from '../components/NotificacoesRecorrentes'
 import useStore from '../store/useStore'
 import { formatCurrency, formatDate, getCategoryIcon } from '../lib/utils'
 
@@ -10,17 +12,27 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const {
     expenses, people, groups, recurring,
-    currentUser, getSaldos, getDebitos,
-    getMinhasReceitas, getMeusDividas, getTotalPagar,
+    currentUser, authUserName, getSaldos, getDebitos,
+    getMinhasReceitas, getMeusDividas, getTotalPagar, getTotalAlheio,
     negocios, proventos,
   } = useStore()
 
   const debitos = useMemo(() => getDebitos(), [expenses])
   const saldos = useMemo(() => getSaldos(), [expenses])
 
-  const totalPendente = useMemo(() => getTotalPagar(), [expenses, currentUser])
+  const minhaCota = useMemo(() => getTotalPagar(), [expenses, currentUser])
+  const cotaAlheia = useMemo(() => getTotalAlheio(), [expenses, currentUser])
   const rateiosAtivos = expenses.filter(e => e.status === 'pendente' && e.participantes?.length > 1).length
   const proximasFaturas = recurring.filter(r => r.ativo)
+
+  // Onboarding: mostra boas-vindas se não tiver pessoas nem despesas
+  const hasPeople = people.length > 0
+  const hasExpenses = expenses.length > 0
+  const hasShared = expenses.some(e => e.participantes?.length > 1)
+
+  if (!hasPeople && !hasExpenses) {
+    return <WelcomeDashboard hasPeople={hasPeople} hasExpenses={hasExpenses} hasShared={hasShared} />
+  }
 
   const recentExpenses = [...expenses]
     .sort((a, b) => new Date(b.data) - new Date(a.data))
@@ -36,21 +48,23 @@ export default function Dashboard() {
     return total + (socio ? (prov.valor * socio.percentual) / 100 : 0)
   }, 0)
 
+  const pendentes = expenses.filter(e => e.status === 'pendente');
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
       <Header
         title="Dashboard"
-        subtitle={`Olá, ${currentUser?.nome || 'usuário'} 👋`}
+        subtitle={`Olá, ${currentUser?.nome || authUserName || 'usuário'} 👋`}
         action={{ label: 'Nova Despesa', onClick: () => navigate('/despesas?new=1') }}
       />
 
       <div style={{ padding: '24px 28px' }}>
+        <NotificacoesRecorrentes />
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
           <StatCard icon="💚" label="Você recebe" value={getMinhasReceitas()} color="#10b981" />
           <StatCard icon="🔴" label="Você deve" value={getMeusDividas()} color="#ef4444" />
-          <StatCard icon="⏳" label="Total pendente" value={totalPendente} color="#f59e0b" />
-          <StatCard icon="🔀" label="Rateios ativos" value={rateiosAtivos} isCurrency={false} color="#6366f1" sub="despesas compartilhadas" />
+          <StatCard icon="⏳" label="Sua parte" value={minhaCota} color="#f59e0b" sub="do total pendente" />
+          <StatCard icon="👤" label="Cabe a outros" value={cotaAlheia} color="#6366f1" sub="em rateios ativos" />
           <StatCard icon="🔁" label="Contas fixas" value={proximasFaturas.length} isCurrency={false} color="#8b5cf6" sub={`${formatCurrency(proximasFaturas.reduce((s, r) => s + r.valor, 0))} / mês`} />
           <StatCard icon="👥" label="Pessoas" value={people.length} isCurrency={false} color="#ec4899" sub={`${groups.length} grupos ativos`} />
         </div>
