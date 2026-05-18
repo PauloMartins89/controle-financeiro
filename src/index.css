@@ -16,6 +16,17 @@
     --text-primary: #e8eaed;
     --text-secondary: #8a9099;
     --border: rgba(255,255,255,0.06);
+    /* ── Sidebar (dark mode defaults) ── */
+    --sb-bg: var(--bg-secondary);
+    --sb-bg-hover: rgba(0,200,150,0.07);
+    --sb-active: rgba(0,200,150,0.12);
+    --sb-active-color: #00c896;
+    --sb-text: var(--text-secondary);
+    --sb-text-active: var(--text-primary);
+    --sb-border: var(--border);
+    --sb-title: var(--text-secondary);
+    --sb-balance-bg: rgba(0,200,150,0.07);
+    --sb-avatar-bg: #6366f1;
   }
 
   :root[data-theme="light"] {
@@ -32,6 +43,17 @@
     --text-primary: #0f172a;
     --text-secondary: #64748b;
     --border: rgba(99,102,241,0.18);
+    /* ── Sidebar (light mode — premium teal) ── */
+    --sb-bg: linear-gradient(175deg, #0B3D3C 0%, #062F2F 65%);
+    --sb-bg-hover: #0C4E4B;
+    --sb-active: #0F5A56;
+    --sb-active-color: #C4A55A;
+    --sb-text: #9AADA6;
+    --sb-text-active: #F0EDE4;
+    --sb-border: rgba(201, 178, 111, 0.14);
+    --sb-title: rgba(184, 154, 93, 0.6);
+    --sb-balance-bg: rgba(10, 58, 57, 0.75);
+    --sb-avatar-bg: #0F5A56;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -187,11 +209,18 @@
   .sidebar-item {
     display: flex; align-items: center; gap: 12px;
     padding: 10px 14px; border-radius: 10px;
-    color: var(--text-secondary); font-size: 14px; font-weight: 500;
-    cursor: pointer; transition: all 0.2s; text-decoration: none;
+    color: var(--sb-text); font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.18s ease; text-decoration: none;
   }
-  .sidebar-item:hover { background: rgba(0,200,150,0.07); color: var(--text-primary); }
-  .sidebar-item.active { background: rgba(0,200,150,0.12); color: #00c896; }
+  .sidebar-item:hover { background: var(--sb-bg-hover); color: var(--sb-text-active); }
+  .sidebar-item.active {
+    background: var(--sb-active);
+    color: var(--sb-active-color);
+    font-weight: 600;
+  }
+  :root[data-theme="light"] .sidebar-item.active {
+    box-shadow: inset 2px 0 0 var(--sb-active-color);
+  }
 
   .stat-card {
     background: var(--bg-card); border: 1px solid var(--border);

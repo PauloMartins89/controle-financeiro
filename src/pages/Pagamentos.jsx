@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
@@ -6,7 +6,8 @@ import { supabase } from '../lib/supabase'
 import {
   BanknotesIcon, DocumentTextIcon, XMarkIcon, MagnifyingGlassIcon,
   ChevronDownIcon, ChevronUpIcon, TruckIcon, CalendarDaysIcon,
-  DocumentArrowDownIcon, EyeIcon,
+  DocumentArrowDownIcon, EyeIcon, CheckCircleIcon, ClockIcon,
+  ArrowUpTrayIcon, CurrencyDollarIcon,
 } from '@heroicons/react/24/outline'
 
 function fmtCurrency(v) {
@@ -32,12 +33,146 @@ function calcKmTotais(d = {}) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Modal: Confirmar Recebimento
+// ─────────────────────────────────────────────────────────────────────────────
+function ConfirmarRecebimentoModal({ pagamento, onClose, onSaved }) {
+  const hoje = new Date().toISOString().slice(0, 10)
+  const [dataRecebimento, setDataRecebimento] = useState(hoje)
+  const [file, setFile] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const fileRef = useRef()
+
+  async function handleConfirmar() {
+    setSaving(true)
+    try {
+      let comprovante_pagamento_url = pagamento.comprovante_pagamento_url || null
+
+      if (file) {
+        const ext = file.name.split('.').pop()
+        const path = `pagamentos/recebimento/${pagamento.id}_${Date.now()}.${ext}`
+        const { data: uploaded, error: upErr } = await supabase.storage
+          .from('comprovantes').upload(path, file, { contentType: file.type, upsert: true })
+        if (upErr) throw upErr
+        const { data: pub } = supabase.storage.from('comprovantes').getPublicUrl(uploaded.path)
+        comprovante_pagamento_url = pub?.publicUrl || null
+      }
+
+      const { error } = await supabase.from('pagamentos')
+        .update({
+          status: 'recebido',
+          data_recebimento: dataRecebimento,
+          comprovante_pagamento_url,
+        })
+        .eq('id', pagamento.id)
+      if (error) throw error
+
+      toast.success('Recebimento confirmado!')
+      onSaved()
+    } catch (e) {
+      toast.error('Erro ao confirmar: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background: 'var(--bg-secondary)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460,
+        border: '1px solid var(--border)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+      }}>
+        {/* Cabeçalho */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircleIcon style={{ width: 18, height: 18, color: '#10b981' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>Confirmar Recebimento</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{pagamento.descricao || 'Pagamento'}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}>
+            <XMarkIcon style={{ width: 20, height: 20 }} />
+          </button>
+        </div>
+
+        {/* Valor destaque */}
+        <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: '#10b981', fontWeight: 700 }}>VALOR A CONFIRMAR</span>
+          <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{(pagamento.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        </div>
+
+        {/* Data de recebimento */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>DATA DE RECEBIMENTO</label>
+          <input
+            type="date"
+            value={dataRecebimento}
+            onChange={e => setDataRecebimento(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
+          />
+        </div>
+
+        {/* Upload comprovante */}
+        <div style={{ marginBottom: 22 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>COMPROVANTE DE PAGAMENTO (opcional)</label>
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" onChange={e => setFile(e.target.files[0])} style={{ display: 'none' }} />
+          <div
+            onClick={() => fileRef.current.click()}
+            style={{
+              border: `2px dashed ${file ? '#10b981' : 'var(--border)'}`,
+              borderRadius: 10, padding: '16px', textAlign: 'center', cursor: 'pointer',
+              background: file ? 'rgba(16,185,129,0.05)' : 'var(--bg-primary)',
+              transition: 'all 0.15s',
+            }}
+          >
+            <ArrowUpTrayIcon style={{ width: 22, height: 22, color: file ? '#10b981' : 'var(--text-secondary)', margin: '0 auto 6px' }} />
+            <div style={{ fontSize: 13, color: file ? '#10b981' : 'var(--text-secondary)', fontWeight: file ? 700 : 400 }}>
+              {file ? file.name : 'Clique para anexar PIX / TED / boleto'}
+            </div>
+            {!file && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>PNG, JPG ou PDF</div>}
+          </div>
+          {pagamento.comprovante_pagamento_url && !file && (
+            <div style={{ marginTop: 6, fontSize: 11, color: '#10b981' }}>
+              ✓ Já possui comprovante anexado —{' '}
+              <span style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => window.open(pagamento.comprovante_pagamento_url, '_blank')}>visualizar</span>
+            </div>
+          )}
+        </div>
+
+        {/* Botões */}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 8, background: 'none', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 14, cursor: 'pointer', fontWeight: 600 }}>
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirmar}
+            disabled={saving || !dataRecebimento}
+            style={{ flex: 2, padding: '11px', borderRadius: 8, background: saving ? 'rgba(16,185,129,0.4)' : '#10b981', border: 'none', color: '#fff', fontSize: 14, cursor: saving ? 'default' : 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          >
+            <CheckCircleIcon style={{ width: 16, height: 16 }} />
+            {saving ? 'Salvando...' : 'Confirmar Recebimento'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Card de um pagamento expandível
 // ─────────────────────────────────────────────────────────────────────────────
-function PagamentoCard({ pagamento }) {
+function PagamentoCard({ pagamento, onRefresh }) {
   const [expanded, setExpanded] = useState(false)
   const [lancamentos, setLancamentos] = useState([])
   const [loadingItems, setLoadingItems] = useState(false)
+  const [showModalRecebimento, setShowModalRecebimento] = useState(false)
+
+  const isRecebido = pagamento.status === 'recebido'
 
   async function carregarLancamentos() {
     if (lancamentos.length > 0) { setExpanded(e => !e); return }
@@ -55,7 +190,7 @@ function PagamentoCard({ pagamento }) {
   const fmtKm = v => v > 0 ? v.toLocaleString('pt-BR') : '—'
 
   return (
-    <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden', transition: 'box-shadow 0.2s' }}>
+    <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: `1px solid ${isRecebido ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`, overflow: 'hidden', transition: 'box-shadow 0.2s' }}>
 
       {/* cabeçalho do card */}
       <div
@@ -65,8 +200,11 @@ function PagamentoCard({ pagamento }) {
         onMouseLeave={e => e.currentTarget.style.background = ''}
       >
         {/* ícone */}
-        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <BanknotesIcon style={{ width: 22, height: 22, color: '#8b5cf6' }} />
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: isRecebido ? 'rgba(16,185,129,0.12)' : 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {isRecebido
+            ? <CheckCircleIcon style={{ width: 22, height: 22, color: '#10b981' }} />
+            : <BanknotesIcon style={{ width: 22, height: 22, color: '#8b5cf6' }} />
+          }
         </div>
 
         {/* info principal */}
@@ -74,11 +212,17 @@ function PagamentoCard({ pagamento }) {
           <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {pagamento.descricao || 'Pagamento'}
           </div>
-          <div style={{ display: 'flex', gap: 14, marginTop: 4, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 14, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               <CalendarDaysIcon style={{ width: 12, height: 12, display: 'inline', marginRight: 3, verticalAlign: 'middle' }} />
-              {fmtDate(pagamento.data_pagamento)}
+              NF: {fmtDate(pagamento.data_pagamento)}
             </span>
+            {isRecebido && pagamento.data_recebimento && (
+              <span style={{ fontSize: 12, color: '#10b981', fontWeight: 700 }}>
+                <CheckCircleIcon style={{ width: 12, height: 12, display: 'inline', marginRight: 3, verticalAlign: 'middle' }} />
+                Recebido: {fmtDate(pagamento.data_recebimento)}
+              </span>
+            )}
             {pagamento.numero_nf && (
               <span style={{ fontSize: 12, color: '#818cf8', fontWeight: 700 }}>
                 NF {pagamento.numero_nf}
@@ -90,21 +234,52 @@ function PagamentoCard({ pagamento }) {
           </div>
         </div>
 
-        {/* valor */}
+        {/* valor + badge status */}
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#8b5cf6' }}>{fmtCurrency(pagamento.valor_total)}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>faturado</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: isRecebido ? '#10b981' : '#8b5cf6' }}>
+            {(pagamento.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </div>
+          <span style={{
+            display: 'inline-block', marginTop: 4,
+            padding: '2px 9px', borderRadius: 20, fontSize: 10, fontWeight: 800,
+            background: isRecebido ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+            color: isRecebido ? '#10b981' : '#f59e0b',
+          }}>
+            {isRecebido ? '✓ RECEBIDO' : 'AG. RECEBIMENTO'}
+          </span>
         </div>
 
         {/* ações */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 8, flexShrink: 0 }}>
+          {/* Comprovante NF */}
           {pagamento.comprovante_nf_url && (
             <button
-              title="Ver NF / Comprovante"
+              title="Ver NF"
               onClick={e => { e.stopPropagation(); window.open(pagamento.comprovante_nf_url, '_blank') }}
               style={{ padding: 6, borderRadius: 7, background: 'rgba(129,140,248,0.1)', border: 'none', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center' }}
             >
               <DocumentArrowDownIcon style={{ width: 16, height: 16 }} />
+            </button>
+          )}
+          {/* Comprovante Pagamento */}
+          {pagamento.comprovante_pagamento_url && (
+            <button
+              title="Ver Comprovante de Pagamento"
+              onClick={e => { e.stopPropagation(); window.open(pagamento.comprovante_pagamento_url, '_blank') }}
+              style={{ padding: 6, borderRadius: 7, background: 'rgba(16,185,129,0.1)', border: 'none', cursor: 'pointer', color: '#10b981', display: 'flex', alignItems: 'center' }}
+            >
+              <EyeIcon style={{ width: 16, height: 16 }} />
+            </button>
+          )}
+          {/* Confirmar Recebimento */}
+          {!isRecebido && (
+            <button
+              title="Confirmar Recebimento"
+              onClick={e => { e.stopPropagation(); setShowModalRecebimento(true) }}
+              style={{ padding: '6px 10px', borderRadius: 7, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', cursor: 'pointer', color: '#10b981', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}
+            >
+              <CurrencyDollarIcon style={{ width: 15, height: 15 }} />
+              Confirmar
             </button>
           )}
           <div style={{ padding: 6, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
@@ -205,6 +380,15 @@ function PagamentoCard({ pagamento }) {
           )}
         </div>
       )}
+
+      {/* Modal Confirmar Recebimento */}
+      {showModalRecebimento && (
+        <ConfirmarRecebimentoModal
+          pagamento={pagamento}
+          onClose={() => setShowModalRecebimento(false)}
+          onSaved={() => { setShowModalRecebimento(false); onRefresh() }}
+        />
+      )}
     </div>
   )
 }
@@ -225,6 +409,7 @@ export default function Pagamentos() {
     const { data, error } = await supabase
       .from('pagamentos')
       .select('*, lancamentos(count)')
+      .order('status', { ascending: true })
       .order('data_pagamento', { ascending: false })
       .order('created_at', { ascending: false })
     if (error) { toast.error('Erro ao carregar pagamentos'); setLoading(false); return }
@@ -248,10 +433,13 @@ export default function Pagamentos() {
     )
   })
 
-  const totalGeral = pagamentos.reduce((s, p) => s + (p.valor_total || 0), 0)
+  const totalGeral    = pagamentos.reduce((s, p) => s + (p.valor_total || 0), 0)
+  const totalRecebido = pagamentos.filter(p => p.status === 'recebido').reduce((s, p) => s + (p.valor_total || 0), 0)
+  const totalPendente = pagamentos.filter(p => p.status !== 'recebido').reduce((s, p) => s + (p.valor_total || 0), 0)
   const totalMes = pagamentos
     .filter(p => p.data_pagamento?.startsWith(new Date().toISOString().slice(0, 7)))
     .reduce((s, p) => s + (p.valor_total || 0), 0)
+  const qtdPendente = pagamentos.filter(p => p.status !== 'recebido').length
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
@@ -262,8 +450,10 @@ export default function Pagamentos() {
         {/* ── Cards de resumo ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 24 }}>
           {[
-            { label: 'TOTAL FATURADO',  value: fmtCurrency(totalGeral),       color: '#8b5cf6', sub: `${pagamentos.length} pagamento(s)` },
-            { label: 'ESTE MÊS',        value: fmtCurrency(totalMes),         color: '#10b981', sub: null },
+            { label: 'TOTAL FATURADO',        value: fmtCurrency(totalGeral),    color: '#8b5cf6', sub: `${pagamentos.length} faturamento(s)` },
+            { label: 'AG. RECEBIMENTO',       value: fmtCurrency(totalPendente), color: '#f59e0b', sub: `${qtdPendente} pendente${qtdPendente !== 1 ? 's' : ''}` },
+            { label: 'JÁ RECEBIDO',           value: fmtCurrency(totalRecebido), color: '#10b981', sub: null },
+            { label: 'FATURADO ESTE MÊS',     value: fmtCurrency(totalMes),      color: '#6366f1', sub: null },
           ].map(c => (
             <div key={c.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
@@ -296,7 +486,7 @@ export default function Pagamentos() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {filtered.map(p => <PagamentoCard key={p.id} pagamento={p} />)}
+            {filtered.map(p => <PagamentoCard key={p.id} pagamento={p} onRefresh={loadData} />)}
           </div>
         )}
 

@@ -254,6 +254,73 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
+    // Diagnóstico Z-API: verifica variáveis de ambiente e status da instância
+    if (action === 'test_zapi') {
+      const instanceId  = process.env.ZAPI_INSTANCE_ID  || null
+      const token       = process.env.ZAPI_TOKEN         || null
+      const clientToken = process.env.ZAPI_CLIENT_TOKEN  || null
+      const report = {
+        ts: new Date().toISOString(),
+        env: {
+          ZAPI_INSTANCE_ID:   instanceId   ? '✅ definido' : '❌ AUSENTE',
+          ZAPI_TOKEN:         token        ? '✅ definido' : '❌ AUSENTE',
+          ZAPI_CLIENT_TOKEN:  clientToken  ? '✅ definido' : '⚠️  ausente (recomendado)',
+          APP_URL:            process.env.APP_URL ? `✅ ${process.env.APP_URL}` : '⚠️  ausente (usa fallback dividiai.app.br)',
+        },
+        zapi: null,
+        teste_envio: null,
+      }
+      if (!instanceId || !token) {
+        report.zapi = { status: 'PULADO', motivo: 'ZAPI_INSTANCE_ID ou ZAPI_TOKEN não configurados' }
+        return res.status(200).json(report)
+      }
+      try {
+        const statusRes = await fetch(
+          `https://api.z-api.io/instances/${instanceId}/token/${token}/status`,
+          { headers: clientToken ? { 'Client-Token': clientToken } : {} }
+        )
+        const body = await statusRes.json().catch(() => ({}))
+        report.zapi = {
+          http_status: statusRes.status,
+          conectado: body.connected === true ? '✅ CONECTADO' : '❌ DESCONECTADO',
+          smartphoneConnected: body.smartphoneConnected ?? null,
+          session: body.session || null,
+          raw: body,
+        }
+      } catch (e) {
+        report.zapi = { status: 'ERRO', mensagem: e?.message }
+      }
+      // Teste real de envio se ?to= for fornecido
+      const testTo = req.query.to || null
+      if (testTo) {
+        try {
+          const sendRes = await fetch(
+            `https://api.z-api.io/instances/${instanceId}/token/${token}/send-text`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(clientToken ? { 'Client-Token': clientToken } : {}),
+              },
+              body: JSON.stringify({ phone: testTo, message: '✅ Teste Z-API — diagnóstico DividiaI' }),
+            }
+          )
+          const sendBody = await sendRes.json().catch(() => ({}))
+          report.teste_envio = {
+            para: testTo,
+            http_status: sendRes.status,
+            ok: sendRes.ok ? '✅ ENVIADO' : '❌ FALHOU',
+            raw: sendBody,
+          }
+        } catch (e) {
+          report.teste_envio = { status: 'ERRO', mensagem: e?.message }
+        }
+      } else {
+        report.teste_envio = { status: 'PULADO', dica: 'Adicione &to=5511999999999 para testar envio real' }
+      }
+      return res.status(200).json(report)
+    }
+
     return res.status(400).json({ error: 'Ação inválida' })
   }
 

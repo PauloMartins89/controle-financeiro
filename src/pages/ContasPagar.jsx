@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import {
@@ -7,7 +9,8 @@ import {
   ExclamationCircleIcon, ClockIcon, PencilIcon, TrashIcon,
   BanknotesIcon, CalendarDaysIcon, ArrowPathIcon, DevicePhoneMobileIcon,
   EyeIcon, NoSymbolIcon, ChevronDownIcon, ChevronRightIcon,
-  TruckIcon, UserIcon, IdentificationIcon,
+  TruckIcon, UserIcon, IdentificationIcon, ShoppingCartIcon,
+  DocumentArrowDownIcon, PaperAirplaneIcon,
 } from '@heroicons/react/24/outline'
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid'
 
@@ -227,8 +230,14 @@ function MarcarPagoModal({ conta, onClose, onConfirm }) {
           .update({ status: 'pago', data_pagamento: dataPagamento, updated_at: new Date().toISOString() })
           .eq('id', conta.id).select().single()
         if (error) throw error
+        // Se for compra, marca a solicitação como paga também
+        if (conta._source === 'compras' && conta.solicitacao_id) {
+          await supabase.from('solicitacoes_compra')
+            .update({ status: 'pago', data_pagamento: dataPagamento })
+            .eq('id', conta.solicitacao_id)
+        }
         toast.success('Conta marcada como paga!')
-        onConfirm({ ...data, _source: 'manual' })
+        onConfirm({ ...data, _source: conta._source, solicitacao: conta.solicitacao })
       }
     } catch (e) {
       console.error(e)
@@ -342,6 +351,40 @@ function DetalhesModal({ item, onClose }) {
           {item.forma_pagamento && <Row label="Forma Pgto" value={item.forma_pagamento} />}
           {item.observacoes && <Row label="Observações" value={item.observacoes} />}
 
+          {/* Bloco Compras */}
+          {item._source === 'compras' && item.solicitacao && (
+            <>
+              <div style={{ margin: '16px 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ShoppingCartIcon style={{ width: 14, height: 14, color: '#f59e0b' }} />
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Dados da Requisição de Compra</span>
+              </div>
+              {item.solicitacao.urgencia && (
+                <Row label="Urgência"
+                  value={{ baixa: '🟢 Baixa', media: '🟡 Média', alta: '🔴 ALTA' }[item.solicitacao.urgencia] || item.solicitacao.urgencia}
+                  color={item.solicitacao.urgencia === 'alta' ? '#ef4444' : undefined}
+                />
+              )}
+              {item.solicitacao.quantidade       && <Row label="Quantidade"        value={item.solicitacao.quantidade} />}
+              {item.solicitacao.requisitante_nome && <Row label="Solicitante"       value={item.solicitacao.requisitante_nome} />}
+              {item.solicitacao.data_necessidade  && <Row label="Data necessidade"  value={fmtDate(item.solicitacao.data_necessidade)} />}
+              {item.solicitacao.descricao         && <Row label="Detalhamento"      value={item.solicitacao.descricao} />}
+
+              {item.solicitacao.comprovante_url && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Imagem da Requisição</div>
+                  <a href={item.solicitacao.comprovante_url} target="_blank" rel="noreferrer">
+                    <img
+                      src={item.solicitacao.comprovante_url}
+                      alt="Imagem da requisição"
+                      style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', maxHeight: 320, objectFit: 'contain', background: 'rgba(0,0,0,0.3)', cursor: 'zoom-in' }}
+                    />
+                    <div style={{ fontSize: 11, color: '#818cf8', marginTop: 4, textAlign: 'center' }}>Clique para abrir em tamanho completo ↗</div>
+                  </a>
+                </div>
+              )}
+            </>
+          )}
+
           {/* Bloco WhatsApp */}
           {item._source === 'whatsapp' && (
             <>
@@ -404,11 +447,483 @@ function SourceBadge({ source }) {
       </span>
     )
   }
+  if (source === 'compras') {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', border: '1px solid rgba(245,158,11,0.2)' }}>
+        <ShoppingCartIcon style={{ width: 10, height: 10 }} />
+        Compras
+      </span>
+    )
+  }
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: 'rgba(99,102,241,0.1)', color: '#818cf8', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', border: '1px solid rgba(99,102,241,0.2)' }}>
       Manual
     </span>
   )
+}
+
+// ─── Formata mensagem WA para um item ────────────────────────────────────────
+function formatWaMsg(item, { valorOverride } = {}) {
+  const realStatus = calcStatus(item)
+  const statusLabel = { pago: '✅ Pago', pendente: '⏳ Pendente', vencido: '🔴 Vencido' }[realStatus] || realStatus
+  const extras = item._original?.dados_extras || item.dados_extras || {}
+  const refDate = item.vencimento || item.data
+  const valorExibir = valorOverride != null ? valorOverride : item.valor
+
+  let msg =
+    `📋 *REQUISIÇÃO DE PAGAMENTO*\n\n` +
+    `💼 *${item.descricao}*\n` +
+    (item.fornecedor           ? `🏪 Fornecedor: ${item.fornecedor}\n`         : '') +
+    (item.categoria            ? `🗂 Categoria: ${item.categoria}\n`           : '') +
+    (refDate                   ? `📅 Vencimento: ${fmtDate(refDate)}\n`       : '') +
+    (item.data_pagamento       ? `✅ Pago em: ${fmtDate(item.data_pagamento)}\n` : '') +
+    `💰 Valor: *${fmtCurrency(valorExibir)}*\n` +
+    `📊 Status: ${statusLabel}\n` +
+    (item.observacoes          ? `📝 Obs: ${item.observacoes}\n`              : '')
+
+  if (item._source === 'compras' && item.solicitacao) {
+    const sol = item.solicitacao
+    msg += `\n🛒 *Requisição de Compra*\n`
+    if (sol.requisitante_nome) msg += `👤 Solicitante: ${sol.requisitante_nome}\n`
+    if (sol.urgencia)          msg += `⚡ Urgência: ${{ baixa: 'Baixa', media: 'Média', alta: '🔴 ALTA' }[sol.urgencia] || sol.urgencia}\n`
+    if (sol.quantidade)        msg += `📦 Quantidade: ${sol.quantidade}\n`
+    if (sol.data_necessidade)  msg += `📅 Necessidade: ${fmtDate(sol.data_necessidade)}\n`
+    if (sol.descricao)         msg += `📄 Detalhe: ${sol.descricao}\n`
+  }
+
+  if (item._source === 'whatsapp') {
+    const cond = extras.condutor || extras.motorista
+    if (cond)                       msg += `\n🚗 *Dados do Formulário*\n👨‍✈️ Condutor: ${cond}\n`
+    if (extras.placa)               msg += `🚗 Placa: ${extras.placa}\n`
+    if (extras.local_origem)        msg += `📍 Origem: ${extras.local_origem}\n`
+    if (extras.local_destino)       msg += `📍 Destino: ${extras.local_destino}\n`
+    if (extras.km_inicial != null)  msg += `🔢 KM Inicial: ${extras.km_inicial}\n`
+    if (extras.km_final   != null)  msg += `🔢 KM Final: ${extras.km_final}\n`
+  }
+
+  msg += `\n_Casagrande Locações e Transportes_`
+  return msg
+}
+
+// ─── Modal envio WhatsApp ─────────────────────────────────────────────────────
+function WaSendModal({ item, onClose }) {
+  const [phone,    setPhone]   = useState('')
+  const [sending,  setSending] = useState(false)
+  const [preview,  setPreview] = useState(false)
+  const msg = formatWaMsg(item)
+
+  async function handleSend() {
+    const p = phone.replace(/\D/g, '')
+    if (p.length < 10) { toast.error('Informe um número válido com DDD'); return }
+    setSending(true)
+    try {
+      // 1️⃣ Busca itens da compra se for compra
+      let itensDetalhe = ''
+      let valorTotalItens = null
+      if (item._source === 'compras') {
+        let itensWA = []
+        if (item.solicitacao_id) {
+          const { data: itens, error: itensErr } = await supabase
+            .from('itens_solicitacao_compra')
+            .select('descricao, quantidade, valor_unitario, valor_total')
+            .eq('solicitacao_id', item.solicitacao_id)
+          if (!itensErr && itens && itens.length > 0) {
+            itensWA = itens
+          }
+        }
+        // Fallback: sem itens no banco → usa dados da solicitação
+        if (itensWA.length === 0) {
+          const sol = item.solicitacao
+          const qtd   = parseFloat(sol?.quantidade) || 1
+          const total = parseFloat(item.valor) || 0
+          const desc  = sol?.titulo || item.descricao || '—'
+          itensWA = [{ descricao: desc, quantidade: qtd, valor_total: total }]
+        }
+        valorTotalItens = itensWA.reduce((s, it) => s + (parseFloat(it.valor_total) || 0), 0)
+        itensDetalhe = '\n\n🧾 *Itens da Compra:*\n' +
+          itensWA.map(it => {
+            const qtd   = parseFloat(it.quantidade) || 1
+            const total = parseFloat(it.valor_total) || 0
+            const unit  = total / qtd
+            return `• ${qtd}x ${it.descricao} — ${fmtCurrency(unit)} = ${fmtCurrency(total)}`
+          }).join('\n')
+      }
+
+      // 2️⃣ Gera PDF e faz upload para link público
+      toast('Gerando PDF...', { icon: '📄', duration: 2000 })
+      const pdfData = await exportContaPDF(item, { returnBase64: true })
+
+      const storagePath = `temp_wa/${Date.now()}_${pdfData.nome}`
+      const { data: uploaded, error: upErr } = await supabase.storage
+        .from('comprovantes')
+        .upload(storagePath, pdfData.blob, { contentType: 'application/pdf', upsert: true })
+      if (upErr) throw new Error('Upload PDF falhou: ' + upErr.message)
+
+      const { data: pub } = supabase.storage.from('comprovantes').getPublicUrl(uploaded.path)
+      const pdfUrl = pub.publicUrl
+
+      // 3️⃣ Monta mensagem com itens + link para download
+      const msgFinal = formatWaMsg(item, { valorOverride: valorTotalItens })
+      const mensagemComLink = msgFinal + itensDetalhe + `\n\n📄 *PDF para download:*\n${pdfUrl}`
+
+      // 4️⃣ Envia só o texto (com o link) via WhatsApp
+      toast('Enviando via WhatsApp...', { icon: '📤', duration: 2000 })
+      const res = await fetch('/api/notify-compras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          evento:   '_direto',
+          telefone: p,
+          mensagem: mensagemComLink,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) throw new Error(data.error || `Erro ${res.status}`)
+      toast.success('✅ Enviado com sucesso!')
+      onClose()
+    } catch (e) {
+      console.error('[WA] handleSend erro:', e)
+      toast.error('Erro: ' + e.message)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 460, border: '1px solid var(--border)', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(37,211,102,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PaperAirplaneIcon style={{ width: 18, height: 18, color: '#25d366' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Enviar via WhatsApp</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.descricao}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}>
+            <XMarkIcon style={{ width: 20, height: 20 }} />
+          </button>
+        </div>
+
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Resumo do item */}
+          <div style={{ background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 10, padding: '10px 14px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{item.descricao}</div>
+            <div style={{ fontSize: 12, color: '#25d366', fontWeight: 700, marginTop: 2 }}>{fmtCurrency(item.valor)}</div>
+            {item.fornecedor && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>🏪 {item.fornecedor}</div>}
+          </div>
+
+          {/* Input telefone */}
+          <div>
+            <label style={labelStyle}>Número WhatsApp (com DDD)</label>
+            <input
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="Ex: 11 99999-0000"
+              style={inputStyle}
+              type="tel"
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+            />
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>
+              DDI 55 (Brasil) é adicionado automaticamente se não informado.
+            </div>
+          </div>
+
+          {/* Preview toggle */}
+          <button onClick={() => setPreview(v => !v)}
+            style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {preview ? <ChevronDownIcon style={{ width: 13, height: 13 }} /> : <ChevronRightIcon style={{ width: 13, height: 13 }} />}
+            Ver mensagem que será enviada
+          </button>
+
+          {preview && (
+            <pre style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, fontSize: 11, color: '#94a3b8', whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 200, overflowY: 'auto', margin: 0 }}>
+              {msg}
+            </pre>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', padding: '14px 24px', borderTop: '1px solid var(--border)' }}>
+          <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 10, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+            Cancelar
+          </button>
+          <button onClick={handleSend} disabled={sending}
+            style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: sending ? '#555' : '#25d366', color: '#fff', cursor: sending ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 }}>
+            {sending
+              ? <ArrowPathIcon style={{ width: 15, height: 15, animation: 'spin 1s linear infinite' }} />
+              : <PaperAirplaneIcon style={{ width: 15, height: 15 }} />}
+            {sending ? 'Enviando...' : 'Enviar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Export PDF individual ────────────────────────────────────────────────────
+async function exportContaPDF(item, { returnBase64 = false } = {}) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const W = 210
+  const realStatus = calcStatus(item)
+  const extras = item._original?.dados_extras || item.dados_extras || {}
+
+  // ── Logo / cabeçalho ──────────────────────────────────────────────────────
+  doc.setFillColor(22, 163, 74)
+  doc.rect(0, 0, W, 30, 'F')
+
+  try {
+    const resp = await fetch('/CASAGRANDELOGO.png')
+    if (resp.ok) {
+      const blob = await resp.blob()
+      const b64 = await new Promise(res => {
+        const r = new FileReader()
+        r.onload = () => res(r.result)
+        r.readAsDataURL(blob)
+      })
+      doc.addImage(b64, 'PNG', 10, 3, 44, 24)
+    }
+  } catch { /* logo opcional */ }
+
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.text('REQUISIÇÃO DE PAGAMENTO', W - 14, 14, { align: 'right' })
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'normal')
+  doc.text('Casagrande Locações e Transportes', W - 14, 21, { align: 'right' })
+
+  // ── Status badge ──────────────────────────────────────────────────────────
+  const statusColors = { pago: [16, 185, 129], pendente: [245, 158, 11], vencido: [239, 68, 68] }
+  const [r, g, b] = statusColors[realStatus] || [100, 100, 100]
+  doc.setFillColor(r, g, b)
+  doc.roundedRect(14, 36, 36, 7, 2, 2, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text(realStatus.toUpperCase(), 32, 41.2, { align: 'center' })
+
+  const sourceLabel = { manual: 'Manual', whatsapp: 'WhatsApp / OCR', compras: 'Requisição de Compra' }
+  doc.setTextColor(100, 116, 139)
+  doc.setFontSize(8.5)
+  doc.setFont('helvetica', 'normal')
+  doc.text(`Fonte: ${sourceLabel[item._source] || item._source}`, 56, 41)
+
+  // ── Descrição ─────────────────────────────────────────────────────────────
+  doc.setTextColor(15, 23, 42)
+  doc.setFontSize(16)
+  doc.setFont('helvetica', 'bold')
+  const descLines = doc.splitTextToSize(item.descricao || '—', W - 28)
+  doc.text(descLines, 14, 54)
+  const afterDesc = 54 + (descLines.length - 1) * 7 + 6
+
+  doc.setDrawColor(226, 232, 240)
+  doc.line(14, afterDesc, W - 14, afterDesc)
+
+  // ── Dados principais ──────────────────────────────────────────────────────
+  const refDate = item.vencimento || item.data
+  // Se for compra, busca itens e soma total
+  let itensCompra = []
+  let valorTotalItens = null
+  if (item._source === 'compras' && item.solicitacao_id) {
+    try {
+      const { data: itens, error: itensErr } = await supabase
+        .from('itens_solicitacao_compra')
+        .select('descricao, quantidade, valor_unitario, valor_total')
+        .eq('solicitacao_id', item.solicitacao_id)
+      if (!itensErr && itens && itens.length > 0) {
+        itensCompra = itens
+        valorTotalItens = itens.reduce((s, it) => s + (parseFloat(it.valor_total) || 0), 0)
+      }
+    } catch {}
+  }
+  // Fallback: se não há itens no banco, monta 1 linha com dados da solicitação
+  if (item._source === 'compras' && itensCompra.length === 0) {
+    const sol = item.solicitacao
+    const qtd   = parseFloat(sol?.quantidade) || 1
+    const total = parseFloat(item.valor) || 0
+    const desc  = sol?.titulo || item.descricao || '—'
+    itensCompra   = [{ descricao: desc, quantidade: qtd, valor_total: total, _fallback: true }]
+    valorTotalItens = total
+  }
+
+  const mainRows = [
+    ['Fornecedor',       item.fornecedor || '—'],
+    ['Categoria',        item.categoria  || '—'],
+    ['Data / Vencimento', fmtDate(refDate)],
+    item.data_pagamento ? ['Data do Pagamento', fmtDate(item.data_pagamento)] : null,
+    ['Valor',            fmtCurrency(valorTotalItens !== null ? valorTotalItens : item.valor)],
+    item.observacoes ? ['Observações', item.observacoes] : null,
+  ].filter(Boolean)
+
+  let currentY = afterDesc + 4
+  autoTable(doc, {
+    startY: currentY,
+    head: [],
+    body: mainRows,
+    styles: { fontSize: 10, cellPadding: [3.5, 4] },
+    columnStyles: {
+      0: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 55 },
+      1: { textColor: [15, 23, 42] },
+    },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    theme: 'grid',
+    margin: { left: 14, right: 14 },
+    tableLineColor: [226, 232, 240],
+    tableLineWidth: 0.3,
+  })
+  currentY = doc.lastAutoTable.finalY + 6
+
+  // ── Bloco Compras + Itens ───────────────────────────────────────────────
+  if (item._source === 'compras') {
+    // Cabeçalho + dados da requisição (só se existir solicitacao join)
+    if (item.solicitacao) {
+      const sol = item.solicitacao
+      doc.setFillColor(254, 243, 199)
+      doc.setDrawColor(251, 191, 36)
+      doc.roundedRect(14, currentY, W - 28, 7, 2, 2, 'FD')
+      doc.setTextColor(146, 64, 14)
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.text('DADOS DA REQUISIÇÃO DE COMPRA', 18, currentY + 4.8)
+      currentY += 9
+
+      const comprasRows = [
+        sol.requisitante_nome  ? ['Solicitante',       sol.requisitante_nome] : null,
+        sol.urgencia           ? ['Urgência',           { baixa: 'Baixa', media: 'Média', alta: 'ALTA' }[sol.urgencia] || sol.urgencia] : null,
+        sol.data_necessidade   ? ['Data Necessidade',   fmtDate(sol.data_necessidade)] : null,
+        sol.descricao          ? ['Detalhamento',       sol.descricao] : null,
+      ].filter(Boolean)
+
+      if (comprasRows.length > 0) {
+        autoTable(doc, {
+          startY: currentY,
+          head: [],
+          body: comprasRows,
+          styles: { fontSize: 9.5, cellPadding: [3, 4] },
+          columnStyles: {
+            0: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 55 },
+            1: { textColor: [15, 23, 42] },
+          },
+          alternateRowStyles: { fillColor: [255, 251, 235] },
+          theme: 'grid',
+          margin: { left: 14, right: 14 },
+          tableLineColor: [251, 191, 36],
+          tableLineWidth: 0.3,
+        })
+        currentY = doc.lastAutoTable.finalY + 6
+      }
+    }
+
+    // Tabela de itens — sempre exibida para compras (itens reais ou fallback)
+    if (itensCompra.length > 0) {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(9.5)
+      doc.setTextColor(71, 85, 105)
+      doc.text('ITENS DA COMPRA', 14, currentY + 6)
+      currentY += 8
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Qtd', 'Descrição', 'Valor Unitário', 'Valor Total']],
+        body: itensCompra.map(it => {
+          const qtd   = parseFloat(it.quantidade) || 1
+          const total = parseFloat(it.valor_total) || 0
+          const unit  = total / qtd
+          return [String(qtd), it.descricao, fmtCurrency(unit), fmtCurrency(total)]
+        }),
+        styles: { fontSize: 9.5, cellPadding: [3, 4] },
+        headStyles: { fillColor: [251, 191, 36], textColor: [146, 64, 14], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [255, 251, 235] },
+        columnStyles: {
+          0: { cellWidth: 16, halign: 'center' },
+          2: { halign: 'right' },
+          3: { halign: 'right' },
+        },
+        theme: 'grid',
+        margin: { left: 14, right: 14 },
+        tableLineColor: [251, 191, 36],
+        tableLineWidth: 0.3,
+      })
+      currentY = doc.lastAutoTable.finalY + 6
+    }
+  }
+
+  // ── Bloco WhatsApp / OCR ──────────────────────────────────────────────────
+  if (item._source === 'whatsapp' && Object.keys(extras).length > 0) {
+    doc.setFillColor(220, 252, 231)
+    doc.setDrawColor(74, 222, 128)
+    doc.roundedRect(14, currentY, W - 28, 7, 2, 2, 'FD')
+    doc.setTextColor(22, 101, 52)
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.text('DADOS DO FORMULÁRIO OCR', 18, currentY + 4.8)
+    currentY += 9
+
+    const wppRows = [
+      extras.condutor || extras.motorista ? ['Condutor',   extras.condutor || extras.motorista] : null,
+      extras.placa              ? ['Placa',        extras.placa] : null,
+      extras.empresa            ? ['Empresa',      extras.empresa] : null,
+      extras.solicitante        ? ['Solicitante',  extras.solicitante] : null,
+      extras.numero_diario      ? ['Nº Diário',    String(extras.numero_diario)] : null,
+      extras.km_inicial != null ? ['KM Inicial',   String(extras.km_inicial)] : null,
+      extras.km_final   != null ? ['KM Final',     String(extras.km_final)] : null,
+      extras.local_origem       ? ['Origem',       extras.local_origem] : null,
+      extras.local_destino      ? ['Destino',      extras.local_destino] : null,
+    ].filter(Boolean)
+
+    if (wppRows.length > 0) {
+      autoTable(doc, {
+        startY: currentY,
+        head: [],
+        body: wppRows,
+        styles: { fontSize: 9.5, cellPadding: [3, 4] },
+        columnStyles: {
+          0: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 55 },
+          1: { textColor: [15, 23, 42] },
+        },
+        alternateRowStyles: { fillColor: [240, 253, 244] },
+        theme: 'grid',
+        margin: { left: 14, right: 14 },
+        tableLineColor: [74, 222, 128],
+        tableLineWidth: 0.3,
+      })
+      currentY = doc.lastAutoTable.finalY + 6
+    }
+  }
+
+  // ── Área de assinatura ────────────────────────────────────────────────────
+  const assinaturaY = Math.max(currentY + 10, 230)
+  doc.setDrawColor(200, 200, 200)
+  doc.line(14, assinaturaY, 90, assinaturaY)
+  doc.line(120, assinaturaY, W - 14, assinaturaY)
+  doc.setFontSize(8)
+  doc.setTextColor(150, 150, 150)
+  doc.text('Responsável / Aprovador', 52, assinaturaY + 5, { align: 'center' })
+  doc.text('Financeiro', W - 14 - 23, assinaturaY + 5, { align: 'center' })
+
+  // ── Rodapé ────────────────────────────────────────────────────────────────
+  doc.setFillColor(22, 163, 74)
+  doc.rect(0, 282, W, 15, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(7.5)
+  doc.setFont('helvetica', 'normal')
+  const now = new Date()
+  doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 14, 290.5)
+  doc.text('dividiai.app.br', W - 14, 290.5, { align: 'right' })
+
+  const slug = (item.descricao || 'conta').replace(/[^a-z0-9]/gi, '_').slice(0, 30)
+  const fileName = `requisicao_${slug}.pdf`
+  if (returnBase64) {
+    const b64 = doc.output('datauristring') // data:application/pdf;base64,...
+    return { blob: doc.output('blob'), nome: fileName, b64 }
+  }
+  doc.save(fileName)
 }
 
 // ─── Página principal ─────────────────────────────────────────────────────────
@@ -425,13 +940,14 @@ export default function ContasPagar() {
   const [detalhesModal,setDetalhesModal]= useState(null)
   const [deletingId,   setDeletingId]   = useState(null)
   const [reprovandoId, setReprovandoId] = useState(null)
+  const [waModal,      setWaModal]      = useState(null)
 
   // ── Carrega as duas fontes em paralelo ────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const [resContas, resLanc] = await Promise.all([
-        supabase.from('contas_pagar').select('*').order('vencimento', { ascending: true }),
+        supabase.from('contas_pagar').select('*, solicitacao:solicitacoes_compra(id,titulo,descricao,urgencia,quantidade,requisitante_nome,data_necessidade,comprovante_url)').order('vencimento', { ascending: true }),
         supabase.from('lancamentos')
           .select('*')
           .eq('tipo', 'despesa')
@@ -453,7 +969,7 @@ export default function ContasPagar() {
 
   // ── Lista unificada (ordena por data de referência) ───────────────────────
   const allItems = [
-    ...contas.map(c => ({ ...c, _source: 'manual' })),
+    ...contas.map(c => ({ ...c, _source: c.solicitacao_id ? 'compras' : 'manual' })),
     ...lancamentos.map(normalizeLancamento),
   ].sort((a, b) => {
     const da = a.vencimento || a.data || ''
@@ -525,7 +1041,13 @@ export default function ContasPagar() {
           .update({ status: 'pendente', data_pagamento: null, updated_at: new Date().toISOString() })
           .eq('id', item.id).select().single()
         if (error) throw error
-        setContas(prev => prev.map(c => c.id === data.id ? data : c))
+        // Se for compra, reverte status da solicitação
+        if (item._source === 'compras' && item.solicitacao_id) {
+          await supabase.from('solicitacoes_compra')
+            .update({ status: 'pedido_emitido', data_pagamento: null })
+            .eq('id', item.solicitacao_id)
+        }
+        setContas(prev => prev.map(c => c.id === data.id ? { ...data, solicitacao: c.solicitacao } : c))
       }
       toast.success('Pagamento desfeito')
     } catch {
@@ -617,6 +1139,7 @@ export default function ContasPagar() {
             <option value="todos">Todas as fontes</option>
             <option value="manual">Manual</option>
             <option value="whatsapp">WhatsApp</option>
+            <option value="compras">Compras</option>
           </select>
 
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
@@ -747,6 +1270,18 @@ export default function ContasPagar() {
                                 <EyeIcon style={{ width: 15, height: 15 }} />
                               </button>
 
+                              {/* Exportar PDF */}
+                              <button title="Exportar PDF" onClick={() => exportContaPDF(item)}
+                                style={{ padding: 6, borderRadius: 8, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.2)', cursor: 'pointer', color: '#16a34a', display: 'flex', alignItems: 'center' }}>
+                                <DocumentArrowDownIcon style={{ width: 15, height: 15 }} />
+                              </button>
+
+                              {/* Enviar via WhatsApp */}
+                              <button title="Enviar via WhatsApp" onClick={() => setWaModal(item)}
+                                style={{ padding: 6, borderRadius: 8, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', cursor: 'pointer', color: '#25d366', display: 'flex', alignItems: 'center' }}>
+                                <PaperAirplaneIcon style={{ width: 15, height: 15 }} />
+                              </button>
+
                               {!isPago ? (
                                 <button title="Marcar como pago" onClick={() => setPagoModal(item)}
                                   style={{ padding: 6, borderRadius: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', cursor: 'pointer', color: '#10b981', display: 'flex', alignItems: 'center' }}>
@@ -771,7 +1306,7 @@ export default function ContasPagar() {
                                   style={{ padding: 6, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', opacity: deletingId === item.id ? 0.5 : 1 }}>
                                   <TrashIcon style={{ width: 15, height: 15 }} />
                                 </button>
-                              ) : (
+                              ) : item._source === 'whatsapp' ? (
                                 <button
                                   title="Reprovar lançamento"
                                   disabled={reprovandoId === item.id || realStatus === 'pago'}
@@ -779,7 +1314,7 @@ export default function ContasPagar() {
                                   style={{ padding: 6, borderRadius: 8, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', cursor: reprovandoId === item.id || realStatus === 'pago' ? 'not-allowed' : 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', opacity: realStatus === 'pago' ? 0.3 : 1 }}>
                                   <NoSymbolIcon style={{ width: 15, height: 15 }} />
                                 </button>
-                              )}
+                              ) : null}
                             </div>
                           </td>
                         </tr>
@@ -796,6 +1331,8 @@ export default function ContasPagar() {
                   <span style={{ color: '#25d366' }}>{filtered.filter(c => c._source === 'whatsapp').length} WhatsApp</span>
                   &nbsp;/&nbsp;
                   <span style={{ color: '#818cf8' }}>{filtered.filter(c => c._source === 'manual').length} manual</span>
+                  &nbsp;/&nbsp;
+                  <span style={{ color: '#f59e0b' }}>{filtered.filter(c => c._source === 'compras').length} compras</span>
                 </span>
                 <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>
                   Total: <span style={{ color: '#ef4444' }}>{fmtCurrency(totalFiltrado)}</span>
@@ -824,6 +1361,12 @@ export default function ContasPagar() {
         <DetalhesModal
           item={detalhesModal}
           onClose={() => setDetalhesModal(null)}
+        />
+      )}
+      {waModal && (
+        <WaSendModal
+          item={waModal}
+          onClose={() => setWaModal(null)}
         />
       )}
     </div>

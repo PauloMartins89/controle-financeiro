@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { isAdmin } from '../lib/admin'
 import Header from '../components/Header'
@@ -8,9 +8,10 @@ import {
   PencilIcon, TrashIcon, LinkIcon, PhoneIcon,
   ChatBubbleLeftRightIcon, UsersIcon, SignalIcon, CreditCardIcon,
   BuildingOffice2Icon, PlusIcon, ChevronDownIcon, ChevronUpIcon, TruckIcon,
-  BellAlertIcon,
+  BellAlertIcon, ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import SaudeTab from './SaudeTab'
 
 const ALL_MODULES = [
   { key: 'inicio',       label: 'Início' },
@@ -24,24 +25,20 @@ const ALL_MODULES = [
   { key: 'historico',    label: 'Histórico' },
   { key: 'balanco',      label: 'Balanço' },
   { key: 'caixa',        label: 'Caixa' },
-  { key: 'negocios',     label: 'Negócios' },
-  { key: 'proventos',    label: 'Proventos' },
+  { key: 'central',      label: 'Central Gerencial' },
   { key: 'lancamentos',  label: 'Lançamentos' },
+  { key: 'cadastros',    label: 'Cadastros' },
+  { key: 'proventos',    label: 'Proventos' },
   { key: 'faturamento',  label: 'Faturamento' },
   { key: 'importar',     label: 'Importar' },
   { key: 'escanear',     label: 'Escanear Doc.' },
   { key: 'notas-fiscais',label: 'Notas Fiscais' },
+  { key: 'negocios',     label: 'Negócios' },
+  { key: 'compras',      label: 'Compras' },
+  { key: 'refeicoes',    label: 'Refeições' },
 ]
 
-const TABS = [
-  { id: 'workspaces',     label: 'Workspaces',        icon: BuildingOffice2Icon },
-  { id: 'notificacoes',   label: 'Notificações',      icon: BellAlertIcon },
-  { id: 'motoristas',    label: 'Motoristas WA',     icon: TruckIcon },
-  { id: 'conexoes',      label: 'Conexões WhatsApp', icon: SignalIcon },
-  { id: 'mensagens',     label: 'Log de Mensagens',  icon: ChatBubbleLeftRightIcon },
-  { id: 'usuarios',      label: 'Usuários',           icon: UsersIcon },
-  { id: 'assinaturas',   label: 'Assinaturas',        icon: CreditCardIcon },
-]
+
 
 function fmtDate(d) {
   if (!d) return '—'
@@ -177,7 +174,8 @@ function WorkspaceNotifSection({ workspaceId }) {
 
 export default function AdminPanel() {
   const navigate = useNavigate()
-  const [tab, setTab] = useState('workspaces')
+  const { section = 'saude' } = useParams()
+  const tab = section
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState({ pessoas: [], canais: [], msgs: [], authUsers: [], assinaturas: [] })
   // Workspaces state
@@ -207,6 +205,9 @@ export default function AdminPanel() {
   const [newMotTel, setNewMotTel] = useState('')
   const [newMotWsId, setNewMotWsId] = useState('')
   const [addingMot, setAddingMot] = useState(false)
+  // Z-API status
+  const [zapiStatus, setZapiStatus]     = useState(null)
+  const [zapiChecking, setZapiChecking] = useState(false)
 
   const apiCall = useCallback(async (method, body) => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -221,6 +222,22 @@ export default function AdminPanel() {
     })
     return res.json()
   }, [])
+
+  const checkZapi = async () => {
+    setZapiChecking(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/admin?action=test_zapi', {
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+      })
+      const json = await res.json()
+      setZapiStatus(json)
+    } catch (e) {
+      setZapiStatus({ erro: e?.message })
+    } finally {
+      setZapiChecking(false)
+    }
+  }
 
   const loadMotoristas = useCallback(async () => {
     setMotoristasLoading(true)
@@ -316,38 +333,15 @@ export default function AdminPanel() {
   data.authUsers.forEach(u => { authById[u.id] = u })
 
   return (
-    <div className="main-content">
-      <Header title="Painel Admin" subtitle="Gerenciar conexões e status do sistema" />
+    <div style={{ flex: 1, overflowY: 'auto' }}>
+      <Header title="Painel Administrativo" subtitle="Gerenciar sistema e configurações" />
 
       <div style={{ padding: '0 24px 24px' }}>
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-          {TABS.map(t => {
-            const Icon = t.icon
-            const active = tab === t.id
-            return (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 16px', background: 'none', border: 'none',
-                  cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 500,
-                  color: active ? 'var(--accent)' : 'var(--text-secondary)',
-                  borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
-                  marginBottom: -1, transition: 'all 0.15s',
-                }}
-              >
-                <Icon style={{ width: 16, height: 16 }} />
-                {t.label}
-              </button>
-            )
-          })}
-          <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
           <button
-            onClick={() => { load(); loadWorkspaces() }}
+            onClick={() => { load(); loadWorkspaces(); loadMotoristas() }}
             disabled={loading}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)' }}
           >
             <ArrowPathIcon style={{ width: 14, height: 14, animation: loading ? 'spin 1s linear infinite' : 'none' }} />
             Atualizar
@@ -358,6 +352,9 @@ export default function AdminPanel() {
           <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>Carregando...</div>
         ) : (
           <>
+            {/* ── TAB: SAÚDE DO SISTEMA ─────────────────────────────────── */}
+            {tab === 'saude' && <SaudeTab />}
+
             {/* ── TAB: WORKSPACES ─────────────────────────────────────────── */}
             {tab === 'workspaces' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -756,6 +753,65 @@ export default function AdminPanel() {
             {/* ── TAB: CONEXÕES ─────────────────────────────────────────── */}
             {tab === 'conexoes' && (
               <div>
+                {/* Card status Z-API */}
+                <div className="card" style={{ marginBottom: 20, padding: '16px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: zapiStatus ? 14 : 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <SignalIcon style={{ width: 18, height: 18, color: 'var(--accent)' }} />
+                      <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Status Z-API (WhatsApp)</span>
+                    </div>
+                    <button
+                      onClick={checkZapi}
+                      disabled={zapiChecking}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: zapiChecking ? 'var(--bg-secondary)' : 'var(--accent)', color: zapiChecking ? 'var(--text-secondary)' : '#0d0f12', fontWeight: 600, fontSize: 12, cursor: zapiChecking ? 'default' : 'pointer' }}>
+                      <ArrowPathIcon style={{ width: 14, height: 14, animation: zapiChecking ? 'spin 1s linear infinite' : 'none' }} />
+                      {zapiChecking ? 'Verificando...' : 'Verificar agora'}
+                    </button>
+                  </div>
+                  {zapiStatus && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {/* Env vars */}
+                      {zapiStatus.env && Object.entries(zapiStatus.env).map(([k, v]) => (
+                        <div key={k} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                          <span style={{ fontFamily: 'monospace', color: String(v).startsWith('✅') ? '#10b981' : String(v).startsWith('❌') ? '#ef4444' : '#f97316', marginRight: 4 }}>{String(v).split(' ')[0]}</span>
+                          <span>{k}</span>
+                        </div>
+                      ))}
+                      {/* Conexão instância */}
+                      {zapiStatus.zapi && (
+                        <div style={{ width: '100%', marginTop: 6, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 14px', borderRadius: 20, fontWeight: 700, fontSize: 13,
+                            background: zapiStatus.zapi.conectado?.includes('CONECTADO') ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                            color: zapiStatus.zapi.conectado?.includes('CONECTADO') ? '#10b981' : '#ef4444',
+                          }}>
+                            {zapiStatus.zapi.conectado?.includes('CONECTADO')
+                              ? <CheckCircleIcon style={{ width: 15, height: 15 }} />
+                              : <XCircleIcon style={{ width: 15, height: 15 }} />}
+                            {zapiStatus.zapi.conectado || zapiStatus.zapi.status || 'Sem resposta'}
+                          </span>
+                          {zapiStatus.zapi.smartphoneConnected != null && (
+                            <span style={{ fontSize: 12, color: zapiStatus.zapi.smartphoneConnected ? '#10b981' : '#f97316' }}>
+                              📱 Celular: {zapiStatus.zapi.smartphoneConnected ? 'online' : 'offline'}
+                            </span>
+                          )}
+                          {zapiStatus.zapi.http_status && zapiStatus.zapi.http_status !== 200 && (
+                            <span style={{ fontSize: 12, color: '#ef4444' }}>HTTP {zapiStatus.zapi.http_status}</span>
+                          )}
+                          {zapiStatus.zapi.mensagem && (
+                            <span style={{ fontSize: 12, color: '#ef4444' }}>{zapiStatus.zapi.mensagem}</span>
+                          )}
+                        </div>
+                      )}
+                      {zapiStatus.erro && (
+                        <div style={{ width: '100%', marginTop: 6, fontSize: 12, color: '#ef4444' }}>Erro: {zapiStatus.erro}</div>
+                      )}
+                    </div>
+                  )}
+                  {!zapiStatus && !zapiChecking && (
+                    <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>Clique em "Verificar agora" para checar a conexão com a Z-API.</p>
+                  )}
+                </div>
                 <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
                   <StatBox label="Pessoas" value={data.pessoas.length} color="var(--accent)" />
                   <StatBox label="Canais ativos" value={data.canais.filter(c => c.ativo).length} color="#10b981" />

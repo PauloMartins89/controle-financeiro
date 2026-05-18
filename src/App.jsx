@@ -18,13 +18,22 @@ import Previsao from './pages/Previsao'
 import Negocios from './pages/Negocios'
 import Proventos from './pages/Proventos'
 import Importar from './pages/Importar'
+import Compras from './pages/Compras'
+import ComprasAprovar from './pages/ComprasAprovar'
+import CotacaoPublica from './pages/CotacaoPublica'
+import AprovarPublica from './pages/AprovarPublica'
+import RefeicaoPublica from './pages/RefeicaoPublica'
+import RefeicaoAprovar from './pages/RefeicaoAprovar'
+import Refeicoes from './pages/Refeicoes'
 import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
+import Cadastros from './pages/Cadastros'
 import Faturamento from './pages/Faturamento'
 import Pagamentos from './pages/Pagamentos'
 import ContasPagar from './pages/ContasPagar'
 import LotesCliente from './pages/LotesCliente'
+import CentralGerencial from './pages/CentralGerencial'
 import Login from './pages/Login'
 import Acessos from './pages/Acessos'
 import AdminPanel from './pages/AdminPanel'
@@ -174,11 +183,12 @@ export default function App() {
           .select('module_key, enabled, workspace_id')
           .in('workspace_id', allWorkspaceIds)
         if (modulesData && modulesData.length > 0) {
-          // Coleta módulos habilitados em QUALQUER workspace do usuário (union)
-          const allEnabled = [...new Set(
-            modulesData.filter(m => m.enabled).map(m => m.module_key)
+          // Coleta módulos EXPLICITAMENTE desabilitados (blacklist)
+          // Módulos sem linha no banco são visíveis por padrão
+          const disabledKeys = [...new Set(
+            modulesData.filter(m => m.enabled === false).map(m => m.module_key)
           )]
-          if (allEnabled.length > 0) enabledModules = allEnabled
+          if (disabledKeys.length > 0) enabledModules = disabledKeys
         }
       }
       const loadedPeople = (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
@@ -302,6 +312,10 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/planos" element={<Planos />} />
+        <Route path="/cotacao/:token" element={<CotacaoPublica />} />
+        <Route path="/aprovar/:token" element={<AprovarPublica />} />
+        <Route path="/refeicao/:token" element={<RefeicaoPublica />} />
+        <Route path="/ar/:token" element={<RefeicaoAprovar />} />
         <Route path="/*" element={
           <RequireAuth>
             <RequireSubscription>
@@ -326,12 +340,18 @@ export default function App() {
                   <Route path="/escanear" element={<EscanearRecibo />} />
                   <Route path="/notas-fiscais" element={<NotasFiscais />} />
                   <Route path="/lancamentos" element={<Lancamentos />} />
+                  <Route path="/cadastros" element={<Cadastros />} />
                   <Route path="/lotes-cliente" element={<LotesCliente />} />
                   <Route path="/faturamento" element={<Faturamento />} />
                   <Route path="/pagamentos" element={<Pagamentos />} />
                   <Route path="/contas-pagar" element={<ContasPagar />} />
+                  <Route path="/central" element={<CentralGerencial />} />
                   <Route path="/acessos" element={<RequireAdmin><Acessos /></RequireAdmin>} />
                   <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
+                  <Route path="/admin/:section" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
+                  <Route path="/compras" element={<Compras />} />
+                  <Route path="/compras/aprovar" element={<ComprasAprovar />} />
+                  <Route path="/refeicoes" element={<Refeicoes />} />
                 </Routes>
               </main>
             </div>

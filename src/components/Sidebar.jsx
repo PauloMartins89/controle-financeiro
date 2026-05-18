@@ -1,11 +1,13 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   HomeIcon, CurrencyDollarIcon, UsersIcon, UserGroupIcon,
   CreditCardIcon, ArrowsRightLeftIcon, ChartBarIcon,
   ArrowPathIcon, CalendarDaysIcon, Cog6ToothIcon, ChevronDoubleLeftIcon,
   BuildingOffice2Icon, BanknotesIcon, ArrowUpTrayIcon, TruckIcon,
   PresentationChartLineIcon, LockClosedIcon, ArrowRightOnRectangleIcon, DocumentTextIcon,
-  SignalIcon, CameraIcon
+  SignalIcon, CameraIcon, TableCellsIcon, ShoppingCartIcon, BuildingStorefrontIcon,
+  ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
+  ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -15,41 +17,65 @@ import { isAdmin } from '../lib/admin'
 
 const navGroups = [
   {
-    title: 'Financeiro',
+    title: 'FinanceiroPro',
     items: [
       { to: '/',            icon: HomeIcon,                  label: 'Início',        moduleKey: 'inicio' },
       { to: '/despesas',    icon: CurrencyDollarIcon,        label: 'Meus Gastos',   moduleKey: 'despesas' },
       { to: '/quem-deve',   icon: ArrowsRightLeftIcon,       label: 'Acertos',       moduleKey: 'acertos' },
       { to: '/recorrentes', icon: ArrowPathIcon,             label: 'Fixos do Mês',  moduleKey: 'recorrentes' },
       { to: '/cartoes',     icon: CreditCardIcon,            label: 'Cartões',       moduleKey: 'cartoes' },
+      { to: '/grupos',      icon: UserGroupIcon,             label: 'Grupos',        moduleKey: 'grupos' },
+      { to: '/pessoas',     icon: UsersIcon,                 label: 'Pessoas',       moduleKey: 'pessoas' },
+      { to: '/veiculos',    icon: TruckIcon,                 label: 'Veículos',      moduleKey: 'veiculos' },
+      { to: '/timeline',    icon: ChartBarIcon,              label: 'Histórico',     moduleKey: 'historico' },
+      { to: '/balanco',     icon: PresentationChartLineIcon, label: 'Balanço',       moduleKey: 'balanco' },
+      { to: '/previsao',    icon: BanknotesIcon,             label: 'Caixa',         moduleKey: 'caixa' },      { to: '/proventos',   icon: ArrowTrendingUpIcon,        label: 'Proventos',     moduleKey: 'proventos' },
+      { to: '/negocios',    icon: BuildingOffice2Icon,        label: 'Negócios',      moduleKey: 'negocios' },    ],
+  },
+  {
+    title: 'Gerencial',
+    items: [
+      { to: '/central',       icon: TableCellsIcon,   label: 'Central Gerencial', moduleKey: 'central' },
+      { to: '/lancamentos',   icon: DocumentTextIcon, label: 'Lançamentos',       moduleKey: 'lancamentos' },
+      { to: '/cadastros',     icon: UsersIcon,        label: 'Cadastros',         moduleKey: 'cadastros' },
+      { to: '/lotes-cliente', icon: UserGroupIcon,    label: 'Lotes Cliente',     moduleKey: 'lancamentos' },
     ],
   },
   {
-    title: 'Minha Rede',
+    title: 'Financeiro',
     items: [
-      { to: '/grupos',   icon: UserGroupIcon,              label: 'Grupos',   moduleKey: 'grupos' },
-      { to: '/pessoas',  icon: UsersIcon,                  label: 'Pessoas',  moduleKey: 'pessoas' },
-      { to: '/veiculos', icon: TruckIcon,                  label: 'Veículos', moduleKey: 'veiculos' },
-      { to: '/timeline', icon: ChartBarIcon,               label: 'Histórico', moduleKey: 'historico' },
-      { to: '/balanco',  icon: PresentationChartLineIcon,  label: 'Balanço',  moduleKey: 'balanco' },
-      { to: '/previsao', icon: BanknotesIcon,              label: 'Caixa',    moduleKey: 'caixa' },
+      { to: '/faturamento',  icon: BanknotesIcon,      label: 'Faturamento',      moduleKey: 'faturamento' },
+      { to: '/pagamentos',   icon: BanknotesIcon,      label: 'Contas a Receber', moduleKey: 'faturamento' },
+      { to: '/contas-pagar', icon: BanknotesIcon,      label: 'Contas a Pagar',   moduleKey: 'faturamento' },
+      { to: '/compras',      icon: ShoppingCartIcon,      label: 'Compras',     moduleKey: 'compras' },
+      { to: '/refeicoes',     icon: BuildingStorefrontIcon, label: 'Refeições',    moduleKey: 'refeicoes' },
     ],
   },
   {
-    title: 'Negócios',
+    title: 'Documentos',
     items: [
-      { to: '/negocios',     icon: BuildingOffice2Icon, label: 'Negócios',      moduleKey: 'negocios' },
-      { to: '/proventos',    icon: BanknotesIcon,       label: 'Proventos',     moduleKey: 'proventos' },
-      { to: '/lancamentos',  icon: DocumentTextIcon,    label: 'Lançamentos',   moduleKey: 'lancamentos' },
-      { to: '/lotes-cliente', icon: UserGroupIcon,       label: 'Lotes Cliente', moduleKey: 'lancamentos' },
-      { to: '/faturamento',  icon: BanknotesIcon,       label: 'Faturamento',   moduleKey: 'faturamento' },
-      { to: '/pagamentos',    icon: BanknotesIcon,       label: 'Contas a Receber', moduleKey: 'faturamento' },
-      { to: '/contas-pagar',  icon: BanknotesIcon,       label: 'Contas a Pagar',   moduleKey: 'faturamento' },
-      { to: '/importar',     icon: ArrowUpTrayIcon,     label: 'Importar',      moduleKey: 'importar' },
-      { to: '/escanear',     icon: CameraIcon,          label: 'Escanear Doc.', moduleKey: 'escanear' },
-      { to: '/notas-fiscais',icon: DocumentTextIcon,    label: 'Notas Fiscais', moduleKey: 'notas-fiscais' },
-      { to: '/acessos',      icon: LockClosedIcon,      label: 'Acessos',       moduleKey: null, adminOnly: true },
-      { to: '/admin',        icon: SignalIcon,           label: 'Painel Admin',  moduleKey: null, adminOnly: true },
+      { to: '/importar',      icon: ArrowUpTrayIcon,  label: 'Importar',      moduleKey: 'importar' },
+      { to: '/escanear',      icon: CameraIcon,       label: 'Escanear Doc.', moduleKey: 'escanear' },
+      { to: '/notas-fiscais', icon: DocumentTextIcon, label: 'Notas Fiscais', moduleKey: 'notas-fiscais' },
+    ],
+  },
+  {
+    title: 'Sistema',
+    items: [
+      { to: '/acessos', icon: LockClosedIcon, label: 'Acessos', moduleKey: null, adminOnly: true },
+    ],
+  },
+  {
+    title: 'Desenvolvedor',
+    items: [
+      { to: '/admin/saude',        icon: ShieldCheckIcon,          label: 'Saúde do Sistema',  moduleKey: null, adminOnly: true },
+      { to: '/admin/workspaces',   icon: BuildingOffice2Icon,       label: 'Workspaces',         moduleKey: null, adminOnly: true },
+      { to: '/admin/notificacoes', icon: BellAlertIcon,             label: 'Notificações',       moduleKey: null, adminOnly: true },
+      { to: '/admin/motoristas',   icon: TruckIcon,                 label: 'Motoristas WA',      moduleKey: null, adminOnly: true },
+      { to: '/admin/conexoes',     icon: SignalIcon,                label: 'Conexões WhatsApp', moduleKey: null, adminOnly: true },
+      { to: '/admin/mensagens',    icon: ChatBubbleLeftRightIcon,   label: 'Log de Mensagens',   moduleKey: null, adminOnly: true },
+      { to: '/admin/usuarios',     icon: UsersIcon,                 label: 'Usuários',           moduleKey: null, adminOnly: true },
+      { to: '/admin/assinaturas',  icon: CreditCardIcon,            label: 'Assinaturas',        moduleKey: null, adminOnly: true },
     ],
   },
 ]
@@ -59,16 +85,34 @@ export default function Sidebar({ collapsed, onToggle }) {
   const enabledModules = useStore(s => s.enabledModules)
   const [authUser, setAuthUser] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Abre automaticamente o grupo que contém a rota ativa
+  const [openGroups, setOpenGroups] = useState(() => {
+    const open = {}
+    navGroups.forEach(({ title, items }) => {
+      open[title] = items.some(item =>
+        item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
+      )
+    })
+    // Se nenhum grupo ativo, abre o primeiro
+    if (!Object.values(open).some(Boolean)) open[navGroups[0].title] = true
+    return open
+  })
+
+  function toggleGroup(title) {
+    setOpenGroups(p => ({ ...p, [title]: !p[title] }))
+  }
 
   // Função que decide se o item do menu deve aparecer:
   // - adminOnly: só admin vê
   // - moduleKey null: sempre visível (se não for adminOnly)
-  // - moduleKey: visível se enabledModules é null (sem restrição) OU inclui o moduleKey
+  // - moduleKey: visível por padrão; escondido apenas se enabledModules (blacklist) incluir o moduleKey
   function isItemVisible(item) {
     if (item.adminOnly) return isAdmin(authUser)
     if (!item.moduleKey) return true
-    if (enabledModules === null) return true // admin / demo sem restrição
-    return enabledModules.includes(item.moduleKey)
+    if (enabledModules === null) return true // sem restrição
+    return !enabledModules.includes(item.moduleKey) // enabledModules = lista de desabilitados
   }
 
   useEffect(() => {
@@ -93,8 +137,8 @@ export default function Sidebar({ collapsed, onToggle }) {
       style={{
         width: collapsed ? 64 : 240,
         minWidth: collapsed ? 64 : 240,
-        background: 'var(--bg-secondary)',
-        borderRight: '1px solid var(--border)',
+        background: 'var(--sb-bg)',
+        borderRight: '1px solid var(--sb-border)',
         transition: 'all 0.3s ease',
         height: '100vh',
         display: 'flex',
@@ -142,9 +186,9 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* My balance snippet */}
       {!collapsed && (
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ background: 'rgba(0,200,150,0.07)', borderRadius: 10, padding: '10px 12px' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saldo atual</div>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--sb-border)' }}>
+          <div style={{ background: 'var(--sb-balance-bg)', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ fontSize: 11, color: 'var(--sb-text)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saldo atual</div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontSize: 11, color: '#10b981' }}>Receber</div>
@@ -161,44 +205,61 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* Nav */}
       <nav style={{ padding: '8px', flex: 1, overflowY: 'auto' }}>
-        {navGroups.map(({ title, items }) => (
-          <div key={title} style={{ marginBottom: 4 }}>
-            {!collapsed && (
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '8px 10px 4px' }}>
-                {title}
-              </div>
-            )}
-            {collapsed && <div style={{ height: 1, background: 'var(--border)', margin: '6px 4px' }} />}
-            {items.filter(item => isItemVisible(item)).map(({ to, icon: Icon, label }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
-                title={collapsed ? label : undefined}
-                style={{ marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start' }}
-              >
-                <Icon style={{ width: 18, height: 18, flexShrink: 0 }} />
-                {!collapsed && <span>{label}</span>}
-              </NavLink>
-            ))}
-          </div>
-        ))}
+        {navGroups.map(({ title, items }) => {
+          const visibleItems = items.filter(item => isItemVisible(item))
+          if (visibleItems.length === 0) return null
+          const isOpen = openGroups[title]
+          return (
+            <div key={title} style={{ marginBottom: 4 }}>
+              {!collapsed && (
+                <button
+                  onClick={() => toggleGroup(title)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    width: '100%', padding: '8px 10px 4px',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 10, fontWeight: 700, color: 'var(--sb-title)',
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                  }}
+                >
+                  <span>{title}</span>
+                  {isOpen
+                    ? <ChevronDownIcon style={{ width: 12, height: 12 }} />
+                    : <ChevronRightIcon style={{ width: 12, height: 12 }} />}
+                </button>
+              )}
+              {collapsed && <div style={{ height: 1, background: 'var(--sb-border)', margin: '6px 4px' }} />}
+              {(isOpen || collapsed) && visibleItems.map(({ to, icon: Icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                  title={collapsed ? label : undefined}
+                  style={{ marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start' }}
+                >
+                  <Icon style={{ width: 18, height: 18, flexShrink: 0 }} />
+                  {!collapsed && <span>{label}</span>}
+                </NavLink>
+              ))}
+            </div>
+          )
+        })}
       </nav>
 
       {/* User info + logout */}
-      <div style={{ padding: collapsed ? '12px 8px' : '12px 16px', borderTop: '1px solid var(--border)' }}>
+      <div style={{ padding: collapsed ? '12px 8px' : '12px 16px', borderTop: '1px solid var(--sb-border)' }}>
         {collapsed ? (
-          <button onClick={handleLogout} title="Sair" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', margin: 'auto' }}>
+          <button onClick={handleLogout} title="Sair" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-text)', display: 'flex', margin: 'auto' }}>
             <ArrowRightOnRectangleIcon style={{ width: 20, height: 20 }} />
           </button>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: 'white', flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--sb-avatar-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: 'white', flexShrink: 0 }}>
               {authUser?.email?.[0]?.toUpperCase() || '?'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-text-active)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {authUser?.email || 'Usuário'}
               </div>
               <button onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 11, padding: 0, marginTop: 2 }}>

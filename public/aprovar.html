@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aprovação de Pedido — SmartProd</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #111827;
+      min-height: 100dvh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-bottom: 48px;
+      color: #e5e7eb;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 480px;
+      margin: 24px 12px;
+      background: #1f2937;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.6);
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+      padding: 28px 24px 22px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .badge-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: #93c5fd;
+      background: #1e3a5f;
+      border: 1px solid #3b82f6;
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    .badge-status {
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    .badge-status.pendente { background: #78350f; color: #fcd34d; border: 1px solid #d97706; }
+    .badge-status.aprovado { background: #064e3b; color: #6ee7b7; border: 1px solid #10b981; }
+    .badge-status.reprovado { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f9fafb;
+      margin-bottom: 14px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .meta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 5px 11px;
+    }
+    .meta-badge.blue  { background: #1e3a5f; color: #93c5fd; }
+    .meta-badge.amber { background: #78350f; color: #fcd34d; }
+    .meta-badge.green { background: #064e3b; color: #6ee7b7; }
+    .section {
+      padding: 0 24px 20px;
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      margin-top: 20px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .stat-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-label { font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
+    .stat-val   { font-size: 18px; font-weight: 800; color: #f9fafb; }
+    .stat-val.green { color: #34d399; }
+    .colab-list { display: flex; flex-direction: column; gap: 6px; }
+    .colab-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .colab-nome { font-weight: 600; font-size: 14px; color: #e5e7eb; }
+    .colab-icons { display: flex; gap: 6px; font-size: 16px; }
+    .obs-box {
+      margin: 0 24px 20px;
+      background: rgba(99,102,241,0.1);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #c7d2fe;
+    }
+    .motivo-area {
+      padding: 0 24px 20px;
+    }
+    textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #f9fafb;
+      font-size: 14px;
+      padding: 10px 14px;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: rgba(99,102,241,0.5); }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 24px 28px;
+    }
+    button {
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.5; cursor: default; transform: none; }
+    .btn-reprovar { background: rgba(220,38,38,0.25); color: #fca5a5; }
+    .btn-aprovar  { background: rgba(16,185,129,0.25); color: #6ee7b7; }
+    .btn-reprovar:hover:not(:disabled) { background: rgba(220,38,38,0.4); }
+    .btn-aprovar:hover:not(:disabled)  { background: rgba(16,185,129,0.4); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ef4444;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #10b981; }
+
+    /* Done screen */
+    .done-wrap {
+      padding: 48px 24px;
+      text-align: center;
+    }
+    .done-icon { font-size: 56px; margin-bottom: 16px; }
+    .done-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .done-msg   { font-size: 13px; color: #9ca3af; margin-bottom: 24px; }
+    .done-info  {
+      background: rgba(255,255,255,0.05);
+      border-radius: 14px;
+      padding: 14px 18px;
+      text-align: left;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .info-label { color: #6b7280; }
+    .info-val   { color: #e5e7eb; font-weight: 500; }
+
+    /* Loading / Error states */
+    .center-box {
+      padding: 48px;
+      text-align: center;
+      color: #9ca3af;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="center-box">
+    <div class="spinner"></div>
+    Carregando pedido...
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const token = new URLSearchParams(location.search).get('token')
+const wrap   = document.getElementById('wrap')
+const toastEl = document.getElementById('toast')
+
+let toastTimer = null
+function showToast(msg, type = 'error') {
+  if (toastTimer) clearTimeout(toastTimer)
+  toastEl.textContent = msg
+  toastEl.className = 'toast show' + (type === 'success' ? ' success' : '')
+  toastTimer = setTimeout(() => { toastEl.className = 'toast' }, 3000)
+}
+
+function fmtBRL(v) {
+  return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+function fmtData(d) {
+  if (!d) return '—'
+  return String(d).split('-').reverse().join('/')
+}
+
+if (!token) {
+  wrap.innerHTML = `<div class="center-box"><div style="font-size:36px;margin-bottom:12px">⚠️</div>
+    <div style="color:#f87171;font-weight:700;font-size:16px;margin-bottom:6px">Link inválido</div>
+    <div style="font-size:13px">Token não encontrado na URL.</div></div>`
+} else {
+  fetch('/api/refeicoes?action=load-aprovar&token=' + encodeURIComponent(token))
+    .then(r => r.json())
+    .then(render)
+    .catch(() => {
+      wrap.innerHTML = `<div class="center-box"><div style="font-size:36px;margin-bottom:12px">⚠️</div>
+        <div style="color:#f87171;font-weight:700;font-size:16px;margin-bottom:6px">Erro de conexão</div>
+        <div style="font-size:13px">Tente reabrir o link.</div></div>`
+    })
+}
+
+function render(json) {
+  if (json.error) {
+    wrap.innerHTML = `<div class="center-box"><div style="font-size:36px;margin-bottom:12px">⚠️</div>
+      <div style="color:#f87171;font-weight:700;font-size:16px;margin-bottom:6px">Link inválido</div>
+      <div style="font-size:13px">${json.error}</div></div>`
+    return
+  }
+
+  const { sol, equipeNome, equipeCdc, restauranteNome, itens } = json
+
+  if (sol.status !== 'pendente') {
+    showDone(sol.status, sol, equipeNome, true)
+    return
+  }
+
+  const refeicaoCount = (itens || []).filter(i => i.refeicao).length
+  const cafeCount     = (itens || []).filter(i => i.cafe).length
+  const colabsNormais = (itens || []).filter(i => !i.extra)
+  const colabsExtras  = (itens || []).filter(i =>  i.extra)
+
+  wrap.innerHTML = `
+    <div class="header">
+      <div class="header-top">
+        <span class="badge-num">${sol.numero_pedido || '—'}</span>
+        <span class="badge-status pendente">⏳ Aguardando aprovação</span>
+      </div>
+      <h1>🍽️ Solicitação de Refeição</h1>
+      <div class="meta-grid">
+        <span class="meta-badge blue">👥 ${equipeNome || '—'}${equipeCdc ? ' · ' + equipeCdc : ''}</span>
+        <span class="meta-badge amber">📅 ${fmtData(sol.data_refeicao)}</span>
+        ${restauranteNome ? `<span class="meta-badge green" style="grid-column:1/-1">🏪 ${restauranteNome}</span>` : ''}
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Resumo</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-label">🍽️ Refeições</div><div class="stat-val">${refeicaoCount}</div></div>
+        <div class="stat-box"><div class="stat-label">☕ Cafés</div><div class="stat-val">${cafeCount}</div></div>
+        <div class="stat-box"><div class="stat-label">💰 Total</div><div class="stat-val green">${fmtBRL(sol.valor_total)}</div></div>
+      </div>
+    </div>
+
+    ${(colabsNormais.length > 0) ? `
+    <div class="section">
+      <div class="section-label">Colaboradores</div>
+      <div class="colab-list">
+        ${colabsNormais.map(it => `
+          <div class="colab-item">
+            <span class="colab-nome">${it.colaborador_nome}</span>
+            <span class="colab-icons">${it.refeicao ? '🍽️' : ''}${it.cafe ? '☕' : ''}</span>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${(colabsExtras.length > 0) ? `
+    <div class="section">
+      <div class="section-label" style="color:#f59e0b">⚠️ Extras (com justificativa)</div>
+      <div class="colab-list">
+        ${colabsExtras.map(it => `
+          <div class="colab-item" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2)">
+            <div>
+              <span class="colab-nome">${it.colaborador_nome}</span>
+              ${it.justificativa ? `<div style="font-size:12px;color:#fbbf24;margin-top:3px">💬 ${it.justificativa}</div>` : ''}
+            </div>
+            <span class="colab-icons">${it.refeicao ? '🍽️' : ''}${it.cafe ? '☕' : ''}</span>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${sol.observacoes ? `
+    <div class="obs-box">📝 ${sol.observacoes}</div>` : ''}
+
+    <div class="motivo-area">
+      <div class="section-label">Motivo (obrigatório para reprovar)</div>
+      <textarea id="motivo" rows="3" placeholder="Informe caso vá reprovar..."></textarea>
+    </div>
+
+    <div class="btn-grid">
+      <button class="btn-reprovar" id="btn-reprovar" onclick="confirmar('reprovado')">❌ Reprovar</button>
+      <button class="btn-aprovar"  id="btn-aprovar"  onclick="confirmar('aprovado')">✅ Aprovar</button>
+    </div>
+  `
+
+  window._solData = { sol, equipeNome }
+}
+
+function confirmar(acao) {
+  const motivo   = (document.getElementById('motivo')?.value || '').trim()
+  const { sol, equipeNome } = window._solData || {}
+
+  if (acao === 'reprovado' && !motivo) {
+    showToast('Informe o motivo da reprovação')
+    return
+  }
+
+  const btnR = document.getElementById('btn-reprovar')
+  const btnA = document.getElementById('btn-aprovar')
+  if (btnR) btnR.disabled = true
+  if (btnA) btnA.disabled = true
+  if (acao === 'reprovado' && btnR) btnR.textContent = '⏳ Reprovando...'
+  if (acao === 'aprovado'  && btnA) btnA.textContent = '⏳ Aprovando...'
+
+  fetch('/api/refeicoes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'aprovar-link', token, acao, motivo: motivo || null }),
+  })
+    .then(r => r.json().then(json => ({ ok: r.ok, status: r.status, json })))
+    .then(({ ok, status, json }) => {
+      if (!ok) {
+        if (status === 409) { showDone(json.status || acao, sol, equipeNome, true); return }
+        showToast(json.error || 'Erro ao processar')
+        if (btnR) { btnR.disabled = false; btnR.textContent = '❌ Reprovar' }
+        if (btnA) { btnA.disabled = false; btnA.textContent = '✅ Aprovar' }
+        return
+      }
+      showDone(acao, sol, equipeNome, false)
+    })
+    .catch(() => {
+      showToast('Erro de conexão. Tente novamente.')
+      if (btnR) { btnR.disabled = false; btnR.textContent = '❌ Reprovar' }
+      if (btnA) { btnA.disabled = false; btnA.textContent = '✅ Aprovar' }
+    })
+}
+
+function showDone(status, sol, equipeNome, ja) {
+  const cfg = {
+    aprovado:  { icon: '✅', label: 'Aprovado!',  color: '#10b981', msg: 'O restaurante e o líder foram notificados via WhatsApp.' },
+    reprovado: { icon: '❌', label: 'Reprovado',   color: '#ef4444', msg: 'O líder foi notificado com o motivo para corrigir o pedido.' },
+    entregue:  { icon: '📦', label: 'Entregue',    color: '#6366f1', msg: '' },
+    fechado:   { icon: '🔒', label: 'Fechado',     color: '#6b7280', msg: '' },
+  }[status] || { icon: '📋', label: status, color: '#9ca3af', msg: '' }
+
+  wrap.innerHTML = `
+    <div class="done-wrap">
+      <div class="done-icon">${cfg.icon}</div>
+      <div class="done-title" style="color:${cfg.color}">Pedido ${cfg.label}</div>
+      ${cfg.msg ? `<div class="done-msg">${ja ? 'Este pedido já foi processado anteriormente.' : cfg.msg}</div>` : ''}
+      <div class="done-info">
+        <div class="info-row"><span class="info-label">Pedido</span><span class="info-val">${sol?.numero_pedido || '—'}</span></div>
+        <div class="info-row"><span class="info-label">Equipe</span><span class="info-val">${equipeNome || '—'}</span></div>
+        <div class="info-row"><span class="info-label">Data</span><span class="info-val">${fmtData(sol?.data_refeicao)}</span></div>
+        <div class="info-row" style="margin-bottom:0"><span class="info-label">Total</span><span class="info-val" style="color:#34d399;font-weight:700">${fmtBRL(sol?.valor_total)}</span></div>
+      </div>
+    </div>
+  `
+}
+</script>
+</body>
+</html>

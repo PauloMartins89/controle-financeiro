@@ -249,7 +249,7 @@ const useStore = create(
   saldoCaixa: 0,
   ownerId: OWNER_ID,
   workspaceId: null,
-  enabledModules: null, // null = sem restrição (admin / demo), array = módulos habilitados
+  enabledModules: null, // null = sem restrição; array = lista de moduleKeys DESABILITADOS (blacklist)
 
   setCurrentUser: (person) => set({ currentUser: person }),
   setOwnerId: async (id) => {

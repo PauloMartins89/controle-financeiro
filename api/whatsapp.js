@@ -1,4 +1,4 @@
-import Groq from 'groq-sdk'
+﻿import Groq from 'groq-sdk'
 import { createClient } from '@supabase/supabase-js'
 import { runOCR } from './_ocr.js'
 
@@ -6,6 +6,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions'
 const GH_MODEL = 'gpt-4o-mini'
+const APP_URL = process.env.APP_URL || 'https://dividiai.app.br'
 
 function getDb() {
   return createClient(
@@ -435,7 +436,45 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
     }
 
     if (!canal) {
-      await sendWA(from, 'Olá! 👋 Seu número não está vinculado ao Dividi Aí.\n\nAcesse *dividiai.app.br* → Admin para cadastrar.')
+      // ── Antes de rejeitar: verifica se é líder de refeição ─────────────────
+      let equipeRef = null
+      for (const v of fromVariants) {
+        const { data } = await db.from('refei_equipes')
+          .select('*').eq('lider_telefone', v).eq('ativo', true).limit(1).maybeSingle()
+        if (data) { equipeRef = data; break }
+      }
+      if (equipeRef) {
+        const { data: solRef } = await db.from('refei_solicitacoes')
+          .select('token_lider, numero_pedido, status')
+          .eq('equipe_id', equipeRef.id)
+          .in('status', ['rascunho', 'reprovado', 'pendente'])
+          .order('criado_em', { ascending: false })
+          .limit(1).maybeSingle()
+        if (solRef && ['rascunho', 'reprovado'].includes(solRef.status)) {
+          const avisoRep = solRef.status === 'reprovado' ? '\n\n⚠️ Pedido anterior reprovado. Corrija e reenvie.' : ''
+          await sendWA(from, `🍽️ *Pedido de Refeição — ${equipeRef.nome}*${avisoRep}\n\nAcesse o formulário:\n${APP_URL}/refeicao/${solRef.token_lider}`)
+        } else if (solRef?.status === 'pendente') {
+          await sendWA(from, `⏳ Seu pedido *${solRef.numero_pedido}* já foi enviado e aguarda aprovação do supervisor.`)
+        } else {
+          // Nenhum pedido ativo — cria novo rascunho automaticamente
+          const { data: novo } = await db.from('refei_solicitacoes').insert({
+            workspace_id:        equipeRef.workspace_id,
+            owner_id:            equipeRef.owner_id,
+            equipe_id:           equipeRef.id,
+            lider_nome:          equipeRef.lider_nome,
+            lider_telefone:      equipeRef.lider_telefone,
+            supervisor_telefone: equipeRef.supervisor_telefone,
+            status:              'rascunho',
+          }).select('token_lider').single()
+          if (novo?.token_lider) {
+            await sendWA(from, `🍽️ *Pedido de Refeição — ${equipeRef.nome}*\n\nAcesse o formulário para preencher e enviar:\n${APP_URL}/refeicao/${novo.token_lider}`)
+          } else {
+            await sendWA(from, `⚠️ Erro ao criar pedido. Contate o administrador.`)
+          }
+        }
+        return res.status(200).end()
+      }
+      await sendWA(from, `Olá! 👋 Seu número não está vinculado ao Dividi Aí.\n\nAcesse *${APP_URL}* → Admin para cadastrar.`)
       return res.status(200).end()
     }
 
@@ -488,18 +527,32 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       const valorFinal = f.valor_total || 0
       const fmtVal = formatBRL(valorFinal)
 
-      // Busca workspace_id via whatsapp_config — tenta todas as variantes do telefone
-      // (igual ao lookup de canais_mensagem, pois Z-API pode mandar 55XX ou XX)
+      // Busca workspace_id via cadastros_condutores (principal) ou whatsapp_config (fallback)
+      // Tenta todas as variantes do telefone (Z-API pode mandar 55XX ou XX)
       let wsId = null
       let wsUserId = ownerId
+      let nomeMotorista = null
       let waConf = null
       for (const v of fromVariants) {
+        // 1️⃣ Tenta cadastros_condutores
+        const { data: condutor } = await db.from('cadastros_condutores')
+          .select('workspace_id, owner_id, nome')
+          .eq('telefone', v)
+          .eq('ativo_whatsapp', true)
+          .eq('ativo', true)
+          .maybeSingle()
+        if (condutor?.workspace_id) {
+          waConf = { workspace_id: condutor.workspace_id, user_id: condutor.owner_id }
+          nomeMotorista = condutor.nome
+          break
+        }
+        // 2️⃣ Fallback: whatsapp_config
         const { data } = await db.from('whatsapp_config')
-          .select('workspace_id, user_id')
+          .select('workspace_id, user_id, nome_motorista')
           .eq('phone_number', v)
           .eq('ativo', true)
           .maybeSingle()
-        if (data) { waConf = data; break }
+        if (data) { waConf = data; nomeMotorista = data.nome_motorista; break }
       }
       if (waConf) {
         wsId = waConf.workspace_id
@@ -532,6 +585,15 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           (f.local_origem && f.local_destino) ? `${f.local_origem} → ${f.local_destino}` : null,
         ].filter(Boolean).join(' | ')
 
+        // Usa nome do cadastro como fallback para condutor se OCR não encontrou
+        const condutorFinal = f.condutor || f.motorista || nomeMotorista || null
+        const dadosExtras = {
+          ...f,
+          ...(condutorFinal ? { condutor: condutorFinal } : {}),
+          phone_whatsapp:          from || null,
+          nome_motorista_cadastro: nomeMotorista || null,
+        }
+
         const { data: inserted, error: dbErr } = await db.from('lancamentos').insert({
           workspace_id: wsId,
           user_id:      wsUserId,
@@ -544,7 +606,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           status:       'rascunho',
           observacoes:  f.observacao || '',
           tipo_formulario: 'transporte',
-          dados_extras:    f,
+          dados_extras:    dadosExtras,
           comprovante_url: comprovanteUrl || '',
         }).select('id').single()
 
@@ -703,7 +765,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         const nomesRaw = lNorm.replace(/^editar\s+pessoa\s+/i, '').split(/\s+e\s+|\s*,\s*/i)
         const novos = nomesRaw.map(n => findPessoa(n.trim())).filter(Boolean)
         if (!novos.length) {
-          reply = 'Não encontrei essas pessoas. Verifique os nomes em dividiai.app.br'
+          reply = `Não encontrei essas pessoas. Verifique os nomes em ${APP_URL}`
         } else {
           const novoP = {
             ...p,
@@ -734,6 +796,42 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       // Limpa qualquer sessão residual
       if (canal.sessao_pendente) {
         await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
+      }
+
+      // ════════════════════════════════════════════════════════════════════════
+      // MÓDULO REFEIÇÕES — Líder solicita via WA
+      // ════════════════════════════════════════════════════════════════════════
+      if (/pedido.*(refei[çc][ãa]|almo[çc]o|caf[eé])|refei[çc][ãa]o|marmita|solicita.*comi/i.test(text)) {
+        let equipe = null
+        for (const v of fromVariants) {
+          const { data } = await db.from('refei_equipes')
+            .select('*').eq('lider_telefone', v).eq('ativo', true).limit(1).maybeSingle()
+          if (data) { equipe = data; break }
+        }
+        if (equipe) {
+          const { data: existente } = await db.from('refei_solicitacoes')
+            .select('token_lider, status').eq('equipe_id', equipe.id).eq('status', 'rascunho')
+            .order('criado_em', { ascending: false }).limit(1).maybeSingle()
+          let tokenLider
+          if (existente) {
+            tokenLider = existente.token_lider
+          } else {
+            const { data: novo } = await db.from('refei_solicitacoes').insert({
+              workspace_id:        equipe.workspace_id,
+              owner_id:            equipe.owner_id,
+              equipe_id:           equipe.id,
+              lider_nome:          equipe.lider_nome,
+              lider_telefone:      fromNorm,
+              supervisor_telefone: equipe.supervisor_telefone,
+              status:              'rascunho',
+            }).select('token_lider').single()
+            tokenLider = novo?.token_lider
+          }
+          const base = APP_URL
+          await sendWA(from, `🍽️ *Solicitação de Refeição*\n\nClique para fazer seu pedido:\n${base}/refeicao/${tokenLider}\n\n_Após enviar, aguarde aprovação do supervisor._`)
+          return res.status(200).end()
+        }
+        // Se não encontrou equipe para este telefone, cai para fluxo normal
       }
 
       if (imagemExtraida) {
@@ -844,7 +942,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           reply = '*Pendências:*\n' + pendentes.slice(0, 5).map(e =>
             `• ${e.descricao} — ${formatBRL(e.valor)}`
           ).join('\n')
-          if (pendentes.length > 5) reply += `\n_...e mais ${pendentes.length - 5}. Veja em dividiai.app.br_`
+          if (pendentes.length > 5) reply += `\n_...e mais ${pendentes.length - 5}. Veja em ${APP_URL}_`
         }
 
       // ── fechar_mes: detalhamento completo ───────────────────────────────

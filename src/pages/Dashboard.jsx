@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import StatCard from '../components/StatCard'
 import Avatar from '../components/Avatar'
-import WelcomeDashboard from '../components/WelcomeDashboard'
 import NotificacoesRecorrentes from '../components/NotificacoesRecorrentes'
 import useStore from '../store/useStore'
 import { formatCurrency, formatDate, getCategoryIcon } from '../lib/utils'
@@ -29,10 +28,6 @@ export default function Dashboard() {
   const hasPeople = people.length > 0
   const hasExpenses = expenses.length > 0
   const hasShared = expenses.some(e => e.participantes?.length > 1)
-
-  if (!hasPeople && !hasExpenses) {
-    return <WelcomeDashboard hasPeople={hasPeople} hasExpenses={hasExpenses} hasShared={hasShared} />
-  }
 
   const recentExpenses = [...expenses]
     .sort((a, b) => new Date(b.data) - new Date(a.data))

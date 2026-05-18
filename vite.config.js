@@ -13,6 +13,7 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
