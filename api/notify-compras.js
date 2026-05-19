@@ -27,7 +27,7 @@ function getDb() {
 
 async function sendWA(to, text) {
   const phone = to.replace(/\D/g, '')
-  if (!phone) return false
+  if (!phone) return { ok: false, error: 'phone vazio' }
   try {
     const res = await fetch(
       `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`,
@@ -40,9 +40,10 @@ async function sendWA(to, text) {
         body: JSON.stringify({ phone, message: text }),
       }
     )
-    return res.ok
-  } catch {
-    return false
+    const body = await res.json().catch(() => ({}))
+    return { ok: res.ok, status: res.status, body }
+  } catch (e) {
+    return { ok: false, error: e?.message }
   }
 }
 
@@ -108,10 +109,11 @@ export default async function handler(req, res) {
   if (evento === '_teste') {
     const tel = (telTeste || '').replace(/\D/g, '')
     if (!tel) return res.status(400).json({ error: 'telefone obrigatório para teste' })
-    const ok = await sendWA(tel,
+    const result = await sendWA(tel,
       `✅ *Teste — Notificações de Compras*\n\nEste número está configurado como aprovador de compras no DividiAí.\n\nVocê receberá avisos automáticos a cada nova solicitação. 🛒`
     )
-    return res.status(200).json({ ok, sent: ok ? 1 : 0 })
+    const ok = result.ok
+    return res.status(200).json({ ok, sent: ok ? 1 : 0, debug: ok ? undefined : result })
   }
 
   // Envio livre — telefone + mensagem + PDF opcional (usado em Contas a Pagar, etc.)
@@ -121,8 +123,8 @@ export default async function handler(req, res) {
     if (!msgDireta) return res.status(400).json({ error: 'mensagem obrigatória' })
     if (tel.length < 10) return res.status(400).json({ error: 'Número inválido' })
 
-    const ok = await sendWA(tel, msgDireta)
-    return res.status(ok ? 200 : 502).json({ ok, sent: ok ? 1 : 0 })
+    const result = await sendWA(tel, msgDireta)
+    return res.status(result.ok ? 200 : 502).json({ ok: result.ok, sent: result.ok ? 1 : 0 })
   }
 
   const db = getDb()
@@ -175,15 +177,14 @@ export default async function handler(req, res) {
 
   // Envia para cada destinatário
   for (const tel of telefones) {
-    const ok = await sendWA(tel, mensagem)
-    resultados.push({ tel, ok })
+    const result = await sendWA(tel, mensagem)
+    resultados.push({ tel, ok: result.ok })
 
-    // Registra log em mensagens_whatsapp (se tabela existir)
     try {
       await db.from('mensagens_whatsapp').insert({
         telefone: tel,
         mensagem: mensagem,
-        status: ok ? 'enviado' : 'erro',
+        status: result.ok ? 'enviado' : 'erro',
         modulo: 'compras',
         referencia_id: solicitacaoId,
       })

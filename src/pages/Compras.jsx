@@ -1024,7 +1024,7 @@ function ModalConfigAprovador({ onClose }) {
       })
       const json = await res.json().catch(() => ({}))
       if (json.ok) toast.success('📱 Mensagem de teste enviada!')
-      else toast.error('Falha no teste: ' + (json.error || res.status))
+      else toast.error('Falha no teste: ' + (json.debug?.error || json.debug?.body?.error || json.error || res.status))
     } catch (e) {
       toast.error('Erro de rede: ' + e.message)
     } finally {
