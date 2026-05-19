@@ -65,3 +65,12 @@ export function getMonthRange(offsetMonths = 0) {
     label: d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
   }
 }
+
+export function waLink(telefone, mensagem) {
+  if (!telefone) return null
+  const numero = String(telefone).replace(/\D/g, '')
+  if (!numero) return null
+  const base = `https://wa.me/55${numero}`
+  if (mensagem) return `${base}?text=${encodeURIComponent(mensagem)}`
+  return base
+}
