@@ -20,6 +20,7 @@ import Proventos from './pages/Proventos'
 import Importar from './pages/Importar'
 import Compras from './pages/Compras'
 import ComprasAprovar from './pages/ComprasAprovar'
+import ComprasBuscaFornecedor from './pages/ComprasBuscaFornecedor'
 import CotacaoPublica from './pages/CotacaoPublica'
 import AprovarPublica from './pages/AprovarPublica'
 import RefeicaoPublica from './pages/RefeicaoPublica'
@@ -351,6 +352,7 @@ export default function App() {
                   <Route path="/admin/:section" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
                   <Route path="/compras" element={<Compras />} />
                   <Route path="/compras/aprovar" element={<ComprasAprovar />} />
+                  <Route path="/compras/buscar-fornecedor" element={<ComprasBuscaFornecedor />} />
                   <Route path="/refeicoes" element={<Refeicoes />} />
                 </Routes>
               </main>

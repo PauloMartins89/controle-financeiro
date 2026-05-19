@@ -7,7 +7,7 @@ import {
   PresentationChartLineIcon, LockClosedIcon, ArrowRightOnRectangleIcon, DocumentTextIcon,
   SignalIcon, CameraIcon, TableCellsIcon, ShoppingCartIcon, BuildingStorefrontIcon,
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
-  ArrowTrendingUpIcon,
+  ArrowTrendingUpIcon, MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -47,7 +47,8 @@ const navGroups = [
       { to: '/faturamento',  icon: BanknotesIcon,      label: 'Faturamento',      moduleKey: 'faturamento' },
       { to: '/pagamentos',   icon: BanknotesIcon,      label: 'Contas a Receber', moduleKey: 'faturamento' },
       { to: '/contas-pagar', icon: BanknotesIcon,      label: 'Contas a Pagar',   moduleKey: 'faturamento' },
-      { to: '/compras',      icon: ShoppingCartIcon,      label: 'Compras',     moduleKey: 'compras' },
+      { to: '/compras',               icon: ShoppingCartIcon,      label: 'Compras',            moduleKey: 'compras' },
+      { to: '/compras/buscar-fornecedor', icon: MagnifyingGlassIcon, label: 'Buscar Fornecedor',  moduleKey: 'compras' },
       { to: '/refeicoes',     icon: BuildingStorefrontIcon, label: 'Refeições',    moduleKey: 'refeicoes' },
     ],
   },
