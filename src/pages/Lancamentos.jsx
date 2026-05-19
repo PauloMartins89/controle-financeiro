@@ -1153,9 +1153,10 @@ function WhatsAppPanel({ workspaceId }) {
     if (!supabase) return
     setLoading(true)
     const { data } = await supabase
-      .from('whatsapp_config')
-      .select('*')
+      .from('cadastros_condutores')
+      .select('id, nome, telefone, ativo_whatsapp, ativo, created_at')
       .eq('workspace_id', workspaceId)
+      .eq('ativo_whatsapp', true)
       .order('created_at', { ascending: false })
     setMotoristas(data || [])
     setLoading(false)
@@ -1168,10 +1169,13 @@ function WhatsAppPanel({ workspaceId }) {
     if (phone.length < 10) { toast.error('Número inválido — use somente dígitos (ex: 5567999990000)'); return }
     if (!form.nome_motorista.trim()) { toast.error('Informe o nome do motorista'); return }
     setSaving(true)
-    const { error } = await supabase.from('whatsapp_config').insert({
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase.from('cadastros_condutores').insert({
       workspace_id:   workspaceId,
-      phone_number:   phone,
-      nome_motorista: form.nome_motorista.trim(),
+      owner_id:       user?.id,
+      nome:           form.nome_motorista.trim(),
+      telefone:       phone,
+      ativo_whatsapp: true,
       ativo:          true,
     })
     if (error) {
@@ -1184,14 +1188,14 @@ function WhatsAppPanel({ workspaceId }) {
     setSaving(false)
   }
 
-  async function handleToggle(id, ativo) {
-    await supabase.from('whatsapp_config').update({ ativo }).eq('id', id)
-    setMotoristas(prev => prev.map(m => m.id === id ? { ...m, ativo } : m))
+  async function handleToggle(id, ativo_whatsapp) {
+    await supabase.from('cadastros_condutores').update({ ativo_whatsapp }).eq('id', id)
+    setMotoristas(prev => prev.map(m => m.id === id ? { ...m, ativo_whatsapp } : m))
   }
 
   async function handleRemove(id) {
     if (!window.confirm('Remover este motorista?')) return
-    await supabase.from('whatsapp_config').delete().eq('id', id)
+    await supabase.from('cadastros_condutores').update({ ativo_whatsapp: false }).eq('id', id)
     setMotoristas(prev => prev.filter(m => m.id !== id))
     toast.success('Removido')
   }
@@ -1256,19 +1260,19 @@ function WhatsAppPanel({ workspaceId }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {motoristas.map(m => (
-            <div key={m.id} style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: `1px solid ${m.ativo ? 'rgba(37,211,102,0.2)' : 'var(--border)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: m.ativo ? 'rgba(37,211,102,0.12)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <PhoneIcon style={{ width: 17, height: 17, color: m.ativo ? '#25d366' : 'var(--text-secondary)' }} />
+            <div key={m.id} style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: `1px solid ${m.ativo_whatsapp ? 'rgba(37,211,102,0.2)' : 'var(--border)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: m.ativo_whatsapp ? 'rgba(37,211,102,0.12)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <PhoneIcon style={{ width: 17, height: 17, color: m.ativo_whatsapp ? '#25d366' : 'var(--text-secondary)' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{m.nome_motorista}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>+{m.phone_number}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{m.nome}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>+{m.telefone}</div>
               </div>
-              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: m.ativo ? 'rgba(37,211,102,0.1)' : 'rgba(255,255,255,0.05)', color: m.ativo ? '#25d366' : 'var(--text-secondary)' }}>
-                {m.ativo ? 'Ativo' : 'Inativo'}
+              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: m.ativo_whatsapp ? 'rgba(37,211,102,0.1)' : 'rgba(255,255,255,0.05)', color: m.ativo_whatsapp ? '#25d366' : 'var(--text-secondary)' }}>
+                {m.ativo_whatsapp ? 'Ativo' : 'Inativo'}
               </span>
-              <button onClick={() => handleToggle(m.id, !m.ativo)} style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12 }}>
-                {m.ativo ? 'Desativar' : 'Ativar'}
+              <button onClick={() => handleToggle(m.id, !m.ativo_whatsapp)} style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12 }}>
+                {m.ativo_whatsapp ? 'Desativar' : 'Ativar'}
               </button>
               <button onClick={() => handleRemove(m.id)} style={{ padding: '5px 10px', borderRadius: 7, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer', fontSize: 12 }}>
                 <TrashIcon style={{ width: 14, height: 14 }} />
