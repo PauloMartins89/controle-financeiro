@@ -191,8 +191,8 @@ export default function Sidebar({ collapsed, onToggle }) {
       <div style={{
         margin: collapsed ? '10px 8px' : '10px 12px',
         borderRadius: 12,
-        background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-        boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
+        background: 'var(--sb-balance-bg)',
+        boxShadow: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
