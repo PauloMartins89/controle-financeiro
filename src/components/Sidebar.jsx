@@ -7,7 +7,8 @@ import {
   PresentationChartLineIcon, LockClosedIcon, ArrowRightOnRectangleIcon, DocumentTextIcon,
   SignalIcon, CameraIcon, TableCellsIcon, ShoppingCartIcon, BuildingStorefrontIcon,
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
-  ArrowTrendingUpIcon, MagnifyingGlassIcon,
+  ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
+  TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -47,9 +48,33 @@ const navGroups = [
       { to: '/faturamento',  icon: BanknotesIcon,      label: 'Faturamento',      moduleKey: 'faturamento' },
       { to: '/pagamentos',   icon: BanknotesIcon,      label: 'Contas a Receber', moduleKey: 'faturamento' },
       { to: '/contas-pagar', icon: BanknotesIcon,      label: 'Contas a Pagar',   moduleKey: 'faturamento' },
-      { to: '/compras',               icon: ShoppingCartIcon,      label: 'Compras',            moduleKey: 'compras' },
-      { to: '/compras/buscar-fornecedor', icon: MagnifyingGlassIcon, label: 'Buscar Fornecedor',  moduleKey: 'compras' },
-      { to: '/refeicoes',     icon: BuildingStorefrontIcon, label: 'Refeições',    moduleKey: 'refeicoes' },
+    ],
+  },
+  {
+    title: 'Compras',
+    items: [
+      { to: '/compras',                        icon: ShoppingCartIcon,           label: 'Workspace',          moduleKey: 'compras' },
+      { to: '/compras/dashboard',              icon: ChartBarIcon,               label: 'Dashboard',          moduleKey: 'compras' },
+      { to: '/compras/operacoes/requisicoes',  icon: ClipboardDocumentListIcon,  label: 'Requisições',        moduleKey: 'compras' },
+      { to: '/compras/operacoes/cotacoes',     icon: TrophyIcon,                 label: 'Cotações',           moduleKey: 'compras' },
+      { to: '/compras/operacoes/aprovacoes',   icon: CheckCircleIcon,            label: 'Aprovações',         moduleKey: 'compras' },
+      { to: '/compras/operacoes/recebimento',  icon: TruckIcon,                  label: 'Recebimento',        moduleKey: 'compras' },
+      { to: '/compras/pedidos',                icon: DocumentTextIcon,           label: 'Pedidos',            moduleKey: 'compras' },
+      { to: '/compras/pesquisa-precos',        icon: MagnifyingGlassIcon,        label: 'Pesquisa de Preços', moduleKey: 'compras' },
+      { to: '/compras/cadastros/catalogo',     icon: TableCellsIcon,             label: 'Catálogo',           moduleKey: 'compras' },
+      { to: '/compras/cadastros/fornecedores', icon: BuildingOffice2Icon,        label: 'Fornecedores',       moduleKey: 'compras' },
+      { to: '/compras/cadastros/categorias',   icon: TagIcon,                    label: 'Categorias',         moduleKey: 'compras' },
+      { to: '/compras/cadastros/buscar',       icon: MagnifyingGlassIcon,        label: 'Buscar Fornecedor',  moduleKey: 'compras' },
+      { to: '/compras/relatorios/economia',    icon: BanknotesIcon,              label: 'Rel. Economia',      moduleKey: 'compras' },
+      { to: '/compras/relatorios/categoria',   icon: ChartBarIcon,               label: 'Rel. Categoria',     moduleKey: 'compras' },
+      { to: '/compras/relatorios/fornecedor',  icon: PresentationChartLineIcon,  label: 'Rel. Fornecedor',    moduleKey: 'compras' },
+      { to: '/compras/parametros',             icon: AdjustmentsHorizontalIcon,  label: 'Parâmetros',         moduleKey: 'compras' },
+    ],
+  },
+  {
+    title: 'Refeições',
+    items: [
+      { to: '/refeicoes', icon: BuildingStorefrontIcon, label: 'Refeições', moduleKey: 'refeicoes' },
     ],
   },
   {

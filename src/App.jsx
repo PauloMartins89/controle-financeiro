@@ -21,6 +21,19 @@ import Importar from './pages/Importar'
 import Compras from './pages/Compras'
 import ComprasAprovar from './pages/ComprasAprovar'
 import ComprasBuscaFornecedor from './pages/ComprasBuscaFornecedor'
+import ComprasWorkspace from './pages/ComprasWorkspace'
+import ComprasDashboard from './pages/ComprasDashboard'
+import ComprasCatalogo from './pages/ComprasCatalogo'
+import ComprasCategorias from './pages/ComprasCategorias'
+import ComprasCotacoes from './pages/ComprasCotacoes'
+import ComprasFornecedores from './pages/ComprasFornecedores'
+import ComprasParametros from './pages/ComprasParametros'
+import ComprasPedidos from './pages/ComprasPedidos'
+import ComprasPesquisaPrecos from './pages/ComprasPesquisaPrecos'
+import ComprasRecebimento from './pages/ComprasRecebimento'
+import ComprasRelCategoria from './pages/ComprasRelCategoria'
+import ComprasRelEconomia from './pages/ComprasRelEconomia'
+import ComprasRelFornecedor from './pages/ComprasRelFornecedor'
 import CotacaoPublica from './pages/CotacaoPublica'
 import AprovarPublica from './pages/AprovarPublica'
 import RefeicaoPublica from './pages/RefeicaoPublica'
@@ -350,9 +363,24 @@ export default function App() {
                   <Route path="/acessos" element={<RequireAdmin><Acessos /></RequireAdmin>} />
                   <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
                   <Route path="/admin/:section" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
-                  <Route path="/compras" element={<Compras />} />
+                  <Route path="/compras" element={<ComprasWorkspace />} />
+                  <Route path="/compras/dashboard" element={<ComprasDashboard />} />
+                  <Route path="/compras/operacoes/requisicoes" element={<Compras />} />
+                  <Route path="/compras/operacoes/cotacoes" element={<ComprasCotacoes />} />
+                  <Route path="/compras/operacoes/aprovacoes" element={<ComprasAprovar />} />
                   <Route path="/compras/aprovar" element={<ComprasAprovar />} />
+                  <Route path="/compras/operacoes/recebimento" element={<ComprasRecebimento />} />
+                  <Route path="/compras/pedidos" element={<ComprasPedidos />} />
+                  <Route path="/compras/cadastros/catalogo" element={<ComprasCatalogo />} />
+                  <Route path="/compras/cadastros/fornecedores" element={<ComprasFornecedores />} />
+                  <Route path="/compras/cadastros/categorias" element={<ComprasCategorias />} />
+                  <Route path="/compras/cadastros/buscar" element={<ComprasBuscaFornecedor />} />
                   <Route path="/compras/buscar-fornecedor" element={<ComprasBuscaFornecedor />} />
+                  <Route path="/compras/pesquisa-precos" element={<ComprasPesquisaPrecos />} />
+                  <Route path="/compras/parametros" element={<ComprasParametros />} />
+                  <Route path="/compras/relatorios/economia" element={<ComprasRelEconomia />} />
+                  <Route path="/compras/relatorios/categoria" element={<ComprasRelCategoria />} />
+                  <Route path="/compras/relatorios/fornecedor" element={<ComprasRelFornecedor />} />
                   <Route path="/refeicoes" element={<Refeicoes />} />
                 </Routes>
               </main>
