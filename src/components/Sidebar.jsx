@@ -164,8 +164,8 @@ export default function Sidebar({ collapsed, onToggle }) {
         onClick={collapsed ? onToggle : undefined}
       >
         <img
-          src="/logo.png"
-          alt="Dividi Aí"
+          src="/logo_smartpro.png"
+          alt="SmartPro"
           style={{
             height: collapsed ? 29 : 34,
             width: collapsed ? 29 : 'auto',
