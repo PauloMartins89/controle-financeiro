@@ -221,11 +221,11 @@ export default function Sidebar({ collapsed, onToggle }) {
 
   return (
     <aside
-      style={{ width: collapsed ? 64 : 240, minWidth: collapsed ? 64 : 240 }}
+      style={{ width: collapsed ? 64 : 224, minWidth: collapsed ? 64 : 224 }}
       className="h-screen flex flex-col transition-all duration-300 border-r"
       style={{
-        width: collapsed ? 64 : 240,
-        minWidth: collapsed ? 64 : 240,
+        width: collapsed ? 64 : 224,
+        minWidth: collapsed ? 64 : 224,
         background: 'var(--sb-bg)',
         borderRight: '1px solid var(--sb-border)',
         transition: 'all 0.3s ease',
@@ -238,15 +238,15 @@ export default function Sidebar({ collapsed, onToggle }) {
     >
       {/* Logo — card verde fixo, independe do tema */}
       <div style={{
-        margin: collapsed ? '10px 8px' : '10px 12px',
-        borderRadius: 12,
+        margin: collapsed ? '8px 6px' : '8px 10px',
+        borderRadius: 10,
         background: 'var(--sb-balance-bg)',
         boxShadow: 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: collapsed ? '10px 8px' : '8px 10px 8px 12px',
-        minHeight: collapsed ? 52 : 110,
+        padding: collapsed ? '8px 6px' : '6px 8px 6px 10px',
+        minHeight: collapsed ? 48 : 100,
         cursor: collapsed ? 'pointer' : 'default',
       }}
         onClick={collapsed ? onToggle : undefined}

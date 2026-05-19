@@ -17,16 +17,16 @@
     --text-secondary: #8a9099;
     --border: rgba(255,255,255,0.06);
     /* ── Sidebar (dark mode defaults) ── */
-    --sb-bg: var(--bg-secondary);
-    --sb-bg-hover: rgba(0,200,150,0.07);
-    --sb-active: rgba(0,200,150,0.12);
-    --sb-active-color: #00c896;
-    --sb-text: var(--text-secondary);
-    --sb-text-active: var(--text-primary);
-    --sb-border: var(--border);
-    --sb-title: var(--text-secondary);
-    --sb-balance-bg: rgba(0,200,150,0.07);
-    --sb-avatar-bg: #6366f1;
+    --sb-bg: linear-gradient(175deg, #0e1a2e 0%, #0a1118 65%);
+    --sb-bg-hover: rgba(255,255,255,0.05);
+    --sb-active: linear-gradient(90deg, rgba(16,185,129,0.22) 0%, rgba(14,165,233,0.12) 100%);
+    --sb-active-color: #10b981;
+    --sb-text: #7a8fa8;
+    --sb-text-active: #e2e8f0;
+    --sb-border: rgba(255,255,255,0.07);
+    --sb-title: rgba(148,163,184,0.5);
+    --sb-balance-bg: rgba(16,185,129,0.07);
+    --sb-avatar-bg: #0f5a56;
   }
 
   :root[data-theme="light"] {
@@ -43,17 +43,17 @@
     --text-primary: #0f172a;
     --text-secondary: #64748b;
     --border: rgba(99,102,241,0.18);
-    /* ── Sidebar (light mode — premium teal) ── */
-    --sb-bg: linear-gradient(175deg, #0B3D3C 0%, #062F2F 65%);
-    --sb-bg-hover: #0C4E4B;
-    --sb-active: #0F5A56;
-    --sb-active-color: #C4A55A;
-    --sb-text: #9AADA6;
-    --sb-text-active: #F0EDE4;
-    --sb-border: rgba(201, 178, 111, 0.14);
-    --sb-title: rgba(184, 154, 93, 0.6);
-    --sb-balance-bg: rgba(10, 58, 57, 0.75);
-    --sb-avatar-bg: #0F5A56;
+    /* ── Sidebar (light mode — mesma cor do dark) ── */
+    --sb-bg: linear-gradient(175deg, #0e1a2e 0%, #0a1118 65%);
+    --sb-bg-hover: rgba(255,255,255,0.05);
+    --sb-active: linear-gradient(90deg, rgba(16,185,129,0.22) 0%, rgba(14,165,233,0.12) 100%);
+    --sb-active-color: #10b981;
+    --sb-text: #7a8fa8;
+    --sb-text-active: #e2e8f0;
+    --sb-border: rgba(255,255,255,0.07);
+    --sb-title: rgba(148,163,184,0.5);
+    --sb-balance-bg: rgba(16,185,129,0.07);
+    --sb-avatar-bg: #0f5a56;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -79,8 +79,9 @@
     border: 1px solid var(--border);
     border-radius: 16px;
     transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1);
   }
-  .card:hover { background: var(--bg-card-hover); border-color: rgba(0,200,150,0.15); }
+  .card:hover { background: var(--bg-card-hover); border-color: rgba(16,185,129,0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.18); }
 
   /* Cards com gradiente sutil no modo claro */
   :root[data-theme="light"] .card {
@@ -186,11 +187,11 @@
     display: inline-flex; align-items: center; gap: 4px;
     padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
   }
-  .badge-success { background: rgba(16,185,129,0.15); color: #10b981; }
-  .badge-danger { background: rgba(239,68,68,0.15); color: #ef4444; }
-  .badge-warning { background: rgba(245,158,11,0.15); color: #f59e0b; }
-  .badge-neutral { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
-  .badge-accent { background: rgba(0,200,150,0.12); color: #00c896; }
+  .badge-success { background: rgba(16,185,129,0.12); color: #34d399; }
+  .badge-danger { background: rgba(239,68,68,0.10); color: #f87171; }
+  .badge-warning { background: rgba(245,158,11,0.10); color: #fbbf24; }
+  .badge-neutral { background: rgba(255,255,255,0.06); color: var(--text-secondary); }
+  .badge-accent { background: rgba(16,185,129,0.10); color: #10b981; }
 
   .modal-overlay {
     position: fixed; inset: 0; z-index: 50;
@@ -217,6 +218,7 @@
     background: var(--sb-active);
     color: var(--sb-active-color);
     font-weight: 600;
+    box-shadow: inset 2px 0 0 var(--sb-active-color);
   }
   :root[data-theme="light"] .sidebar-item.active {
     box-shadow: inset 2px 0 0 var(--sb-active-color);

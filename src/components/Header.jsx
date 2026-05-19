@@ -18,49 +18,50 @@ export default function Header({ title, subtitle, action }) {
   return (
     <header style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '20px 28px', borderBottom: '1px solid var(--border)',
-      background: theme === 'light' ? 'rgba(240,242,248,0.9)' : 'rgba(10,15,30,0.8)',
-      backdropFilter: 'blur(10px)',
+      padding: '14px 24px', borderBottom: '1px solid var(--sb-border)',
+      background: theme === 'light' ? 'rgba(240,242,248,0.95)' : 'rgba(8,14,28,0.85)',
+      backdropFilter: 'blur(16px)',
       position: 'sticky', top: 0, zIndex: 10,
     }}>
       <div>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{title}</h1>
-        {subtitle && <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>{subtitle}</p>}
+        <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2, letterSpacing: -0.3 }}>{title}</h1>
+        {subtitle && <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, opacity: 0.8 }}>{subtitle}</p>}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('openGlobalSearch'))}
           title="Busca global (Ctrl+K)"
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-            borderRadius: 10, padding: '6px 12px', cursor: 'pointer',
-            color: 'var(--text-secondary)', fontSize: 13,
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 8, padding: '7px 14px', cursor: 'pointer',
+            color: 'var(--text-secondary)', fontSize: 13, minWidth: 180,
           }}
         >
-          <MagnifyingGlassIcon style={{ width: 15, height: 15 }} />
-          <span>Buscar...</span>
-          <kbd style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '1px 5px' }}>Ctrl K</kbd>
+          <MagnifyingGlassIcon style={{ width: 14, height: 14 }} />
+          <span style={{ flex: 1, textAlign: 'left' }}>Buscar...</span>
+          <kbd style={{ fontSize: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 4, padding: '1px 5px', letterSpacing: 0.5 }}>⌘K</kbd>
         </button>
         {action && (
           <button className="btn-primary" onClick={action.onClick}>
-            <PlusIcon style={{ width: 16, height: 16 }} />
+            <PlusIcon style={{ width: 15, height: 15 }} />
             {action.label}
           </button>
         )}
         <button
           onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
           title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px', cursor: 'pointer', display: 'flex', color: 'var(--text-secondary)' }}
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '7px', cursor: 'pointer', display: 'flex', color: 'var(--text-secondary)' }}
         >
-          {theme === 'dark' ? <SunIcon style={{ width: 16, height: 16 }} /> : <MoonIcon style={{ width: 16, height: 16 }} />}
+          {theme === 'dark' ? <SunIcon style={{ width: 15, height: 15 }} /> : <MoonIcon style={{ width: 15, height: 15 }} />}
         </button>
         <div style={{
-          width: 36, height: 36, borderRadius: '50%',
-          background: currentUser?.cor || '#6366f1',
+          width: 30, height: 30, borderRadius: '50%',
+          background: currentUser?.cor || 'linear-gradient(135deg, #10b981, #0ea5e9)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 700, fontSize: 14, cursor: 'pointer',
-          border: '2px solid rgba(255,255,255,0.1)'
+          fontWeight: 700, fontSize: 12, cursor: 'pointer',
+          border: '1.5px solid rgba(255,255,255,0.12)',
+          color: '#fff',
         }}>
           {currentUser?.avatar}
         </div>
