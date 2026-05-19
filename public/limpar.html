@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Limpando cache...</title>
+  <style>
+    body { margin: 0; display: flex; align-items: center; justify-content: center;
+           height: 100vh; background: #0f172a; color: #94a3b8;
+           font-family: system-ui, sans-serif; flex-direction: column; gap: 20px; }
+    .spinner { width: 44px; height: 44px; border: 4px solid #6366f1;
+               border-top-color: transparent; border-radius: 50%;
+               animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg) } }
+    p { font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <p>Atualizando o app, aguarde...</p>
+  <script>
+    async function limpar() {
+      try {
+        // Remove todos os service workers
+        const regs = await navigator.serviceWorker.getRegistrations()
+        await Promise.all(regs.map(r => r.unregister()))
+
+        // Limpa todos os caches do PWA
+        const keys = await caches.keys()
+        await Promise.all(keys.map(k => caches.delete(k)))
+
+        // Limpa version no localStorage para forçar re-check
+        localStorage.removeItem('__app_version__')
+      } catch(e) {}
+
+      // Redireciona para a home forçando reload do servidor
+      window.location.replace('/?_bust=' + Date.now())
+    }
+
+    limpar()
+  </script>
+</body>
+</html>

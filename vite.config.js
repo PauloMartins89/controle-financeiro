@@ -15,10 +15,14 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/version\.json/],
+        navigateFallbackDenylist: [/^\/version\.json/, /^\/limpar/],
         runtimeCaching: [
           {
             urlPattern: /\/version\.json/,
+            handler: 'NetworkOnly',
+          },
+          {
+            urlPattern: /\/limpar/,
             handler: 'NetworkOnly',
           },
         ],
