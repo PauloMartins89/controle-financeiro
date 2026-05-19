@@ -280,9 +280,13 @@ export default async function handler(req, res) {
           { headers: clientToken ? { 'Client-Token': clientToken } : {} }
         )
         const body = await statusRes.json().catch(() => ({}))
+        // Multi Device instances may return connected:false even when fully operational.
+        // Use HTTP 200 as the primary health indicator (credentials valid + instance active).
+        const apiAtiva = statusRes.status === 200 && !body.error?.toLowerCase().includes('not found')
         report.zapi = {
           http_status: statusRes.status,
-          conectado: body.connected === true ? '✅ CONECTADO' : '❌ DESCONECTADO',
+          conectado: apiAtiva ? '✅ API ATIVA (Multi Device)' : '❌ DESCONECTADO',
+          whatsappConnected: body.connected === true ? '✅ sim' : '⚠️ offline (normal em Multi Device)',
           smartphoneConnected: body.smartphoneConnected ?? null,
           session: body.session || null,
           raw: body,
