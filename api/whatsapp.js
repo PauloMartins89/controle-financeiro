@@ -193,8 +193,13 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body
+    // DEBUG TEMPORÁRIO — loga tipo e campos recebidos do Z-API
+    console.log('[whatsapp] body.type=', body?.type, 'fromMe=', body?.fromMe, 'keys=', Object.keys(body || {}).join(','))
     // Z-API: ignora tudo exceto mensagens recebidas de terceiros
-    if (body?.type !== 'ReceivedCallback' || body?.fromMe) return res.status(200).end()
+    if (body?.fromMe) return res.status(200).end()
+    // Aceita ReceivedCallback e outros tipos que Z-API Multi Device possa enviar
+    const isValidType = !body?.type || body?.type === 'ReceivedCallback' || body?.type?.includes?.('Message') || body?.type?.includes?.('Received')
+    if (!isValidType) return res.status(200).json({ ignored: true, type: body?.type })
     if (!body?.text && !body?.audio && !body?.image) return res.status(200).end()
 
     const messageType = body.text ? 'text' : body.audio ? 'audio' : 'image'
