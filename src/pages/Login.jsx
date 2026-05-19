@@ -56,7 +56,7 @@ export default function Login() {
         border: '1px solid var(--border)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <img src="/logo_smartpro.png" alt="SmartPro" style={{ height: 112, objectFit: 'contain', marginBottom: 16, display: 'block', margin: '0 auto 16px' }} />
+          <img src="/logo_smartpro.png" alt="SmartPro" style={{ height: 336, objectFit: 'contain', marginBottom: 16, display: 'block', margin: '0 auto 16px' }} />
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>Entre com seu e-mail e senha</p>
         </div>
 

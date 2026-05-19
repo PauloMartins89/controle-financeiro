@@ -197,7 +197,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: collapsed ? '10px 8px' : '8px 10px 8px 12px',
-        minHeight: 52,
+        minHeight: collapsed ? 52 : 110,
         cursor: collapsed ? 'pointer' : 'default',
       }}
         onClick={collapsed ? onToggle : undefined}
@@ -206,11 +206,10 @@ export default function Sidebar({ collapsed, onToggle }) {
           src="/logo_smartpro.png"
           alt="SmartPro"
           style={{
-            height: collapsed ? 29 : 34,
-            width: collapsed ? 29 : 'auto',
-            maxWidth: collapsed ? 29 : 137,
+            height: collapsed ? 87 : 102,
+            width: collapsed ? 87 : 'auto',
+            maxWidth: collapsed ? 87 : 411,
             objectFit: 'contain',
-            filter: 'brightness(0) invert(1)',
             margin: collapsed ? 'auto' : 0,
           }}
         />
