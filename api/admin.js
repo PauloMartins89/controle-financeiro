@@ -285,7 +285,7 @@ export default async function handler(req, res) {
         const apiAtiva = statusRes.status === 200 && !body.error?.toLowerCase().includes('not found')
         report.zapi = {
           http_status: statusRes.status,
-          conectado: apiAtiva ? '✅ API ATIVA (Multi Device)' : '❌ DESCONECTADO',
+          conectado: apiAtiva ? '✅ CONECTADO (Multi Device)' : '❌ DESCONECTADO',
           whatsappConnected: body.connected === true ? '✅ sim' : '⚠️ offline (normal em Multi Device)',
           smartphoneConnected: body.smartphoneConnected ?? null,
           session: body.session || null,
