@@ -272,24 +272,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         )}
       </div>
 
-      {/* My balance snippet */}
-      {!collapsed && (
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--sb-border)' }}>
-          <div style={{ background: 'var(--sb-balance-bg)', borderRadius: 10, padding: '10px 12px' }}>
-            <div style={{ fontSize: 11, color: 'var(--sb-text)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saldo atual</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 11, color: '#10b981' }}>Receber</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>{formatCurrency(getMinhasReceitas())}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: '#ef4444' }}>Pagar</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{formatCurrency(totalPagar)}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Weather card */}
       {!collapsed && (
