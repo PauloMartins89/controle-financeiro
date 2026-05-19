@@ -382,6 +382,20 @@ export default function App() {
                   <Route path="/compras/relatorios/categoria" element={<ComprasRelCategoria />} />
                   <Route path="/compras/relatorios/fornecedor" element={<ComprasRelFornecedor />} />
                   <Route path="/refeicoes" element={<Refeicoes />} />
+                  <Route path="/refeicoes/cadastros/restaurantes" element={<Refeicoes />} />
+                  <Route path="/refeicoes/cadastros/precos" element={<Refeicoes />} />
+                  <Route path="/refeicoes/cadastros/equipes" element={<Refeicoes />} />
+                  <Route path="/refeicoes/cadastros/colaboradores" element={<Refeicoes />} />
+                  <Route path="/refeicoes/cadastros/cdc" element={<Refeicoes />} />
+                  <Route path="/refeicoes/cadastros/regionais" element={<Refeicoes />} />
+                  <Route path="/refeicoes/cadastros/parametros" element={<Refeicoes />} />
+                  <Route path="/refeicoes/operacoes/solicitacoes" element={<Refeicoes />} />
+                  <Route path="/refeicoes/operacoes/aprovacoes" element={<Refeicoes />} />
+                  <Route path="/refeicoes/operacoes/fechamentos" element={<Refeicoes />} />
+                  <Route path="/refeicoes/relatorios/rel-equipe" element={<Refeicoes />} />
+                  <Route path="/refeicoes/relatorios/rel-restaurante" element={<Refeicoes />} />
+                  <Route path="/refeicoes/relatorios/rel-cdc" element={<Refeicoes />} />
+                  <Route path="/refeicoes/relatorios/rel-divergencias" element={<Refeicoes />} />
                 </Routes>
               </main>
             </div>

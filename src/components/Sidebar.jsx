@@ -74,7 +74,21 @@ const navGroups = [
   {
     title: 'Refeições',
     items: [
-      { to: '/refeicoes', icon: BuildingStorefrontIcon, label: 'Refeições', moduleKey: 'refeicoes' },
+      { to: '/refeicoes',                               icon: HomeIcon,                  label: 'Dashboard',        moduleKey: 'refeicoes' },
+      { to: '/refeicoes/cadastros/restaurantes',        icon: BuildingStorefrontIcon,     label: 'Restaurantes',     moduleKey: 'refeicoes' },
+      { to: '/refeicoes/cadastros/precos',              icon: BanknotesIcon,              label: 'Tabela de Preços', moduleKey: 'refeicoes' },
+      { to: '/refeicoes/cadastros/equipes',             icon: UserGroupIcon,              label: 'Equipes',          moduleKey: 'refeicoes' },
+      { to: '/refeicoes/cadastros/colaboradores',       icon: UsersIcon,                  label: 'Colaboradores',    moduleKey: 'refeicoes' },
+      { to: '/refeicoes/cadastros/cdc',                 icon: BuildingOffice2Icon,        label: 'Centros de Custo', moduleKey: 'refeicoes' },
+      { to: '/refeicoes/cadastros/regionais',           icon: MagnifyingGlassIcon,        label: 'Regionais',        moduleKey: 'refeicoes' },
+      { to: '/refeicoes/cadastros/parametros',          icon: Cog6ToothIcon,              label: 'Parâmetros',       moduleKey: 'refeicoes' },
+      { to: '/refeicoes/operacoes/solicitacoes',        icon: ClipboardDocumentListIcon,  label: 'Solicitações',     moduleKey: 'refeicoes' },
+      { to: '/refeicoes/operacoes/aprovacoes',          icon: CheckCircleIcon,            label: 'Aprovações',       moduleKey: 'refeicoes' },
+      { to: '/refeicoes/operacoes/fechamentos',         icon: DocumentTextIcon,           label: 'Fechamentos',      moduleKey: 'refeicoes' },
+      { to: '/refeicoes/relatorios/rel-equipe',         icon: ChartBarIcon,               label: 'Rel. Por Equipe',  moduleKey: 'refeicoes' },
+      { to: '/refeicoes/relatorios/rel-restaurante',    icon: PresentationChartLineIcon,  label: 'Rel. Restaurante', moduleKey: 'refeicoes' },
+      { to: '/refeicoes/relatorios/rel-cdc',            icon: TableCellsIcon,             label: 'Rel. CDC',         moduleKey: 'refeicoes' },
+      { to: '/refeicoes/relatorios/rel-divergencias',   icon: ChartBarIcon,               label: 'Divergências',     moduleKey: 'refeicoes' },
     ],
   },
   {

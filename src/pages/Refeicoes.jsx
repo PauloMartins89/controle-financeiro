@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import useStore from '../store/useStore'
@@ -1294,8 +1295,20 @@ export default function Refeicoes() {
   const workspaceId = useStore(s => s.workspaceId)
   const ownerId     = useStore(s => s.currentUser?.id)
 
-  const [secao, setSecao] = useState('dashboard')
-  const [sub,   setSub]   = useState('restaurantes')
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const { secao, sub } = useMemo(() => {
+    const parts = location.pathname.replace(/\/$/, '').split('/')
+    // parts: ['', 'refeicoes', 'cadastros', 'restaurantes']
+    const s  = parts[2] || 'dashboard'
+    const sb = parts[3] || (
+      s === 'cadastros'  ? 'restaurantes' :
+      s === 'operacoes'  ? 'solicitacoes' :
+      s === 'relatorios' ? 'rel-equipe'   : null
+    )
+    return { secao: s, sub: sb }
+  }, [location.pathname])
 
   const [sols,    setSols]    = useState([])
   const [loading, setLoading] = useState(true)
@@ -1315,8 +1328,8 @@ export default function Refeicoes() {
   useEffect(() => { load() }, [load])
 
   function nav(s, sb) {
-    setSecao(s)
-    if (sb !== undefined && sb !== null) setSub(sb)
+    if (s === 'dashboard' || !sb) navigate('/refeicoes')
+    else navigate(`/refeicoes/${s}/${sb}`)
   }
 
   return (
