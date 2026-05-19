@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { waLink } from '../lib/utils'
 import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
@@ -68,7 +69,7 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
   const addItem = () => setItens(p => [...p, { descricao: '', quantidade: '1', valor_unitario: '' }])
   const removeItem = (i) => setItens(p => p.filter((_, idx) => idx !== i))
   const updateItem = (i, k, v) => setItens(p => p.map((it, idx) => idx === i ? { ...it, [k]: v } : it))
-  const itensValidos = itens.filter(it => it.descricao.trim())
+  const itensValidos = itens.filter(it => String(it.descricao || '').trim())
   const totalEstimado = itens.reduce((acc, it) => {
     const q = parseFloat(String(it.quantidade).replace(',', '.')) || 0
     const v = parseFloat(String(it.valor_unitario).replace(',', '.')) || 0
@@ -876,7 +877,7 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
                             </button>
                             {c.fornecedor_telefone && (
                               <a title="Enviar pelo WhatsApp"
-                                href={`https://wa.me/${c.fornecedor_telefone.replace(/\D/g,'')}?text=${encodeURIComponent(msgWA)}`}
+                                href={waLink(c.fornecedor_telefone, msgWA) || '#'}
                                 target="_blank" rel="noreferrer"
                                 style={{ padding: '4px 7px', borderRadius: 5, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', cursor: 'pointer', color: '#25d366', textDecoration: 'none', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center' }}>
                                 WA
@@ -1251,3 +1252,4 @@ export default function Compras() {
     </div>
   )
 }
+
