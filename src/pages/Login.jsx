@@ -109,36 +109,34 @@ export default function Login() {
         </div>
       </div>
 
-      {/* â”€â”€ Coluna direita: Card de login â”€â”€ */}
+      {/* ── Coluna direita: Card de login ── */}
       <div className="login-right" style={{
         width: 500,
         minWidth: 340,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         position: 'relative',
         zIndex: 3,
         padding: '40px 32px',
       }}>
-        <div style={{
+        <div className="login-card" style={{
           width: '100%',
           maxWidth: 440,
-          background: 'rgba(6,14,33,0.72)',
-          backdropFilter: 'blur(32px)',
-          WebkitBackdropFilter: 'blur(32px)',
+          background: 'linear-gradient(145deg, rgba(15,32,55,0.72), rgba(4,14,31,0.58))',
+          backdropFilter: 'blur(22px) saturate(140%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(140%)',
           borderRadius: 22,
-          border: '1px solid rgba(255,255,255,0.07)',
+          border: '1px solid rgba(125,190,255,0.22)',
           padding: '44px 40px',
-          boxShadow: '0 0 0 1px rgba(14,165,233,0.06), 0 32px 80px rgba(0,0,0,0.65), 0 8px 32px rgba(0,0,0,0.4)',
+          boxShadow: '0 28px 80px rgba(0,0,0,0.45), 0 0 42px rgba(0,174,239,0.10), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 40px rgba(255,255,255,0.025)',
           position: 'relative',
           overflow: 'hidden',
         }}>
-          {/* Reflexo sutil no topo do card */}
+          {/* Brilho radial superior esquerdo */}
           <div style={{
-            position: 'absolute',
-            top: 0, left: '10%', right: '10%',
-            height: 1,
-            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent)',
+            position: 'absolute', inset: 0, borderRadius: 22, pointerEvents: 'none',
+            background: 'radial-gradient(circle at 18% 0%, rgba(255,255,255,0.13), transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.06), transparent 22%)',
           }} />
 
           {/* TÃ­tulo */}
@@ -171,13 +169,14 @@ export default function Login() {
                   required
                   style={{
                     width: '100%', paddingLeft: 42, paddingRight: 16, paddingTop: 13, paddingBottom: 13,
-                    background: 'rgba(4,10,24,0.7)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(4,12,28,0.65)',
+                    border: '1px solid rgba(125,190,255,0.12)',
                     borderRadius: 10, color: '#cbd5e1', fontSize: 14, outline: 'none',
                     boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s',
+                    backdropFilter: 'blur(8px)',
                   }}
-                  onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.45)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.08)' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none' }}
+                  onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.10), 0 0 12px rgba(14,165,233,0.08)' }}
+                  onBlur={e => { e.target.style.borderColor = 'rgba(125,190,255,0.12)'; e.target.style.boxShadow = 'none' }}
                 />
               </div>
             </div>
@@ -199,13 +198,14 @@ export default function Login() {
                   required
                   style={{
                     width: '100%', paddingLeft: 42, paddingRight: 44, paddingTop: 13, paddingBottom: 13,
-                    background: 'rgba(4,10,24,0.7)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(4,12,28,0.65)',
+                    border: '1px solid rgba(125,190,255,0.12)',
                     borderRadius: 10, color: '#cbd5e1', fontSize: 14, outline: 'none',
                     boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s',
+                    backdropFilter: 'blur(8px)',
                   }}
-                  onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.45)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.08)' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none' }}
+                  onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.10), 0 0 12px rgba(14,165,233,0.08)' }}
+                  onBlur={e => { e.target.style.borderColor = 'rgba(125,190,255,0.12)'; e.target.style.boxShadow = 'none' }}
                 />
                 <button
                   type="button"
