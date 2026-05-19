@@ -658,23 +658,9 @@ function CrudParametros({ workspaceId, ownerId }) {
 }
 
 // ─── Seção: Cadastros ─────────────────────────────────────────────────────────
-const CADASTROS_TABS = [
-  { id: 'restaurantes',  label: '🏪 Restaurantes' },
-  { id: 'precos',        label: '💰 Tabela de Preços' },
-  { id: 'equipes',       label: '👥 Equipes' },
-  { id: 'colaboradores', label: '👤 Colaboradores' },
-  { id: 'cdc',           label: '🏢 Centros de Custo' },
-  { id: 'regionais',     label: '🗺️ Regionais' },
-  { id: 'parametros',    label: '⚙️ Parâmetros' },
-]
 function SecaoCadastros({ workspaceId, ownerId, sub }) {
   return (
     <div>
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, flexWrap: 'wrap', borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
-        {CADASTROS_TABS.map(t => (
-          <span key={t.id} style={{ padding: '7px 14px', borderRadius: '8px 8px 0 0', fontSize: 12, fontWeight: 700, background: sub === t.id ? 'var(--bg-card)' : 'transparent', color: sub === t.id ? 'var(--accent)' : 'var(--text-secondary)', borderBottom: sub === t.id ? '2px solid var(--accent)' : '2px solid transparent', display: 'inline-block' }}>{t.label}</span>
-        ))}
-      </div>
       {sub === 'restaurantes'  && <CrudRestaurantes  workspaceId={workspaceId} ownerId={ownerId} />}
       {sub === 'precos'        && <CrudTabelaPrecos  workspaceId={workspaceId} ownerId={ownerId} />}
       {sub === 'equipes'       && <CrudEquipes       workspaceId={workspaceId} ownerId={ownerId} />}
@@ -1211,84 +1197,6 @@ function SecaoRelatorios({ sub, sols }) {
   )
 }
 
-// ─── Navegação interna do módulo ─────────────────────────────────────────────
-const MOD_NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
-  {
-    id: 'cadastros', label: 'Cadastros', icon: TableCellsIcon,
-    sub: [
-      { id: 'restaurantes',  label: 'Restaurantes' },
-      { id: 'precos',        label: 'Tabela de Preços' },
-      { id: 'equipes',       label: 'Equipes' },
-      { id: 'colaboradores', label: 'Colaboradores' },
-      { id: 'cdc',           label: 'Centros de Custo' },
-      { id: 'regionais',     label: 'Regionais' },
-      { id: 'parametros',    label: 'Parâmetros' },
-    ],
-  },
-  {
-    id: 'operacoes', label: 'Operações', icon: DocumentTextIcon,
-    sub: [
-      { id: 'solicitacoes', label: 'Solicitações' },
-      { id: 'aprovacoes',   label: 'Aprovações' },
-      { id: 'fechamentos',  label: 'Fechamentos' },
-    ],
-  },
-  {
-    id: 'relatorios', label: 'Relatórios', icon: ChartBarIcon,
-    sub: [
-      { id: 'rel-equipe',       label: 'Por Equipe' },
-      { id: 'rel-restaurante',  label: 'Por Restaurante' },
-      { id: 'rel-cdc',          label: 'Por CDC/Regional' },
-      { id: 'rel-divergencias', label: 'Divergências' },
-    ],
-  },
-]
-
-function ModuleNav({ secao, sub, onNav }) {
-  const [expandido, setExpandido] = useState({ cadastros: true, operacoes: true, relatorios: true })
-
-  return (
-    <div style={{ width: 210, minWidth: 210, borderRight: '1px solid var(--border)', overflowY: 'auto', paddingTop: 8, paddingBottom: 16 }}>
-      {MOD_NAV.map(item => {
-        const Icon = item.icon
-        const isActive = secao === item.id
-        const isExpanded = expandido[item.id]
-
-        if (!item.sub) {
-          return (
-            <button key={item.id} onClick={() => onNav(item.id, null)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 16px', border: 'none', cursor: 'pointer', background: isActive ? 'rgba(0,200,150,0.12)' : 'transparent', color: isActive ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: isActive ? 700 : 500, fontSize: 13, textAlign: 'left', transition: 'background 0.12s', borderLeft: isActive ? '2px solid var(--accent)' : '2px solid transparent' }} onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
-              <Icon style={{ width: 16, height: 16, flexShrink: 0 }} />
-              {item.label}
-            </button>
-          )
-        }
-
-        return (
-          <div key={item.id}>
-            <button onClick={() => {
-              const next = !isExpanded
-              setExpandido(p => ({ ...p, [item.id]: next }))
-              if (secao !== item.id) onNav(item.id, item.sub[0].id)
-            }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 16px', border: 'none', cursor: 'pointer', background: isActive ? 'rgba(0,200,150,0.06)' : 'transparent', color: isActive ? 'var(--accent)' : 'var(--text-primary)', fontWeight: 700, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.7, textAlign: 'left', transition: 'background 0.12s' }}>
-              <Icon style={{ width: 14, height: 14, flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {isExpanded ? <ChevronDownIcon style={{ width: 12, height: 12 }} /> : <ChevronRightIcon style={{ width: 12, height: 12 }} />}
-            </button>
-            {isExpanded && item.sub.map(s => {
-              const isSub = secao === item.id && sub === s.id
-              return (
-                <button key={s.id} onClick={() => onNav(item.id, s.id)} style={{ display: 'flex', alignItems: 'center', width: '100%', padding: '7px 16px 7px 40px', border: 'none', cursor: 'pointer', background: isSub ? 'rgba(0,200,150,0.12)' : 'transparent', color: isSub ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: isSub ? 700 : 400, fontSize: 13, textAlign: 'left', transition: 'background 0.12s', borderLeft: isSub ? '2px solid var(--accent)' : '2px solid transparent' }} onMouseEnter={e => { if (!isSub) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }} onMouseLeave={e => { if (!isSub) e.currentTarget.style.background = 'transparent' }}>
-                  {s.label}
-                </button>
-              )
-            })}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function Refeicoes() {
@@ -1335,16 +1243,13 @@ export default function Refeicoes() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="🍽️ Refeições" subtitle="Gestão completa de refeições" />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <ModuleNav secao={secao} sub={sub} onNav={nav} />
-        <div style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
-          {secao === 'dashboard'  && <SecaoDashboard sols={sols} onNav={nav} />}
-          {secao === 'cadastros'  && <SecaoCadastros workspaceId={workspaceId} ownerId={ownerId} sub={sub} />}
-          {secao === 'operacoes'  && sub === 'solicitacoes' && <SecaoSolicitacoes sols={sols} workspaceId={workspaceId} ownerId={ownerId} onReload={load} loading={loading} />}
-          {secao === 'operacoes'  && sub === 'aprovacoes'   && <SecaoAprovacoes sols={sols} onReload={load} />}
-          {secao === 'operacoes'  && sub === 'fechamentos'  && <SecaoFechamentos workspaceId={workspaceId} ownerId={ownerId} />}
-          {secao === 'relatorios' && <SecaoRelatorios sub={sub} sols={sols} />}
-        </div>
+      <div style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
+        {secao === 'dashboard'  && <SecaoDashboard sols={sols} onNav={nav} />}
+        {secao === 'cadastros'  && <SecaoCadastros workspaceId={workspaceId} ownerId={ownerId} sub={sub} />}
+        {secao === 'operacoes'  && sub === 'solicitacoes' && <SecaoSolicitacoes sols={sols} workspaceId={workspaceId} ownerId={ownerId} onReload={load} loading={loading} />}
+        {secao === 'operacoes'  && sub === 'aprovacoes'   && <SecaoAprovacoes sols={sols} onReload={load} />}
+        {secao === 'operacoes'  && sub === 'fechamentos'  && <SecaoFechamentos workspaceId={workspaceId} ownerId={ownerId} />}
+        {secao === 'relatorios' && <SecaoRelatorios sub={sub} sols={sols} />}
       </div>
     </div>
   )
