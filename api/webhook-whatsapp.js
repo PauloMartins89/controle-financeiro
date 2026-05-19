@@ -137,8 +137,6 @@ async function processRefeiApproval(supabase, tokenCompact, acao, fromPhone) {
   }
 }
 
-}
-
 // Busca workspace configurado para um número de telefone
 async function getWorkspaceForPhone(supabase, phone) {
   // 1️⃣ Busca em cadastros_condutores (fonte principal)

@@ -11,7 +11,8 @@ const APP_URL = process.env.APP_URL || 'https://dividiai.app.br'
 function getDb() {
   return createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
+    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY,
+    { realtime: { params: { log_level: 'disabled' } }, global: {} }
   )
 }
 
