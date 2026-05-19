@@ -15,6 +15,13 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        navigateFallbackDenylist: [/^\/version\.json/],
+        runtimeCaching: [
+          {
+            urlPattern: /\/version\.json/,
+            handler: 'NetworkOnly',
+          },
+        ],
       },
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
