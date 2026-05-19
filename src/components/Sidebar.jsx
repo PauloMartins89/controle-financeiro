@@ -120,10 +120,25 @@ const navGroups = [
   },
 ]
 
+function weatherIcon(code) {
+  if (code <= 1) return '☀️'
+  if (code === 2) return '⛅'
+  if (code === 3) return '☁️'
+  if (code === 45 || code === 48) return '🌫️'
+  if (code >= 51 && code <= 55) return '🌦️'
+  if (code >= 61 && code <= 65) return '🌧️'
+  if (code >= 71 && code <= 77) return '🌨️'
+  if (code >= 80 && code <= 82) return '🌦️'
+  if (code >= 95) return '⛈️'
+  return '🌡️'
+}
+
 export default function Sidebar({ collapsed, onToggle }) {
   const { getMeusDividas, getMinhasReceitas, getTotalPagar } = useStore()
   const enabledModules = useStore(s => s.enabledModules)
   const [authUser, setAuthUser] = useState(null)
+  const [weather, setWeather] = useState(null)
+  const [weatherLoading, setWeatherLoading] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -161,6 +176,40 @@ export default function Sidebar({ collapsed, onToggle }) {
       setAuthUser(session?.user || null)
     }) || {}
     return () => listener?.subscription?.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    const cached = sessionStorage.getItem('sp_weather')
+    if (cached) {
+      try {
+        const { data, ts } = JSON.parse(cached)
+        if (Date.now() - ts < 30 * 60 * 1000) {
+          setWeather(data); setWeatherLoading(false); return
+        }
+      } catch {}
+    }
+    const load = async (lat, lon, city) => {
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=precipitation_probability_max,weather_code&timezone=auto&forecast_days=2`)
+        const d = await r.json()
+        const result = { ...d, city }
+        setWeather(result)
+        sessionStorage.setItem('sp_weather', JSON.stringify({ data: result, ts: Date.now() }))
+      } catch {}
+      finally { setWeatherLoading(false) }
+    }
+    navigator.geolocation?.getCurrentPosition(
+      async pos => {
+        const { latitude, longitude } = pos.coords
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
+          const d = await r.json()
+          const city = d.address?.city || d.address?.town || d.address?.state || 'Local'
+          load(latitude, longitude, city)
+        } catch { load(latitude, longitude, 'Local') }
+      },
+      () => load(-23.5505, -46.6333, 'São Paulo')
+    )
   }, [])
 
   async function handleLogout() {
@@ -238,6 +287,44 @@ export default function Sidebar({ collapsed, onToggle }) {
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{formatCurrency(totalPagar)}</div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Weather card */}
+      {!collapsed && (
+        <div style={{ padding: '0 16px 12px', borderBottom: '1px solid var(--sb-border)' }}>
+          <div style={{ background: 'var(--sb-balance-bg)', borderRadius: 10, padding: '10px 12px' }}>
+            {weatherLoading ? (
+              <div style={{ fontSize: 11, color: 'var(--sb-text)', textAlign: 'center' }}>⏳ Carregando clima...</div>
+            ) : weather ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <div style={{ fontSize: 11, color: 'var(--sb-text)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    📍 {weather.city}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--sb-text-active)' }}>
+                    {weatherIcon(weather.current?.weather_code)} {Math.round(weather.current?.temperature_2m)}°C
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: 'var(--sb-text)' }}>Hoje</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: (weather.daily?.precipitation_probability_max?.[0] ?? 0) >= 60 ? '#60a5fa' : '#10b981' }}>
+                      {weatherIcon(weather.daily?.weather_code?.[0])} {weather.daily?.precipitation_probability_max?.[0] ?? 0}% chuva
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 10, color: 'var(--sb-text)' }}>Amanhã</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: (weather.daily?.precipitation_probability_max?.[1] ?? 0) >= 60 ? '#60a5fa' : '#10b981' }}>
+                      {weatherIcon(weather.daily?.weather_code?.[1])} {weather.daily?.precipitation_probability_max?.[1] ?? 0}% chuva
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 11, color: 'var(--sb-text)' }}>🌡️ Clima indisponível</div>
+            )}
           </div>
         </div>
       )}
