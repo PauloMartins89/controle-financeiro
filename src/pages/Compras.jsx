@@ -66,6 +66,9 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
   const [fornecedores, setFornecedores] = useState([])
   const [fornQuery, setFornQuery] = useState('')
   const [showFornDrop, setShowFornDrop] = useState(false)
+  const [showNovoForn, setShowNovoForn] = useState(false)
+  const [novoForn, setNovoForn] = useState({ nome: '', contato: '', telefone: '', email: '' })
+  const [savingForn, setSavingForn] = useState(false)
 
   useEffect(() => {
     if (!workspaceId) return
@@ -93,6 +96,26 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
     setFornQuery(f.nome)
     setForm(p => ({ ...p, fornecedor: f.nome, contato_fornecedor: f.contato || '', telefone_fornecedor: f.telefone || '', email_fornecedor: f.email || '' }))
     setShowFornDrop(false)
+  }
+
+  async function salvarNovoFornecedor() {
+    if (!novoForn.nome.trim()) { toast.error('Informe o nome do fornecedor'); return }
+    setSavingForn(true)
+    const { data, error } = await supabase.from('fornecedores').insert({
+      nome: novoForn.nome.trim(),
+      contato: novoForn.contato.trim() || null,
+      telefone: novoForn.telefone.trim() || null,
+      email: novoForn.email.trim() || null,
+      ativo: true,
+      workspace_id: workspaceId,
+    }).select('id, nome, contato, telefone, email').single()
+    setSavingForn(false)
+    if (error) { toast.error('Erro: ' + error.message); return }
+    setFornecedores(prev => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)))
+    selectFornecedor(data)
+    setShowNovoForn(false)
+    setNovoForn({ nome: '', contato: '', telefone: '', email: '' })
+    toast.success('Fornecedor cadastrado!')
   }
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
@@ -183,7 +206,48 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
 
         {/* Dados da Solicitação (fornecedor) */}
         <div style={{ background: 'rgba(16,185,129,0.05)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, border: '1px solid rgba(16,185,129,0.15)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.4 }}>Dados da Solicitação</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.4 }}>Dados da Solicitação</div>
+            <button
+              type="button"
+              onClick={() => setShowNovoForn(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 6, background: showNovoForn ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', cursor: 'pointer', color: '#10b981', fontSize: 11, fontWeight: 700 }}
+            >
+              <PlusIcon style={{ width: 11, height: 11 }} /> Novo fornecedor
+            </button>
+          </div>
+
+          {showNovoForn && (
+            <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '10px 12px', marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.3 }}>Cadastrar Novo Fornecedor</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                <div>
+                  <label style={labelStyle}>Nome *</label>
+                  <input style={inputStyle} value={novoForn.nome} onChange={e => setNovoForn(p => ({ ...p, nome: e.target.value }))} placeholder="Razão social ou nome" autoFocus />
+                </div>
+                <div>
+                  <label style={labelStyle}>Contato</label>
+                  <input style={inputStyle} value={novoForn.contato} onChange={e => setNovoForn(p => ({ ...p, contato: e.target.value }))} placeholder="Nome do contato" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Telefone</label>
+                  <input style={inputStyle} value={novoForn.telefone} onChange={e => setNovoForn(p => ({ ...p, telefone: e.target.value }))} placeholder="(00) 00000-0000" />
+                </div>
+                <div>
+                  <label style={labelStyle}>E-mail</label>
+                  <input style={inputStyle} value={novoForn.email} onChange={e => setNovoForn(p => ({ ...p, email: e.target.value }))} placeholder="email@fornecedor.com" />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => { setShowNovoForn(false); setNovoForn({ nome: '', contato: '', telefone: '', email: '' }) }} style={{ padding: '6px 14px', borderRadius: 6, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 12 }}>Cancelar</button>
+                <button type="button" onClick={salvarNovoFornecedor} disabled={savingForn} style={{ padding: '6px 14px', borderRadius: 6, background: '#10b981', border: 'none', cursor: savingForn ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 12, fontWeight: 700, opacity: savingForn ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {savingForn ? <ArrowPathIcon style={{ width: 13, height: 13, animation: 'spin 1s linear infinite' }} /> : <PlusIcon style={{ width: 13, height: 13 }} />}
+                  {savingForn ? 'Salvando...' : 'Salvar e Selecionar'}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div style={{ position: 'relative' }}>
               <label style={labelStyle}>Fornecedor</label>
