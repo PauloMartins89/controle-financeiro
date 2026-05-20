@@ -1,4 +1,5 @@
 ﻿import { createClient } from '@supabase/supabase-js'
+import ws from 'ws'
 import { runOCR } from './_ocr.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -27,7 +28,7 @@ const APP_URL           = process.env.APP_URL || 'https://dividiai.app.br'
 
 function getSupabase() {
   if (!supabaseUrl || !supabaseServiceKey) return null
-  return createClient(supabaseUrl, supabaseServiceKey)
+  return createClient(supabaseUrl, supabaseServiceKey, { realtime: { params: { log_level: 'disabled' }, transport: ws }, global: {} })
 }
 
 // Envia mensagem de texto via Z-API
