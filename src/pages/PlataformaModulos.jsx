@@ -4,22 +4,35 @@ import { PuzzlePieceIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/
 
 // Mapeamento de todos os módulos disponíveis na plataforma
 const TODOS_MODULOS = [
-  { key: 'dashboard',    label: 'Início / Dashboard',    descricao: 'Tela inicial e visão geral' },
-  { key: 'despesas',     label: 'Despesas',               descricao: 'Lançamentos de despesas' },
-  { key: 'lancamentos',  label: 'Lançamentos',            descricao: 'Lançamentos financeiros gerencial' },
-  { key: 'cartoes',      label: 'Cartões',                descricao: 'Controle de cartões' },
-  { key: 'balanco',      label: 'Balanço',                descricao: 'Balanço e relatórios' },
-  { key: 'recorrentes',  label: 'Recorrentes',            descricao: 'Despesas recorrentes / Fixos do mês' },
-  { key: 'previsao',     label: 'Caixa / Previsão',       descricao: 'Orçamento e previsão de caixa' },
-  { key: 'timeline',     label: 'Histórico / Timeline',   descricao: 'Linha do tempo financeira' },
-  { key: 'negocios',     label: 'Negócios',               descricao: 'CRM e oportunidades' },
-  { key: 'proventos',    label: 'Proventos',              descricao: 'Receitas e proventos' },
-  { key: 'refeicoes',    label: 'Refeições',              descricao: 'Controle de refeições' },
-  { key: 'compras',      label: 'Compras',                descricao: 'Módulo de compras/cotações' },
-  { key: 'veiculos',     label: 'Veículos',               descricao: 'Controle de frota' },
-  { key: 'faturamento',  label: 'Faturamento',            descricao: 'Notas fiscais, contas a receber/pagar' },
-  { key: 'importar',     label: 'Importar',               descricao: 'Importação de extratos' },
-  { key: 'chat_ia',      label: 'Chat IA',                descricao: 'Assistente de inteligência artificial' },
+  // ── FinanceiroPro ─────────────────────────────────────────
+  { key: 'dashboard',     label: 'Início / Dashboard',    descricao: 'Tela inicial e visão geral' },
+  { key: 'despesas',      label: 'Despesas',              descricao: 'Lançamentos de despesas' },
+  { key: 'acertos',       label: 'Acertos',               descricao: 'Acertos e divisão entre pessoas' },
+  { key: 'recorrentes',   label: 'Fixos do Mês',          descricao: 'Despesas recorrentes / Fixos do mês' },
+  { key: 'cartoes',       label: 'Cartões',               descricao: 'Controle de cartões' },
+  { key: 'grupos',        label: 'Grupos',                descricao: 'Grupos e categorias de despesas' },
+  { key: 'pessoas',       label: 'Pessoas',               descricao: 'Cadastro de pessoas' },
+  { key: 'veiculos',      label: 'Veículos',              descricao: 'Controle de frota' },
+  { key: 'timeline',      label: 'Histórico / Timeline',  descricao: 'Linha do tempo financeira' },
+  { key: 'balanco',       label: 'Balanço',               descricao: 'Balanço e relatórios' },
+  { key: 'previsao',      label: 'Caixa / Previsão',      descricao: 'Orçamento e previsão de caixa' },
+  { key: 'proventos',     label: 'Proventos',             descricao: 'Receitas e proventos' },
+  { key: 'negocios',      label: 'Negócios',              descricao: 'CRM e oportunidades' },
+  // ── Gerencial ─────────────────────────────────────────────
+  { key: 'central',       label: 'Central Gerencial',     descricao: 'Visão gerencial consolidada' },
+  { key: 'lancamentos',   label: 'Lançamentos',           descricao: 'Lançamentos financeiros gerencial' },
+  { key: 'cadastros',     label: 'Cadastros',             descricao: 'Cadastros gerenciais' },
+  // ── Financeiro ────────────────────────────────────────────
+  { key: 'faturamento',   label: 'Faturamento',           descricao: 'Notas fiscais, contas a receber/pagar' },
+  // ── Módulos especializados ────────────────────────────────
+  { key: 'compras',       label: 'Compras',               descricao: 'Módulo de compras/cotações' },
+  { key: 'refeicoes',     label: 'Refeições',             descricao: 'Controle de refeições' },
+  // ── Documentos ────────────────────────────────────────────
+  { key: 'importar',      label: 'Importar Extratos',     descricao: 'Importação de extratos bancários' },
+  { key: 'escanear',      label: 'Escanear Documentos',   descricao: 'Escaneamento de documentos' },
+  { key: 'notas-fiscais', label: 'Notas Fiscais',         descricao: 'Emissão e consulta de notas fiscais' },
+  // ── IA ────────────────────────────────────────────────────
+  { key: 'chat_ia',       label: 'Chat IA',               descricao: 'Assistente de inteligência artificial' },
 ]
 
 export default function PlataformaModulos() {

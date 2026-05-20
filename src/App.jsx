@@ -116,7 +116,7 @@ function RequireSubscription({ children }) {
 // Rota padrão: redireciona para o primeiro módulo habilitado se Dashboard estiver desabilitado
 function DefaultRoute() {
   const enabledModules = useStore(s => s.enabledModules)
-  if (enabledModules && enabledModules.includes('inicio')) {
+  if (enabledModules && enabledModules.includes('dashboard')) {
     const prioridade = [
       { key: 'refeicoes', path: '/refeicoes' },
       { key: 'compras',   path: '/compras' },
@@ -299,6 +299,7 @@ export default function App() {
           .eq('user_id', authUser.id)
           .maybeSingle()
         update.isPlatformAdmin = !!adminRow
+        if (adminRow) update.enabledModules = null // admin sempre vê todos os módulos
 
         // Carrega permissões: ['*'] = acesso total, array específico quando tem perfil restrito
         let permissoes = ['*'] // default: admin total da empresa (sem perfil_id)
