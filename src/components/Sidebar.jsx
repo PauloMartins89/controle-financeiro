@@ -168,12 +168,12 @@ export default function Sidebar({ collapsed, onToggle }) {
   // Função que decide se o item do menu deve aparecer:
   // - adminOnly: só admin vê
   // - moduleKey null: sempre visível (se não for adminOnly)
-  // - moduleKey: visível por padrão; escondido apenas se enabledModules (blacklist) incluir o moduleKey
+  // - moduleKey: visível apenas se enabledModules (whitelist) incluir o moduleKey, ou se enabledModules=null (sem restrição)
   function isItemVisible(item) {
     if (item.adminOnly) return isPlatformAdmin
     if (!item.moduleKey) return true
-    if (enabledModules === null) return true // sem restrição
-    return !enabledModules.includes(item.moduleKey) // enabledModules = lista de desabilitados
+    if (enabledModules === null) return true // sem restrição (admin ou workspace sem config)
+    return enabledModules.includes(item.moduleKey) // enabledModules = whitelist de habilitados
   }
 
   useEffect(() => {

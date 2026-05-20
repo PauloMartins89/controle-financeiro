@@ -116,7 +116,7 @@ function RequireSubscription({ children }) {
 // Rota padrão: redireciona para o primeiro módulo habilitado se Dashboard estiver desabilitado
 function DefaultRoute() {
   const enabledModules = useStore(s => s.enabledModules)
-  if (enabledModules && enabledModules.includes('dashboard')) {
+  if (enabledModules && !enabledModules.includes('dashboard')) {
     const prioridade = [
       { key: 'refeicoes', path: '/refeicoes' },
       { key: 'compras',   path: '/compras' },
@@ -125,7 +125,7 @@ function DefaultRoute() {
       { key: 'despesas',  path: '/despesas' },
       { key: 'faturamento', path: '/faturamento' },
     ]
-    const primeiro = prioridade.find(m => !enabledModules.includes(m.key))
+    const primeiro = prioridade.find(m => enabledModules.includes(m.key))
     if (primeiro) return <Navigate to={primeiro.path} replace />
   }
   return <Dashboard />
@@ -253,12 +253,11 @@ export default function App() {
           .select('module_key, enabled, workspace_id')
           .in('workspace_id', allWorkspaceIds)
         if (modulesData && modulesData.length > 0) {
-          // Coleta módulos EXPLICITAMENTE desabilitados (blacklist)
-          // Módulos sem linha no banco são visíveis por padrão
-          const disabledKeys = [...new Set(
-            modulesData.filter(m => m.enabled === false).map(m => m.module_key)
+          // Whitelist: se o workspace tem configuração, mostra apenas módulos explicitamente habilitados
+          // Módulos sem linha no banco ficam ocultos (não estão na whitelist)
+          enabledModules = [...new Set(
+            modulesData.filter(m => m.enabled === true).map(m => m.module_key)
           )]
-          if (disabledKeys.length > 0) enabledModules = disabledKeys
         }
       }
       const loadedPeople = (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
@@ -483,7 +482,7 @@ export default function App() {
                 </Routes>
               </main>
             </div>
-            {(enabledModules === null || !enabledModules?.includes('chat_ia')) && <ChatIA />}
+            {(enabledModules === null || enabledModules?.includes('chat_ia')) && <ChatIA />}
             <GlobalSearch />
             </RequireSubscription>
           </RequireAuth>

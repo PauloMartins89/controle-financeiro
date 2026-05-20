@@ -60,8 +60,15 @@ export default function PlataformaModulos() {
       .from('workspace_modules')
       .select('module_key, enabled')
       .eq('workspace_id', emp.id)
-    // Desabilitados = linhas onde enabled = false
-    setDesabilitados((data || []).filter(m => m.enabled === false).map(m => m.module_key))
+    if (data && data.length > 0) {
+      // Workspace já tem configuração: usa whitelist
+      // Desabilitados = todos os módulos que NÃO têm enabled=true explícito
+      const habilitados = new Set(data.filter(m => m.enabled === true).map(m => m.module_key))
+      setDesabilitados(TODOS_MODULOS.map(m => m.key).filter(k => !habilitados.has(k)))
+    } else {
+      // Workspace sem configuração: todos habilitados por padrão
+      setDesabilitados([])
+    }
     setLoadingMods(false)
   }
 
