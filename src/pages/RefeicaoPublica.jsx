@@ -413,14 +413,14 @@ export default function RefeicaoPublica() {
             </>
           )}
 
-          {/* Espaço para botão fixo */}
-          <div style={{ height: 72 }} />
+          {/* Espaço para botão fixo + safe-area iOS */}
+          <div style={{ height: 96 }} />
 
         </MainCard>
       </PageLayout>
 
       {/* ── Botão fixo no rodapé ── */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '12px 16px', background: T.pageBg, borderTop: `1px solid ${T.divider}` }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '12px 16px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))', background: T.pageBg, borderTop: `1px solid ${T.divider}` }}>
         <div style={{ maxWidth: 520, margin: '0 auto' }}>
           <button
             onClick={handleSubmit}
