@@ -327,7 +327,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     width: '100%', padding: '8px 10px 4px',
                     background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: 10, fontWeight: 700, color: 'var(--sb-title)',
+                    fontSize: 14, fontWeight: 700, color: 'var(--sb-title)',
                     textTransform: 'uppercase', letterSpacing: '0.08em',
                   }}
                 >
