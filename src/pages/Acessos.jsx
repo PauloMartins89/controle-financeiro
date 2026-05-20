@@ -173,33 +173,34 @@ function AbaPerfis({ workspaceId }) {
 }
 
 // ─── Aba Membros ─────────────────────────────────────────────────────────────
-function AbaMembros({ workspaceId }) {
+// Recebe apiWs para buscar membros com e-mails via admin API
+function AbaMembros({ workspaceId, apiWs }) {
   const [membros, setMembros] = useState([])
   const [perfis, setPerfis] = useState([])
   const [loading, setLoading] = useState(true)
   const [salvando, setSalvando] = useState(null)
 
-  useEffect(() => {
+  const carregarMembros = useCallback(async () => {
     if (!workspaceId) return
-    async function carregar() {
-      setLoading(true)
-      const [{ data: m }, { data: p }] = await Promise.all([
-        supabase.from('workspace_members').select('id, user_id, perfil_id, ativo, created_at').eq('workspace_id', workspaceId).order('created_at'),
-        supabase.from('perfis').select('id, nome').eq('workspace_id', workspaceId).order('nome'),
-      ])
-      setMembros(m || [])
-      setPerfis(p || [])
-      setLoading(false)
-    }
-    carregar()
-  }, [workspaceId])
+    setLoading(true)
+    // Busca membros com e-mails via API e perfis via Supabase em paralelo
+    const [apiRes, { data: p }] = await Promise.all([
+      apiWs({ action: 'workspace-members-list' }),
+      supabase.from('perfis').select('id, nome').eq('workspace_id', workspaceId).order('nome'),
+    ])
+    setMembros(apiRes?.members || [])
+    setPerfis(p || [])
+    setLoading(false)
+  }, [workspaceId, apiWs])
+
+  useEffect(() => { carregarMembros() }, [carregarMembros])
 
   async function alterarPerfil(membroId, perfilId) {
     setSalvando(membroId)
     await supabase.from('workspace_members').update({ perfil_id: perfilId || null }).eq('id', membroId)
     setMembros(prev => prev.map(m => m.id === membroId ? { ...m, perfil_id: perfilId || null } : m))
     setSalvando(null)
-    toast.success('Perfil atualizado!')
+    toast.success('Grupo atualizado!')
   }
 
   async function alterarAtivo(membroId, ativo) {
@@ -207,7 +208,7 @@ function AbaMembros({ workspaceId }) {
     await supabase.from('workspace_members').update({ ativo }).eq('id', membroId)
     setMembros(prev => prev.map(m => m.id === membroId ? { ...m, ativo } : m))
     setSalvando(null)
-    toast.success(ativo ? 'Membro reativado.' : 'Membro desativado.')
+    toast.success(ativo ? 'Usuário reativado.' : 'Usuário desativado.')
   }
 
   if (loading) return <div className="py-12 text-center text-gray-400 text-sm">Carregando membros…</div>
@@ -217,16 +218,19 @@ function AbaMembros({ workspaceId }) {
       <table className="w-full text-sm">
         <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
           <tr>
-            <th className="px-4 py-3 text-left">Usuário (ID)</th>
-            <th className="px-4 py-3 text-left">Perfil</th>
+            <th className="px-4 py-3 text-left">Usuário</th>
+            <th className="px-4 py-3 text-left">Grupo de acesso</th>
             <th className="px-4 py-3 text-left">Status</th>
-            <th className="px-4 py-3 text-left">Membro desde</th>
+            <th className="px-4 py-3 text-left">Desde</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50">
           {membros.map(m => (
             <tr key={m.id} className={`hover:bg-gray-50 transition-colors ${!m.ativo ? 'opacity-50' : ''}`}>
-              <td className="px-4 py-3 text-gray-600 font-mono text-xs truncate max-w-[160px]" title={m.user_id}>{m.user_id?.slice(0, 8)}…</td>
+              <td className="px-4 py-3">
+                <p className="text-sm font-medium text-gray-800">{m.nome || m.email}</p>
+                <p className="text-xs text-gray-400">{m.email}</p>
+              </td>
               <td className="px-4 py-3">
                 <select
                   value={m.perfil_id || ''}
@@ -259,19 +263,58 @@ function AbaMembros({ workspaceId }) {
   )
 }
 
+// ─── Helper: chama /api/admin com o JWT do usuário logado ───────────────────
+async function apiWs(body) {
+  const { data: { session } } = await supabase.auth.getSession()
+  const res = await fetch('/api/admin', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session?.access_token}`,
+    },
+    body: JSON.stringify(body),
+  })
+  return res.json()
+}
+
 // ─── Componente principal ────────────────────────────────────────────────────
 export default function Acessos() {
   const [aba, setAba] = useState('usuarios')
-  const workspaceId = useStore(s => s.workspaceId)
+  const workspaceId   = useStore(s => s.workspaceId)
   const isPlatformAdmin = useStore(s => s.isPlatformAdmin)
-  const [email, setEmail] = useState('')
+  const permissoes    = useStore(s => s.permissoes)
+  const isWorkspaceAdmin = isPlatformAdmin || permissoes.includes('*')
+
+  // ── Estado: criar usuário (empresa admin) ─────────────────────────────────
+  const [wsEmail,   setWsEmail]   = useState('')
+  const [wsNome,    setWsNome]    = useState('')
+  const [wsSenha,   setWsSenha]   = useState('')
+  const [wsLoading, setWsLoading] = useState(false)
+  const [wsError,   setWsError]   = useState('')
+  const [wsSuccess, setWsSuccess] = useState('')
+
+  // ── Estado: criar usuário (plataforma admin) ──────────────────────────────
+  const [email, setEmail]     = useState('')
   const [password, setPassword] = useState('')
-  const [nome, setNome] = useState('')
+  const [nome, setNome]       = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]     = useState('')
   const [success, setSuccess] = useState('')
   const [inviteLink, setInviteLink] = useState('')
-  const [aiMetrics, setAiMetrics] = useState(null)
+  const [aiMetrics, setAiMetrics]   = useState(null)
+
+  // Adiciona usuário ao workspace (ação de empresa admin)
+  async function handleWsAddUser(e) {
+    e.preventDefault()
+    setWsError(''); setWsSuccess('')
+    if (!wsEmail || !wsNome) { setWsError('Preencha nome e e-mail.'); return }
+    setWsLoading(true)
+    const json = await apiWs({ action: 'workspace-add-user', email: wsEmail, nome: wsNome, password: wsSenha || undefined })
+    setWsLoading(false)
+    if (json.error) { setWsError(json.error); return }
+    setWsSuccess(`${wsEmail} adicionado com sucesso!`)
+    setWsEmail(''); setWsNome(''); setWsSenha('')
+  }
 
   function generateInviteLink() {
     const token = btoa(`invite-${Date.now()}-${Math.random().toString(36).slice(2)}`)
@@ -325,8 +368,8 @@ export default function Acessos() {
 
   const abas = [
     { key: 'usuarios', label: 'Usuários', icon: UsersIcon },
-    { key: 'perfis',   label: 'Perfis & Permissões', icon: ShieldCheckIcon },
-    { key: 'membros',  label: 'Membros', icon: UserGroupIcon },
+    { key: 'perfis',   label: 'Grupos de Acesso', icon: ShieldCheckIcon },
+    { key: 'membros',  label: 'Membros & Grupos', icon: UserGroupIcon },
   ]
 
   return (
@@ -350,34 +393,41 @@ export default function Acessos() {
         {/* Aba: Usuários */}
         {aba === 'usuarios' && (
           <div className="space-y-6" style={{ maxWidth: 680 }}>
-            {/* Formulário de criação */}
-            <div className="card" style={{ padding: 24 }}>
-              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <PlusIcon style={{ width: 20, height: 20, color: '#6366f1' }} />
-                Criar novo acesso
+
+            {/* Adicionar usuário ao workspace (admin da empresa) */}
+            {isWorkspaceAdmin && (
+              <div className="card" style={{ padding: 24 }}>
+                <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <PlusIcon style={{ width: 20, height: 20, color: '#6366f1' }} />
+                  Adicionar usuário ao workspace
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                  Crie um novo usuário ou adicione alguém que já existe na plataforma.
+                  Após adicionar, vá em <strong>Membros &amp; Grupos</strong> para atribuir o grupo de acesso.
+                </p>
+                <form onSubmit={handleWsAddUser} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label className="label">Nome completo</label>
+                      <input className="input" type="text" placeholder="Ex: João da Silva" value={wsNome} onChange={e => setWsNome(e.target.value)} required />
+                    </div>
+                    <div>
+                      <label className="label">E-mail</label>
+                      <input className="input" type="email" placeholder="usuario@empresa.com" value={wsEmail} onChange={e => setWsEmail(e.target.value)} required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Senha (opcional — gerada automaticamente se vazia)</label>
+                    <input className="input" type="password" placeholder="Deixe em branco para gerar automaticamente" value={wsSenha} onChange={e => setWsSenha(e.target.value)} />
+                  </div>
+                  <button className="btn-primary" type="submit" disabled={wsLoading} style={{ marginTop: 4 }}>
+                    {wsLoading ? 'Adicionando...' : '+ Adicionar usuário'}
+                  </button>
+                </form>
+                {wsError   && <div style={{ color: '#ef4444', marginTop: 12, fontSize: 13 }}>{wsError}</div>}
+                {wsSuccess && <div style={{ color: '#10b981', marginTop: 12, fontSize: 13 }}>{wsSuccess}</div>}
               </div>
-              <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
-                  <label className="label">Nome</label>
-                  <input className="input" type="text" placeholder="Nome completo" value={nome} onChange={e => setNome(e.target.value)} required />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div>
-                    <label className="label">E-mail</label>
-                    <input className="input" type="email" placeholder="usuario@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
-                  </div>
-                  <div>
-                    <label className="label">Senha</label>
-                    <input className="input" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={e => setPassword(e.target.value)} required />
-                  </div>
-                </div>
-                <button className="btn-primary" type="submit" disabled={loading} style={{ marginTop: 4 }}>
-                  {loading ? 'Criando...' : '+ Criar usuário'}
-                </button>
-              </form>
-              {error && <div style={{ color: '#ef4444', marginTop: 12, fontSize: 13 }}>{error}</div>}
-              {success && <div style={{ color: '#10b981', marginTop: 12, fontSize: 13 }}>{success}</div>}
-            </div>
+            )}
 
             {/* Métricas IA (só platform admin) */}
             {isPlatformAdmin && aiMetrics && (
@@ -399,35 +449,77 @@ export default function Acessos() {
               </div>
             )}
 
-            {/* Convite por link */}
-            <div className="card" style={{ padding: 24 }}>
-              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <LinkIcon style={{ width: 20, height: 20, color: '#6366f1' }} />
-                Convidar por link
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
-                Gere um link de convite para enviar por WhatsApp ou e-mail.
-              </div>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <button className="btn-primary" onClick={generateInviteLink}>
-                  <LinkIcon style={{ width: 15, height: 15 }} /> Gerar link de convite
-                </button>
-                {inviteLink && (
-                  <>
-                    <input className="input" readOnly value={inviteLink} style={{ flex: 1, minWidth: 200, fontSize: 12 }} onClick={e => e.target.select()} />
-                    <button className="btn-ghost" onClick={copyInviteLink} style={{ padding: '10px 14px' }}>
-                      <ClipboardDocumentIcon style={{ width: 16, height: 16 }} />
+            {/* Ferramentas de plataforma admin */}
+            {isPlatformAdmin && (
+              <>
+                {/* Criar usuário global (plataforma admin) */}
+                <div className="card" style={{ padding: 24 }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <KeyIcon style={{ width: 18, height: 18, color: '#8b5cf6' }} />
+                    Criar usuário global (plataforma)
+                  </div>
+                  <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label className="label">Nome</label>
+                      <input className="input" type="text" placeholder="Nome completo" value={nome} onChange={e => setNome(e.target.value)} required />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label className="label">E-mail</label>
+                        <input className="input" type="email" placeholder="usuario@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                      </div>
+                      <div>
+                        <label className="label">Senha</label>
+                        <input className="input" type="password" placeholder="Mínimo 6 caracteres" value={password} onChange={e => setPassword(e.target.value)} required />
+                      </div>
+                    </div>
+                    <button className="btn-primary" type="submit" disabled={loading} style={{ marginTop: 4 }}>
+                      {loading ? 'Criando...' : '+ Criar usuário'}
                     </button>
-                  </>
-                )}
-              </div>
-            </div>
+                  </form>
+                  {error   && <div style={{ color: '#ef4444', marginTop: 12, fontSize: 13 }}>{error}</div>}
+                  {success && <div style={{ color: '#10b981', marginTop: 12, fontSize: 13 }}>{success}</div>}
+                </div>
 
-            <div style={{ textAlign: 'right' }}>
-              <a href="https://supabase.com/dashboard/project/yfxkgwlxoszbapvgtpee/auth/users" target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ fontSize: 13 }}>
-                Gerenciar usuários no Supabase →
-              </a>
-            </div>
+                {/* Convite por link */}
+                <div className="card" style={{ padding: 24 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <LinkIcon style={{ width: 20, height: 20, color: '#6366f1' }} />
+                    Convidar por link
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14 }}>
+                    Gere um link de convite para enviar por WhatsApp ou e-mail.
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button className="btn-primary" onClick={generateInviteLink}>
+                      <LinkIcon style={{ width: 15, height: 15 }} /> Gerar link de convite
+                    </button>
+                    {inviteLink && (
+                      <>
+                        <input className="input" readOnly value={inviteLink} style={{ flex: 1, minWidth: 200, fontSize: 12 }} onClick={e => e.target.select()} />
+                        <button className="btn-ghost" onClick={copyInviteLink} style={{ padding: '10px 14px' }}>
+                          <ClipboardDocumentIcon style={{ width: 16, height: 16 }} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <a href="https://supabase.com/dashboard/project/yfxkgwlxoszbapvgtpee/auth/users" target="_blank" rel="noopener noreferrer" className="btn-ghost" style={{ fontSize: 13 }}>
+                    Gerenciar usuários no Supabase →
+                  </a>
+                </div>
+              </>
+            )}
+
+            {!isWorkspaceAdmin && !isPlatformAdmin && (
+              <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <ShieldCheckIcon style={{ width: 40, height: 40, margin: '0 auto 12px', color: '#d1d5db' }} />
+                <p style={{ fontWeight: 600 }}>Acesso restrito</p>
+                <p style={{ fontSize: 13 }}>Apenas o administrador do workspace pode gerenciar usuários.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -435,7 +527,7 @@ export default function Acessos() {
         {aba === 'perfis' && <AbaPerfis workspaceId={workspaceId} />}
 
         {/* Aba: Membros */}
-        {aba === 'membros' && <AbaMembros workspaceId={workspaceId} />}
+        {aba === 'membros' && <AbaMembros workspaceId={workspaceId} apiWs={apiWs} />}
       </div>
     </div>
   )

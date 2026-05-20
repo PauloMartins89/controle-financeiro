@@ -22,12 +22,126 @@ async function verifyAdmin(req) {
   return user
 }
 
+// Verifica se o usuário logado é membro ativo de algum workspace.
+// isAdmin = true quando perfil_id IS NULL (acesso total ao workspace).
+async function verifyWorkspaceMember(req) {
+  const auth = req.headers.authorization || ''
+  const token = auth.replace(/^Bearer\s+/i, '').trim()
+  if (!token) return null
+  const db = getDb()
+  const { data: { user }, error } = await db.auth.getUser(token)
+  if (error || !user) return null
+  const { data: member } = await db
+    .from('workspace_members')
+    .select('workspace_id, perfil_id, ativo')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!member) return null
+  return {
+    user,
+    workspaceId: member.workspace_id,
+    isAdmin: member.perfil_id === null, // sem perfil restrito = admin da empresa
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
+  // ── Ações de workspace admin (não exigem ser plataforma admin) ────────────
+  const wsAction = req.method === 'POST' ? req.body?.action
+                 : req.method === 'GET'  ? req.query?.action
+                 : null
+
+  if (wsAction === 'workspace-add-user' || wsAction === 'workspace-members-list') {
+    const wsMember = await verifyWorkspaceMember(req)
+    if (!wsMember) return res.status(401).json({ error: 'Não autorizado' })
+    if (!wsMember.isAdmin) return res.status(403).json({ error: 'Apenas o admin do workspace pode realizar esta ação' })
+    const db = getDb()
+
+    // Lista membros do workspace com e-mails
+    if (wsAction === 'workspace-members-list') {
+      const { data: members } = await db
+        .from('workspace_members')
+        .select('id, user_id, perfil_id, ativo, created_at')
+        .eq('workspace_id', wsMember.workspaceId)
+        .order('created_at')
+      if (!members || members.length === 0) return res.status(200).json({ members: [] })
+      const { data: { users } } = await db.auth.admin.listUsers({ perPage: 1000 })
+      const userMap = {}
+      users.forEach(u => {
+        userMap[u.id] = {
+          email: u.email,
+          nome: u.user_metadata?.full_name || u.email,
+        }
+      })
+      const result = members.map(m => ({
+        ...m,
+        email: userMap[m.user_id]?.email || '—',
+        nome:  userMap[m.user_id]?.nome  || '—',
+      }))
+      return res.status(200).json({ members: result })
+    }
+
+    // Cria usuário (se ainda não existe) e adiciona ao workspace
+    if (wsAction === 'workspace-add-user') {
+      const { email, nome, password } = req.body
+      if (!email || !nome) return res.status(400).json({ error: 'email e nome são obrigatórios' })
+
+      // Verifica se já existe
+      const listResult = await db.auth.admin.listUsers({ perPage: 1000 })
+      const existingUser = (listResult.data?.users || []).find(
+        u => u.email?.toLowerCase() === email.toLowerCase()
+      )
+      let userId = existingUser?.id
+
+      if (!userId) {
+        // Cria novo usuário
+        const pwd = password?.trim() || (Math.random().toString(36).slice(2) + 'Aa1!')
+        const createRes = await fetch(`${process.env.SUPABASE_URL}/auth/v1/admin/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.SUPABASE_SERVICE_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+          },
+          body: JSON.stringify({
+            email,
+            password: pwd,
+            email_confirm: false,
+            user_metadata: { full_name: nome },
+          }),
+        })
+        const createData = await createRes.json()
+        if (!createRes.ok || !createData.id) {
+          return res.status(400).json({ error: createData.message || 'Erro ao criar usuário' })
+        }
+        userId = createData.id
+
+        // Assinatura isento
+        await db.from('assinaturas').upsert({
+          user_id: userId, email, status: 'isento', plan: 'isento',
+          trial_expires_at: null, expires_at: null,
+        }, { onConflict: 'user_id' })
+
+        // Confirma e-mail (ignora erro — triggers são tolerantes a falha)
+        await db.auth.admin.updateUserById(userId, { email_confirm: true }).catch(() => {})
+      }
+
+      // Adiciona ao workspace (upsert — idempotente)
+      const { error: addError } = await db.from('workspace_members').upsert(
+        { workspace_id: wsMember.workspaceId, user_id: userId, ativo: true },
+        { onConflict: 'workspace_id,user_id' }
+      )
+      if (addError) return res.status(400).json({ error: addError.message })
+
+      return res.status(200).json({ ok: true, user_id: userId, is_new: !existingUser })
+    }
+  }
+
+  // ── Ações de plataforma admin ─────────────────────────────────────────────
   const admin = await verifyAdmin(req)
   if (!admin) return res.status(401).json({ error: 'Não autorizado' })
 
