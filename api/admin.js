@@ -274,6 +274,8 @@ export default async function handler(req, res) {
         const users = listResult.data?.users || []
         const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
         if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' })
+
+        // Tenta via REST API (GoTrue Admin)
         const confirmRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, {
           method: 'PUT',
           headers: {
@@ -283,12 +285,19 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify({ email_confirm: true }),
         })
-        const body = await confirmRes.json().catch(() => ({}))
-        if (!confirmRes.ok) {
-          console.error('[confirm-email] PUT falhou:', confirmRes.status, JSON.stringify(body))
-          return res.status(500).json({ error: body.msg || body.error_description || body.message || `HTTP ${confirmRes.status}` })
+
+        if (confirmRes.ok) {
+          return res.status(200).json({ ok: true })
         }
-        return res.status(200).json({ ok: true })
+
+        // Fallback: confirma diretamente via SQL (requer função admin_confirm_user_email no DB)
+        console.warn('[confirm-email] REST falhou, tentando via RPC...')
+        const { error: rpcError } = await db.rpc('admin_confirm_user_email', { p_email: email.toLowerCase() })
+        if (rpcError) {
+          console.error('[confirm-email] RPC falhou:', rpcError.message)
+          return res.status(500).json({ error: rpcError.message })
+        }
+        return res.status(200).json({ ok: true, via: 'rpc' })
       } catch (err) {
         console.error('[confirm-email] exceção:', err.message)
         return res.status(500).json({ error: err.message })
