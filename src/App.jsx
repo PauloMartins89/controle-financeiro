@@ -253,11 +253,24 @@ export default function App() {
           .select('module_key, enabled, workspace_id')
           .in('workspace_id', allWorkspaceIds)
         if (modulesData && modulesData.length > 0) {
-          // Whitelist: se o workspace tem configuração, mostra apenas módulos explicitamente habilitados
-          // Módulos sem linha no banco ficam ocultos (não estão na whitelist)
-          enabledModules = [...new Set(
-            modulesData.filter(m => m.enabled === true).map(m => m.module_key)
-          )]
+          // Agrupa por workspace_id
+          const byWorkspace = {}
+          modulesData.forEach(m => {
+            if (!byWorkspace[m.workspace_id]) byWorkspace[m.workspace_id] = []
+            byWorkspace[m.workspace_id].push(m)
+          })
+          // Usa apenas o workspace que tem restrições explícitas (ao menos 1 enabled=false)
+          // Ignora workspaces criados pela migration antiga (todos enabled=true)
+          const rowsRestritos = Object.values(byWorkspace).find(rows =>
+            rows.some(r => r.enabled === false)
+          )
+          if (rowsRestritos) {
+            // Whitelist: apenas módulos com enabled=true nesse workspace
+            enabledModules = rowsRestritos
+              .filter(r => r.enabled === true)
+              .map(r => r.module_key)
+          }
+          // Se nenhum workspace tem restrição, mantém enabledModules = null (mostra tudo)
         }
       }
       const loadedPeople = (pessoas || []).map(p => ({ ...p, avatar: p.nome?.[0]?.toUpperCase() || '?' }))
