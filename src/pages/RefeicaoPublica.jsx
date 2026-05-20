@@ -252,11 +252,9 @@ export default function RefeicaoPublica() {
 
   // ── Formulário principal ─────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: T.pageBg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
+    <PageLayout>
       <Toaster position="top-center" toastOptions={{ style: { background: T.cardBg, color: T.text, border: `1px solid ${T.border}`, borderRadius: 12, fontSize: 14 } }} />
-      <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ maxWidth: 520, margin: '24px auto', padding: '0 12px' }}>
-        <div style={{ background: T.cardBg, borderRadius: 24, overflow: 'hidden', boxShadow: T.shadow }}>
+      <MainCard maxWidth={520}>
 
           {/* ── Header ── */}
           <div style={{ padding: '24px 24px 16px' }}>
@@ -414,27 +412,24 @@ export default function RefeicaoPublica() {
             </>
           )}
 
-        </div>
-        </div>
-      </div>
+          {/* ── Botão Enviar ── */}
+          <Divider />
+          <div style={{ padding: '20px 24px 28px' }}>
+            <button
+              onClick={handleSubmit}
+              disabled={saving}
+              style={{
+                width: '100%', padding: '16px', borderRadius: 12, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+                background: saving ? 'rgba(255,255,255,0.08)' : '#6366f1',
+                color: saving ? T.textMuted : '#fff',
+                fontWeight: 800, fontSize: 16, transition: 'all 0.2s',
+              }}
+            >
+              {saving ? '⏳ Enviando...' : '🚀 Enviar Pedido'}
+            </button>
+          </div>
 
-      {/* ── Botão — estruturalmente abaixo do scroll, sem sobreposição ── */}
-      <div style={{ flexShrink: 0, padding: '12px 16px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))', background: T.pageBg, borderTop: `1px solid ${T.divider}` }}>
-        <div style={{ maxWidth: 520, margin: '0 auto' }}>
-          <button
-            onClick={handleSubmit}
-            disabled={saving}
-            style={{
-              width: '100%', padding: '14px', borderRadius: 12, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
-              background: saving ? 'rgba(255,255,255,0.08)' : '#6366f1',
-              color: saving ? T.textMuted : '#fff',
-              fontWeight: 800, fontSize: 16, transition: 'all 0.2s',
-            }}
-          >
-            {saving ? '⏳ Enviando...' : '🚀 Enviar Pedido'}
-          </button>
-        </div>
-      </div>
-    </div>
+        </MainCard>
+    </PageLayout>
   )
 }
