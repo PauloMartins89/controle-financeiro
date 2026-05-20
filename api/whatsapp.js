@@ -1,6 +1,7 @@
 ﻿import Groq from 'groq-sdk'
 import { createClient } from '@supabase/supabase-js'
 import { runOCR } from './_ocr.js'
+import ws from 'ws'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
@@ -12,7 +13,7 @@ function getDb() {
   return createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY,
-    { realtime: { params: { log_level: 'disabled' } }, global: {} }
+    { realtime: { params: { log_level: 'disabled' }, transport: ws }, global: {} }
   )
 }
 
