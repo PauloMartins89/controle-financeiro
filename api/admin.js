@@ -176,6 +176,7 @@ export default async function handler(req, res) {
       const serviceKey = process.env.SUPABASE_SERVICE_KEY
       if (!serviceKey) return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY não configurada no servidor' })
 
+      // Passo 1: cria sem confirmar o e-mail (evita trigger on_auth_user_confirmed)
       const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
         method: 'POST',
         headers: {
@@ -186,7 +187,7 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           email,
           password,
-          email_confirm: true,
+          email_confirm: false,
           user_metadata: { full_name: nome, whatsapp: telefone || null },
         }),
       })
@@ -195,16 +196,30 @@ export default async function handler(req, res) {
         console.error('[create_user] Supabase error:', JSON.stringify(createData))
         return res.status(400).json({ error: createData.message || createData.msg || JSON.stringify(createData) })
       }
-      const newUser = { user: createData }
-      // Marca como isento (piloto)
+      const userId = createData.id
+
+      // Passo 2: insere assinatura isento ANTES de confirmar (evita conflito com trigger)
       await db.from('assinaturas').upsert({
-        user_id: newUser.user.id,
+        user_id: userId,
         email,
         status: 'isento',
         plan: 'isento',
         trial_expires_at: null,
         expires_at: null,
       }, { onConflict: 'user_id' })
+
+      // Passo 3: confirma o e-mail (trigger vai disparar mas ON CONFLICT DO NOTHING vai ignorar)
+      await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({ email_confirm: true }),
+      })
+
+      const newUser = { user: { id: userId } }
       return res.status(200).json({ ok: true, user_id: newUser.user.id })
     }
 
