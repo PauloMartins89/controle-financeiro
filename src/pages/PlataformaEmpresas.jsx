@@ -9,9 +9,12 @@ export default function PlataformaEmpresas() {
   const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
-  const [editando, setEditando] = useState(null) // { id, plano, ativo }
+  const [editando, setEditando] = useState(null)
   const [salvando, setSalvando] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [modalAberto, setModalAberto] = useState(false)
+  const [novo, setNovo] = useState({ nome: '', cnpj: '', plano: 'trial' })
+  const [criando, setCriando] = useState(false)
 
   useEffect(() => { carregar() }, [])
 
@@ -44,6 +47,27 @@ export default function PlataformaEmpresas() {
     setTimeout(() => setMsg(null), 3000)
   }
 
+  async function criarEmpresa() {
+    if (!novo.nome.trim()) return
+    setCriando(true)
+    const { error } = await supabase.from('workspaces').insert({
+      nome: novo.nome.trim(),
+      cnpj: novo.cnpj.trim() || null,
+      plano: novo.plano,
+      tipo: 'empresa',
+    })
+    setCriando(false)
+    if (error) {
+      setMsg({ tipo: 'erro', texto: 'Erro ao criar: ' + error.message })
+    } else {
+      setMsg({ tipo: 'ok', texto: `Empresa "${novo.nome.trim()}" criada com sucesso.` })
+      setModalAberto(false)
+      setNovo({ nome: '', cnpj: '', plano: 'trial' })
+      carregar()
+    }
+    setTimeout(() => setMsg(null), 4000)
+  }
+
   const filtradas = empresas.filter(e =>
     e.nome?.toLowerCase().includes(busca.toLowerCase()) ||
     e.cnpj?.includes(busca)
@@ -59,8 +83,72 @@ export default function PlataformaEmpresas() {
             <p className="text-sm text-gray-500">Gerencie todos os workspaces da plataforma</p>
           </div>
         </div>
-        <span className="text-sm text-gray-500">{empresas.length} empresa(s)</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">{empresas.length} empresa(s)</span>
+          <button
+            onClick={() => setModalAberto(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Nova Empresa
+          </button>
+        </div>
       </div>
+
+      {/* Modal nova empresa */}
+      {modalAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setModalAberto(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-gray-900">Nova Empresa</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  placeholder="Nome da empresa"
+                  value={novo.nome}
+                  onChange={e => setNovo({ ...novo, nome: e.target.value })}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">CNPJ</label>
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  placeholder="00.000.000/0000-00 (opcional)"
+                  value={novo.cnpj}
+                  onChange={e => setNovo({ ...novo, cnpj: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Plano</label>
+                <select
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  value={novo.plano}
+                  onChange={e => setNovo({ ...novo, plano: e.target.value })}
+                >
+                  {PLANOS.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                onClick={() => setModalAberto(false)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={criarEmpresa}
+                disabled={criando || !novo.nome.trim()}
+                className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {criando ? 'Criando…' : 'Criar Empresa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {msg && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm ${msg.tipo === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>

@@ -26,30 +26,35 @@ const TODOS_MODULOS = [
 export default function PlataformaModulos() {
   const [empresas, setEmpresas] = useState([])
   const [selecionada, setSelecionada] = useState(null)
-  const [modulosAtivos, setModulosAtivos] = useState([]) // chaves desabilitadas (blacklist)
-  const [loading, setLoading] = useState(false)
+  const [desabilitados, setDesabilitados] = useState([]) // module_keys com enabled=false
+  const [loadingMods, setLoadingMods] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [msg, setMsg] = useState(null)
 
   useEffect(() => {
     supabase
       .from('workspaces')
-      .select('id, nome, plano, enabled_modules')
+      .select('id, nome, plano')
       .neq('tipo', 'platform')
       .order('nome')
       .then(({ data }) => setEmpresas(data || []))
   }, [])
 
-  function selecionarEmpresa(emp) {
+  async function selecionarEmpresa(emp) {
     setSelecionada(emp)
-    // enabled_modules é a BLACKLIST (módulos desabilitados)
-    setModulosAtivos(emp.enabled_modules || [])
     setMsg(null)
+    setLoadingMods(true)
+    const { data } = await supabase
+      .from('workspace_modules')
+      .select('module_key, enabled')
+      .eq('workspace_id', emp.id)
+    // Desabilitados = linhas onde enabled = false
+    setDesabilitados((data || []).filter(m => m.enabled === false).map(m => m.module_key))
+    setLoadingMods(false)
   }
 
   function toggleModulo(key) {
-    // Módulo na lista = desabilitado; fora da lista = habilitado
-    setModulosAtivos(prev =>
+    setDesabilitados(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     )
   }
@@ -57,17 +62,20 @@ export default function PlataformaModulos() {
   async function salvar() {
     if (!selecionada) return
     setSalvando(true)
+    // Upsert uma linha por módulo: enabled=false se estiver na blacklist, enabled=true caso contrário
+    const rows = TODOS_MODULOS.map(mod => ({
+      workspace_id: selecionada.id,
+      module_key: mod.key,
+      enabled: !desabilitados.includes(mod.key),
+    }))
     const { error } = await supabase
-      .from('workspaces')
-      .update({ enabled_modules: modulosAtivos })
-      .eq('id', selecionada.id)
+      .from('workspace_modules')
+      .upsert(rows, { onConflict: 'workspace_id,module_key' })
     setSalvando(false)
     if (error) {
       setMsg({ tipo: 'erro', texto: 'Erro ao salvar: ' + error.message })
     } else {
       setMsg({ tipo: 'ok', texto: 'Módulos atualizados com sucesso.' })
-      setEmpresas(prev => prev.map(e => e.id === selecionada.id ? { ...e, enabled_modules: modulosAtivos } : e))
-      setSelecionada(prev => ({ ...prev, enabled_modules: modulosAtivos }))
     }
     setTimeout(() => setMsg(null), 3000)
   }
@@ -107,9 +115,6 @@ export default function PlataformaModulos() {
                       <p className={`text-sm font-medium ${selecionada?.id === emp.id ? 'text-indigo-700' : 'text-gray-900'}`}>{emp.nome}</p>
                       <p className="text-xs text-gray-400">{emp.plano}</p>
                     </div>
-                    <span className="text-xs text-gray-400">
-                      {TODOS_MODULOS.length - (emp.enabled_modules?.length || 0)} ativos
-                    </span>
                   </button>
                 </li>
               ))}
@@ -136,8 +141,10 @@ export default function PlataformaModulos() {
                 </button>
               </div>
               <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {TODOS_MODULOS.map(mod => {
-                  const desabilitado = modulosAtivos.includes(mod.key)
+                {loadingMods ? (
+                  <div className="col-span-2 text-center py-8 text-gray-400 text-sm">Carregando módulos…</div>
+                ) : TODOS_MODULOS.map(mod => {
+                  const desabilitado = desabilitados.includes(mod.key)
                   return (
                     <label
                       key={mod.key}
