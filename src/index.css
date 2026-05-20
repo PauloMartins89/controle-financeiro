@@ -226,7 +226,7 @@
 
   .stat-card {
     background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 16px; padding: 24px; position: relative; overflow: hidden;
+    border-radius: 16px; padding: 18px 20px; position: relative; overflow: hidden;
     transition: all 0.2s;
   }
   .stat-card:hover { border-color: rgba(0,200,150,0.2); transform: translateY(-2px); }
@@ -240,7 +240,7 @@
 
   .table-row {
     display: grid; align-items: center;
-    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
     transition: background 0.15s;
   }
   .table-row:hover { background: rgba(255,255,255,0.03); }

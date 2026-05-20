@@ -18,7 +18,7 @@ export default function Header({ title, subtitle, action }) {
   return (
     <header style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '14px 24px', borderBottom: '1px solid var(--sb-border)',
+      padding: '10px 24px', borderBottom: '1px solid var(--sb-border)',
       background: theme === 'light' ? 'rgba(240,242,248,0.95)' : 'rgba(8,14,28,0.85)',
       backdropFilter: 'blur(16px)',
       position: 'sticky', top: 0, zIndex: 10,

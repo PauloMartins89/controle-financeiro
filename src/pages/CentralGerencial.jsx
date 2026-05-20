@@ -37,21 +37,21 @@ function KPICard({ label, value, sub, color, bg, icon: Icon, onClick, trend }) {
   return (
     <div onClick={onClick}
       style={{
-        background: 'var(--bg-secondary)', borderRadius: 14, padding: '18px 20px',
+        background: 'var(--bg-secondary)', borderRadius: 14, padding: '14px 16px',
         border: '1px solid var(--border)', borderTop: `3px solid ${color}`,
         cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow 0.15s',
-        display: 'flex', flexDirection: 'column', gap: 6,
+        display: 'flex', flexDirection: 'column', gap: 4,
       }}
       onMouseEnter={e => onClick && (e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)')}
       onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon style={{ width: 16, height: 16, color }} />
+        <div style={{ width: 28, height: 28, borderRadius: 7, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon style={{ width: 14, height: 14, color }} />
         </div>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 900, color }}>{value}</div>
+      <div style={{ fontSize: 18, fontWeight: 900, color }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{sub}</div>}
       {trend !== undefined && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
@@ -71,11 +71,11 @@ function PipelineStep({ label, count, value, color, bg, isLast }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
       <div style={{
-        flex: 1, background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px',
+        flex: 1, background: 'var(--bg-secondary)', borderRadius: 12, padding: '11px 14px',
         border: `1px solid var(--border)`, borderLeft: `3px solid ${color}`,
       }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
-        <div style={{ fontSize: 24, fontWeight: 900, color }}>{count}</div>
+        <div style={{ fontSize: 20, fontWeight: 900, color }}>{count}</div>
         {value != null && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{fmtCurrency(value)}</div>}
       </div>
       {!isLast && (
@@ -89,12 +89,12 @@ function AlertItem({ icon: Icon, color, bg, title, desc, badge, onClick }) {
   return (
     <div onClick={onClick}
       style={{
-        display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px',
+        display: 'flex', alignItems: 'flex-start', gap: 8, padding: '9px 12px',
         borderRadius: 10, background: bg, border: `1px solid ${color}22`,
-        cursor: onClick ? 'pointer' : 'default', marginBottom: 8,
+        cursor: onClick ? 'pointer' : 'default', marginBottom: 6,
       }}>
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Icon style={{ width: 16, height: 16, color }} />
+      <div style={{ width: 28, height: 28, borderRadius: 7, background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <Icon style={{ width: 14, height: 14, color }} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</div>
@@ -582,10 +582,10 @@ export default function CentralGerencial() {
 
   const cardStyle = {
     background: 'var(--bg-secondary)', borderRadius: 14,
-    border: '1px solid var(--border)', padding: '20px 20px',
+    border: '1px solid var(--border)', padding: '16px 18px',
   }
   const sectionTitle = (label, icon) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
       {icon}
       <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
     </div>
@@ -605,10 +605,10 @@ export default function CentralGerencial() {
         }}
       />
 
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '24px 24px' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 20px' }}>
 
         {/* Barra de status + botão Monitor */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)', fontSize: 11 }}>
             {lastUpdate && (
               <>
@@ -645,7 +645,7 @@ export default function CentralGerencial() {
         ) : data ? (
           <>
             {/* ── KPIs ─────────────────────────────────────────────────────── */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 16 }}>
               <KPICard
                 label="Ag. Aprovação"
                 value={data.kpis.aguardando}
@@ -697,7 +697,7 @@ export default function CentralGerencial() {
             </div>
 
             {/* ── Fila de Aprovações + Resumo do Mês + Por Setor ──────────── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 16, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 12, marginBottom: 14 }}>
 
               {/* Fila de Aprovações */}
               <div style={cardStyle}>
@@ -817,29 +817,29 @@ export default function CentralGerencial() {
 
             {/* ── Módulo de Compras ─────────────────────────────────────────── */}
             {(data.kpis.comprasAguardando > 0 || data.kpis.comprasLeiloes > 0 || data.kpis.comprasGastoMes > 0 || data.kpis.comprasEconomia > 0) && (
-              <div style={{ ...cardStyle, marginBottom: 20 }}>
+              <div style={{ ...cardStyle, marginBottom: 14 }}>
                 {sectionTitle('Módulo de Compras',
                   <ShoppingCartIcon style={{ width: 16, height: 16, color: '#8b5cf6' }} />
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 14 }}>
-                  <div style={{ background: 'var(--bg-primary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border)', borderTop: '2px solid #f59e0b', cursor: 'pointer' }} onClick={() => navigate('/compras/aprovar')}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Ag. Aprovação</div>
-                    <div style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b' }}>{data.kpis.comprasAguardando}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 10 }}>
+                  <div style={{ background: 'var(--bg-primary)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)', borderTop: '2px solid #f59e0b', cursor: 'pointer' }} onClick={() => navigate('/compras/aprovar')}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Ag. Aprovação</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: '#f59e0b' }}>{data.kpis.comprasAguardando}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>pedidos pendentes</div>
                   </div>
-                  <div style={{ background: 'var(--bg-primary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border)', borderTop: '2px solid #8b5cf6', cursor: 'pointer' }} onClick={() => navigate('/compras/aprovar')}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Leilões Ativos</div>
-                    <div style={{ fontSize: 24, fontWeight: 900, color: '#8b5cf6' }}>{data.kpis.comprasLeiloes}</div>
+                  <div style={{ background: 'var(--bg-primary)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)', borderTop: '2px solid #8b5cf6', cursor: 'pointer' }} onClick={() => navigate('/compras/aprovar')}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Leilões Ativos</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: '#8b5cf6' }}>{data.kpis.comprasLeiloes}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>cotando fornecedores</div>
                   </div>
-                  <div style={{ background: 'var(--bg-primary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border)', borderTop: '2px solid #ef4444' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Gasto no Mês</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: '#ef4444' }}>{fmtCurrency(data.kpis.comprasGastoMes)}</div>
+                  <div style={{ background: 'var(--bg-primary)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)', borderTop: '2px solid #ef4444' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Gasto no Mês</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#ef4444' }}>{fmtCurrency(data.kpis.comprasGastoMes)}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>compras pagas</div>
                   </div>
-                  <div style={{ background: 'var(--bg-primary)', borderRadius: 10, padding: '14px 16px', border: '1px solid var(--border)', borderTop: '2px solid #10b981' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Economia via Leilão</div>
-                    <div style={{ fontSize: 18, fontWeight: 900, color: '#10b981' }}>{fmtCurrency(data.kpis.comprasEconomia)}</div>
+                  <div style={{ background: 'var(--bg-primary)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)', borderTop: '2px solid #10b981' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Economia via Leilão</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#10b981' }}>{fmtCurrency(data.kpis.comprasEconomia)}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>abaixo do orçamento</div>
                   </div>
                 </div>
@@ -857,7 +857,7 @@ export default function CentralGerencial() {
             )}
 
             {/* ── Pipeline de Lançamentos ──────────────────────────────────── */}
-            <div style={{ ...cardStyle, marginBottom: 20 }}>
+            <div style={{ ...cardStyle, marginBottom: 14 }}>
               {sectionTitle('Pipeline Operacional de Lançamentos',
                 <DocumentTextIcon style={{ width: 16, height: 16, color: '#6366f1' }} />
               )}
@@ -897,7 +897,7 @@ export default function CentralGerencial() {
             </div>
 
             {/* ── Pipeline de Faturamento (Lotes Cliente) ────────────────── */}
-            <div style={{ ...cardStyle, marginBottom: 20 }}>
+            <div style={{ ...cardStyle, marginBottom: 14 }}>
               {sectionTitle('Pipeline de Faturamento — Lotes Cliente',
                 <UserGroupIcon style={{ width: 16, height: 16, color: '#f59e0b' }} />
               )}
@@ -919,7 +919,7 @@ export default function CentralGerencial() {
             </div>
 
             {/* ── Alertas + Atividade Recente ────────────────────────────── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
 
               {/* Alertas */}
               <div style={cardStyle}>
@@ -1006,7 +1006,7 @@ export default function CentralGerencial() {
             </div>
 
             {/* ── Despesas por Categoria ───────────────────────────────────── */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={cardStyle}>
                 {sectionTitle(`Despesas por Categoria — ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`,
                   <ChartBarIcon style={{ width: 16, height: 16, color: '#f97316' }} />
