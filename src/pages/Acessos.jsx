@@ -10,6 +10,7 @@ export default function Acessos() {
   const [users, setUsers] = useState([])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [nome, setNome] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -63,15 +64,22 @@ export default function Acessos() {
     e.preventDefault()
     setError('')
     setSuccess('')
-    if (!email || !password) { setError('Preencha e-mail e senha.'); return }
+    if (!email || !password || !nome) { setError('Preencha nome, e-mail e senha.'); return }
     if (password.length < 6) { setError('A senha deve ter no mínimo 6 caracteres.'); return }
     setLoading(true)
-    const { error: err } = await supabase.auth.signUp({ email, password })
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ action: 'create_user', email, password, nome }),
+    })
+    const json = await res.json()
     setLoading(false)
-    if (err) { setError(err.message); return }
+    if (!res.ok || json.error) { setError(json.error || 'Erro ao criar usuário'); return }
     setSuccess(`Usuário ${email} criado com sucesso!`)
     setEmail('')
     setPassword('')
+    setNome('')
     loadUsers()
   }
 
@@ -98,6 +106,17 @@ export default function Acessos() {
             Criar novo acesso
           </div>
           <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label className="label">Nome</label>
+              <input
+                className="input"
+                type="text"
+                placeholder="Nome completo"
+                value={nome}
+                onChange={e => setNome(e.target.value)}
+                required
+              />
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
                 <label className="label">E-mail</label>
