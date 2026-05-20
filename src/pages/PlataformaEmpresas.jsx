@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon, UsersIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 const PLANOS = ['trial', 'basico', 'profissional', 'enterprise', 'isento']
 const STATUS_PLANO = { trial: 'bg-yellow-100 text-yellow-800', basico: 'bg-blue-100 text-blue-800', profissional: 'bg-indigo-100 text-indigo-800', enterprise: 'bg-purple-100 text-purple-800', isento: 'bg-green-100 text-green-800' }
@@ -50,7 +50,40 @@ export default function PlataformaEmpresas() {
   const [loadingMods, setLoadingMods] = useState(false)
   const [salvandoMods, setSalvandoMods] = useState(false)
 
+  // Tabs
+  const [aba, setAba] = useState('dados')
+
+  // Usuários
+  const [membros, setMembros] = useState([])
+  const [loadingMembros, setLoadingMembros] = useState(false)
+  const [novoEmail, setNovoEmail] = useState('')
+  const [adicionando, setAdicionando] = useState(false)
+  const [removendo, setRemovendo] = useState(null)
+
   useEffect(() => { carregar() }, [])
+
+  const apiAdmin = useCallback(async (method, params) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    if (method === 'GET') {
+      const qs = new URLSearchParams(params).toString()
+      const res = await fetch(`/api/admin?${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+      return res.json()
+    }
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(params),
+    })
+    return res.json()
+  }, [])
+
+  const carregarMembros = useCallback(async (workspaceId) => {
+    setLoadingMembros(true)
+    const data = await apiAdmin('GET', { action: 'workspace-members', workspace_id: workspaceId })
+    setMembros(data.members || [])
+    setLoadingMembros(false)
+  }, [apiAdmin])
 
   async function carregar() {
     setLoading(true)
@@ -67,6 +100,9 @@ export default function PlataformaEmpresas() {
     setSelecionada(emp)
     setDadosEdit({ plano: emp.plano || 'trial' })
     setMsg(null)
+    setAba('dados')
+    setMembros([])
+    setNovoEmail('')
     setLoadingMods(true)
     const { data } = await supabase
       .from('workspace_modules')
@@ -115,6 +151,38 @@ export default function PlataformaEmpresas() {
       setMsg({ tipo: 'erro', texto: 'Erro ao salvar módulos: ' + error.message })
     } else {
       setMsg({ tipo: 'ok', texto: 'Módulos atualizados com sucesso.' })
+    }
+    setTimeout(() => setMsg(null), 3000)
+  }
+
+  async function adicionarMembro(e) {
+    e.preventDefault()
+    if (!novoEmail.trim() || !selecionada) return
+    setAdicionando(true)
+    const data = await apiAdmin('POST', { action: 'add-member', workspace_id: selecionada.id, email: novoEmail.trim() })
+    setAdicionando(false)
+    if (data.error) {
+      setMsg({ tipo: 'erro', texto: data.error })
+    } else {
+      setMsg({ tipo: 'ok', texto: `${data.email} adicionado(a) com sucesso.` })
+      setNovoEmail('')
+      carregarMembros(selecionada.id)
+      carregar()
+    }
+    setTimeout(() => setMsg(null), 4000)
+  }
+
+  async function removerMembro(membroId, email) {
+    if (!window.confirm(`Remover "${email}" desta empresa?`)) return
+    setRemovendo(membroId)
+    const data = await apiAdmin('POST', { action: 'remove-member', member_id: membroId })
+    setRemovendo(null)
+    if (data.error) {
+      setMsg({ tipo: 'erro', texto: data.error })
+    } else {
+      setMsg({ tipo: 'ok', texto: 'Membro removido.' })
+      setMembros(prev => prev.filter(m => m.id !== membroId))
+      carregar()
     }
     setTimeout(() => setMsg(null), 3000)
   }
@@ -284,90 +352,181 @@ export default function PlataformaEmpresas() {
               Selecione uma empresa para gerenciar
             </div>
           ) : (
-            <>
-              {/* Dados da empresa */}
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-700">{selecionada.nome}</p>
-                  <button
-                    onClick={salvarDados}
-                    disabled={salvandoDados}
-                    className="px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                  >
-                    {salvandoDados ? 'Salvando…' : 'Salvar dados'}
-                  </button>
-                </div>
-                <div className="p-4 grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Nome</label>
-                    <p className="text-sm text-gray-900">{selecionada.nome}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">CNPJ</label>
-                    <p className="text-sm text-gray-900">{selecionada.cnpj || '—'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Plano</label>
-                    <select
-                      className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                      value={dadosEdit?.plano || 'trial'}
-                      onChange={e => setDadosEdit({ ...dadosEdit, plano: e.target.value })}
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              {/* Header com nome e tabs */}
+              <div className="px-4 pt-4 pb-0 border-b border-gray-100">
+                <p className="text-base font-bold text-gray-900 mb-3">{selecionada.nome}</p>
+                <div className="flex gap-1">
+                  {[
+                    { key: 'dados', label: 'Dados', icon: BuildingOffice2Icon },
+                    { key: 'modulos', label: 'Módulos', icon: PuzzlePieceIcon },
+                    { key: 'usuarios', label: 'Usuários', icon: UsersIcon },
+                  ].map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => {
+                        setAba(t.key)
+                        if (t.key === 'usuarios' && membros.length === 0) carregarMembros(selecionada.id)
+                      }}
+                      className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${aba === t.key ? 'border-indigo-600 text-indigo-700 bg-indigo-50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
                     >
-                      {PLANOS.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Usuários</label>
-                    <p className="text-sm text-gray-900">{selecionada.workspace_members?.[0]?.count ?? 0}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Criado em</label>
-                    <p className="text-sm text-gray-900">{new Date(selecionada.created_at).toLocaleDateString('pt-BR')}</p>
-                  </div>
+                      <t.icon className="w-4 h-4" />
+                      {t.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Módulos */}
-              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <PuzzlePieceIcon className="w-4 h-4 text-indigo-600" />
-                    <p className="text-sm font-semibold text-gray-700">Módulos Habilitados</p>
-                  </div>
-                  <button
-                    onClick={salvarModulos}
-                    disabled={salvandoMods}
-                    className="px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                  >
-                    {salvandoMods ? 'Salvando…' : 'Salvar módulos'}
-                  </button>
-                </div>
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {loadingMods ? (
-                    <div className="col-span-2 text-center py-8 text-gray-400 text-sm">Carregando módulos…</div>
-                  ) : TODOS_MODULOS.map(mod => {
-                    const desabilitado = desabilitados.includes(mod.key)
-                    return (
-                      <label
-                        key={mod.key}
-                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${desabilitado ? 'border-gray-200 bg-gray-50 opacity-60' : 'border-indigo-200 bg-indigo-50'}`}
+              {/* Aba: Dados */}
+              {aba === 'dados' && (
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Nome</label>
+                      <p className="text-sm text-gray-900">{selecionada.nome}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">CNPJ</label>
+                      <p className="text-sm text-gray-900">{selecionada.cnpj || '—'}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Plano</label>
+                      <select
+                        className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        value={dadosEdit?.plano || 'trial'}
+                        onChange={e => setDadosEdit({ ...dadosEdit, plano: e.target.value })}
                       >
-                        <input
-                          type="checkbox"
-                          checked={!desabilitado}
-                          onChange={() => toggleModulo(mod.key)}
-                          className="w-4 h-4 text-indigo-600 rounded"
-                        />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{mod.label}</p>
-                          <p className="text-xs text-gray-500">{mod.descricao}</p>
-                        </div>
-                      </label>
-                    )
-                  })}
+                        {PLANOS.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Usuários</label>
+                      <p className="text-sm text-gray-900">{selecionada.workspace_members?.[0]?.count ?? 0}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Criado em</label>
+                      <p className="text-sm text-gray-900">{new Date(selecionada.created_at).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button
+                      onClick={salvarDados}
+                      disabled={salvandoDados}
+                      className="px-5 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {salvandoDados ? 'Salvando…' : 'Salvar dados'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </>
+              )}
+
+              {/* Aba: Módulos */}
+              {aba === 'modulos' && (
+                <div className="p-4 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-1">
+                    {loadingMods ? (
+                      <div className="col-span-2 text-center py-8 text-gray-400 text-sm">Carregando módulos…</div>
+                    ) : TODOS_MODULOS.map(mod => {
+                      const desabilitado = desabilitados.includes(mod.key)
+                      return (
+                        <label
+                          key={mod.key}
+                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${desabilitado ? 'border-gray-200 bg-gray-50 opacity-60' : 'border-indigo-200 bg-indigo-50'}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!desabilitado}
+                            onChange={() => toggleModulo(mod.key)}
+                            className="w-4 h-4 text-indigo-600 rounded"
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{mod.label}</p>
+                            <p className="text-xs text-gray-500">{mod.descricao}</p>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={salvarModulos}
+                      disabled={salvandoMods}
+                      className="px-5 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {salvandoMods ? 'Salvando…' : 'Salvar módulos'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Aba: Usuários */}
+              {aba === 'usuarios' && (
+                <div className="p-4 space-y-4">
+                  {/* Adicionar membro */}
+                  <form onSubmit={adicionarMembro} className="flex gap-2">
+                    <input
+                      type="email"
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                      placeholder="E-mail do usuário já cadastrado na plataforma…"
+                      value={novoEmail}
+                      onChange={e => setNovoEmail(e.target.value)}
+                    />
+                    <button
+                      type="submit"
+                      disabled={adicionando || !novoEmail.trim()}
+                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      {adicionando ? 'Adicionando…' : 'Adicionar'}
+                    </button>
+                  </form>
+
+                  {/* Lista de membros */}
+                  {loadingMembros ? (
+                    <div className="text-center py-8 text-gray-400 text-sm">Carregando usuários…</div>
+                  ) : (
+                    <div className="overflow-hidden rounded-xl border border-gray-100">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                          <tr>
+                            <th className="px-4 py-3 text-left">E-mail</th>
+                            <th className="px-4 py-3 text-left">Membro desde</th>
+                            <th className="px-4 py-3 text-left">Status</th>
+                            <th className="px-4 py-3"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {membros.map(m => (
+                            <tr key={m.id} className={`hover:bg-gray-50 transition-colors ${!m.ativo ? 'opacity-50' : ''}`}>
+                              <td className="px-4 py-3 text-gray-900 font-medium">{m.email}</td>
+                              <td className="px-4 py-3 text-gray-400 text-xs">{new Date(m.created_at).toLocaleDateString('pt-BR')}</td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${m.ativo ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                  {m.ativo ? 'Ativo' : 'Inativo'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <button
+                                  onClick={() => removerMembro(m.id, m.email)}
+                                  disabled={removendo === m.id}
+                                  className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                  title="Remover da empresa"
+                                >
+                                  <TrashIcon className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                          {membros.length === 0 && (
+                            <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Nenhum usuário vinculado.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

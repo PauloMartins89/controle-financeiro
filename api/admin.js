@@ -70,6 +70,22 @@ export default async function handler(req, res) {
       return res.status(200).json({ motoristas: data || [] })
     }
 
+    // Lista membros de um workspace com e-mails (via auth.admin)
+    if (action === 'workspace-members') {
+      const { workspace_id } = req.query
+      if (!workspace_id) return res.status(400).json({ error: 'workspace_id obrigatório' })
+      const { data: members } = await db.from('workspace_members')
+        .select('id, user_id, perfil_id, ativo, created_at')
+        .eq('workspace_id', workspace_id)
+        .order('created_at')
+      if (!members || members.length === 0) return res.status(200).json({ members: [] })
+      const { data: { users } } = await db.auth.admin.listUsers({ perPage: 1000 })
+      const userMap = {}
+      users.forEach(u => { userMap[u.id] = u.email })
+      const result = members.map(m => ({ ...m, email: userMap[m.user_id] || m.user_id }))
+      return res.status(200).json({ members: result })
+    }
+
     return res.status(400).json({ error: 'Ação inválida' })
   }
 
@@ -163,6 +179,33 @@ export default async function handler(req, res) {
       // Remove a pessoa
       const { error } = await db.from('pessoas').delete().eq('id', pessoa_id)
       if (error) return res.status(400).json({ error: error.message })
+      return res.status(200).json({ ok: true })
+    }
+
+    // Adiciona um usuário existente a um workspace
+    if (action === 'add-member') {
+      const { workspace_id, email } = req.body
+      if (!workspace_id || !email) return res.status(400).json({ error: 'workspace_id e email obrigatórios' })
+      const { data: { users } } = await db.auth.admin.listUsers({ perPage: 1000 })
+      const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      if (!user) return res.status(404).json({ error: 'Usuário não encontrado. Verifique se o e-mail está cadastrado na plataforma.' })
+      const { data: existing } = await db.from('workspace_members')
+        .select('id')
+        .eq('workspace_id', workspace_id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (existing) return res.status(409).json({ error: 'Usuário já é membro desta empresa.' })
+      const { error } = await db.from('workspace_members').insert({ workspace_id, user_id: user.id, ativo: true })
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(200).json({ ok: true, email: user.email, user_id: user.id })
+    }
+
+    // Remove um membro de um workspace
+    if (action === 'remove-member') {
+      const { member_id } = req.body
+      if (!member_id) return res.status(400).json({ error: 'member_id obrigatório' })
+      const { error } = await db.from('workspace_members').delete().eq('id', member_id)
+      if (error) return res.status(500).json({ error: error.message })
       return res.status(200).json({ ok: true })
     }
 
