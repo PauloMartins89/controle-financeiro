@@ -241,7 +241,7 @@ export default function App() {
         supabase.from('negocios').select('*'),
         supabase.from('proventos').select('*').order('data', { ascending: false }),
         supabase.from('closures').select('*').order('mes', { ascending: true }),
-        supabase.from('workspace_members').select('workspace_id, perfil_id, ativo').limit(10),
+        supabase.from('workspace_members').select('workspace_id, perfil_id, ativo, user_id').limit(10),
       ])
       // Usa o workspace com mais módulos configurados (usuário pode ter múltiplos)
       const allWorkspaceIds = (wsMembers || []).map(m => m.workspace_id).filter(Boolean)
@@ -316,13 +316,14 @@ export default function App() {
         // Carrega permissões: ['*'] = acesso total, array específico quando tem perfil restrito
         let permissoes = ['*'] // default: admin total da empresa (sem perfil_id)
         if (!adminRow) {
-          const activeMember = (wsMembers || []).find(m => m.ativo !== false && m.perfil_id)
-          if (activeMember?.perfil_id) {
+          // Filtra pelo registro do USUÁRIO ATUAL (não qualquer membro do workspace)
+          const myMember = (wsMembers || []).find(m => m.user_id === authUser.id && m.ativo !== false)
+          if (myMember?.perfil_id) {
             // Tem perfil definido → carrega permissões específicas
             const { data: perms } = await supabase
               .from('perfil_permissoes')
               .select('modulo, acao')
-              .eq('perfil_id', activeMember.perfil_id)
+              .eq('perfil_id', myMember.perfil_id)
             permissoes = (perms || []).map(p => `${p.modulo}.${p.acao}`)
           }
           // Se perfil_id é NULL → admin da empresa → permissoes = ['*']
