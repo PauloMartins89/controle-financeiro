@@ -327,17 +327,17 @@ export default function RefeicaoPublica() {
                 const algum = m.refeicao || m.cafe
                 return (
                   <div key={c.id} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    display: 'flex', alignItems: 'center', gap: 8,
                     padding: '10px 14px', borderRadius: 10,
                     background: algum ? 'rgba(99,102,241,0.08)' : T.rowBg,
                     border: `1px solid ${algum ? 'rgba(99,102,241,0.3)' : T.border}`,
                     transition: 'all 0.15s',
                   }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: T.text }}>{c.nome}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: T.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.nome}</div>
                       {c.cargo && <div style={{ fontSize: 11, color: T.textDim }}>{c.cargo}</div>}
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, flexShrink:0 }}>
                       <button onClick={() => toggleMarca(c.id, 'refeicao')} style={{ padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: m.refeicao ? '#6366f1' : 'rgba(255,255,255,0.07)', color: m.refeicao ? '#fff' : '#94a3b8', transition: 'all 0.15s' }}>🍽️</button>
                       <button onClick={() => toggleMarca(c.id, 'cafe')}     style={{ padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: m.cafe     ? '#f59e0b' : 'rgba(255,255,255,0.07)', color: m.cafe     ? '#fff' : '#94a3b8', transition: 'all 0.15s' }}>☕</button>
                     </div>
@@ -361,10 +361,12 @@ export default function RefeicaoPublica() {
             {extras.map(e => (
               <div key={e._id} style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                  <input placeholder="Nome da pessoa *" value={e.nome} onChange={ev => updateExtra(e._id, 'nome', ev.target.value)} style={{ ...inputSt, flex: 1, fontSize: 13 }} />
-                  <button onClick={() => toggleExtra(e._id, 'refeicao')} style={{ padding: '7px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: e.refeicao ? '#6366f1' : 'rgba(255,255,255,0.07)', color: e.refeicao ? '#fff' : '#94a3b8', whiteSpace: 'nowrap' }}>🍽️</button>
-                  <button onClick={() => toggleExtra(e._id, 'cafe')}    style={{ padding: '7px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: e.cafe    ? '#f59e0b' : 'rgba(255,255,255,0.07)', color: e.cafe    ? '#fff' : '#94a3b8', whiteSpace: 'nowrap' }}>☕</button>
-                  <button onClick={() => removeExtra(e._id)} style={{ background: 'rgba(239,68,68,0.15)', border: 'none', color: '#f87171', borderRadius: 8, padding: '7px 10px', cursor: 'pointer' }}>✕</button>
+                  <input placeholder="Nome da pessoa *" value={e.nome} onChange={ev => updateExtra(e._id, 'nome', ev.target.value)} style={{ ...inputSt, flex: 1, minWidth:0, width:'auto', fontSize: 13 }} />
+                  <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                  <button onClick={() => toggleExtra(e._id, 'refeicao')} style={{ padding: '7px 10px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: e.refeicao ? '#6366f1' : 'rgba(255,255,255,0.07)', color: e.refeicao ? '#fff' : '#94a3b8' }}>🍽️</button>
+                  <button onClick={() => toggleExtra(e._id, 'cafe')}    style={{ padding: '7px 10px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', border: 'none', background: e.cafe    ? '#f59e0b' : 'rgba(255,255,255,0.07)', color: e.cafe    ? '#fff' : '#94a3b8' }}>☕</button>
+                  <button onClick={() => removeExtra(e._id)} style={{ background: 'rgba(239,68,68,0.15)', border: 'none', color: '#f87171', borderRadius: 8, padding: '7px 8px', cursor: 'pointer' }}>✕</button>
+                  </div>
                 </div>
                 <div style={{ position: 'relative' }}>
                   <textarea
