@@ -144,6 +144,7 @@ export default function Sidebar({ collapsed, onToggle }) {
   const { getMeusDividas, getMinhasReceitas, getTotalPagar } = useStore()
   const enabledModules = useStore(s => s.enabledModules)
   const isPlatformAdmin = useStore(s => s.isPlatformAdmin)
+  const authUserName = useStore(s => s.authUserName)
   const [weather, setWeather] = useState(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
   const navigate = useNavigate()
@@ -362,11 +363,11 @@ export default function Sidebar({ collapsed, onToggle }) {
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--sb-avatar-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, color: 'white', flexShrink: 0 }}>
-              {authUser?.email?.[0]?.toUpperCase() || '?'}
+              {authUserName?.[0] || '?'}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-text-active)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {authUser?.email || 'Usuário'}
+                {authUserName || 'Usuário'}
               </div>
               <button onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 11, padding: 0, marginTop: 2 }}>
                 Sair
