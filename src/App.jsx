@@ -152,8 +152,20 @@ function RequireAdmin({ children }) {
   return children
 }
 
-function RequireAuth({ children }) {
-  const location = useLocation()
+// Protege rota por permissão granular. Usuários sem perfil_id (admin empresa)
+// e platform admins sempre têm acesso. Usuários com perfil restrito precisam
+// ter a combinação modulo.acao na tabela perfil_permissoes.
+function RequirePermissao({ modulo, acao, children }) {
+  const isPlatformAdmin = useStore(s => s.isPlatformAdmin)
+  const permissoes = useStore(s => s.permissoes)
+  const pode = isPlatformAdmin
+    || permissoes.includes('*')
+    || permissoes.includes(`${modulo}.${acao}`)
+  if (!pode) return <Navigate to="/" replace />
+  return children
+}
+
+function RequireAuth({ children }) {  const location = useLocation()
   const [checked, setChecked] = useState(false)
   const [authed, setAuthed] = useState(false)
 
@@ -187,7 +199,7 @@ export default function App() {
       recurring: [], negocios: [], proventos: [], closures: [],
       saldoCaixa: 0, currentUser: null, ownerId: null,
       workspaceId: null, enabledModules: null,
-      isPlatformAdmin: false,
+      isPlatformAdmin: false, permissoes: ['*'],
     }
 
     const load = async () => {
@@ -214,7 +226,7 @@ export default function App() {
         supabase.from('negocios').select('*'),
         supabase.from('proventos').select('*').order('data', { ascending: false }),
         supabase.from('closures').select('*').order('mes', { ascending: true }),
-        supabase.from('workspace_members').select('workspace_id').limit(10),
+        supabase.from('workspace_members').select('workspace_id, perfil_id, ativo').limit(10),
       ])
       // Usa o workspace com mais módulos configurados (usuário pode ter múltiplos)
       const allWorkspaceIds = (wsMembers || []).map(m => m.workspace_id).filter(Boolean)
@@ -272,6 +284,22 @@ export default function App() {
           .eq('user_id', authUser.id)
           .maybeSingle()
         update.isPlatformAdmin = !!adminRow
+
+        // Carrega permissões: ['*'] = acesso total, array específico quando tem perfil restrito
+        let permissoes = ['*'] // default: admin total da empresa (sem perfil_id)
+        if (!adminRow) {
+          const activeMember = (wsMembers || []).find(m => m.ativo !== false && m.perfil_id)
+          if (activeMember?.perfil_id) {
+            // Tem perfil definido → carrega permissões específicas
+            const { data: perms } = await supabase
+              .from('perfil_permissoes')
+              .select('modulo, acao')
+              .eq('perfil_id', activeMember.perfil_id)
+            permissoes = (perms || []).map(p => `${p.modulo}.${p.acao}`)
+          }
+          // Se perfil_id é NULL → admin da empresa → permissoes = ['*']
+        }
+        update.permissoes = permissoes
       }
       const rawName = authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || null
       update.authUserName = rawName
@@ -403,10 +431,10 @@ export default function App() {
                   <Route path="/compras" element={<ComprasWorkspace />} />
                   <Route path="/compras/dashboard" element={<ComprasDashboard />} />
                   <Route path="/compras/operacoes/requisicoes" element={<Compras />} />
-                  <Route path="/compras/operacoes/cotacoes" element={<ComprasCotacoes />} />
-                  <Route path="/compras/operacoes/aprovacoes" element={<ComprasAprovar />} />
-                  <Route path="/compras/aprovar" element={<ComprasAprovar />} />
-                  <Route path="/compras/operacoes/recebimento" element={<ComprasRecebimento />} />
+                  <Route path="/compras/operacoes/cotacoes" element={<RequirePermissao modulo="compras" acao="cotar"><ComprasCotacoes /></RequirePermissao>} />
+                  <Route path="/compras/operacoes/aprovacoes" element={<RequirePermissao modulo="compras" acao="aprovar"><ComprasAprovar /></RequirePermissao>} />
+                  <Route path="/compras/aprovar" element={<RequirePermissao modulo="compras" acao="aprovar"><ComprasAprovar /></RequirePermissao>} />
+                  <Route path="/compras/operacoes/recebimento" element={<RequirePermissao modulo="compras" acao="receber"><ComprasRecebimento /></RequirePermissao>} />
                   <Route path="/compras/pedidos" element={<ComprasPedidos />} />
                   <Route path="/compras/cadastros/catalogo" element={<ComprasCatalogo />} />
                   <Route path="/compras/cadastros/fornecedores" element={<ComprasFornecedores />} />
@@ -414,7 +442,7 @@ export default function App() {
                   <Route path="/compras/cadastros/buscar" element={<ComprasBuscaFornecedor />} />
                   <Route path="/compras/buscar-fornecedor" element={<ComprasBuscaFornecedor />} />
                   <Route path="/compras/pesquisa-precos" element={<ComprasPesquisaPrecos />} />
-                  <Route path="/compras/parametros" element={<ComprasParametros />} />
+                  <Route path="/compras/parametros" element={<RequirePermissao modulo="compras" acao="parametros"><ComprasParametros /></RequirePermissao>} />
                   <Route path="/compras/relatorios/economia" element={<ComprasRelEconomia />} />
                   <Route path="/compras/relatorios/categoria" element={<ComprasRelCategoria />} />
                   <Route path="/compras/relatorios/fornecedor" element={<ComprasRelFornecedor />} />
@@ -427,8 +455,8 @@ export default function App() {
                   <Route path="/refeicoes/cadastros/regionais" element={<Refeicoes />} />
                   <Route path="/refeicoes/cadastros/parametros" element={<Refeicoes />} />
                   <Route path="/refeicoes/operacoes/solicitacoes" element={<Refeicoes />} />
-                  <Route path="/refeicoes/operacoes/aprovacoes" element={<Refeicoes />} />
-                  <Route path="/refeicoes/operacoes/fechamentos" element={<Refeicoes />} />
+                  <Route path="/refeicoes/operacoes/aprovacoes" element={<RequirePermissao modulo="refeicoes" acao="aprovar"><Refeicoes /></RequirePermissao>} />
+                  <Route path="/refeicoes/operacoes/fechamentos" element={<RequirePermissao modulo="refeicoes" acao="fechar"><Refeicoes /></RequirePermissao>} />
                   <Route path="/refeicoes/relatorios/rel-equipe" element={<Refeicoes />} />
                   <Route path="/refeicoes/relatorios/rel-restaurante" element={<Refeicoes />} />
                   <Route path="/refeicoes/relatorios/rel-cdc" element={<Refeicoes />} />

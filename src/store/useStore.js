@@ -251,6 +251,16 @@ const useStore = create(
   workspaceId: null,
   enabledModules: null, // null = sem restrição; array = lista de moduleKeys DESABILITADOS (blacklist)
   isPlatformAdmin: false, // true se o usuário logado está na tabela platform_admins
+  permissoes: ['*'], // ['*'] = acesso total; array de 'modulo.acao' quando tem perfil restrito
+
+  // Verifica se o usuário tem permissão para modulo+acao
+  // ['*'] = admin total (platform admin ou empresa admin sem perfil)
+  pode: (modulo, acao) => {
+    const { isPlatformAdmin, permissoes } = get()
+    if (isPlatformAdmin) return true
+    if (permissoes.includes('*')) return true
+    return permissoes.includes(`${modulo}.${acao}`)
+  },
 
   setCurrentUser: (person) => set({ currentUser: person }),
   setOwnerId: async (id) => {
