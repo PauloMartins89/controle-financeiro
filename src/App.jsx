@@ -52,6 +52,9 @@ import Login from './pages/Login'
 import Acessos from './pages/Acessos'
 import AdminPanel from './pages/AdminPanel'
 import Planos from './pages/Planos'
+import PlataformaEmpresas from './pages/PlataformaEmpresas'
+import PlataformaModulos from './pages/PlataformaModulos'
+import PlataformaAuditoria from './pages/PlataformaAuditoria'
 import ChatIA from './components/ChatIA'
 import GlobalSearch from './components/GlobalSearch'
 
@@ -428,6 +431,9 @@ export default function App() {
                   <Route path="/acessos" element={<RequireAdmin><Acessos /></RequireAdmin>} />
                   <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
                   <Route path="/admin/:section" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
+                  <Route path="/plataforma/empresas" element={<RequireAdmin><PlataformaEmpresas /></RequireAdmin>} />
+                  <Route path="/plataforma/modulos" element={<RequireAdmin><PlataformaModulos /></RequireAdmin>} />
+                  <Route path="/plataforma/auditoria" element={<RequireAdmin><PlataformaAuditoria /></RequireAdmin>} />
                   <Route path="/compras" element={<ComprasWorkspace />} />
                   <Route path="/compras/dashboard" element={<ComprasDashboard />} />
                   <Route path="/compras/operacoes/requisicoes" element={<Compras />} />

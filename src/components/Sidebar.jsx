@@ -8,7 +8,7 @@ import {
   SignalIcon, CameraIcon, TableCellsIcon, ShoppingCartIcon, BuildingStorefrontIcon,
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
-  TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon,
+  TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -102,6 +102,14 @@ const navGroups = [
     title: 'Sistema',
     items: [
       { to: '/acessos', icon: LockClosedIcon, label: 'Acessos', moduleKey: null, adminOnly: true },
+    ],
+  },
+  {
+    title: 'Plataforma SmartPro',
+    items: [
+      { to: '/plataforma/empresas',  icon: BuildingOffice2Icon,      label: 'Empresas',   moduleKey: null, adminOnly: true },
+      { to: '/plataforma/modulos',   icon: PuzzlePieceIcon,          label: 'Módulos',    moduleKey: null, adminOnly: true },
+      { to: '/plataforma/auditoria', icon: ClipboardDocumentListIcon, label: 'Auditoria', moduleKey: null, adminOnly: true },
     ],
   },
   {
