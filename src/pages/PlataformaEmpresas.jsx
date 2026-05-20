@@ -190,10 +190,16 @@ export default function PlataformaEmpresas() {
       password: novoUsuario.senha,
     })
     if (criado.error) {
-      setMsg({ tipo: 'erro', texto: criado.error })
-      setCriandoUsuario(false)
-      setTimeout(() => setMsg(null), 5000)
-      return
+      // Se já existe, confirma o e-mail e segue para vincular
+      const jaExiste = criado.error.toLowerCase().includes('already been registered') || criado.error.toLowerCase().includes('already registered')
+      if (!jaExiste) {
+        setMsg({ tipo: 'erro', texto: criado.error })
+        setCriandoUsuario(false)
+        setTimeout(() => setMsg(null), 5000)
+        return
+      }
+      // Confirma o e-mail do usuário existente antes de vincular
+      await apiAdmin('POST', { action: 'confirm-email', email: novoUsuario.email.trim() })
     }
     // 2. Vincula ao workspace
     const adicionado = await apiAdmin('POST', {
