@@ -245,7 +245,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: collapsed ? '8px 6px' : '6px 8px 6px 10px',
+        padding: collapsed ? '8px 6px' : '0px 8px 0px 10px',
         minHeight: collapsed ? 48 : 100,
         cursor: collapsed ? 'pointer' : 'default',
       }}
@@ -255,9 +255,9 @@ export default function Sidebar({ collapsed, onToggle }) {
           src="/logo_smartpro.png"
           alt="SmartPro"
           style={{
-            height: collapsed ? 87 : 102,
-            width: collapsed ? 87 : 'auto',
-            maxWidth: collapsed ? 87 : 411,
+            height: collapsed ? 36 : 60,
+            width: 'auto',
+            maxWidth: '100%',
             objectFit: 'contain',
             margin: collapsed ? 'auto' : 0,
           }}
