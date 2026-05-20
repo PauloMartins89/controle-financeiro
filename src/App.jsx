@@ -204,6 +204,7 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [ready, setReady] = useState(!supabase)
   const set = useStore.setState
+  const enabledModules = useStore(s => s.enabledModules)
 
   useEffect(() => {
     if (!supabase) return
