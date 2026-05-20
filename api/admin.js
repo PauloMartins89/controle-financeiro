@@ -170,14 +170,32 @@ export default async function handler(req, res) {
     if (action === 'create_user') {
       const { email, password, nome, telefone } = req.body
       if (!email || !password || !nome) return res.status(400).json({ error: 'email, password e nome são obrigatórios' })
-      // Cria o usuário via admin API (email_confirm = true → não precisa confirmar e-mail)
-      const { data: newUser, error: createErr } = await db.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name: nome, whatsapp: telefone || null },
+
+      // Usa a REST Admin API diretamente para evitar problemas com hooks/triggers do SDK
+      const supabaseUrl = process.env.SUPABASE_URL
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY
+      if (!serviceKey) return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY não configurada no servidor' })
+
+      const createRes = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: nome, whatsapp: telefone || null },
+        }),
       })
-      if (createErr) return res.status(400).json({ error: createErr.message })
+      const createData = await createRes.json()
+      if (!createRes.ok) {
+        console.error('[create_user] Supabase error:', JSON.stringify(createData))
+        return res.status(400).json({ error: createData.message || createData.msg || JSON.stringify(createData) })
+      }
+      const newUser = { user: createData }
       // Marca como isento (piloto)
       await db.from('assinaturas').upsert({
         user_id: newUser.user.id,
