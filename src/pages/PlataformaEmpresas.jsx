@@ -1,20 +1,54 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PencilSquareIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 
 const PLANOS = ['trial', 'basico', 'profissional', 'enterprise', 'isento']
 const STATUS_PLANO = { trial: 'bg-yellow-100 text-yellow-800', basico: 'bg-blue-100 text-blue-800', profissional: 'bg-indigo-100 text-indigo-800', enterprise: 'bg-purple-100 text-purple-800', isento: 'bg-green-100 text-green-800' }
+
+const TODOS_MODULOS = [
+  { key: 'dashboard',     label: 'Início / Dashboard',    descricao: 'Tela inicial e visão geral' },
+  { key: 'despesas',      label: 'Despesas',              descricao: 'Lançamentos de despesas' },
+  { key: 'acertos',       label: 'Acertos',               descricao: 'Acertos e divisão entre pessoas' },
+  { key: 'recorrentes',   label: 'Fixos do Mês',          descricao: 'Despesas recorrentes / Fixos do mês' },
+  { key: 'cartoes',       label: 'Cartões',               descricao: 'Controle de cartões' },
+  { key: 'grupos',        label: 'Grupos',                descricao: 'Grupos e categorias de despesas' },
+  { key: 'pessoas',       label: 'Pessoas',               descricao: 'Cadastro de pessoas' },
+  { key: 'veiculos',      label: 'Veículos',              descricao: 'Controle de frota' },
+  { key: 'timeline',      label: 'Histórico / Timeline',  descricao: 'Linha do tempo financeira' },
+  { key: 'balanco',       label: 'Balanço',               descricao: 'Balanço e relatórios' },
+  { key: 'previsao',      label: 'Caixa / Previsão',      descricao: 'Orçamento e previsão de caixa' },
+  { key: 'proventos',     label: 'Proventos',             descricao: 'Receitas e proventos' },
+  { key: 'negocios',      label: 'Negócios',              descricao: 'CRM e oportunidades' },
+  { key: 'central',       label: 'Central Gerencial',     descricao: 'Visão gerencial consolidada' },
+  { key: 'lancamentos',   label: 'Lançamentos',           descricao: 'Lançamentos financeiros gerencial' },
+  { key: 'cadastros',     label: 'Cadastros',             descricao: 'Cadastros gerenciais' },
+  { key: 'faturamento',   label: 'Faturamento',           descricao: 'Notas fiscais, contas a receber/pagar' },
+  { key: 'compras',       label: 'Compras',               descricao: 'Módulo de compras/cotações' },
+  { key: 'refeicoes',     label: 'Refeições',             descricao: 'Controle de refeições' },
+  { key: 'importar',      label: 'Importar Extratos',     descricao: 'Importação de extratos bancários' },
+  { key: 'escanear',      label: 'Escanear Documentos',   descricao: 'Escaneamento de documentos' },
+  { key: 'notas-fiscais', label: 'Notas Fiscais',         descricao: 'Emissão e consulta de notas fiscais' },
+  { key: 'chat_ia',       label: 'Chat IA',               descricao: 'Assistente de inteligência artificial' },
+]
 
 export default function PlataformaEmpresas() {
   const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
-  const [editando, setEditando] = useState(null)
-  const [salvando, setSalvando] = useState(false)
   const [msg, setMsg] = useState(null)
   const [modalAberto, setModalAberto] = useState(false)
   const [novo, setNovo] = useState({ nome: '', cnpj: '', plano: 'trial' })
   const [criando, setCriando] = useState(false)
+
+  // Empresa selecionada
+  const [selecionada, setSelecionada] = useState(null)
+  const [dadosEdit, setDadosEdit] = useState(null)
+  const [salvandoDados, setSalvandoDados] = useState(false)
+
+  // Módulos
+  const [desabilitados, setDesabilitados] = useState([])
+  const [loadingMods, setLoadingMods] = useState(false)
+  const [salvandoMods, setSalvandoMods] = useState(false)
 
   useEffect(() => { carregar() }, [])
 
@@ -29,20 +63,58 @@ export default function PlataformaEmpresas() {
     setLoading(false)
   }
 
-  async function salvarEdicao() {
-    if (!editando) return
-    setSalvando(true)
+  async function selecionarEmpresa(emp) {
+    setSelecionada(emp)
+    setDadosEdit({ plano: emp.plano || 'trial' })
+    setMsg(null)
+    setLoadingMods(true)
+    const { data } = await supabase
+      .from('workspace_modules')
+      .select('module_key, enabled')
+      .eq('workspace_id', emp.id)
+    if (data && data.length > 0) {
+      const habilitados = new Set(data.filter(m => m.enabled === true).map(m => m.module_key))
+      setDesabilitados(TODOS_MODULOS.map(m => m.key).filter(k => !habilitados.has(k)))
+    } else {
+      setDesabilitados([])
+    }
+    setLoadingMods(false)
+  }
+
+  async function salvarDados() {
+    if (!selecionada || !dadosEdit) return
+    setSalvandoDados(true)
     const { error } = await supabase
       .from('workspaces')
-      .update({ plano: editando.plano })
-      .eq('id', editando.id)
-    setSalvando(false)
+      .update({ plano: dadosEdit.plano })
+      .eq('id', selecionada.id)
+    setSalvandoDados(false)
     if (error) {
-      setMsg({ tipo: 'erro', texto: 'Erro ao salvar: ' + error.message })
+      setMsg({ tipo: 'erro', texto: 'Erro ao salvar dados: ' + error.message })
     } else {
-      setMsg({ tipo: 'ok', texto: 'Empresa atualizada com sucesso.' })
-      setEditando(null)
+      setMsg({ tipo: 'ok', texto: 'Dados da empresa atualizados.' })
+      setSelecionada(prev => ({ ...prev, plano: dadosEdit.plano }))
       carregar()
+    }
+    setTimeout(() => setMsg(null), 3000)
+  }
+
+  async function salvarModulos() {
+    if (!selecionada) return
+    setSalvandoMods(true)
+    const rows = TODOS_MODULOS.map(mod => ({
+      workspace_id: selecionada.id,
+      module_key: mod.key,
+      enabled: !desabilitados.includes(mod.key),
+    }))
+    const { error } = await supabase
+      .from('workspace_modules')
+      .upsert(rows, { onConflict: 'workspace_id,module_key' })
+    setSalvandoMods(false)
+    if (error) {
+      setMsg({ tipo: 'erro', texto: 'Erro ao salvar módulos: ' + error.message })
+    } else {
+      setMsg({ tipo: 'ok', texto: 'Módulos atualizados com sucesso.' })
     }
     setTimeout(() => setMsg(null), 3000)
   }
@@ -68,6 +140,12 @@ export default function PlataformaEmpresas() {
     setTimeout(() => setMsg(null), 4000)
   }
 
+  function toggleModulo(key) {
+    setDesabilitados(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
+
   const filtradas = empresas.filter(e =>
     e.nome?.toLowerCase().includes(busca.toLowerCase()) ||
     e.cnpj?.includes(busca)
@@ -75,12 +153,13 @@ export default function PlataformaEmpresas() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <BuildingOffice2Icon className="w-7 h-7 text-indigo-600" />
           <div>
             <h1 className="text-xl font-bold text-gray-900">Empresas</h1>
-            <p className="text-sm text-gray-500">Gerencie todos os workspaces da plataforma</p>
+            <p className="text-sm text-gray-500">Gerencie workspaces, planos e módulos da plataforma</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -132,12 +211,7 @@ export default function PlataformaEmpresas() {
               </div>
             </div>
             <div className="flex gap-2 justify-end pt-2">
-              <button
-                onClick={() => setModalAberto(false)}
-                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancelar
-              </button>
+              <button onClick={() => setModalAberto(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
               <button
                 onClick={criarEmpresa}
                 disabled={criando || !novo.nome.trim()}
@@ -157,93 +231,146 @@ export default function PlataformaEmpresas() {
         </div>
       )}
 
-      <div className="relative">
-        <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input
-          className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          placeholder="Buscar por nome ou CNPJ…"
-          value={busca}
-          onChange={e => setBusca(e.target.value)}
-        />
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12 text-gray-400">Carregando…</div>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-100">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
-              <tr>
-                <th className="px-4 py-3 text-left">Empresa</th>
-                <th className="px-4 py-3 text-left">CNPJ</th>
-                <th className="px-4 py-3 text-left">Plano</th>
-                <th className="px-4 py-3 text-left">Usuários</th>
-                <th className="px-4 py-3 text-left">Criado em</th>
-                <th className="px-4 py-3 text-left">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtradas.map(emp => (
-                <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">{emp.nome}</td>
-                  <td className="px-4 py-3 text-gray-500">{emp.cnpj || '—'}</td>
-                  <td className="px-4 py-3">
-                    {editando?.id === emp.id ? (
-                      <select
-                        className="border border-gray-300 rounded px-2 py-1 text-xs"
-                        value={editando.plano}
-                        onChange={e => setEditando({ ...editando, plano: e.target.value })}
-                      >
-                        {PLANOS.map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    ) : (
+      {/* Layout: lista + painel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Lista de empresas */}
+        <div className="lg:col-span-1 space-y-3">
+          <div className="relative">
+            <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="Buscar por nome ou CNPJ…"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+            />
+          </div>
+          {loading ? (
+            <div className="text-center py-12 text-gray-400 text-sm">Carregando…</div>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{filtradas.length} empresa(s)</p>
+              </div>
+              <ul className="divide-y divide-gray-50 max-h-[calc(100vh-320px)] overflow-y-auto">
+                {filtradas.map(emp => (
+                  <li key={emp.id}>
+                    <button
+                      onClick={() => selecionarEmpresa(emp)}
+                      className={`w-full text-left px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors ${selecionada?.id === emp.id ? 'bg-indigo-50 border-l-2 border-indigo-500' : ''}`}
+                    >
+                      <div>
+                        <p className={`text-sm font-medium ${selecionada?.id === emp.id ? 'text-indigo-700' : 'text-gray-900'}`}>{emp.nome}</p>
+                        <p className="text-xs text-gray-400">{emp.workspace_members?.[0]?.count ?? 0} usuário(s)</p>
+                      </div>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_PLANO[emp.plano] || 'bg-gray-100 text-gray-700'}`}>
                         {emp.plano || 'trial'}
                       </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {emp.workspace_members?.[0]?.count ?? 0}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {new Date(emp.created_at).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="px-4 py-3">
-                    {editando?.id === emp.id ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={salvarEdicao}
-                          disabled={salvando}
-                          className="px-3 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 disabled:opacity-50"
-                        >
-                          {salvando ? 'Salvando…' : 'Salvar'}
-                        </button>
-                        <button
-                          onClick={() => setEditando(null)}
-                          className="px-3 py-1 border border-gray-300 text-gray-600 text-xs rounded hover:bg-gray-50"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setEditando({ id: emp.id, plano: emp.plano || 'trial' })}
-                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-                        title="Editar plano"
-                      >
-                        <PencilSquareIcon className="w-4 h-4" />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {filtradas.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhuma empresa encontrada.</td></tr>
-              )}
-            </tbody>
-          </table>
+                    </button>
+                  </li>
+                ))}
+                {filtradas.length === 0 && (
+                  <li className="px-4 py-8 text-center text-gray-400 text-sm">Nenhuma empresa encontrada.</li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Painel de detalhes */}
+        <div className="lg:col-span-2 space-y-4">
+          {!selecionada ? (
+            <div className="bg-white rounded-xl border border-gray-100 flex flex-col items-center justify-center py-24 text-gray-400 text-sm gap-2">
+              <BuildingOffice2Icon className="w-8 h-8 text-gray-300" />
+              Selecione uma empresa para gerenciar
+            </div>
+          ) : (
+            <>
+              {/* Dados da empresa */}
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-700">{selecionada.nome}</p>
+                  <button
+                    onClick={salvarDados}
+                    disabled={salvandoDados}
+                    className="px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {salvandoDados ? 'Salvando…' : 'Salvar dados'}
+                  </button>
+                </div>
+                <div className="p-4 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Nome</label>
+                    <p className="text-sm text-gray-900">{selecionada.nome}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">CNPJ</label>
+                    <p className="text-sm text-gray-900">{selecionada.cnpj || '—'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Plano</label>
+                    <select
+                      className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                      value={dadosEdit?.plano || 'trial'}
+                      onChange={e => setDadosEdit({ ...dadosEdit, plano: e.target.value })}
+                    >
+                      {PLANOS.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Usuários</label>
+                    <p className="text-sm text-gray-900">{selecionada.workspace_members?.[0]?.count ?? 0}</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Criado em</label>
+                    <p className="text-sm text-gray-900">{new Date(selecionada.created_at).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Módulos */}
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <PuzzlePieceIcon className="w-4 h-4 text-indigo-600" />
+                    <p className="text-sm font-semibold text-gray-700">Módulos Habilitados</p>
+                  </div>
+                  <button
+                    onClick={salvarModulos}
+                    disabled={salvandoMods}
+                    className="px-4 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  >
+                    {salvandoMods ? 'Salvando…' : 'Salvar módulos'}
+                  </button>
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {loadingMods ? (
+                    <div className="col-span-2 text-center py-8 text-gray-400 text-sm">Carregando módulos…</div>
+                  ) : TODOS_MODULOS.map(mod => {
+                    const desabilitado = desabilitados.includes(mod.key)
+                    return (
+                      <label
+                        key={mod.key}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${desabilitado ? 'border-gray-200 bg-gray-50 opacity-60' : 'border-indigo-200 bg-indigo-50'}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!desabilitado}
+                          onChange={() => toggleModulo(mod.key)}
+                          className="w-4 h-4 text-indigo-600 rounded"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{mod.label}</p>
+                          <p className="text-xs text-gray-500">{mod.descricao}</p>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

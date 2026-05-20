@@ -108,7 +108,6 @@ const navGroups = [
     title: 'Plataforma SmartPro',
     items: [
       { to: '/plataforma/empresas',  icon: BuildingOffice2Icon,      label: 'Empresas',   moduleKey: null, adminOnly: true },
-      { to: '/plataforma/modulos',   icon: PuzzlePieceIcon,          label: 'Módulos',    moduleKey: null, adminOnly: true },
       { to: '/plataforma/auditoria', icon: ClipboardDocumentListIcon, label: 'Auditoria', moduleKey: null, adminOnly: true },
     ],
   },
