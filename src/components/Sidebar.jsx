@@ -14,7 +14,6 @@ import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../lib/utils'
-import useStore from '../store/useStore'
 
 const navGroups = [
   {
