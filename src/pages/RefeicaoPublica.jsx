@@ -414,7 +414,7 @@ export default function RefeicaoPublica() {
           )}
 
           {/* Espaço para botão fixo + safe-area iOS */}
-          <div style={{ height: 96 }} />
+          <div style={{ height: 140 }} />
 
         </MainCard>
       </PageLayout>
