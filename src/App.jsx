@@ -106,6 +106,24 @@ function RequireSubscription({ children }) {
   return children
 }
 
+// Rota padrão: redireciona para o primeiro módulo habilitado se Dashboard estiver desabilitado
+function DefaultRoute() {
+  const enabledModules = useStore(s => s.enabledModules)
+  if (enabledModules && enabledModules.includes('inicio')) {
+    const prioridade = [
+      { key: 'refeicoes', path: '/refeicoes' },
+      { key: 'compras',   path: '/compras' },
+      { key: 'lancamentos', path: '/lancamentos' },
+      { key: 'central',   path: '/central' },
+      { key: 'despesas',  path: '/despesas' },
+      { key: 'faturamento', path: '/faturamento' },
+    ]
+    const primeiro = prioridade.find(m => !enabledModules.includes(m.key))
+    if (primeiro) return <Navigate to={primeiro.path} replace />
+  }
+  return <Dashboard />
+}
+
 function RequireAdmin({ children }) {
   const location = useLocation()
   const [checked, setChecked] = useState(false)
@@ -337,7 +355,7 @@ export default function App() {
               <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(c => !c)} />
               <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <Routes>
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/" element={<DefaultRoute />} />
                   <Route path="/despesas" element={<Despesas />} />
                   <Route path="/quem-deve" element={<QuemDeve />} />
                   <Route path="/grupos" element={<Grupos />} />
