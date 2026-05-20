@@ -318,6 +318,7 @@ export default function App() {
         if (!adminRow) {
           // Filtra pelo registro do USUÁRIO ATUAL (não qualquer membro do workspace)
           const myMember = (wsMembers || []).find(m => m.user_id === authUser.id && m.ativo !== false)
+          console.log('[DEBUG permissoes] wsMembers:', wsMembers, '| authUser.id:', authUser.id, '| myMember:', myMember)
           if (myMember?.perfil_id) {
             // Tem perfil definido → carrega permissões específicas
             const { data: perms } = await supabase
@@ -327,6 +328,7 @@ export default function App() {
             permissoes = (perms || []).map(p => `${p.modulo}.${p.acao}`)
           }
           // Se perfil_id é NULL → admin da empresa → permissoes = ['*']
+          console.log('[DEBUG permissoes] final:', permissoes)
         }
         update.permissoes = permissoes
       }
