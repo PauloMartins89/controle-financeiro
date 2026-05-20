@@ -80,7 +80,7 @@ export default function ComprasRelCategoria() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="Relatório por Categoria" subtitle="Distribuição de gastos por tipo de compra" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 22, alignItems: 'center' }}>
           {PERIODOS.map(p => (

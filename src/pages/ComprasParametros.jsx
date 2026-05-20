@@ -85,7 +85,7 @@ export default function ComprasParametros() {
         title="Parâmetros de Compras"
         subtitle="Configurações do módulo — aprovação, cotações, notificações"
       />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* Barra de ação fixa */}
         {dirty && (

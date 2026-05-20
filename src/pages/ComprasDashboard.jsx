@@ -87,7 +87,7 @@ export default function ComprasDashboard() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="Compras" subtitle="Visão geral do módulo" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* KPI Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14, marginBottom: 24 }}>

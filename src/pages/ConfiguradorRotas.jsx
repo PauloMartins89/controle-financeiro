@@ -831,7 +831,7 @@ export default function ConfiguradorRotas() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Header title="Configurador de Rotas" />
 
-      <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>>
+      <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Configurador de Rotas</h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>

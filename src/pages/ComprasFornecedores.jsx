@@ -161,7 +161,7 @@ export default function ComprasFornecedores() {
         subtitle="Cadastro de fornecedores do módulo Compras"
         action={{ label: 'Novo Fornecedor', onClick: () => setShowModal(true), icon: PlusIcon }}
       />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* Busca */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, alignItems: 'center' }}>

@@ -133,7 +133,7 @@ export default function Funcoes() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Header title="Funções do Efetivo" />
 
-      <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>>
+      <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
         {/* Topo */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>

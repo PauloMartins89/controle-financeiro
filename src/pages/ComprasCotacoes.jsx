@@ -369,7 +369,7 @@ export default function ComprasCotacoes() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="Cotações / Leilão" subtitle="Leilões abertos e propostas de fornecedores" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* Filtros */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>

@@ -109,7 +109,7 @@ export default function ComprasWorkspace() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="Workspace do Comprador" subtitle="Todas as pendências e ações necessárias em um só lugar" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           {lastRefresh && (
             <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
