@@ -63,6 +63,37 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
   })
   const [itens, setItens] = useState([{ descricao: '', quantidade: '1', valor_unitario: '' }])
   const [saving, setSaving] = useState(false)
+  const [fornecedores, setFornecedores] = useState([])
+  const [fornQuery, setFornQuery] = useState('')
+  const [showFornDrop, setShowFornDrop] = useState(false)
+
+  useEffect(() => {
+    if (!workspaceId) return
+    supabase.from('fornecedores')
+      .select('id, nome, contato, telefone, email')
+      .eq('workspace_id', workspaceId)
+      .eq('ativo', true)
+      .order('nome')
+      .then(({ data }) => setFornecedores(data || []))
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('pessoas').select('nome, telefone').eq('user_id', user.id).limit(1).single()
+        .then(({ data: p }) => {
+          if (p?.nome) setForm(f => ({ ...f, requisitante_nome: f.requisitante_nome || p.nome }))
+          if (p?.telefone) setForm(f => ({ ...f, requisitante_telefone: f.requisitante_telefone || p.telefone }))
+        })
+    })
+  }, [workspaceId])
+
+  const fornFiltrados = fornecedores.filter(f =>
+    fornQuery.trim() === '' ? true : f.nome.toLowerCase().includes(fornQuery.toLowerCase())
+  )
+
+  function selectFornecedor(f) {
+    setFornQuery(f.nome)
+    setForm(p => ({ ...p, fornecedor: f.nome, contato_fornecedor: f.contato || '', telefone_fornecedor: f.telefone || '', email_fornecedor: f.email || '' }))
+    setShowFornDrop(false)
+  }
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
@@ -154,9 +185,42 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
         <div style={{ background: 'rgba(16,185,129,0.05)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, border: '1px solid rgba(16,185,129,0.15)' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.4 }}>Dados da Solicitação</div>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-            <div>
+            <div style={{ position: 'relative' }}>
               <label style={labelStyle}>Fornecedor</label>
-              <input style={inputStyle} value={form.fornecedor} onChange={e => set('fornecedor', e.target.value)} placeholder="Nome do fornecedor" />
+              <input
+                style={inputStyle}
+                value={fornQuery}
+                onChange={e => { setFornQuery(e.target.value); set('fornecedor', e.target.value); setShowFornDrop(true) }}
+                onFocus={() => setShowFornDrop(true)}
+                onBlur={() => setTimeout(() => setShowFornDrop(false), 160)}
+                placeholder="Nome do fornecedor"
+                autoComplete="off"
+              />
+              {showFornDrop && fornFiltrados.length > 0 && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
+                  background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                  borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
+                  maxHeight: 200, overflowY: 'auto', marginTop: 3,
+                }}>
+                  {fornFiltrados.map(f => (
+                    <div
+                      key={f.id}
+                      onMouseDown={() => selectFornecedor(f)}
+                      style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = ''}
+                    >
+                      <div style={{ fontWeight: 600 }}>{f.nome}</div>
+                      {(f.contato || f.telefone) && (
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>
+                          {[f.contato, f.telefone].filter(Boolean).join(' · ')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Contato</label>
