@@ -19,7 +19,7 @@ const navGroups = [
   {
     title: 'FinanceiroPro',
     items: [
-      { to: '/',            icon: HomeIcon,                  label: 'Início',        moduleKey: 'inicio' },
+      { to: '/',            icon: HomeIcon,                  label: 'Início',        moduleKey: 'dashboard' },
       { to: '/despesas',    icon: CurrencyDollarIcon,        label: 'Meus Gastos',   moduleKey: 'despesas' },
       { to: '/quem-deve',   icon: ArrowsRightLeftIcon,       label: 'Acertos',       moduleKey: 'acertos' },
       { to: '/recorrentes', icon: ArrowPathIcon,             label: 'Fixos do Mês',  moduleKey: 'recorrentes' },
@@ -27,9 +27,9 @@ const navGroups = [
       { to: '/grupos',      icon: UserGroupIcon,             label: 'Grupos',        moduleKey: 'grupos' },
       { to: '/pessoas',     icon: UsersIcon,                 label: 'Pessoas',       moduleKey: 'pessoas' },
       { to: '/veiculos',    icon: TruckIcon,                 label: 'Veículos',      moduleKey: 'veiculos' },
-      { to: '/timeline',    icon: ChartBarIcon,              label: 'Histórico',     moduleKey: 'historico' },
+      { to: '/timeline',    icon: ChartBarIcon,              label: 'Histórico',     moduleKey: 'timeline' },
       { to: '/balanco',     icon: PresentationChartLineIcon, label: 'Balanço',       moduleKey: 'balanco' },
-      { to: '/previsao',    icon: BanknotesIcon,             label: 'Caixa',         moduleKey: 'caixa' },      { to: '/proventos',   icon: ArrowTrendingUpIcon,        label: 'Proventos',     moduleKey: 'proventos' },
+      { to: '/previsao',    icon: BanknotesIcon,             label: 'Caixa',         moduleKey: 'previsao' },      { to: '/proventos',   icon: ArrowTrendingUpIcon,        label: 'Proventos',     moduleKey: 'proventos' },
       { to: '/negocios',    icon: BuildingOffice2Icon,        label: 'Negócios',      moduleKey: 'negocios' },    ],
   },
   {

@@ -481,7 +481,7 @@ export default function App() {
                 </Routes>
               </main>
             </div>
-            <ChatIA />
+            {(enabledModules === null || !enabledModules?.includes('chat_ia')) && <ChatIA />}
             <GlobalSearch />
             </RequireSubscription>
           </RequireAuth>
