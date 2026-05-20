@@ -258,8 +258,8 @@ export default function RefeicaoPublica() {
 
       {/* Área de scroll — minHeight:0 é obrigatório para overflow funcionar em flex */}
       <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain' }}>
-        <div style={{ maxWidth:520, margin:'0 auto', padding:'16px 12px 24px' }}>
-          <div style={{ background:T.cardBg, borderRadius:20, overflow:'hidden', boxShadow:T.shadow }}>
+        <div style={{ maxWidth:520, margin:'0 auto', padding:'16px 12px 24px', boxSizing:'border-box', width:'100%', minWidth:0 }}>
+          <div style={{ background:T.cardBg, borderRadius:20, boxShadow:T.shadow, boxSizing:'border-box', overflow:'hidden' }}>
 
           {/* ── Header ── */}
           <div style={{ padding: '24px 24px 16px' }}>
@@ -283,12 +283,12 @@ export default function RefeicaoPublica() {
           {/* ── Configuração ── */}
           <div style={{ padding: '20px 24px' }}>
             <SectionLabel>Configuração</SectionLabel>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div>
+            <div style={{ display:'flex', gap:12, flexWrap:'wrap', alignItems:'flex-start' }}>
+              <div style={{ flex:'1 1 140px', minWidth:0 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 6 }}>📅 Data</div>
                 <input type="date" value={dataRefeicao} onChange={e => setData(e.target.value)} style={inputSt} />
               </div>
-              <div>
+              <div style={{ flex:'1 1 140px', minWidth:0 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: T.textMuted, marginBottom: 6 }}>🏪 Restaurante</div>
                 <select value={restauranteId} onChange={e => setRestId(e.target.value)} style={inputSt}>
                   <option value="">Selecione...</option>
@@ -403,7 +403,7 @@ export default function RefeicaoPublica() {
               <Divider />
               <div style={{ padding: '20px 24px 28px' }}>
                 <SectionLabel>Resumo do Pedido</SectionLabel>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0,1fr))', gap: 10, marginBottom: 14 }}>
                   <StatCard label="Refeições" value={totais.qtdRef}        icon="🍽️" />
                   <StatCard label="Cafés"     value={totais.qtdCafe}       icon="☕" />
                   <StatCard label="Total"     value={fmtBRL(totais.total)} icon="💰" green />
