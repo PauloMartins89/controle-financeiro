@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon, UsersIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon, UsersIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 
 const PLANOS = ['trial', 'basico', 'profissional', 'enterprise', 'isento']
 const STATUS_PLANO = { trial: 'bg-yellow-100 text-yellow-800', basico: 'bg-blue-100 text-blue-800', profissional: 'bg-indigo-100 text-indigo-800', enterprise: 'bg-purple-100 text-purple-800', isento: 'bg-green-100 text-green-800' }
@@ -59,6 +59,9 @@ export default function PlataformaEmpresas() {
   const [novoEmail, setNovoEmail] = useState('')
   const [adicionando, setAdicionando] = useState(false)
   const [removendo, setRemovendo] = useState(null)
+  const [modalCriar, setModalCriar] = useState(false)
+  const [novoUsuario, setNovoUsuario] = useState({ nome: '', email: '', senha: '' })
+  const [criandoUsuario, setCriandoUsuario] = useState(false)
 
   useEffect(() => { carregar() }, [])
 
@@ -103,6 +106,8 @@ export default function PlataformaEmpresas() {
     setAba('dados')
     setMembros([])
     setNovoEmail('')
+    setModalCriar(false)
+    setNovoUsuario({ nome: '', email: '', senha: '' })
     setLoadingMods(true)
     const { data } = await supabase
       .from('workspace_modules')
@@ -170,6 +175,43 @@ export default function PlataformaEmpresas() {
       carregar()
     }
     setTimeout(() => setMsg(null), 4000)
+  }
+
+  async function criarEAdicionar(e) {
+    e.preventDefault()
+    if (!novoUsuario.nome.trim() || !novoUsuario.email.trim() || !novoUsuario.senha.trim()) return
+    if (!selecionada) return
+    setCriandoUsuario(true)
+    // 1. Cria o usuário
+    const criado = await apiAdmin('POST', {
+      action: 'create_user',
+      nome: novoUsuario.nome.trim(),
+      email: novoUsuario.email.trim(),
+      password: novoUsuario.senha,
+    })
+    if (criado.error) {
+      setMsg({ tipo: 'erro', texto: criado.error })
+      setCriandoUsuario(false)
+      setTimeout(() => setMsg(null), 5000)
+      return
+    }
+    // 2. Vincula ao workspace
+    const adicionado = await apiAdmin('POST', {
+      action: 'add-member',
+      workspace_id: selecionada.id,
+      email: novoUsuario.email.trim(),
+    })
+    setCriandoUsuario(false)
+    if (adicionado.error) {
+      setMsg({ tipo: 'erro', texto: 'Usuário criado mas erro ao vincular: ' + adicionado.error })
+    } else {
+      setMsg({ tipo: 'ok', texto: `Usuário ${novoUsuario.email.trim()} criado e vinculado com sucesso!` })
+      setModalCriar(false)
+      setNovoUsuario({ nome: '', email: '', senha: '' })
+      carregarMembros(selecionada.id)
+      carregar()
+    }
+    setTimeout(() => setMsg(null), 5000)
   }
 
   async function removerMembro(membroId, email) {
@@ -462,24 +504,90 @@ export default function PlataformaEmpresas() {
               {/* Aba: Usuários */}
               {aba === 'usuarios' && (
                 <div className="p-4 space-y-4">
-                  {/* Adicionar membro */}
-                  <form onSubmit={adicionarMembro} className="flex gap-2">
-                    <input
-                      type="email"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                      placeholder="E-mail do usuário já cadastrado na plataforma…"
-                      value={novoEmail}
-                      onChange={e => setNovoEmail(e.target.value)}
-                    />
+                  {/* Modal criar + adicionar */}
+                  {modalCriar && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setModalCriar(false)}>
+                      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <UserPlusIcon className="w-5 h-5 text-indigo-600" />
+                          <h2 className="text-lg font-bold text-gray-900">Criar e Vincular Usuário</h2>
+                        </div>
+                        <p className="text-xs text-gray-500">Cria uma nova conta e já vincula à empresa <strong>{selecionada?.nome}</strong>.</p>
+                        <form onSubmit={criarEAdicionar} className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
+                            <input
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                              placeholder="Nome completo"
+                              value={novoUsuario.nome}
+                              onChange={e => setNovoUsuario({ ...novoUsuario, nome: e.target.value })}
+                              required autoFocus
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">E-mail *</label>
+                            <input
+                              type="email"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                              placeholder="email@empresa.com.br"
+                              value={novoUsuario.email}
+                              onChange={e => setNovoUsuario({ ...novoUsuario, email: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Senha *</label>
+                            <input
+                              type="password"
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                              placeholder="Senha de acesso"
+                              value={novoUsuario.senha}
+                              onChange={e => setNovoUsuario({ ...novoUsuario, senha: e.target.value })}
+                              required minLength={6}
+                            />
+                          </div>
+                          <div className="flex gap-2 justify-end pt-1">
+                            <button type="button" onClick={() => setModalCriar(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
+                            <button
+                              type="submit"
+                              disabled={criandoUsuario}
+                              className="px-5 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                            >
+                              {criandoUsuario ? 'Criando…' : 'Criar e Vincular'}
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Barra de ações */}
+                  <div className="flex gap-2">
+                    <form onSubmit={adicionarMembro} className="flex gap-2 flex-1">
+                      <input
+                        type="email"
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        placeholder="E-mail de usuário já cadastrado na plataforma…"
+                        value={novoEmail}
+                        onChange={e => setNovoEmail(e.target.value)}
+                      />
+                      <button
+                        type="submit"
+                        disabled={adicionando || !novoEmail.trim()}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                      >
+                        <PlusIcon className="w-4 h-4" />
+                        {adicionando ? 'Adicionando…' : 'Adicionar'}
+                      </button>
+                    </form>
                     <button
-                      type="submit"
-                      disabled={adicionando || !novoEmail.trim()}
-                      className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                      onClick={() => setModalCriar(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
                     >
-                      <PlusIcon className="w-4 h-4" />
-                      {adicionando ? 'Adicionando…' : 'Adicionar'}
+                      <UserPlusIcon className="w-4 h-4" />
+                      Criar usuário
                     </button>
-                  </form>
+                  </div>
 
                   {/* Lista de membros */}
                   {loadingMembros ? (
