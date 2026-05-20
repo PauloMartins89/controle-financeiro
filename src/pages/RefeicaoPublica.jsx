@@ -252,8 +252,8 @@ export default function RefeicaoPublica() {
 
   // ── Formulário principal ─────────────────────────────────────────────────
   return (
-    // height:100dvh + flex column + minHeight:0 no scroll = botão nunca sobreposta
-    <div style={{ display:'flex', flexDirection:'column', height:'100dvh', background:T.pageBg, fontFamily:'Inter,system-ui,sans-serif', color:T.text }}>
+    // position:fixed inset:0 = mais confiável que height:100dvh em iOS Safari
+    <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, display:'flex', flexDirection:'column', background:T.pageBg, fontFamily:'Inter,system-ui,sans-serif', color:T.text }}>
       <Toaster position="top-center" toastOptions={{ style: { background: T.cardBg, color: T.text, border: `1px solid ${T.border}`, borderRadius: 12, fontSize: 14 } }} />
 
       {/* Área de scroll — minHeight:0 é obrigatório para overflow funcionar em flex */}
