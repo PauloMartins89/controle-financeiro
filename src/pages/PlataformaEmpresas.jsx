@@ -182,36 +182,60 @@ export default function PlataformaEmpresas() {
     if (!novoUsuario.nome.trim() || !novoUsuario.email.trim() || !novoUsuario.senha.trim()) return
     if (!selecionada) return
     setCriandoUsuario(true)
-    // 1. Cria o usuário
+    const emailLower = novoUsuario.email.trim()
+
+    // 1. Tenta vincular direto (se usuário já existe na plataforma)
+    const tentativa = await apiAdmin('POST', {
+      action: 'add-member',
+      workspace_id: selecionada.id,
+      email: emailLower,
+    })
+
+    if (!tentativa.error) {
+      // Usuário já existia e foi vinculado — confirma e-mail por garantia
+      await apiAdmin('POST', { action: 'confirm-email', email: emailLower })
+      setCriandoUsuario(false)
+      setMsg({ tipo: 'ok', texto: `Usuário ${emailLower} vinculado com sucesso!` })
+      setModalCriar(false)
+      setNovoUsuario({ nome: '', email: '', senha: '' })
+      carregarMembros(selecionada.id)
+      carregar()
+      setTimeout(() => setMsg(null), 5000)
+      return
+    }
+
+    // Se já é membro, só informa
+    if (tentativa.error.toLowerCase().includes('já é membro')) {
+      setCriandoUsuario(false)
+      setMsg({ tipo: 'erro', texto: tentativa.error })
+      setTimeout(() => setMsg(null), 5000)
+      return
+    }
+
+    // 2. Usuário não encontrado → cria e vincula
     const criado = await apiAdmin('POST', {
       action: 'create_user',
       nome: novoUsuario.nome.trim(),
-      email: novoUsuario.email.trim(),
+      email: emailLower,
       password: novoUsuario.senha,
     })
     if (criado.error) {
-      // Se já existe, confirma o e-mail e segue para vincular
-      const jaExiste = criado.error.toLowerCase().includes('already been registered') || criado.error.toLowerCase().includes('already registered')
-      if (!jaExiste) {
-        setMsg({ tipo: 'erro', texto: criado.error })
-        setCriandoUsuario(false)
-        setTimeout(() => setMsg(null), 5000)
-        return
-      }
-      // Confirma o e-mail do usuário existente antes de vincular
-      await apiAdmin('POST', { action: 'confirm-email', email: novoUsuario.email.trim() })
+      setCriandoUsuario(false)
+      setMsg({ tipo: 'erro', texto: criado.error })
+      setTimeout(() => setMsg(null), 5000)
+      return
     }
-    // 2. Vincula ao workspace
+    // 3. Vincula ao workspace
     const adicionado = await apiAdmin('POST', {
       action: 'add-member',
       workspace_id: selecionada.id,
-      email: novoUsuario.email.trim(),
+      email: emailLower,
     })
     setCriandoUsuario(false)
     if (adicionado.error) {
       setMsg({ tipo: 'erro', texto: 'Usuário criado mas erro ao vincular: ' + adicionado.error })
     } else {
-      setMsg({ tipo: 'ok', texto: `Usuário ${novoUsuario.email.trim()} criado e vinculado com sucesso!` })
+      setMsg({ tipo: 'ok', texto: `Usuário ${emailLower} criado e vinculado com sucesso!` })
       setModalCriar(false)
       setNovoUsuario({ nome: '', email: '', senha: '' })
       carregarMembros(selecionada.id)
