@@ -252,9 +252,14 @@ export default function RefeicaoPublica() {
 
   // ── Formulário principal ─────────────────────────────────────────────────
   return (
-    <PageLayout>
+    // height:100dvh + flex column + minHeight:0 no scroll = botão nunca sobreposta
+    <div style={{ display:'flex', flexDirection:'column', height:'100dvh', background:T.pageBg, fontFamily:'Inter,system-ui,sans-serif', color:T.text }}>
       <Toaster position="top-center" toastOptions={{ style: { background: T.cardBg, color: T.text, border: `1px solid ${T.border}`, borderRadius: 12, fontSize: 14 } }} />
-      <MainCard maxWidth={520}>
+
+      {/* Área de scroll — minHeight:0 é obrigatório para overflow funcionar em flex */}
+      <div style={{ flex:1, minHeight:0, overflowY:'auto', WebkitOverflowScrolling:'touch', overscrollBehavior:'contain' }}>
+        <div style={{ maxWidth:520, margin:'0 auto', padding:'16px 12px 24px' }}>
+          <div style={{ background:T.cardBg, borderRadius:20, overflow:'hidden', boxShadow:T.shadow }}>
 
           {/* ── Header ── */}
           <div style={{ padding: '24px 24px 16px' }}>
@@ -412,24 +417,27 @@ export default function RefeicaoPublica() {
             </>
           )}
 
-          {/* ── Botão Enviar ── */}
-          <Divider />
-          <div style={{ padding: '20px 24px 28px' }}>
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              style={{
-                width: '100%', padding: '16px', borderRadius: 12, border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
-                background: saving ? 'rgba(255,255,255,0.08)' : '#6366f1',
-                color: saving ? T.textMuted : '#fff',
-                fontWeight: 800, fontSize: 16, transition: 'all 0.2s',
-              }}
-            >
-              {saving ? '⏳ Enviando...' : '🚀 Enviar Pedido'}
-            </button>
           </div>
+        </div>
+      </div>
 
-        </MainCard>
-    </PageLayout>
+      {/* Botão — fora do scroll, nunca sobreposta, com safe-area iOS */}
+      <div style={{ flexShrink:0, padding:'12px 16px', paddingBottom:'calc(env(safe-area-inset-bottom) + 12px)', background:T.pageBg, borderTop:`1px solid ${T.divider}` }}>
+        <div style={{ maxWidth:520, margin:'0 auto' }}>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            style={{
+              width:'100%', padding:'16px', borderRadius:12, border:'none', cursor: saving ? 'not-allowed' : 'pointer',
+              background: saving ? 'rgba(255,255,255,0.08)' : '#6366f1',
+              color: saving ? T.textMuted : '#fff',
+              fontWeight:800, fontSize:16, transition:'all 0.2s',
+            }}
+          >
+            {saving ? '⏳ Enviando...' : '🚀 Enviar Pedido'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
