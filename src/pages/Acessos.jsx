@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { isAdmin } from '../lib/admin'
+import useStore from '../store/useStore'
 import Header from '../components/Header'
 import { TrashIcon, PlusIcon, KeyIcon, LinkIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
@@ -48,7 +48,8 @@ export default function Acessos() {
 
   useEffect(() => {
     supabase?.auth.getUser().then(({ data }) => {
-      if (!isAdmin(data?.user)) { navigate('/'); return }
+      const isPlatformAdmin = useStore.getState().isPlatformAdmin
+      if (!isPlatformAdmin) { navigate('/'); return }
       setAuthUser(data.user)
       loadAiMetrics()
     })

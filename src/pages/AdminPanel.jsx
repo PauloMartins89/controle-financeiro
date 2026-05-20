@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { isAdmin } from '../lib/admin'
+import useStore from '../store/useStore'
 import Header from '../components/Header'
 import {
   ArrowPathIcon, CheckCircleIcon, XCircleIcon,
@@ -291,7 +291,7 @@ export default function AdminPanel() {
 
   useEffect(() => {
     supabase?.auth.getUser().then(({ data }) => {
-      if (!isAdmin(data?.user)) { navigate('/'); return }
+      if (!useStore.getState().isPlatformAdmin) { navigate('/'); return }
       load()
       loadWorkspaces()
       loadMotoristas()

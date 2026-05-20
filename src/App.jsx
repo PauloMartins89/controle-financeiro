@@ -52,7 +52,6 @@ import Login from './pages/Login'
 import Acessos from './pages/Acessos'
 import AdminPanel from './pages/AdminPanel'
 import Planos from './pages/Planos'
-import { isAdmin } from './lib/admin'
 import ChatIA from './components/ChatIA'
 import GlobalSearch from './components/GlobalSearch'
 
@@ -78,8 +77,13 @@ function RequireSubscription({ children }) {
     if (!supabase) { setAllowed(true); setChecked(true); return }
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { setAllowed(false); setChecked(true); return }
-      // Admin sempre tem acesso
-      if (isAdmin(data.user)) { setAllowed(true); setChecked(true); return }
+      // Platform admin sempre tem acesso (verifica via banco)
+      const { data: adminRow } = await supabase
+        .from('platform_admins')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .maybeSingle()
+      if (adminRow) { setAllowed(true); setChecked(true); return }
       const { data: sub } = await supabase
         .from('assinaturas')
         .select('status, trial_expires_at, expires_at')
@@ -131,8 +135,14 @@ function RequireAdmin({ children }) {
 
   useEffect(() => {
     if (!supabase) { setAllowed(true); setChecked(true); return }
-    supabase.auth.getUser().then(({ data }) => {
-      setAllowed(isAdmin(data?.user))
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data?.user) { setAllowed(false); setChecked(true); return }
+      const { data: adminRow } = await supabase
+        .from('platform_admins')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .maybeSingle()
+      setAllowed(!!adminRow)
       setChecked(true)
     })
   }, [])
@@ -177,6 +187,7 @@ export default function App() {
       recurring: [], negocios: [], proventos: [], closures: [],
       saldoCaixa: 0, currentUser: null, ownerId: null,
       workspaceId: null, enabledModules: null,
+      isPlatformAdmin: false,
     }
 
     const load = async () => {
@@ -252,8 +263,16 @@ export default function App() {
       // Sincroniza saldoCaixa do banco
       const cfgSaldo = configs?.find(c => c.chave === 'saldoCaixa')
       if (cfgSaldo) update.saldoCaixa = parseFloat(cfgSaldo.valor) || 0
-      // Nome do usuário autenticado (user_metadata.full_name ou parte do email)
+      // Verifica se o usuário é platform admin (substitui check hardcoded de e-mail)
       const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser?.id) {
+        const { data: adminRow } = await supabase
+          .from('platform_admins')
+          .select('id')
+          .eq('user_id', authUser.id)
+          .maybeSingle()
+        update.isPlatformAdmin = !!adminRow
+      }
       const rawName = authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || null
       update.authUserName = rawName
         ? rawName.split(' ')[0].charAt(0).toUpperCase() + rawName.split(' ')[0].slice(1)

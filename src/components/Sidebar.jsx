@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../lib/utils'
-import { isAdmin } from '../lib/admin'
+import useStore from '../store/useStore'
 
 const navGroups = [
   {
@@ -136,13 +136,11 @@ function weatherIcon(code) {
 export default function Sidebar({ collapsed, onToggle }) {
   const { getMeusDividas, getMinhasReceitas, getTotalPagar } = useStore()
   const enabledModules = useStore(s => s.enabledModules)
-  const [authUser, setAuthUser] = useState(null)
+  const isPlatformAdmin = useStore(s => s.isPlatformAdmin)
   const [weather, setWeather] = useState(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
-
-  // Abre automaticamente o grupo que contém a rota ativa
   const [openGroups, setOpenGroups] = useState(() => {
     const open = {}
     navGroups.forEach(({ title, items }) => {
@@ -164,19 +162,11 @@ export default function Sidebar({ collapsed, onToggle }) {
   // - moduleKey null: sempre visível (se não for adminOnly)
   // - moduleKey: visível por padrão; escondido apenas se enabledModules (blacklist) incluir o moduleKey
   function isItemVisible(item) {
-    if (item.adminOnly) return isAdmin(authUser)
+    if (item.adminOnly) return isPlatformAdmin
     if (!item.moduleKey) return true
     if (enabledModules === null) return true // sem restrição
     return !enabledModules.includes(item.moduleKey) // enabledModules = lista de desabilitados
   }
-
-  useEffect(() => {
-    supabase?.auth.getUser().then(({ data }) => setAuthUser(data?.user || null))
-    const { data: listener } = supabase?.auth.onAuthStateChange((_e, session) => {
-      setAuthUser(session?.user || null)
-    }) || {}
-    return () => listener?.subscription?.unsubscribe()
-  }, [])
 
   useEffect(() => {
     const cached = sessionStorage.getItem('sp_weather')

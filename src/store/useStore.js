@@ -250,6 +250,7 @@ const useStore = create(
   ownerId: OWNER_ID,
   workspaceId: null,
   enabledModules: null, // null = sem restrição; array = lista de moduleKeys DESABILITADOS (blacklist)
+  isPlatformAdmin: false, // true se o usuário logado está na tabela platform_admins
 
   setCurrentUser: (person) => set({ currentUser: person }),
   setOwnerId: async (id) => {
