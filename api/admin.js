@@ -251,19 +251,26 @@ export default async function handler(req, res) {
         expires_at: null,
       }, { onConflict: 'user_id' })
 
-      // Passo 3: confirma o e-mail (trigger vai disparar mas ON CONFLICT DO NOTHING vai ignorar)
-      await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': serviceKey,
-          'Authorization': `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({ email_confirm: true }),
-      })
+      // Passo 3: confirma o e-mail via SDK (mais confiável que fetch manual)
+      const { error: confirmError } = await db.auth.admin.updateUserById(userId, { email_confirm: true })
+      if (confirmError) {
+        console.error('[create_user] Erro ao confirmar e-mail:', confirmError.message)
+        // Não bloqueia — usuário foi criado, admin pode confirmar depois
+      }
 
-      const newUser = { user: { id: userId } }
-      return res.status(200).json({ ok: true, user_id: newUser.user.id })
+      return res.status(200).json({ ok: true, user_id: userId })
+    }
+
+    // Confirma o e-mail de um usuário existente (corrige "Email not confirmed")
+    if (action === 'confirm-email') {
+      const { email } = req.body
+      if (!email) return res.status(400).json({ error: 'email obrigatório' })
+      const { data: { users } } = await db.auth.admin.listUsers({ perPage: 1000 })
+      const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' })
+      const { error } = await db.auth.admin.updateUserById(user.id, { email_confirm: true })
+      if (error) return res.status(500).json({ error: error.message })
+      return res.status(200).json({ ok: true })
     }
 
     // Cria ou atualiza assinatura manualmente (admin concede/revoga acesso)

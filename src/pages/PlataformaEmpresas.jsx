@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon, UsersIcon, TrashIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon, UsersIcon, TrashIcon, UserPlusIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
 
 const PLANOS = ['trial', 'basico', 'profissional', 'enterprise', 'isento']
 const STATUS_PLANO = { trial: 'bg-yellow-100 text-yellow-800', basico: 'bg-blue-100 text-blue-800', profissional: 'bg-indigo-100 text-indigo-800', enterprise: 'bg-purple-100 text-purple-800', isento: 'bg-green-100 text-green-800' }
@@ -212,6 +212,16 @@ export default function PlataformaEmpresas() {
       carregar()
     }
     setTimeout(() => setMsg(null), 5000)
+  }
+
+  async function confirmarEmail(email) {
+    const data = await apiAdmin('POST', { action: 'confirm-email', email })
+    if (data.error) {
+      setMsg({ tipo: 'erro', texto: data.error })
+    } else {
+      setMsg({ tipo: 'ok', texto: `E-mail de ${email} confirmado!` })
+    }
+    setTimeout(() => setMsg(null), 3000)
   }
 
   async function removerMembro(membroId, email) {
@@ -614,14 +624,23 @@ export default function PlataformaEmpresas() {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-right">
-                                <button
-                                  onClick={() => removerMembro(m.id, m.email)}
-                                  disabled={removendo === m.id}
-                                  className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                                  title="Remover da empresa"
-                                >
-                                  <TrashIcon className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => confirmarEmail(m.email)}
+                                    className="p-1.5 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded transition-colors"
+                                    title="Confirmar e-mail (corrige 'Email not confirmed')"
+                                  >
+                                    <EnvelopeIcon className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => removerMembro(m.id, m.email)}
+                                    disabled={removendo === m.id}
+                                    className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                    title="Remover da empresa"
+                                  >
+                                    <TrashIcon className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
