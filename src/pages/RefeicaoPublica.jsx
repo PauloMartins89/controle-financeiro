@@ -252,10 +252,11 @@ export default function RefeicaoPublica() {
 
   // ── Formulário principal ─────────────────────────────────────────────────
   return (
-    <>
-      <PageLayout>
-        <Toaster position="top-center" toastOptions={{ style: { background: T.cardBg, color: T.text, border: `1px solid ${T.border}`, borderRadius: 12, fontSize: 14 } }} />
-        <MainCard maxWidth={520}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: T.pageBg, fontFamily: 'Inter, system-ui, sans-serif', color: T.text }}>
+      <Toaster position="top-center" toastOptions={{ style: { background: T.cardBg, color: T.text, border: `1px solid ${T.border}`, borderRadius: 12, fontSize: 14 } }} />
+      <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ maxWidth: 520, margin: '24px auto', padding: '0 12px' }}>
+        <div style={{ background: T.cardBg, borderRadius: 24, overflow: 'hidden', boxShadow: T.shadow }}>
 
           {/* ── Header ── */}
           <div style={{ padding: '24px 24px 16px' }}>
@@ -413,14 +414,12 @@ export default function RefeicaoPublica() {
             </>
           )}
 
-          {/* Espaço para botão fixo + safe-area iOS */}
-          <div style={{ height: 140 }} />
+        </div>
+        </div>
+      </div>
 
-        </MainCard>
-      </PageLayout>
-
-      {/* ── Botão fixo no rodapé ── */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '12px 16px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))', background: T.pageBg, borderTop: `1px solid ${T.divider}` }}>
+      {/* ── Botão — estruturalmente abaixo do scroll, sem sobreposição ── */}
+      <div style={{ flexShrink: 0, padding: '12px 16px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))', background: T.pageBg, borderTop: `1px solid ${T.divider}` }}>
         <div style={{ maxWidth: 520, margin: '0 auto' }}>
           <button
             onClick={handleSubmit}
@@ -436,6 +435,6 @@ export default function RefeicaoPublica() {
           </button>
         </div>
       </div>
-    </>
+    </div>
   )
 }
