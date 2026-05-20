@@ -192,8 +192,8 @@ export default function PlataformaEmpresas() {
     })
 
     if (!tentativa.error) {
-      // Usuário já existia e foi vinculado — confirma e-mail por garantia
-      await apiAdmin('POST', { action: 'confirm-email', email: emailLower })
+      // Usuário já existia e foi vinculado — confirma e-mail por garantia (silencioso)
+      apiAdmin('POST', { action: 'confirm-email', email: emailLower }).catch(() => {})
       setCriandoUsuario(false)
       setMsg({ tipo: 'ok', texto: `Usuário ${emailLower} vinculado com sucesso!` })
       setModalCriar(false)
