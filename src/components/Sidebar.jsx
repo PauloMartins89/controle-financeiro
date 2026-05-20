@@ -101,7 +101,7 @@ const navGroups = [
   {
     title: 'Sistema',
     items: [
-      { to: '/acessos', icon: LockClosedIcon, label: 'Acessos', moduleKey: null, adminOnly: true },
+      { to: '/acessos', icon: LockClosedIcon, label: 'Acessos', moduleKey: null, empresaAdminOnly: true },
     ],
   },
   {
@@ -144,6 +144,7 @@ export default function Sidebar({ collapsed, onToggle }) {
   const { getMeusDividas, getMinhasReceitas, getTotalPagar } = useStore()
   const enabledModules = useStore(s => s.enabledModules)
   const isPlatformAdmin = useStore(s => s.isPlatformAdmin)
+  const permissoes = useStore(s => s.permissoes)
   const authUserName = useStore(s => s.authUserName)
   const [weather, setWeather] = useState(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
@@ -171,6 +172,7 @@ export default function Sidebar({ collapsed, onToggle }) {
   // - moduleKey: visível apenas se enabledModules (whitelist) incluir o moduleKey, ou se enabledModules=null (sem restrição)
   function isItemVisible(item) {
     if (item.adminOnly) return isPlatformAdmin
+    if (item.empresaAdminOnly) return isPlatformAdmin || permissoes?.includes('*')
     if (!item.moduleKey) return true
     if (enabledModules === null) return true // sem restrição (admin ou workspace sem config)
     return enabledModules.includes(item.moduleKey) // enabledModules = whitelist de habilitados
