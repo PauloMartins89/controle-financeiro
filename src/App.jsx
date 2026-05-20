@@ -155,6 +155,17 @@ function RequireAdmin({ children }) {
   return children
 }
 
+// Protege rota que requer admin da empresa (perfil_id = NULL) ou platform admin.
+// Empresa admins têm permissoes = ['*'] mas NÃO são platform admins.
+function RequireEmpresaAdmin({ children }) {
+  const isPlatformAdmin = useStore(s => s.isPlatformAdmin)
+  const permissoes = useStore(s => s.permissoes)
+  const isEmpresaAdmin = isPlatformAdmin || permissoes.includes('*')
+  const location = useLocation()
+  if (!isEmpresaAdmin) return <Navigate to="/" replace state={{ from: location }} />
+  return children
+}
+
 // Protege rota por permissão granular. Usuários sem perfil_id (admin empresa)
 // e platform admins sempre têm acesso. Usuários com perfil restrito precisam
 // ter a combinação modulo.acao na tabela perfil_permissoes.
@@ -428,7 +439,7 @@ export default function App() {
                   <Route path="/pagamentos" element={<Pagamentos />} />
                   <Route path="/contas-pagar" element={<ContasPagar />} />
                   <Route path="/central" element={<CentralGerencial />} />
-                  <Route path="/acessos" element={<RequireAdmin><Acessos /></RequireAdmin>} />
+                  <Route path="/acessos" element={<RequireEmpresaAdmin><Acessos /></RequireEmpresaAdmin>} />
                   <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
                   <Route path="/admin/:section" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
                   <Route path="/plataforma/empresas" element={<RequireAdmin><PlataformaEmpresas /></RequireAdmin>} />
