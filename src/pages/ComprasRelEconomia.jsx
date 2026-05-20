@@ -59,7 +59,7 @@ export default function ComprasRelEconomia() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="Economia / Savings" subtitle="Comparativo entre orçamento e valor aprovado" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 32px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
 
         {/* Filtro de período */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 22, alignItems: 'center' }}>

@@ -152,7 +152,7 @@ export default function ComprasRecebimento() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="Recebimento" subtitle="Confirme a entrega das compras emitidas" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 32px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
 
         {/* Stats rápidas */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 22 }}>

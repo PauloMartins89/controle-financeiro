@@ -133,7 +133,7 @@ export default function ComprasCategorias() {
         subtitle="Classifique as compras por tipo"
         action={{ label: 'Nova Categoria', onClick: () => setShowModal(true), icon: PlusIcon }}
       />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 32px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
           <button onClick={load} style={{ padding: '7px 12px', borderRadius: 8, fontSize: 12, background: 'var(--bg-secondary)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>

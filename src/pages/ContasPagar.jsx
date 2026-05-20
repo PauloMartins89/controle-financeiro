@@ -1097,10 +1097,10 @@ export default function ContasPagar() {
   )].sort()
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
       <Header title="Contas a Pagar" subtitle="Controle de pagamentos e vencimentos" />
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 24px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* Cards resumo */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>

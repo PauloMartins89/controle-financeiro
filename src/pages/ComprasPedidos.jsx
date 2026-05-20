@@ -251,7 +251,7 @@ export default function ComprasPedidos() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="Pedidos Emitidos" subtitle="Acompanhe a execução das compras aprovadas" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 32px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
 
         {/* Alerta de pendentes */}
         {pendentes.length > 0 && (

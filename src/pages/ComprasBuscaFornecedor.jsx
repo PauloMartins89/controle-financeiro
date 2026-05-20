@@ -841,7 +841,7 @@ export default function ComprasBuscaFornecedor() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="Buscar Fornecedores" subtitle="Descubra fornecedores por região ou consulte CNPJ completo" />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 32px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>>
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
           {abas.map(a => {
             const I = a.icon

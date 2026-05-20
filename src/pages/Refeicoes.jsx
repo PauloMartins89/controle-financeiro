@@ -1243,7 +1243,7 @@ export default function Refeicoes() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="🍽️ Refeições" subtitle="Gestão completa de refeições" />
-      <div style={{ flex: 1, overflow: 'auto', padding: '24px 28px' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
         {secao === 'dashboard'  && <SecaoDashboard sols={sols} onNav={nav} />}
         {secao === 'cadastros'  && <SecaoCadastros workspaceId={workspaceId} ownerId={ownerId} sub={sub} />}
         {secao === 'operacoes'  && sub === 'solicitacoes' && <SecaoSolicitacoes sols={sols} workspaceId={workspaceId} ownerId={ownerId} onReload={load} loading={loading} />}

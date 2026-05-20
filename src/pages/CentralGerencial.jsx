@@ -605,7 +605,7 @@ export default function CentralGerencial() {
         }}
       />
 
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 20px' }}>
+      <div style={{ padding: '20px 24px' }}>
 
         {/* Barra de status + botão Monitor */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
