@@ -268,25 +268,31 @@ export default async function handler(req, res) {
       const supabaseUrl = process.env.SUPABASE_URL
       const serviceKey = process.env.SUPABASE_SERVICE_KEY
       if (!serviceKey) return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY não configurada' })
-      const { data: { users } } = await db.auth.admin.listUsers({ perPage: 1000 })
-      const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
-      if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' })
-      // Usa REST API direto (mais confiável que o SDK para email_confirm)
-      const confirmRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': serviceKey,
-          'Authorization': `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify({ email_confirm: true }),
-      })
-      if (!confirmRes.ok) {
+      try {
+        const listResult = await db.auth.admin.listUsers({ perPage: 1000 })
+        if (listResult.error) return res.status(500).json({ error: listResult.error.message })
+        const users = listResult.data?.users || []
+        const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+        if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' })
+        const confirmRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': serviceKey,
+            'Authorization': `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ email_confirm: true }),
+        })
         const body = await confirmRes.json().catch(() => ({}))
-        console.error('[confirm-email] PUT falhou:', confirmRes.status, body)
-        return res.status(500).json({ error: body.msg || body.error_description || body.message || 'Erro ao confirmar e-mail' })
+        if (!confirmRes.ok) {
+          console.error('[confirm-email] PUT falhou:', confirmRes.status, JSON.stringify(body))
+          return res.status(500).json({ error: body.msg || body.error_description || body.message || `HTTP ${confirmRes.status}` })
+        }
+        return res.status(200).json({ ok: true })
+      } catch (err) {
+        console.error('[confirm-email] exceção:', err.message)
+        return res.status(500).json({ error: err.message })
       }
-      return res.status(200).json({ ok: true })
     }
 
     // Cria ou atualiza assinatura manualmente (admin concede/revoga acesso)
