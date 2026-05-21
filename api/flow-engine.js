@@ -760,7 +760,8 @@ async function handleInstance(db, query) {
       .select('*, flow_steps(nome, status_valor, tipo, config)')
       .eq('entidade_tipo', entidade_tipo)
       .eq('entidade_id', entidade_id)
-      .eq('status', 'ativo')
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
     instancia = data
   }
