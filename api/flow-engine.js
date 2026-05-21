@@ -932,13 +932,15 @@ async function handleBackfill(db, query) {
 
   if (!flowDef) return { status: 404, body: { error: `Nenhum flow_definition ativo para módulo "${modulo}"` } }
 
-  // Busca solicitações pendentes/enviadas sem flow_instance
+  // Busca solicitações recentes sem flow_instance (últimos 60 dias, qualquer status exceto fechado/cancelado)
   const entidadeTipo = modulo === 'refeicoes' ? 'refei_solicitacoes' : modulo
+  const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
   const { data: solicitacoes } = await db
     .from(entidadeTipo)
     .select('id, status, numero_pedido, created_at')
     .eq('workspace_id', workspace_id)
-    .in('status', ['pendente', 'enviado', 'aguardando'])
+    .not('status', 'in', '(fechado,cancelado,encerrado)')
+    .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
 
   if (!solicitacoes?.length) return { status: 200, body: { criadas: 0, mensagem: 'Nenhuma solicitação elegível encontrada' } }
