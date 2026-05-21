@@ -223,6 +223,8 @@
       <div class="meta-grid">
         <span class="meta-badge blue"  id="meta-data">📅 —</span>
         <span class="meta-badge amber" id="meta-equipe">👥 —</span>
+        <span class="meta-badge green" id="meta-lider">👤 —</span>
+        <span class="meta-badge blue"  id="meta-supervisor">✅ —</span>
         <span class="meta-badge green" id="meta-total">💰 —</span>
       </div>
     </div>
@@ -316,6 +318,8 @@
     document.getElementById('badge-num').textContent    = sol.ticket || sol.numero_pedido || '—'
     document.getElementById('meta-data').textContent    = '📅 ' + fmtData(sol.data_refeicao)
     document.getElementById('meta-equipe').textContent  = '👥 ' + (equipe?.nome || '—')
+    document.getElementById('meta-lider').textContent      = '👤 ' + (sol.lider_nome || '—')
+    document.getElementById('meta-supervisor').textContent = '✅ ' + (sol.supervisor_nome || '—')
     document.getElementById('meta-total').textContent   = '💰 ' + fmtBRL(sol.valor_total)
 
     const qtdRef  = itens.filter(i => i.refeicao).length

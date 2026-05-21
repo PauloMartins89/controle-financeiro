@@ -74,6 +74,8 @@ async function triggerRestauranteFlow(db, sol, itens) {
     const msg = [
       `🏪 *Pedido Confirmado: ${sol.ticket || sol.numero_pedido}*`,
       `Equipe: ${equipe?.nome || '—'}`,
+      sol.lider_nome       ? `Solicitante: ${sol.lider_nome}` : null,
+      sol.supervisor_nome  ? `Aprovador: ${sol.supervisor_nome}` : null,
       `📅 Data: ${fmtData(sol.data_refeicao)}`,
       `─────────────────────`,
       ...nomes,
