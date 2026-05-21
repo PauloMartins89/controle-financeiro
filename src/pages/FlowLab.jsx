@@ -294,10 +294,10 @@ function InstanceTesterTab({ workspaceId }) {
   // Carregar lista de instâncias
   const loadInstances = useCallback(async () => {
     if (!workspaceId) return
-    const q = supabase
+    let q = supabase
       .from('flow_instances')
       .select(`
-        id, status, dados_contexto, updated_at, criado_em,
+        id, status, dados_contexto, updated_at, created_at,
         flow_steps(nome, status_valor),
         flow_definitions(nome)
       `)
@@ -305,7 +305,7 @@ function InstanceTesterTab({ workspaceId }) {
       .order('updated_at', { ascending: false })
       .limit(50)
 
-    if (filter !== 'todos') q.eq('status', filter)
+    if (filter !== 'todos') q = q.eq('status', filter)
     const { data } = await q
     setInstances(data || [])
   }, [workspaceId, filter])
