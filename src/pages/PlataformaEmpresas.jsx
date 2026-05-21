@@ -101,7 +101,7 @@ export default function PlataformaEmpresas() {
 
   async function selecionarEmpresa(emp) {
     setSelecionada(emp)
-    setDadosEdit({ plano: emp.plano || 'trial' })
+    setDadosEdit({ nome: emp.nome || '', cnpj: emp.cnpj || '', plano: emp.plano || 'trial' })
     setMsg(null)
     setAba('dados')
     setMembros([])
@@ -124,17 +124,18 @@ export default function PlataformaEmpresas() {
 
   async function salvarDados() {
     if (!selecionada || !dadosEdit) return
+    if (!dadosEdit.nome?.trim()) { setMsg({ tipo: 'erro', texto: 'Nome é obrigatório.' }); return }
     setSalvandoDados(true)
     const { error } = await supabase
       .from('workspaces')
-      .update({ plano: dadosEdit.plano })
+      .update({ nome: dadosEdit.nome.trim(), cnpj: dadosEdit.cnpj?.trim() || null, plano: dadosEdit.plano })
       .eq('id', selecionada.id)
     setSalvandoDados(false)
     if (error) {
       setMsg({ tipo: 'erro', texto: 'Erro ao salvar dados: ' + error.message })
     } else {
       setMsg({ tipo: 'ok', texto: 'Dados da empresa atualizados.' })
-      setSelecionada(prev => ({ ...prev, plano: dadosEdit.plano }))
+      setSelecionada(prev => ({ ...prev, nome: dadosEdit.nome.trim(), cnpj: dadosEdit.cnpj?.trim() || null, plano: dadosEdit.plano }))
       carregar()
     }
     setTimeout(() => setMsg(null), 3000)
@@ -464,12 +465,21 @@ export default function PlataformaEmpresas() {
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Nome</label>
-                      <p className="text-sm text-gray-900">{selecionada.nome}</p>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Nome *</label>
+                      <input
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        value={dadosEdit?.nome || ''}
+                        onChange={e => setDadosEdit({ ...dadosEdit, nome: e.target.value })}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">CNPJ</label>
-                      <p className="text-sm text-gray-900">{selecionada.cnpj || '—'}</p>
+                      <input
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        placeholder="00.000.000/0000-00"
+                        value={dadosEdit?.cnpj || ''}
+                        onChange={e => setDadosEdit({ ...dadosEdit, cnpj: e.target.value })}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Plano</label>
