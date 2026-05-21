@@ -6,6 +6,7 @@ import useStore from '../store/useStore'
 import Header from '../components/Header'
 import FlowHistory from '../components/refeicao/FlowHistory'
 import FlowTaskBell from '../components/refeicao/FlowTaskBell'
+import PedidoTimeline from '../components/refeicao/PedidoTimeline'
 import {
   MagnifyingGlassIcon, Cog6ToothIcon, PlusIcon, PencilIcon,
   TrashIcon, XMarkIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon,
@@ -30,13 +31,22 @@ function todayISO() {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS = {
-  rascunho:   { label: 'Rascunho',   color: '#64748b', bg: 'rgba(100,116,139,0.15)', icon: ClipboardDocumentListIcon },
-  pendente:   { label: 'Pendente',   color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  icon: ClockIcon },
-  aprovado:   { label: 'Aprovado',   color: '#10b981', bg: 'rgba(16,185,129,0.15)',  icon: CheckCircleIcon },
-  reprovado:  { label: 'Reprovado',  color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   icon: XCircleIcon },
-  preparando: { label: 'Preparando', color: '#6366f1', bg: 'rgba(99,102,241,0.15)',  icon: ClockIcon },
-  entregue:   { label: 'Entregue',   color: '#34d399', bg: 'rgba(52,211,153,0.15)',  icon: CheckCircleIcon },
-  fechado:    { label: 'Fechado',    color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', icon: NoSymbolIcon },
+  // ── Novos status do fluxo completo ──
+  rascunho:                    { label: 'Rascunho',             color: '#64748b', bg: 'rgba(100,116,139,0.15)', icon: ClipboardDocumentListIcon },
+  aguardando_aprovacao:        { label: 'Aguard. Aprovação',    color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  icon: ClockIcon },
+  aprovado:                    { label: 'Aprovado',             color: '#10b981', bg: 'rgba(16,185,129,0.15)',  icon: CheckCircleIcon },
+  reprovado:                   { label: 'Reprovado',            color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   icon: XCircleIcon },
+  consolidado:                 { label: 'Consolidado',          color: '#6366f1', bg: 'rgba(99,102,241,0.15)',  icon: CheckCircleIcon },
+  enviado_restaurante:         { label: 'No Restaurante',       color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)',  icon: BuildingStorefrontIcon },
+  em_acompanhamento:           { label: 'Em Acompanhamento',    color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   icon: ClockIcon },
+  entregue:                    { label: 'Entregue',             color: '#34d399', bg: 'rgba(52,211,153,0.15)',  icon: CheckCircleIcon },
+  aguardando_validacao:        { label: 'Aguard. Validação',    color: '#f97316', bg: 'rgba(249,115,22,0.15)',  icon: ClockIcon },
+  finalizado:                  { label: 'Finalizado',           color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', icon: NoSymbolIcon },
+  finalizado_com_ocorrencia:   { label: 'Finaliz. c/ Ocorrência', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', icon: XCircleIcon },
+  // ── Aliases de compatibilidade (status antigos) ──
+  pendente:   { label: 'Aguard. Aprovação', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  icon: ClockIcon },
+  preparando: { label: 'Em Preparo',        color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   icon: ClockIcon },
+  fechado:    { label: 'Finalizado',        color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', icon: NoSymbolIcon },
 }
 
 function StatusBadge({ status }) {
@@ -847,41 +857,36 @@ function SecaoCadastros({ workspaceId, ownerId, sub }) {
 
 // ─── Modal de Detalhe / Aprovação ────────────────────────────────────────────
 function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspaceId }) {
-  const [itens, setItens]   = useState([])
-  const [motivo, setMotivo] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [itens,    setItens]    = useState([])
+  const [motivo,   setMotivo]   = useState('')
+  const [ocorr,    setOcorr]    = useState('')
+  const [saving,   setSaving]   = useState(false)
+  const [tab,      setTab]      = useState('resumo')  // 'resumo' | 'timeline'
 
   useEffect(() => {
     supabase.from('refei_itens').select('*').eq('solicitacao_id', sol.id).order('colaborador_nome')
       .then(({ data }) => setItens(data || []))
   }, [sol.id])
 
-  async function executarAcaoFlow(acaoNome) {
+  // ── Executar ação via API REST ──────────────────────────────────────────────
+  async function execAcao(actionName, extra = {}) {
     setSaving(true)
     try {
-      const instRes = await fetch(`/api/flow-engine?action=instance&entidade_tipo=refei_solicitacoes&entidade_id=${sol.id}`)
-      if (!instRes.ok) throw new Error('Instância não encontrada')
-      const { instancia } = await instRes.json()
-      const actRes = await fetch(`/api/flow-engine?action=actions&instance_id=${instancia.id}`)
-      const { acoes } = await actRes.json()
-      const acaoObj = acoes.find(a => a.nome === acaoNome)
-      if (!acaoObj) throw new Error(`Ação "${acaoNome}" não disponível nesta etapa`)
-      const execRes = await fetch('/api/flow-engine?action=execute', {
+      const r = await fetch('/api/refeicoes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instance_id: instancia.id, acao_id: acaoObj.id, executado_por: userId, dados: {}, origem: 'humano' }),
+        body: JSON.stringify({ action: actionName, solicitacaoId: sol.id, userId, ...extra }),
       })
-      const j = await execRes.json()
-      if (!execRes.ok) throw new Error(j.error || 'Erro no motor de fluxo')
-      toast.success('Ação executada com sucesso!')
+      const j = await r.json()
+      if (!r.ok) throw new Error(j.error || 'Erro')
+      toast.success(j.mensagem || 'Ação realizada!')
       onUpdated()
       onClose()
-    } catch (err) {
-      toast.error(err.message || 'Erro')
-    }
+    } catch (err) { toast.error(err.message || 'Erro') }
     setSaving(false)
   }
 
+  // ── Aprovar / Reprovar (mantém compatibilidade com Flow Engine) ────────────
   async function aprovar(acao) {
     if (acao === 'reprovado' && !motivo.trim()) { toast.error('Informe o motivo'); return }
     setSaving(true)
@@ -896,143 +901,210 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
           const acaoObj = acoes.find(a => a.nome === acaoNome)
           if (!acaoObj) throw new Error(`Ação "${acaoNome}" não disponível nesta etapa`)
           const execRes = await fetch('/api/flow-engine?action=execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              instance_id: instancia.id,
-              acao_id: acaoObj.id,
-              executado_por: userId,
-              dados: acao === 'reprovado' ? { motivo } : {},
-              origem: 'humano',
-            }),
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instance_id: instancia.id, acao_id: acaoObj.id, executado_por: userId, dados: acao === 'reprovado' ? { motivo } : {}, origem: 'humano' }),
           })
           const j = await execRes.json()
           if (!execRes.ok) throw new Error(j.error || 'Erro no motor de fluxo')
-          toast.success(acao === 'aprovado' ? 'Aprovado! ✅ (Flow Engine)' : 'Reprovado ❌ (Flow Engine)')
-          onUpdated()
-          onClose()
-          return
+          toast.success(acao === 'aprovado' ? 'Aprovado! ✅' : 'Reprovado ❌')
+          onUpdated(); onClose(); return
         }
-        // sem instância → cai no caminho antigo (compatibilidade)
       }
       const r = await fetch('/api/refeicoes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'aprovar', solicitacaoId: sol.id, acao, motivo }),
       })
       const j = await r.json()
       if (r.ok) { toast.success(acao === 'aprovado' ? 'Aprovado!' : 'Reprovado'); onUpdated(); onClose() }
       else toast.error(j.error || 'Erro')
-    } catch (err) {
-      toast.error(err.message || 'Erro')
-    }
+    } catch (err) { toast.error(err.message || 'Erro') }
     setSaving(false)
   }
 
-  const st = STATUS[sol.status] || STATUS.rascunho
+  const st      = STATUS[sol.status] || STATUS.rascunho
+  const ticket  = sol.ticket || sol.numero_pedido || '—'
+  const isFinal = ['finalizado', 'finalizado_com_ocorrencia', 'fechado'].includes(sol.status)
+
+  // ── Botões de ação por status ───────────────────────────────────────────────
+  function ActionBlock() {
+    const btnBase = { width: '100%', padding: '11px 18px', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+
+    if (['pendente', 'aguardando_aprovacao'].includes(sol.status)) return (
+      <div>
+        <label style={lbl}>Motivo (obrigatório ao reprovar)</label>
+        <input className="input" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Descreva o motivo se for reprovar..." style={{ marginBottom: 12 }} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => aprovar('reprovado')} disabled={saving} className="btn-danger" style={{ flex: 1, justifyContent: 'center' }}>❌ Reprovar</button>
+          <button onClick={() => aprovar('aprovado')}  disabled={saving} className="btn-success" style={{ flex: 1, justifyContent: 'center' }}>✅ Aprovar</button>
+        </div>
+      </div>
+    )
+
+    if (sol.status === 'aprovado') return (
+      <button onClick={() => execAcao('consolidar')} disabled={saving} style={{ ...btnBase, background: '#6366f1', color: '#fff' }}>
+        📦 Consolidar Pedido
+      </button>
+    )
+
+    if (sol.status === 'consolidado') return (
+      <button onClick={() => execAcao('enviar_restaurante')} disabled={saving} style={{ ...btnBase, background: '#8b5cf6', color: '#fff' }}>
+        🏪 Marcar como Enviado ao Restaurante
+      </button>
+    )
+
+    if (['enviado_restaurante', 'em_acompanhamento'].includes(sol.status)) return (
+      <button onClick={() => execAcao('registrar_entrega')} disabled={saving} style={{ ...btnBase, background: '#10b981', color: '#fff' }}>
+        🚚 Registrar Entrega
+      </button>
+    )
+
+    if (sol.status === 'entregue') return (
+      <button onClick={() => execAcao('enviar_validacao')} disabled={saving} style={{ ...btnBase, background: '#f97316', color: '#fff' }}>
+        📱 Enviar Validação ao Líder
+      </button>
+    )
+
+    if (sol.status === 'aguardando_validacao') return (
+      <div>
+        <div style={{ background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.25)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#f97316', marginBottom: 4 }}>📱 Aguardando validação do líder</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>O líder ainda não confirmou o recebimento. Você pode registrar manualmente abaixo.</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <button onClick={() => execAcao('validar_entrega', { resultado: 'correto' })} disabled={saving} style={{ ...btnBase, flex: 1, background: '#10b981', color: '#fff' }}>🎉 Confirmar Entrega Correta</button>
+        </div>
+        <label style={lbl}>Registrar ocorrência (se houve problema)</label>
+        <input className="input" value={ocorr} onChange={e => setOcorr(e.target.value)} placeholder="Descreva o problema na entrega..." style={{ marginBottom: 10 }} />
+        <button onClick={() => { if (!ocorr.trim()) { toast.error('Descreva a ocorrência'); return } execAcao('validar_entrega', { resultado: 'com_ocorrencia', ocorrencia: ocorr }) }} disabled={saving} style={{ ...btnBase, background: '#f59e0b', color: '#000' }}>⚠️ Finalizar com Ocorrência</button>
+      </div>
+    )
+
+    if (sol.status === 'reprovado') return (
+      <button onClick={() => execAcao('reabrir')} disabled={saving} style={{ ...btnBase, background: '#f59e0b', color: '#000' }}>
+        🔄 Reabrir para Correção
+      </button>
+    )
+
+    return null
+  }
+
   return (
-    <Modal title={`Pedido ${sol.numero_pedido || '—'}`} onClose={onClose} maxWidth={500}>
-      {/* Badges */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-        <StatusBadge status={sol.status} />
-        <span className="badge badge-neutral">📅 {fmtData(sol.data_refeicao)}</span>
-        {sol.refei_restaurantes && <span className="badge badge-neutral">🏪 {sol.refei_restaurantes.nome}</span>}
+    <Modal title="" onClose={onClose} maxWidth={620}>
+
+      {/* ── Cabeçalho do pedido ── */}
+      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', marginBottom: 18, border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Protocolo</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text-primary)', fontFamily: 'monospace', letterSpacing: -0.5 }}>{ticket}</div>
+          </div>
+          <StatusBadge status={sol.status} />
+        </div>
+        <div style={{ display: 'flex', gap: 20, marginTop: 12, flexWrap: 'wrap' }}>
+          {[            { icon: '👥', val: sol.refei_equipes?.nome },
+            { icon: '🏪', val: sol.refei_restaurantes?.nome },
+            { icon: '📅', val: fmtData(sol.data_refeicao) },
+            { icon: '👤', val: sol.lider_nome },
+          ].filter(r => r.val).map((r, i) => (
+            <span key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {r.icon} {r.val}
+            </span>
+          ))}
+        </div>
       </div>
 
-      {/* Totais */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
+      {/* ── Cards de totais ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 18 }}>
         {[
-          { label: '🍽️ Refeições', value: sol.total_refeicoes || 0, isCurrency: false },
-          { label: '☕ Cafés',     value: sol.total_cafes || 0,     isCurrency: false },
-          { label: '💰 Total',    value: fmtBRL(sol.valor_total),   isCurrency: false, accent: true },
+          { label: 'Refeições', value: sol.total_refeicoes || 0, emoji: '🍽️', color: '#6366f1' },
+          { label: 'Cafés',     value: sol.total_cafes     || 0, emoji: '☕', color: '#f59e0b' },
+          { label: 'Pessoas',   value: itens.length,             emoji: '👥', color: '#06b6d4' },
+          { label: 'Total',     value: fmtBRL(sol.valor_total),  emoji: '💰', color: '#10b981', text: true },
         ].map((c, i) => (
-          <div key={i} className="card" style={{ padding: '10px 12px', textAlign: 'center' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>{c.label}</div>
-            <div style={{ fontWeight: 800, fontSize: 16, color: c.accent ? '#10b981' : 'var(--text-primary)' }}>{c.value}</div>
+          <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 18, marginBottom: 4 }}>{c.emoji}</div>
+            <div style={{ fontWeight: 800, fontSize: c.text ? 14 : 18, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{c.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Colaboradores */}
-      {itens.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 8 }}>Colaboradores</div>
-          <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {itens.filter(it => !it.extra).map(it => (
-              <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}>
-                <span style={{ color: 'var(--text-primary)' }}>{it.colaborador_nome}</span>
-                <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{it.refeicao ? '🍽️ ' : ''}{it.cafe ? '☕' : ''}</span>
+      {/* ── Abas: Resumo / Timeline ── */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--bg-secondary)', borderRadius: 10, padding: 4 }}>
+        {[{ id: 'resumo', label: '📋 Resumo' }, { id: 'timeline', label: '⏱️ Timeline' }].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{ flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', background: tab === t.id ? 'var(--bg-card)' : 'transparent', color: tab === t.id ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: tab === t.id ? '0 1px 4px rgba(0,0,0,0.12)' : 'none', transition: 'all 0.15s' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Aba Resumo ── */}
+      {tab === 'resumo' && (
+        <div>
+          {/* Colaboradores */}
+          {itens.filter(it => !it.extra).length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={lbl}>Colaboradores ({itens.filter(it => !it.extra).length})</div>
+              <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {itens.filter(it => !it.extra).map(it => (
+                  <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}>
+                    <span style={{ color: 'var(--text-primary)' }}>{it.colaborador_nome}</span>
+                    <span style={{ fontSize: 14 }}>{it.refeicao ? '🍽️ ' : ''}{it.cafe ? '☕' : ''}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Extras */}
-      {itens.some(it => it.extra) && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 8 }}>⚠️ Extras</div>
-          <div style={{ maxHeight: 160, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {itens.filter(it => it.extra).map(it => (
-              <div key={it.id} style={{ padding: '6px 10px', background: 'rgba(245,158,11,0.05)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.2)', fontSize: 13 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{it.colaborador_nome}</span>
-                  <span style={{ fontSize: 14 }}>{it.refeicao ? '🍽️ ' : ''}{it.cafe ? '☕' : ''}</span>
-                </div>
-                {it.justificativa && <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 3 }}>💬 {it.justificativa}</div>}
+            </div>
+          )}
+          {/* Extras */}
+          {itens.some(it => it.extra) && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 6 }}>⚠️ Extras</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {itens.filter(it => it.extra).map(it => (
+                  <div key={it.id} style={{ padding: '6px 10px', background: 'rgba(245,158,11,0.05)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.2)', fontSize: 13 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{it.colaborador_nome}</span>
+                      <span>{it.refeicao ? '🍽️ ' : ''}{it.cafe ? '☕' : ''}</span>
+                    </div>
+                    {it.justificativa && <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 2 }}>💬 {it.justificativa}</div>}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+          {/* Observações e motivo */}
+          {sol.observacoes && (
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid var(--border)' }}>📝 {sol.observacoes}</div>
+          )}
+          {sol.motivo_reprovacao && (
+            <div style={{ fontSize: 12, color: '#f87171', background: 'rgba(239,68,68,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(239,68,68,0.2)', borderLeft: '3px solid #ef4444' }}>❌ Reprovado: {sol.motivo_reprovacao}</div>
+          )}
+          {sol.ocorrencia && (
+            <div style={{ fontSize: 12, color: '#fbbf24', background: 'rgba(245,158,11,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(245,158,11,0.2)', borderLeft: '3px solid #f59e0b' }}>⚠️ Ocorrência: {sol.ocorrencia}</div>
+          )}
+          {/* Flow Engine */}
+          {useFlowEngine && <FlowHistory solicitacaoId={sol.id} />}
         </div>
       )}
 
-      {sol.observacoes && (
-        <div style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px', marginBottom: 16, border: '1px solid var(--border)' }}>
-          📝 {sol.observacoes}
+      {/* ── Aba Timeline ── */}
+      {tab === 'timeline' && (
+        <div style={{ minHeight: 120 }}>
+          <PedidoTimeline solicitacaoId={sol.id} />
         </div>
       )}
 
-      {sol.motivo_reprovacao && (
-        <div className="badge badge-danger" style={{ padding: '8px 12px', borderRadius: 8, marginBottom: 16, fontSize: 12, display: 'block' }}>
-          ❌ Motivo: {sol.motivo_reprovacao}
+      {/* ── Bloco de ações ── */}
+      {!isFinal && (
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 16 }}>
+          <ActionBlock />
         </div>
       )}
 
-      {/* Histórico do Flow Engine */}
-      {useFlowEngine && <FlowHistory solicitacaoId={sol.id} />}
-
-      {/* Ações */}
-      {sol.status === 'pendente' && (
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-          <label style={lbl}>Motivo (obrigatório para reprovar)</label>
-          <input className="input" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Informe caso vá reprovar..." style={{ marginBottom: 12 }} />
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => aprovar('reprovado')} disabled={saving} className="btn-danger" style={{ flex: 1, justifyContent: 'center', fontSize: 13 }}>❌ Reprovar</button>
-            <button onClick={() => aprovar('aprovado')} disabled={saving} className="btn-success" style={{ flex: 1, justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>✅ Aprovar</button>
-          </div>
-        </div>
-      )}
-
-      {/* Ações extras via Flow Engine */}
-      {useFlowEngine && sol.status === 'aprovado' && (
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-          <button onClick={() => executarAcaoFlow('confirmar_entrega')} disabled={saving} className="btn-success" style={{ width: '100%', justifyContent: 'center', fontSize: 13 }}>
-            🚚 Confirmar Entrega
-          </button>
-        </div>
-      )}
-      {useFlowEngine && sol.status === 'entregue' && (
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-          <button onClick={() => executarAcaoFlow('fechar')} disabled={saving} className="btn-primary" style={{ width: '100%', justifyContent: 'center', fontSize: 13 }}>
-            🏁 Fechar Processo
-          </button>
-        </div>
-      )}
-      {useFlowEngine && sol.status === 'reprovado' && (
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-          <button onClick={() => executarAcaoFlow('reabrir')} disabled={saving} style={{ width: '100%', justifyContent: 'center', fontSize: 13, background: '#f59e0b', color: '#000', border: 'none', borderRadius: 8, padding: '10px', fontWeight: 700, cursor: 'pointer' }}>
-            🔄 Reabrir para Correção
-          </button>
+      {isFinal && (
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 14, textAlign: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>🏁 Pedido encerrado — nenhuma ação disponível</span>
         </div>
       )}
     </Modal>

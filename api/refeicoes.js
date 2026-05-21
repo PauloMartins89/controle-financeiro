@@ -58,6 +58,19 @@ function fmtData(d) {
   return String(d).split('-').reverse().join('/')
 }
 
+// ── Helper: registra evento na timeline do pedido ────────────────────────────
+async function logEvento(db, { solicitacaoId, tipo, descricao, ator, atorTipo = 'sistema', dados }) {
+  const { error } = await db.from('refei_pedido_eventos').insert({
+    solicitacao_id: solicitacaoId,
+    tipo,
+    descricao,
+    ator:      ator || null,
+    ator_tipo: atorTipo,
+    dados:     dados || null,
+  })
+  if (error) console.error(`[refeicoes] logEvento(${tipo}):`, error.message)
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -142,14 +155,16 @@ export default async function handler(req, res) {
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', sol.workspace_id)
       .neq('status', 'rascunho')
-    const numeroPedido = `REF-${String((count || 0) + 1).padStart(4, '0')}`
+    const year = new Date().getFullYear()
+    const numeroPedido = `REF-${year}-${String((count || 0) + 1).padStart(6, '0')}`
 
     // Atualiza solicitação
     await db.from('refei_solicitacoes').update({
       restaurante_id:  restauranteId,
       data_refeicao:   dataRefeicao,
       numero_pedido:   numeroPedido,
-      status:          'pendente',
+      ticket:          numeroPedido,
+      status:          'aguardando_aprovacao',
       total_refeicoes: totalRef,
       total_cafes:     totalCafe,
       valor_refeicao:  valorRef,
@@ -172,6 +187,10 @@ export default async function handler(req, res) {
         justificativa:    i.extra ? (i.justificativa || null) : null,
       }))
     if (itensInsert.length) await db.from('refei_itens').insert(itensInsert)
+
+    // Registra eventos na timeline
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'pedido_criado', descricao: `Pedido ${numeroPedido} criado por ${sol.lider_nome || 'líder'}`, ator: sol.lider_nome, atorTipo: 'lider' })
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_aprovacao', descricao: 'Enviado para aprovação do supervisor', ator: sol.lider_nome, atorTipo: 'lider' })
 
     // Notifica supervisor via WA com lista completa de colaboradores
     const supervisorTel = sol.supervisor_telefone
@@ -282,11 +301,22 @@ export default async function handler(req, res) {
     const { data: sol } = await db.from('refei_solicitacoes').select('*').eq('id', solicitacaoId).maybeSingle()
     if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
 
+    const now = new Date().toISOString()
     await db.from('refei_solicitacoes').update({
       status:             acao,
       motivo_reprovacao:  motivo || null,
-      aprovado_em:        acao === 'aprovado' ? new Date().toISOString() : null,
+      aprovado_em:        acao === 'aprovado' ? now : null,
     }).eq('id', sol.id)
+
+    // Registra evento na timeline
+    await logEvento(db, {
+      solicitacaoId: sol.id,
+      tipo:          acao,
+      descricao:     acao === 'aprovado' ? 'Pedido aprovado pelo supervisor' : 'Pedido reprovado pelo supervisor',
+      ator:          null,
+      atorTipo:      'supervisor',
+      dados:         motivo ? { motivo } : null,
+    })
 
     // Notifica restaurante se aprovado
     if (acao === 'aprovado') {
@@ -321,7 +351,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ ok: true })
+    return res.status(200).json({ ok: true, mensagem: acao === 'aprovado' ? 'Pedido aprovado!' : 'Pedido reprovado' })
   }
 
   // ── GET: carrega resumo para aprovação pública (token_aprovacao) ─────────
@@ -374,7 +404,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Erro ao buscar solicitação' })
       }
       if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
-      if (!['pendente'].includes(sol.status)) {
+      if (!['pendente', 'aguardando_aprovacao'].includes(sol.status)) {
         return res.status(409).json({ error: 'Este pedido já foi processado', status: sol.status })
       }
 
@@ -520,6 +550,131 @@ export default async function handler(req, res) {
     await sendWA(sol.supervisor_telefone, msg)
 
     return res.status(200).json({ ok: true })
+  }
+
+  // ── POST: consolidar ──────────────────────────────────────────────────────
+  if (req.method === 'POST' && action === 'consolidar') {
+    const { solicitacaoId, userId } = req.body || {}
+    if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
+    const { data: sol } = await db.from('refei_solicitacoes').select('*').eq('id', solicitacaoId).maybeSingle()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+    if (sol.status !== 'aprovado') return res.status(409).json({ error: 'Apenas pedidos aprovados podem ser consolidados' })
+    const now = new Date().toISOString()
+    await db.from('refei_solicitacoes').update({ status: 'consolidado', consolidado_em: now }).eq('id', sol.id)
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'consolidado', descricao: 'Pedido consolidado — ticket gerado e pronto para envio', ator: 'Sistema', atorTipo: 'sistema' })
+    return res.status(200).json({ ok: true, mensagem: 'Pedido consolidado! 📦' })
+  }
+
+  // ── POST: enviar_restaurante ───────────────────────────────────────────────
+  if (req.method === 'POST' && action === 'enviar_restaurante') {
+    const { solicitacaoId, userId } = req.body || {}
+    if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
+    const { data: sol } = await db.from('refei_solicitacoes')
+      .select('*, refei_restaurantes(nome, telefone_wa)')
+      .eq('id', solicitacaoId).maybeSingle()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+    if (sol.status !== 'consolidado') return res.status(409).json({ error: 'Pedido precisa estar consolidado' })
+    const now = new Date().toISOString()
+    const { data: itens } = await db.from('refei_itens').select('*').eq('solicitacao_id', sol.id).order('colaborador_nome')
+    await db.from('refei_solicitacoes').update({ status: 'enviado_restaurante', env_restaurante_em: now }).eq('id', sol.id)
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_restaurante', descricao: `Pedido enviado ao restaurante ${sol.refei_restaurantes?.nome || ''}`.trim(), ator: 'Sistema', atorTipo: 'sistema', dados: { restaurante: sol.refei_restaurantes?.nome } })
+    // Notifica restaurante via WA
+    if (sol.refei_restaurantes?.telefone_wa) {
+      const qtdRef  = (itens || []).filter(i => i.refeicao).length
+      const qtdCafe = (itens || []).filter(i => i.cafe).length
+      const nomes   = (itens || []).map(i => `• ${i.colaborador_nome}${i.refeicao ? ' 🍽️' : ''}${i.cafe ? ' ☕' : ''}`)
+      const msg = [
+        `🏪 *Pedido Confirmado: ${sol.ticket || sol.numero_pedido}*`,
+        `📅 Data: ${fmtData(sol.data_refeicao)}`,
+        `─────────────────────`,
+        ...nomes,
+        `─────────────────────`,
+        `🍽️ ${qtdRef} refeição(ões)  ☕ ${qtdCafe} café(s)`,
+        `*Total: ${fmtBRL(sol.valor_total)}*`,
+      ].join('\n')
+      await sendWA(sol.refei_restaurantes.telefone_wa, msg)
+    }
+    return res.status(200).json({ ok: true, mensagem: 'Pedido enviado ao restaurante! 🏪' })
+  }
+
+  // ── POST: registrar_entrega ────────────────────────────────────────────────
+  if (req.method === 'POST' && action === 'registrar_entrega') {
+    const { solicitacaoId, userId } = req.body || {}
+    if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
+    const { data: sol } = await db.from('refei_solicitacoes').select('*').eq('id', solicitacaoId).maybeSingle()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+    if (!['enviado_restaurante', 'em_acompanhamento'].includes(sol.status)) return res.status(409).json({ error: 'Status inválido para registrar entrega' })
+    const now = new Date().toISOString()
+    await db.from('refei_solicitacoes').update({ status: 'entregue', entregue_em: now }).eq('id', sol.id)
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'entrega_registrada', descricao: 'Entrega registrada pelo operador', ator: 'Operador', atorTipo: 'admin' })
+    return res.status(200).json({ ok: true, mensagem: 'Entrega registrada! 🚚' })
+  }
+
+  // ── POST: enviar_validacao ─────────────────────────────────────────────────
+  if (req.method === 'POST' && action === 'enviar_validacao') {
+    const { solicitacaoId } = req.body || {}
+    if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
+    const { data: sol } = await db.from('refei_solicitacoes').select('*').eq('id', solicitacaoId).maybeSingle()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+    if (sol.status !== 'entregue') return res.status(409).json({ error: 'Pedido precisa estar entregue' })
+    const now = new Date().toISOString()
+    await db.from('refei_solicitacoes').update({ status: 'aguardando_validacao', validacao_env_em: now }).eq('id', sol.id)
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'validacao_enviada', descricao: 'Validação enviada ao líder para confirmação', ator: 'Sistema', atorTipo: 'sistema' })
+    if (sol.lider_telefone) {
+      const validUrl = `${APP_URL}/refeicao/validar/${sol.token_lider}`
+      await sendWA(sol.lider_telefone, [
+        `🍽️ *Confirmação de Entrega — ${sol.ticket || sol.numero_pedido}*`,
+        `Olá${sol.lider_nome ? ', ' + sol.lider_nome : ''}!`,
+        ``,
+        `Sua refeição do dia ${fmtData(sol.data_refeicao)} foi entregue?`,
+        ``,
+        `✅ Tudo certo: ${validUrl}?ok=1`,
+        `⚠️ Houve problema: ${validUrl}?ok=0`,
+        ``,
+        `_Responda para registrar a confirmação._`,
+      ].join('\n'))
+    }
+    return res.status(200).json({ ok: true, mensagem: 'Validação enviada ao líder! 📱' })
+  }
+
+  // ── POST: validar_entrega ──────────────────────────────────────────────────
+  if (req.method === 'POST' && action === 'validar_entrega') {
+    const { solicitacaoId, resultado, ocorrencia, userId } = req.body || {}
+    if (!solicitacaoId || !resultado) return res.status(400).json({ error: 'solicitacaoId e resultado obrigatórios' })
+    if (!['correto', 'com_ocorrencia'].includes(resultado)) return res.status(400).json({ error: 'resultado inválido' })
+    const { data: sol } = await db.from('refei_solicitacoes').select('*').eq('id', solicitacaoId).maybeSingle()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+    if (!['entregue', 'aguardando_validacao'].includes(sol.status)) return res.status(409).json({ error: 'Status inválido para validação' })
+    const now = new Date().toISOString()
+    const novoStatus = resultado === 'correto' ? 'finalizado' : 'finalizado_com_ocorrencia'
+    await db.from('refei_solicitacoes').update({
+      status:              novoStatus,
+      validado_em:         now,
+      resultado_validacao: resultado,
+      ocorrencia:          ocorrencia || null,
+    }).eq('id', sol.id)
+    if (resultado === 'correto') {
+      await logEvento(db, { solicitacaoId: sol.id, tipo: 'entrega_confirmada', descricao: 'Entrega confirmada pelo líder', ator: sol.lider_nome, atorTipo: 'lider' })
+    } else {
+      await logEvento(db, { solicitacaoId: sol.id, tipo: 'ocorrencia_registrada', descricao: 'Líder registrou ocorrência na entrega', ator: sol.lider_nome, atorTipo: 'lider', dados: { ocorrencia } })
+    }
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'pedido_finalizado', descricao: resultado === 'correto' ? 'Pedido finalizado com sucesso' : 'Pedido finalizado com ocorrência registrada', ator: 'Sistema', atorTipo: 'sistema' })
+    return res.status(200).json({ ok: true, mensagem: resultado === 'correto' ? 'Pedido finalizado! 🏁' : 'Pedido finalizado com ocorrência registrada ⚠️' })
+  }
+
+  // ── POST: reabrir ──────────────────────────────────────────────────────────
+  if (req.method === 'POST' && action === 'reabrir') {
+    const { solicitacaoId } = req.body || {}
+    if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
+    const { data: sol } = await db.from('refei_solicitacoes').select('*').eq('id', solicitacaoId).maybeSingle()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+    if (sol.status !== 'reprovado') return res.status(409).json({ error: 'Apenas pedidos reprovados podem ser reabertos' })
+    await db.from('refei_solicitacoes').update({ status: 'rascunho', motivo_reprovacao: null }).eq('id', sol.id)
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'reabertura', descricao: 'Pedido reaberto para correção pelo líder', ator: null, atorTipo: 'admin' })
+    if (sol.lider_telefone) {
+      await sendWA(sol.lider_telefone, `🔄 Pedido *${sol.ticket || sol.numero_pedido}* reaberto para correção.\nAcesse o link para editar e reenviar: ${APP_URL}/refeicao/${sol.token_lider}`)
+    }
+    return res.status(200).json({ ok: true, mensagem: 'Pedido reaberto para correção! 🔄' })
   }
 
   return res.status(404).json({ error: 'Endpoint não encontrado' })
