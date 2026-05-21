@@ -49,6 +49,7 @@ import ContasPagar from './pages/ContasPagar'
 import LotesCliente from './pages/LotesCliente'
 import CentralGerencial from './pages/CentralGerencial'
 import FlowCenter from './pages/FlowCenter'
+import FlowLab from './pages/FlowLab'
 import Login from './pages/Login'
 import Acessos from './pages/Acessos'
 import AdminPanel from './pages/AdminPanel'
@@ -462,6 +463,7 @@ export default function App() {
                   <Route path="/contas-pagar" element={<ContasPagar />} />
                   <Route path="/central" element={<CentralGerencial />} />
                   <Route path="/flow-center" element={<FlowCenter />} />
+                  <Route path="/flow-lab" element={<FlowLab />} />
                   <Route path="/acessos" element={<RequireEmpresaAdmin><Acessos /></RequireEmpresaAdmin>} />
                   <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
                   <Route path="/admin/:section" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
