@@ -37,10 +37,10 @@ export default function FlowTaskBell({ userId, workspaceId, onSelectTask }) {
     if (!userId && !workspaceId) return
     setLoading(true)
     try {
-      const params = new URLSearchParams({ module: 'flow', action: 'tasks', status: 'pendente' })
+      const params = new URLSearchParams({ action: 'tasks', status: 'pendente' })
       if (userId)      params.set('user_id', userId)
       if (workspaceId) params.set('workspace_id', workspaceId)
-      const res = await fetch(`/api/refeicoes?${params}`)
+      const res = await fetch(`/api/flow-engine?${params}`)
       if (res.ok) {
         const { tasks: t } = await res.json()
         setTasks(t || [])

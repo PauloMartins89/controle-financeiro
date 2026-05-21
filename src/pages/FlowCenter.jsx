@@ -132,7 +132,7 @@ function ActionButtons({ instanceId, status, onAction }) {
   const [executing, setExecuting] = useState(null)
 
   useEffect(() => {
-    fetch(`/api/refeicoes?module=flow&action=actions&instance_id=${instanceId}`)
+    fetch(`/api/flow-engine?action=actions&instance_id=${instanceId}`)
       .then(r => r.ok ? r.json() : null)
       .then(d => setAcoes(d?.acoes || []))
       .catch(() => {})
@@ -143,7 +143,7 @@ function ActionButtons({ instanceId, status, onAction }) {
       const motivo = window.prompt(`Motivo para "${acao.label}":`)
       if (!motivo) return
       setExecuting(acao.id)
-      const r = await fetch('/api/refeicoes?module=flow&action=execute', {
+      const r = await fetch('/api/flow-engine?action=execute', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ instance_id: instanceId, acao_id: acao.id, executado_por: userId, dados: { motivo }, origem: 'humano' }),
       })
@@ -154,7 +154,7 @@ function ActionButtons({ instanceId, status, onAction }) {
       return
     }
     setExecuting(acao.id)
-    const r = await fetch('/api/refeicoes?module=flow&action=execute', {
+    const r = await fetch('/api/flow-engine?action=execute', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ instance_id: instanceId, acao_id: acao.id, executado_por: userId, dados: {}, origem: 'humano' }),
     })

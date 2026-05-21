@@ -44,7 +44,7 @@ export default function FlowHistory({ solicitacaoId, open }) {
     if (!open || !solicitacaoId) return
     setLoading(true)
     setError(null)
-    fetch(`/api/refeicoes?module=flow&action=instance&entidade_tipo=refei_solicitacoes&entidade_id=${solicitacaoId}`)
+    fetch(`/api/flow-engine?action=instance&entidade_tipo=refei_solicitacoes&entidade_id=${solicitacaoId}`)
       .then(r => r.json())
       .then(j => {
         if (j.error) { setError(j.error); return }
