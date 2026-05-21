@@ -914,6 +914,94 @@ async function handleSimulate(db, body) {
 }
 
 // ─────────────────────────────────────────────
+// BACKFILL — cria instâncias para solicitações órfãs
+// GET /api/flow-engine?action=backfill&workspace_id=xxx&modulo=refeicoes
+// ─────────────────────────────────────────────
+async function handleBackfill(db, query) {
+  const { workspace_id, modulo = 'refeicoes' } = query
+  if (!workspace_id) return { status: 400, body: { error: 'workspace_id obrigatório' } }
+
+  // Busca a definição de fluxo ativa para o módulo
+  const { data: flowDef } = await db
+    .from('flow_definitions')
+    .select('id')
+    .eq('workspace_id', workspace_id)
+    .eq('modulo', modulo)
+    .eq('ativo', true)
+    .maybeSingle()
+
+  if (!flowDef) return { status: 404, body: { error: `Nenhum flow_definition ativo para módulo "${modulo}"` } }
+
+  // Busca solicitações pendentes/enviadas sem flow_instance
+  const entidadeTipo = modulo === 'refeicoes' ? 'refei_solicitacoes' : modulo
+  const { data: solicitacoes } = await db
+    .from(entidadeTipo)
+    .select('id, status, numero_pedido, created_at')
+    .eq('workspace_id', workspace_id)
+    .in('status', ['pendente', 'enviado', 'aguardando'])
+    .order('created_at', { ascending: false })
+
+  if (!solicitacoes?.length) return { status: 200, body: { criadas: 0, mensagem: 'Nenhuma solicitação elegível encontrada' } }
+
+  // Verifica quais já têm flow_instance
+  const ids = solicitacoes.map(s => s.id)
+  const { data: existentes } = await db
+    .from('flow_instances')
+    .select('entidade_id')
+    .eq('entidade_tipo', entidadeTipo)
+    .in('entidade_id', ids)
+
+  const comInstancia = new Set((existentes || []).map(e => e.entidade_id))
+  const orfas = solicitacoes.filter(s => !comInstancia.has(s.id))
+
+  if (!orfas.length) return { status: 200, body: { criadas: 0, mensagem: 'Todas as solicitações já possuem flow_instance' } }
+
+  const resultados = []
+
+  for (const sol of orfas) {
+    try {
+      const startResult = await handleStart(db, {
+        definition_id:  flowDef.id,
+        entidade_tipo:  entidadeTipo,
+        entidade_id:    sol.id,
+        workspace_id,
+        dados_contexto: { numero_pedido: sol.numero_pedido },
+      })
+
+      if (startResult.status !== 201) {
+        resultados.push({ id: sol.id, ok: false, erro: startResult.body?.error })
+        continue
+      }
+
+      // Avançar para "Aguardando Aprovação" via ação 'enviar'
+      const { data: acaoEnviar } = await db
+        .from('flow_actions')
+        .select('id')
+        .eq('step_id', startResult.body.current_step.id)
+        .eq('nome', 'enviar')
+        .maybeSingle()
+
+      if (acaoEnviar) {
+        await handleExecute(db, {
+          instance_id:   startResult.body.instance_id,
+          acao_id:       acaoEnviar.id,
+          executado_por: null,
+          dados:         {},
+          origem:        'backfill',
+        })
+      }
+
+      resultados.push({ id: sol.id, numero_pedido: sol.numero_pedido, ok: true, instance_id: startResult.body.instance_id })
+    } catch (err) {
+      resultados.push({ id: sol.id, ok: false, erro: err?.message })
+    }
+  }
+
+  const criadas = resultados.filter(r => r.ok).length
+  return { status: 200, body: { criadas, total_orfas: orfas.length, resultados } }
+}
+
+// ─────────────────────────────────────────────
 // HANDLER PRINCIPAL
 // ─────────────────────────────────────────────
 export default async function handler(req, res) {
@@ -937,9 +1025,10 @@ export default async function handler(req, res) {
       }
     } else if (req.method === 'GET') {
       switch (action) {
-        case 'tasks':    result = await handleTasks(db, req.query);   break
-        case 'instance': result = await handleInstance(db, req.query); break
-        case 'actions':  result = await handleActions(db, req.query);  break
+        case 'tasks':    result = await handleTasks(db, req.query);      break
+        case 'instance': result = await handleInstance(db, req.query);   break
+        case 'actions':  result = await handleActions(db, req.query);    break
+        case 'backfill': result = await handleBackfill(db, req.query);   break
         default:
           return res.status(400).json({ error: `Ação GET desconhecida: ${action}` })
       }
