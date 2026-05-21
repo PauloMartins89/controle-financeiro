@@ -49,6 +49,7 @@ export default function PlataformaEmpresas() {
   const [modalAberto, setModalAberto] = useState(false)
   const [novo, setNovo] = useState({ nome: '', cnpj: '', plano: 'trial', razao_social: '', endereco: '', atividade: '', proprietario: '', contato: '' })
   const [criando, setCriando] = useState(false)
+  const [consultandoCnpj, setConsultandoCnpj] = useState(false)
 
   // Empresa selecionada
   const [selecionada, setSelecionada] = useState(null)
