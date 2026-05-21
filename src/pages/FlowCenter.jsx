@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
@@ -51,9 +51,23 @@ function StatusPill({ status }) {
 // ─── Linha de instância ───────────────────────────────────────────────────────
 function InstanceRow({ inst, onAction }) {
   const [expanded, setExpanded] = useState(false)
+  const [responsavel, setResponsavel] = useState(null)
   const step = inst.flow_steps
   const sla = slaStatus(inst.sla_vence_em)
   const ctx = inst.dados_contexto || {}
+
+  useEffect(() => {
+    if (!expanded) return
+    supabase
+      .from('flow_tasks')
+      .select('responsavel_nome, responsavel_id, step_id')
+      .eq('instance_id', inst.id)
+      .eq('status', 'pendente')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setResponsavel(data))
+  }, [expanded, inst.id])
 
   return (
     <>
@@ -112,7 +126,14 @@ function InstanceRow({ inst, onAction }) {
       {expanded && (
         <tr style={{ background: 'rgba(255,255,255,0.015)' }}>
           <td colSpan={7} style={{ padding: '0 24px 16px' }}>
-            <div style={{ paddingTop: 16 }}>
+            {/* Responsável */}
+            {responsavel?.responsavel_nome && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)', width: 'fit-content' }}>
+                <span style={{ fontSize: 11, color: '#6366f1', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Responsável</span>
+                <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>{responsavel.responsavel_nome}</span>
+              </div>
+            )}
+            <div style={{ paddingTop: 12 }}>
               <FlowHistory solicitacaoId={inst.entidade_id} open={expanded} />
             </div>
             {/* Ações rápidas */}
@@ -234,6 +255,10 @@ export default function FlowCenter() {
   const [filtroModulo, setFiltroModulo] = useState('todos')
   const [busca, setBusca]         = useState('')
 
+  const [countdown, setCountdown] = useState(30)
+  const intervalRef = useRef(null)
+  const countRef   = useRef(null)
+
   const load = useCallback(async () => {
     if (!workspaceId) return
     setLoading(true)
@@ -249,9 +274,20 @@ export default function FlowCenter() {
       .limit(200)
     setInstances(data || [])
     setLoading(false)
+    setCountdown(30)
   }, [workspaceId])
 
   useEffect(() => { load() }, [load])
+
+  // Auto-refresh a cada 30s
+  useEffect(() => {
+    intervalRef.current = setInterval(() => load(), 30000)
+    countRef.current    = setInterval(() => setCountdown(c => c > 0 ? c - 1 : 30), 1000)
+    return () => {
+      clearInterval(intervalRef.current)
+      clearInterval(countRef.current)
+    }
+  }, [load])
 
   // Stats
   const stats = useMemo(() => {
@@ -364,9 +400,10 @@ export default function FlowCenter() {
             <input className="input" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar pedido, processo..." style={{ paddingLeft: 30, fontSize: 12 }} />
           </div>
 
-          {/* Reload */}
-          <button onClick={load} title="Atualizar" style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-            <ArrowPathIcon style={{ width: 14, height: 14 }} />
+          {/* Reload + countdown */}
+          <button onClick={load} title="Atualizar agora" style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <ArrowPathIcon style={{ width: 13, height: 13 }} />
+            <span style={{ fontSize: 10, fontWeight: 600 }}>{countdown}s</span>
           </button>
         </div>
 
