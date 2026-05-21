@@ -65,10 +65,19 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* ── Scrollbar global (dark mode) ── */
+  * { scrollbar-width: thin; scrollbar-color: rgba(0,200,150,0.35) transparent; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(0,200,150,0.3); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(0,200,150,0.6); }
+  ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,200,150,0.35); border-radius: 3px; transition: background 0.2s; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,200,150,0.65); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
+  /* ── Scrollbar global (light mode) ── */
+  :root[data-theme="light"] * { scrollbar-color: rgba(99,102,241,0.4) transparent; }
+  :root[data-theme="light"] ::-webkit-scrollbar-track { background: rgba(99,102,241,0.05); }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.35); }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.65); }
 
   /* Logo sempre visível — card verde fixo no sidebar */
 }

@@ -438,7 +438,7 @@ export default function App() {
             <RequireSubscription>
             <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg-primary)' }}>
               <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(c => !c)} />
-              <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <main style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <Routes>
                   <Route path="/" element={<DefaultRoute />} />
                   <Route path="/despesas" element={<Despesas />} />
