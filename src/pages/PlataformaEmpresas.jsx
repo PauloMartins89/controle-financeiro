@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon, UsersIcon, TrashIcon, UserPlusIcon, EnvelopeIcon } from '@heroicons/react/24/outline'
+import { BuildingOffice2Icon, PlusIcon, MagnifyingGlassIcon, PuzzlePieceIcon, CheckCircleIcon, XCircleIcon, UsersIcon, TrashIcon, UserPlusIcon, EnvelopeIcon, ArrowPathIcon, IdentificationIcon } from '@heroicons/react/24/outline'
+import toast from 'react-hot-toast'
 
 const PLANOS = ['trial', 'basico', 'profissional', 'enterprise', 'isento']
 const STATUS_PLANO = { trial: 'bg-yellow-100 text-yellow-800', basico: 'bg-blue-100 text-blue-800', profissional: 'bg-indigo-100 text-indigo-800', enterprise: 'bg-purple-100 text-purple-800', isento: 'bg-green-100 text-green-800' }
@@ -31,13 +32,22 @@ const TODOS_MODULOS = [
   { key: 'chat_ia',       label: 'Chat IA',               descricao: 'Assistente de inteligência artificial' },
 ]
 
+function fmtCNPJ(v = '') {
+  const d = v.replace(/\D/g, '').slice(0, 14)
+  if (d.length <= 2) return d
+  if (d.length <= 5) return `${d.slice(0,2)}.${d.slice(2)}`
+  if (d.length <= 8) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5)}`
+  if (d.length <= 12) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8)}`
+  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`
+}
+
 export default function PlataformaEmpresas() {
   const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [msg, setMsg] = useState(null)
   const [modalAberto, setModalAberto] = useState(false)
-  const [novo, setNovo] = useState({ nome: '', cnpj: '', plano: 'trial' })
+  const [novo, setNovo] = useState({ nome: '', cnpj: '', plano: 'trial', razao_social: '', endereco: '', atividade: '', proprietario: '', contato: '' })
   const [criando, setCriando] = useState(false)
 
   // Empresa selecionada
@@ -88,11 +98,43 @@ export default function PlataformaEmpresas() {
     setLoadingMembros(false)
   }, [apiAdmin])
 
+  async function consultarCnpjRf(cnpjStr, target) {
+    const digits = (cnpjStr || '').replace(/\D/g, '')
+    if (digits.length !== 14) { toast.error('CNPJ deve ter 14 dígitos.'); return }
+    setConsultandoCnpj(true)
+    try {
+      const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}))
+        throw new Error(err.message || 'CNPJ não encontrado ou inativo.')
+      }
+      const d = await r.json()
+      const end = [d.descricao_tipo_de_logradouro, d.logradouro, d.numero, d.complemento, d.bairro, d.municipio, d.uf, d.cep ? `CEP ${d.cep}` : null].filter(Boolean).join(', ')
+      const tel = (d.ddd_telefone_1 || '').replace(/\D/g,'').length > 5
+        ? `(${d.ddd_telefone_1.slice(0,2)}) ${d.ddd_telefone_1.slice(2)}`
+        : ''
+      const preenchido = {
+        nome: d.nome_fantasia?.trim() || d.razao_social || '',
+        razao_social: d.razao_social || '',
+        endereco: end,
+        atividade: d.cnae_fiscal_descricao ? `${d.cnae_fiscal} — ${d.cnae_fiscal_descricao}` : '',
+        proprietario: d.qsa?.[0]?.nome_socio || '',
+        contato: d.email || tel,
+      }
+      if (target === 'novo') setNovo(prev => ({ ...prev, cnpj: fmtCNPJ(digits), ...preenchido }))
+      else setDadosEdit(prev => ({ ...prev, ...preenchido }))
+      toast.success('Dados preenchidos via Receita Federal.')
+    } catch (err) {
+      toast.error(err.message)
+    }
+    setConsultandoCnpj(false)
+  }
+
   async function carregar() {
     setLoading(true)
     const { data, error } = await supabase
       .from('workspaces')
-      .select('id, nome, cnpj, plano, tipo, cor, created_at, workspace_members(count)')
+      .select('id, nome, cnpj, razao_social, endereco, atividade, proprietario, contato, plano, tipo, cor, created_at, workspace_members(count)')
       .neq('tipo', 'platform')
       .order('created_at', { ascending: false })
     if (!error) setEmpresas(data || [])
@@ -101,7 +143,7 @@ export default function PlataformaEmpresas() {
 
   async function selecionarEmpresa(emp) {
     setSelecionada(emp)
-    setDadosEdit({ nome: emp.nome || '', cnpj: emp.cnpj || '', plano: emp.plano || 'trial' })
+    setDadosEdit({ nome: emp.nome || '', cnpj: emp.cnpj || '', plano: emp.plano || 'trial', razao_social: emp.razao_social || '', endereco: emp.endereco || '', atividade: emp.atividade || '', proprietario: emp.proprietario || '', contato: emp.contato || '' })
     setMsg(null)
     setAba('dados')
     setMembros([])
@@ -128,14 +170,14 @@ export default function PlataformaEmpresas() {
     setSalvandoDados(true)
     const { error } = await supabase
       .from('workspaces')
-      .update({ nome: dadosEdit.nome.trim(), cnpj: dadosEdit.cnpj?.trim() || null, plano: dadosEdit.plano })
+      .update({ nome: dadosEdit.nome.trim(), cnpj: dadosEdit.cnpj?.trim() || null, plano: dadosEdit.plano, razao_social: dadosEdit.razao_social?.trim() || null, endereco: dadosEdit.endereco?.trim() || null, atividade: dadosEdit.atividade?.trim() || null, proprietario: dadosEdit.proprietario?.trim() || null, contato: dadosEdit.contato?.trim() || null })
       .eq('id', selecionada.id)
     setSalvandoDados(false)
     if (error) {
       setMsg({ tipo: 'erro', texto: 'Erro ao salvar dados: ' + error.message })
     } else {
       setMsg({ tipo: 'ok', texto: 'Dados da empresa atualizados.' })
-      setSelecionada(prev => ({ ...prev, nome: dadosEdit.nome.trim(), cnpj: dadosEdit.cnpj?.trim() || null, plano: dadosEdit.plano }))
+      setSelecionada(prev => ({ ...prev, nome: dadosEdit.nome.trim(), cnpj: dadosEdit.cnpj?.trim() || null, plano: dadosEdit.plano, razao_social: dadosEdit.razao_social?.trim() || null, endereco: dadosEdit.endereco?.trim() || null, atividade: dadosEdit.atividade?.trim() || null, proprietario: dadosEdit.proprietario?.trim() || null, contato: dadosEdit.contato?.trim() || null }))
       carregar()
     }
     setTimeout(() => setMsg(null), 3000)
@@ -275,9 +317,14 @@ export default function PlataformaEmpresas() {
     setCriando(true)
     const { error } = await supabase.from('workspaces').insert({
       nome: novo.nome.trim(),
-      cnpj: novo.cnpj.trim() || null,
+      cnpj: novo.cnpj?.trim() || null,
       plano: novo.plano,
       tipo: 'empresa',
+      razao_social: novo.razao_social?.trim() || null,
+      endereco: novo.endereco?.trim() || null,
+      atividade: novo.atividade?.trim() || null,
+      proprietario: novo.proprietario?.trim() || null,
+      contato: novo.contato?.trim() || null,
     })
     setCriando(false)
     if (error) {
@@ -285,7 +332,7 @@ export default function PlataformaEmpresas() {
     } else {
       setMsg({ tipo: 'ok', texto: `Empresa "${novo.nome.trim()}" criada com sucesso.` })
       setModalAberto(false)
-      setNovo({ nome: '', cnpj: '', plano: 'trial' })
+      setNovo({ nome: '', cnpj: '', plano: 'trial', razao_social: '', endereco: '', atividade: '', proprietario: '', contato: '' })
       carregar()
     }
     setTimeout(() => setMsg(null), 4000)
@@ -328,26 +375,87 @@ export default function PlataformaEmpresas() {
       {/* Modal nova empresa */}
       {modalAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setModalAberto(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl space-y-4 max-h-[92vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-gray-900">Nova Empresa</h2>
-            <div className="space-y-3">
+
+            {/* Consulta CNPJ */}
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-3">Consultar CNPJ — Receita Federal</p>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  placeholder="00.000.000/0000-00"
+                  maxLength={18}
+                  value={novo.cnpj}
+                  onChange={e => setNovo({ ...novo, cnpj: fmtCNPJ(e.target.value) })}
+                  onKeyDown={e => e.key === 'Enter' && consultarCnpjRf(novo.cnpj, 'novo')}
+                  autoFocus
+                />
+                <button
+                  onClick={() => consultarCnpjRf(novo.cnpj, 'novo')}
+                  disabled={consultandoCnpj || novo.cnpj.replace(/\D/g, '').length !== 14}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                  {consultandoCnpj ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <IdentificationIcon className="w-4 h-4" />}
+                  {consultandoCnpj ? 'Consultando…' : 'Consultar'}
+                </button>
+              </div>
+              <p className="text-xs text-indigo-500 mt-2">Preenche automaticamente nome, endereço, atividade, sócios e contato.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Nome / Fantasia *</label>
                 <input
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  placeholder="Nome da empresa"
+                  placeholder="Nome comercial da empresa"
                   value={novo.nome}
                   onChange={e => setNovo({ ...novo, nome: e.target.value })}
-                  autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">CNPJ</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Razão Social</label>
                 <input
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  placeholder="00.000.000/0000-00 (opcional)"
-                  value={novo.cnpj}
-                  onChange={e => setNovo({ ...novo, cnpj: e.target.value })}
+                  placeholder="Razão social (Receita Federal)"
+                  value={novo.razao_social}
+                  onChange={e => setNovo({ ...novo, razao_social: e.target.value })}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Endereço</label>
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  placeholder="Logradouro, número, bairro, cidade/UF"
+                  value={novo.endereco}
+                  onChange={e => setNovo({ ...novo, endereco: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Atividade Principal</label>
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  placeholder="CNAE / atividade"
+                  value={novo.atividade}
+                  onChange={e => setNovo({ ...novo, atividade: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Proprietário / Sócio</label>
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  placeholder="Nome do responsável"
+                  value={novo.proprietario}
+                  onChange={e => setNovo({ ...novo, proprietario: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Contato (tel./e-mail)</label>
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  placeholder="(11) 99999-9999 ou email@..."
+                  value={novo.contato}
+                  onChange={e => setNovo({ ...novo, contato: e.target.value })}
                 />
               </div>
               <div>
@@ -361,6 +469,7 @@ export default function PlataformaEmpresas() {
                 </select>
               </div>
             </div>
+
             <div className="flex gap-2 justify-end pt-2">
               <button onClick={() => setModalAberto(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancelar</button>
               <button
@@ -465,7 +574,7 @@ export default function PlataformaEmpresas() {
                 <div className="p-4 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Nome *</label>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Nome / Fantasia *</label>
                       <input
                         className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
                         value={dadosEdit?.nome || ''}
@@ -474,12 +583,22 @@ export default function PlataformaEmpresas() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">CNPJ</label>
-                      <input
-                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                        placeholder="00.000.000/0000-00"
-                        value={dadosEdit?.cnpj || ''}
-                        onChange={e => setDadosEdit({ ...dadosEdit, cnpj: e.target.value })}
-                      />
+                      <div className="flex gap-1">
+                        <input
+                          className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                          placeholder="00.000.000/0000-00"
+                          value={dadosEdit?.cnpj || ''}
+                          onChange={e => setDadosEdit({ ...dadosEdit, cnpj: fmtCNPJ(e.target.value) })}
+                        />
+                        <button
+                          onClick={() => consultarCnpjRf(dadosEdit?.cnpj || '', 'edit')}
+                          disabled={consultandoCnpj || (dadosEdit?.cnpj || '').replace(/\D/g,'').length !== 14}
+                          className="px-2 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center"
+                          title="Consultar Receita Federal"
+                        >
+                          {consultandoCnpj ? <ArrowPathIcon className="w-3.5 h-3.5 animate-spin" /> : <IdentificationIcon className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Plano</label>
@@ -494,6 +613,51 @@ export default function PlataformaEmpresas() {
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Usuários</label>
                       <p className="text-sm text-gray-900">{selecionada.workspace_members?.[0]?.count ?? 0}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Razão Social</label>
+                      <input
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        placeholder="Razão social (Receita Federal)"
+                        value={dadosEdit?.razao_social || ''}
+                        onChange={e => setDadosEdit({ ...dadosEdit, razao_social: e.target.value })}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Endereço</label>
+                      <input
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        placeholder="Logradouro, número, bairro, cidade/UF"
+                        value={dadosEdit?.endereco || ''}
+                        onChange={e => setDadosEdit({ ...dadosEdit, endereco: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Atividade Principal</label>
+                      <input
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        placeholder="CNAE / atividade"
+                        value={dadosEdit?.atividade || ''}
+                        onChange={e => setDadosEdit({ ...dadosEdit, atividade: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Proprietário / Sócio</label>
+                      <input
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        placeholder="Nome do responsável"
+                        value={dadosEdit?.proprietario || ''}
+                        onChange={e => setDadosEdit({ ...dadosEdit, proprietario: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Contato (tel./e-mail)</label>
+                      <input
+                        className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        placeholder="(11) 99999-9999 ou email@..."
+                        value={dadosEdit?.contato || ''}
+                        onChange={e => setDadosEdit({ ...dadosEdit, contato: e.target.value })}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Criado em</label>
