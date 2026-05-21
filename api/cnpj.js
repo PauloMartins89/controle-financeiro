@@ -26,9 +26,9 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── POST: busca CNPJ por nome de empresa via Serper ────────────────────────
+  // ── POST: busca CNPJ por nome de empresa via Casa dos Dados (gratuito) ───────
   if (req.method === 'POST') {
-    const { mode, nome, cidade } = req.body || {}
+    const { mode, nome, cidade, uf } = req.body || {}
 
     if (mode !== 'cnpj_search') {
       return res.status(400).json({ error: 'mode inválido' })
@@ -37,38 +37,34 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'nome é obrigatório' })
     }
 
-    const SERPER_KEY = process.env.SERPER_API_KEY
-    if (!SERPER_KEY) {
-      return res.status(500).json({ error: 'SERPER_API_KEY não configurada no servidor' })
+    const body = {
+      query: {
+        termo: [nome.trim()],
+        situacao_cadastral: 'ATIVA',
+        ...(cidade?.trim() ? { municipio: [cidade.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')] } : {}),
+        ...(uf?.trim()     ? { uf: [uf.trim().toUpperCase()] } : {}),
+      },
+      extras: { somente_mei: false, excluir_mei: false, somente_matriz: true },
+      page: 1,
     }
 
-    const q = cidade?.trim()
-      ? `"${nome.trim()}" CNPJ ${cidade.trim()}`
-      : `"${nome.trim()}" CNPJ`
-
     try {
-      const sr = await fetch('https://google.serper.dev/search', {
+      const r = await fetch('https://api.casadosdados.com.br/v2/public/cnpj/pesquisa', {
         method: 'POST',
-        headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q, gl: 'br', hl: 'pt-br', num: 10 }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(10000),
       })
-      if (!sr.ok) throw new Error(`Serper retornou ${sr.status}`)
+      if (!r.ok) throw new Error(`Casa dos Dados retornou ${r.status}`)
 
-      const sd = await sr.json()
-      const cnpjRegex = /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/g
-      const cnpjSet = new Set()
-      const sources = [
-        sd.answerBox?.answer || '',
-        sd.answerBox?.snippet || '',
-        sd.knowledgeGraph?.description || '',
-        ...(sd.organic || []).map(r => `${r.title || ''} ${r.snippet || ''}`),
-      ]
-      for (const text of sources) {
-        for (const m of text.matchAll(cnpjRegex)) cnpjSet.add(m[0])
-      }
+      const data = await r.json()
+      const cnpjs = (data.data?.cnpj || []).map(item => {
+        const c = (item.cnpj || '').replace(/\D/g, '')
+        if (c.length !== 14) return null
+        return `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`
+      }).filter(Boolean)
 
-      return res.status(200).json({ cnpjs: [...cnpjSet] })
+      return res.status(200).json({ cnpjs })
     } catch (err) {
       return res.status(500).json({ error: err.message })
     }
