@@ -38,7 +38,7 @@ BEGIN
   -- Loop em todas solicitações sem instância
   FOR v_sol IN
     SELECT s.id, s.status, s.workspace_id, s.valor_total,
-           s.numero_pedido, s.created_at
+           s.numero_pedido, s.criado_em
     FROM refei_solicitacoes s
     WHERE s.workspace_id = v_workspace_id
       AND s.status NOT IN ('rascunho')  -- rascunho não entra no flow ainda
@@ -47,7 +47,7 @@ BEGIN
         WHERE fi.entidade_tipo = 'refei_solicitacoes'
           AND fi.entidade_id   = s.id
       )
-    ORDER BY s.created_at
+    ORDER BY s.criado_em
   LOOP
     -- Encontrar o step correspondente ao status atual
     SELECT fs.id INTO v_step_id
@@ -74,7 +74,7 @@ BEGIN
       v_sol.status, v_step_id,
       jsonb_build_object('valor_total', v_sol.valor_total, 'numero_pedido', v_sol.numero_pedido),
       v_admin_user_id,
-      v_sol.created_at
+      v_sol.criado_em
     )
     RETURNING id INTO v_inst_id;
 
