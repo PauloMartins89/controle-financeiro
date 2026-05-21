@@ -113,7 +113,7 @@ function InstanceRow({ inst, onAction }) {
         <tr style={{ background: 'rgba(255,255,255,0.015)' }}>
           <td colSpan={7} style={{ padding: '0 24px 16px' }}>
             <div style={{ paddingTop: 16 }}>
-              <FlowHistory solicitacaoId={inst.entidade_id} />
+              <FlowHistory solicitacaoId={inst.entidade_id} open={expanded} />
             </div>
             {/* Ações rápidas */}
             <ActionButtons instanceId={inst.id} status={inst.status} onAction={onAction} />
