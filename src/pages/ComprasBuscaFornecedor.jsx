@@ -488,13 +488,10 @@ function AbaCnpj({ onAdicionar, adicionados, hint, hintCidade }) {
     setEmpresa(null)
     setCnpj('')
     try {
-      const r = await fetch('/api/cnpj', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'cnpj_search', nome: nomeBusca.trim(), cidade: cidadeBusca.trim() }),
+      const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
+        body: { mode: 'cnpj_search', nome: nomeBusca.trim(), cidade: cidadeBusca.trim() },
       })
-      const data = await r.json()
-      if (!r.ok || !data?.cnpjs?.length) {
+      if (error || !data?.cnpjs?.length) {
         toast.error('CNPJ não encontrado. Tente o nome completo ou inclua a cidade.')
         return
       }
@@ -515,13 +512,11 @@ function AbaCnpj({ onAdicionar, adicionados, hint, hintCidade }) {
     setEmpresa(null)
     setCnpj('')
     setAutoSearching(true)
-    fetch('/api/cnpj', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'cnpj_search', nome: hint, cidade: hintCidade || '' }),
-    }).then(r => r.json()).then(data => {
+    supabase.functions.invoke('busca-fornecedores', {
+      body: { mode: 'cnpj_search', nome: hint, cidade: hintCidade || '' },
+    }).then(({ data, error }) => {
       setAutoSearching(false)
-      if (!data?.cnpjs?.length) {
+      if (error || !data?.cnpjs?.length) {
         setAutoMsg('notfound')
         return
       }
