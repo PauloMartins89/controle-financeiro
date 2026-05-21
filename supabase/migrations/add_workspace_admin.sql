@@ -6,6 +6,7 @@
 -- ============================================================
 
 -- ── 1. Perfis: workspace admin pode criar / editar / excluir ─────────────────
+DROP POLICY IF EXISTS "workspace_admin_insert_perfis" ON perfis;
 CREATE POLICY "workspace_admin_insert_perfis" ON perfis
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -17,6 +18,7 @@ CREATE POLICY "workspace_admin_insert_perfis" ON perfis
     )
   );
 
+DROP POLICY IF EXISTS "workspace_admin_update_perfis" ON perfis;
 CREATE POLICY "workspace_admin_update_perfis" ON perfis
   FOR UPDATE USING (
     EXISTS (
@@ -28,6 +30,7 @@ CREATE POLICY "workspace_admin_update_perfis" ON perfis
     )
   );
 
+DROP POLICY IF EXISTS "workspace_admin_delete_perfis" ON perfis;
 CREATE POLICY "workspace_admin_delete_perfis" ON perfis
   FOR DELETE USING (
     EXISTS (
@@ -40,6 +43,7 @@ CREATE POLICY "workspace_admin_delete_perfis" ON perfis
   );
 
 -- ── 2. Permissões do perfil: workspace admin gerencia ────────────────────────
+DROP POLICY IF EXISTS "workspace_admin_insert_permissoes" ON perfil_permissoes;
 CREATE POLICY "workspace_admin_insert_permissoes" ON perfil_permissoes
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -52,6 +56,7 @@ CREATE POLICY "workspace_admin_insert_permissoes" ON perfil_permissoes
     )
   );
 
+DROP POLICY IF EXISTS "workspace_admin_delete_permissoes" ON perfil_permissoes;
 CREATE POLICY "workspace_admin_delete_permissoes" ON perfil_permissoes
   FOR DELETE USING (
     EXISTS (
@@ -65,12 +70,24 @@ CREATE POLICY "workspace_admin_delete_permissoes" ON perfil_permissoes
   );
 
 -- ── 3. Membros: workspace admin pode atualizar (perfil / ativo) ──────────────
+-- Usa função SECURITY DEFINER para evitar recursão RLS (igual ao members_see_own_members)
+CREATE OR REPLACE FUNCTION get_my_admin_workspace_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT workspace_id FROM workspace_members
+  WHERE user_id    = auth.uid()
+    AND perfil_id  IS NULL
+    AND ativo      IS NOT FALSE;
+$$;
+
+DROP POLICY IF EXISTS "workspace_admin_update_members" ON workspace_members;
 CREATE POLICY "workspace_admin_update_members" ON workspace_members
   FOR UPDATE USING (
-    workspace_id IN (
-      SELECT wm2.workspace_id FROM workspace_members wm2
-      WHERE wm2.user_id   = auth.uid()
-        AND wm2.perfil_id IS NULL
-        AND wm2.ativo     IS NOT FALSE
-    )
+    workspace_id IN (SELECT get_my_admin_workspace_ids())
+  )
+  WITH CHECK (
+    workspace_id IN (SELECT get_my_admin_workspace_ids())
   );

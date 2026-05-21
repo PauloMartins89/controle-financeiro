@@ -197,10 +197,17 @@ function AbaMembros({ workspaceId, apiWs }) {
 
   async function alterarPerfil(membroId, perfilId) {
     setSalvando(membroId)
-    await supabase.from('workspace_members').update({ perfil_id: perfilId || null }).eq('id', membroId)
-    setMembros(prev => prev.map(m => m.id === membroId ? { ...m, perfil_id: perfilId || null } : m))
+    const { error } = await supabase
+      .from('workspace_members')
+      .update({ perfil_id: perfilId || null })
+      .eq('id', membroId)
+    if (error) {
+      toast.error('Erro ao salvar: ' + error.message)
+    } else {
+      setMembros(prev => prev.map(m => m.id === membroId ? { ...m, perfil_id: perfilId || null } : m))
+      toast.success('Grupo atualizado!')
+    }
     setSalvando(null)
-    toast.success('Grupo atualizado!')
   }
 
   async function alterarAtivo(membroId, ativo) {
