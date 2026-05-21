@@ -158,12 +158,11 @@ export default async function handler(req, res) {
     const year = new Date().getFullYear()
     const numeroPedido = `REF-${year}-${String((count || 0) + 1).padStart(6, '0')}`
 
-    // Atualiza solicitação
-    await db.from('refei_solicitacoes').update({
+    // Atualiza solicitação — apenas campos garantidos pelo schema base
+    const { error: updErr } = await db.from('refei_solicitacoes').update({
       restaurante_id:  restauranteId,
       data_refeicao:   dataRefeicao,
       numero_pedido:   numeroPedido,
-      ticket:          numeroPedido,
       status:          'aguardando_aprovacao',
       total_refeicoes: totalRef,
       total_cafes:     totalCafe,
@@ -172,6 +171,14 @@ export default async function handler(req, res) {
       valor_total:     valorTotal,
       observacoes:     observacoes || null,
     }).eq('id', sol.id)
+
+    if (updErr) {
+      console.error('[refeicoes] submit – update solicitacao falhou:', updErr.message)
+      return res.status(500).json({ error: 'Erro ao salvar pedido. Tente novamente.' })
+    }
+
+    // Campo ticket (requer migration add_refei_fluxo.sql) — atualiza separado, falha silenciosa
+    await db.from('refei_solicitacoes').update({ ticket: numeroPedido }).eq('id', sol.id)
 
     // Recria itens
     await db.from('refei_itens').delete().eq('solicitacao_id', sol.id)
