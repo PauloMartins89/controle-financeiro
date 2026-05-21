@@ -659,7 +659,7 @@ function StartNewTab({ workspaceId }) {
             style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#f1f5f9', borderRadius: 8, padding: '9px 12px', fontSize: 14 }}>
             <option value=''>— Selecione —</option>
             {entities.map(e => (
-              <option key={e.id} value={e.id} disabled={e.has_instance}>
+              <option key={e.id} value={e.id}>
                 {e.numero_pedido || e.id.substring(0, 8)} — {e.status}{e.has_instance ? ' (já tem fluxo)' : ''}
               </option>
             ))}
