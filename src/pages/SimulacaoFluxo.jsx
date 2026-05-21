@@ -17,21 +17,21 @@ const ICONS_PAPEL = ['👤', '✍️', '🍽️', '📋', '🔔', '🏢', '💰'
 
 // ─── Labels amigáveis das chaves de mensagem ──────────────────────────
 const MSG_LABELS = {
-  boas:          'Boas-vindas ao P1 (início)',
-  confirm_p1:    'P1 · Confirmação de envio',
-  notif_p2:      'P2 · Notificação (aprovador)',
-  aguarda_p1:    'P1 · Aguardando resposta do P2',
-  aprovado_p2:   'P2 · Resposta de aprovação',
-  aprovado_p1:   'P1 · Notificação de aprovação',
-  reprovado_p1:  'P1 · Notificação de reprovação',
-  notif_p3:      'P3 · Notificação ao 3º participante',
-  confirmado_p3: 'P3 · Confirmação do 3º participante',
-  confirmado_p1: 'P1 · Aviso após P3 confirmar',
-  notif_lider:   'Líder · Solicitação de validação de entrega',
-  lider_ok_msg:  'Líder · Confirmação de entrega OK',
-  concluido_p1:  'P1 · Pedido finalizado (mensagem final)',
-  concluido:     'Conclusão do fluxo (sistema)',
-  notif_extra:   'P4/P5 · Notificação para participantes extras',
+  boas:              'Boas-vindas ao P1 (início)',
+  confirm_p1:        'P1 · Confirmação de envio',
+  notif_p2:          'P2 · Notificação (aprovador)',
+  aguarda_p1:        'P1 · Aguardando resposta do P2',
+  aprovado_p2:       'P2 · Resposta de aprovação',
+  aprovado_p1:       'P1 · Notificação de aprovação',
+  reprovado_p1:      'P1 · Notificação de reprovação',
+  sistema_consolida: 'Sistema · Consolidação automática',
+  notif_p3:          'P3 · Notificação ao 3º participante',
+  confirmado_p3:     'P3 · Confirmação do 3º participante',
+  confirmado_p1:     'P1 · Aviso após P3 confirmar',
+  notif_validacao:   'P1 Líder · Solicitação de validação de entrega',
+  validado_ok:       'P1 Líder · Confirmação de entrega OK',
+  concluido:         'Conclusão do fluxo (sistema)',
+  notif_extra:       'P4/P5 · Notificação para participantes extras',
 }
 const VARS_HINT = '{nome_p1} {nome_p2} {nome_p3} {nome_lider} {papel_p1} {papel_p2} {papel_p3} {pedido} {cod} {link_p2} {link_p3} {link_lider} {motivo} {ocorrencia} {instance_id} {msg_p3}'
 
@@ -41,27 +41,26 @@ const TEMPLATES = {
     label: 'Refeições 🍽️',
     inputPlaceholder: 'Ex: 2 almoços para 22/05, turno manhã...',
     participantes: [
-      { papel: 'Colaborador',  icon: '👤', cor: '#6366f1', obrig: true,  email: '', canal: 'whatsapp' },
-      { papel: 'Supervisor',   icon: '✍️', cor: '#f59e0b', obrig: true,  email: '', canal: 'whatsapp' },
-      { papel: 'Restaurante',  icon: '🍽️', cor: '#10b981', obrig: false, email: '', canal: 'whatsapp' },
-      { papel: 'Líder',        icon: '🔍', cor: '#ec4899', obrig: false, email: '', canal: 'whatsapp' },
+      { papel: 'Líder',       icon: '👤', cor: '#6366f1', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Supervisor',  icon: '✍️', cor: '#f59e0b', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Restaurante', icon: '🍽️', cor: '#10b981', obrig: false, email: '', canal: 'whatsapp' },
     ],
     msgs: {
-      boas:          'Olá, *{nome_p1}*! 👋\n\nSou o assistente de pedidos de refeição.\n\nDigite sua solicitação:\n(ex: 2 almoços para 22/05, turno manhã)',
-      confirm_p1:    '✅ *Pedido registrado!*\n\n🎫 Protocolo: *{cod}*\n\nEnviado para aprovação de *{nome_p2}*...',
-      notif_p2:      '📋 *Solicitação de Refeição*\n\nColaborador: *{nome_p1}*\nPedido: *{pedido}*\nProtocolo: *{cod}*\n\n🔗 *{link_p2}*\n\nUse os botões abaixo:',
-      aguarda_p1:    '📨 Aguardando resposta de *{nome_p2}*...\n\n🎫 Protocolo: *{cod}*',
-      aprovado_p2:   '✅ *Aprovação registrada!*\n\nProtocolo: *{cod}*\nAprovado por: *{nome_p2}*',
-      aprovado_p1:   '🎉 *Pedido Aprovado!*\n\nAprovado por *{nome_p2}*.\n🎫 Protocolo: *{cod}*\n\n{msg_p3}',
-      reprovado_p1:  '❌ *Pedido Reprovado*\n\nReprovado por *{nome_p2}*.\nMotivo: *{motivo}*\n🎫 Protocolo: *{cod}*\n\nEntre em contato com seu gestor.',
-      notif_p3:      '📦 *Pedido Confirmado — Ação Necessária*\n\nColaborador: *{nome_p1}*\nPedido: *{pedido}*\nProtocolo: *{cod}*\nAprovado por: *{nome_p2}*\n\n🔗 Confirmar recebimento:\n*{link_p3}*',
-      confirmado_p3: '✅ *Recebimento confirmado!*\n\nProtocolo: *{cod}*\nStatus: em preparo',
-      confirmado_p1: '🍽️ *Pedido em Preparo!*\n\nRestaurante confirmou o recebimento.\nSeu pedido está sendo preparado. Aguarde!',
-      notif_lider:   '🔍 *Validação de Entrega Necessária*\n\nColaborador: *{nome_p1}*\nPedido: *{pedido}*\nProtocolo: *{cod}*\n\nA entrega foi realizada. Por favor confirme:\n\n🔗 *{link_lider}*',
-      lider_ok_msg:  '✅ *Entrega Validada com Sucesso!*\n\nProtocolo: *{cod}*\nValidado por: *{nome_lider}*',
-      concluido_p1:  '🎉 *Pedido Finalizado!*\n\nEntrega validada pelo líder.\n🎫 Protocolo: *{cod}*\n\nObrigado por usar o sistema!',
-      concluido:     '✅ *Fluxo Corporativo Concluído!*\n\n1. {papel_p1} → Solicitou ✓\n2. {papel_p2} → Aprovou ✓\n3. {papel_p3} → Confirmou ✓\n4. Líder → Validou entrega ✓\n\nID: {instance_id}',
-      notif_extra:   '🔔 *Informativo*\n\nPedido finalizado!\n{papel_p1}: {nome_p1}\nPedido: {pedido}\nProtocolo: *{cod}*',
+      boas:              'Olá, *{nome_p1}*! 👋\n\nSou o assistente de pedidos de refeição.\n\nDigite sua solicitação:\n(ex: 2 almoços para 22/05, turno manhã)',
+      confirm_p1:        '✅ *Pedido registrado!*\n\n🎫 Protocolo: *{cod}*\n\nEnviado para aprovação de *{nome_p2}*...',
+      notif_p2:          '📋 *Solicitação de Refeição*\n\nLíder: *{nome_p1}*\nPedido: *{pedido}*\nProtocolo: *{cod}*\n\n🔗 *{link_p2}*\n\nUse os botões abaixo:',
+      aguarda_p1:        '📨 Aguardando resposta de *{nome_p2}*...\n\n🎫 Protocolo: *{cod}*',
+      aprovado_p2:       '✅ *Aprovação registrada!*\n\nProtocolo: *{cod}*\nAprovado por: *{nome_p2}*',
+      aprovado_p1:       '🎉 *Pedido Aprovado!*\n\nAprovado por *{nome_p2}*.\n🎫 Protocolo: *{cod}*',
+      reprovado_p1:      '❌ *Pedido Reprovado*\n\nReprovado por *{nome_p2}*.\nMotivo: *{motivo}*\n🎫 Protocolo: *{cod}*\n\nEntre em contato com seu gestor.',
+      sistema_consolida: '⚙️ *Sistema · Pedido consolidado*\n\nSeu pedido foi consolidado e encaminhado ao restaurante.\n🎫 Protocolo: *{cod}*',
+      notif_p3:          '📦 *Novo Pedido — Ação Necessária*\n\nLíder: *{nome_p1}*\nPedido: *{pedido}*\nProtocolo: *{cod}*\nAprovado por: *{nome_p2}*\n\n🔗 Confirmar recebimento:\n*{link_p3}*',
+      confirmado_p3:     '✅ *Recebimento confirmado!*\n\nProtocolo: *{cod}*\nStatus: em acompanhamento',
+      confirmado_p1:     '🍽️ *Pedido em Acompanhamento*\n\nRestaurante confirmou o recebimento.\nSeu pedido está sendo preparado!',
+      notif_validacao:   '🔍 *Valide a entrega recebida*\n\nA entrega foi registrada pelo sistema.\nProtocolo: *{cod}*\n\nA refeição chegou corretamente?\n\n🔗 *{link_lider}*',
+      validado_ok:       '✅ *Entrega Validada!*\n\nEntrega confirmada por *{nome_p1}*.\n🎫 Protocolo: *{cod}*\n\nFluxo concluído com sucesso!',
+      concluido:         '✅ *Fluxo Corporativo Concluído!*\n\n1. {papel_p1} → Solicitou ✓\n2. {papel_p2} → Aprovou ✓\n3. Sistema → Consolidou e enviou ✓\n4. {papel_p3} → Confirmou ✓\n5. {papel_p1} → Validou entrega ✓\n\nID: {instance_id}',
+      notif_extra:       '🔔 *Informativo*\n\nPedido finalizado!\n{papel_p1}: {nome_p1}\nPedido: {pedido}\nProtocolo: *{cod}*',
     },
   },
   compras: {
@@ -650,6 +649,8 @@ export default function SimulacaoFluxo() {
 
       if (participantes[2]?.nome) {
         const vFull = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
+        // Sistema: consolidar + encaminhar ao restaurante
+        if (msgs.sistema_consolida) setTimeout(() => addMsg(0, interp(msgs.sistema_consolida, vFull), false, true), 300)
         setTimeout(() => {
           addMsg(2, interp(msgs.notif_p3, vFull))
           if ((participantes[2]?.canal === 'email' || participantes[2]?.canal === 'ambos') && participantes[2]?.email) {
@@ -659,14 +660,23 @@ export default function SimulacaoFluxo() {
             )
           }
           setFase('p3_confirma')
-        }, 600)
+        }, 800)
       } else {
-        setFase('concluido')
-        const vEnd = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
-        setTimeout(() => {
-          addMsg(0, interp(msgs.concluido, vEnd), false, true)
-          notificarExtras(vEnd)
-        }, 400)
+        const vFull = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
+        if (tipoFluxo === 'refeicoes') {
+          // Sem restaurante → sistema consolida e encaminha direto para validação do líder
+          if (msgs.sistema_consolida) setTimeout(() => addMsg(0, interp(msgs.sistema_consolida, vFull), false, true), 300)
+          setTimeout(() => {
+            addMsg(0, interp(msgs.notif_validacao || '🔍 Valide a entrega recebida.\n\nProtocolo: *{cod}*\n\n🔗 *{link_lider}*', vFull))
+            setFase('p1_valida')
+          }, 800)
+        } else {
+          setFase('concluido')
+          setTimeout(() => {
+            addMsg(0, interp(msgs.concluido, vFull), false, true)
+            notificarExtras(vFull)
+          }, 400)
+        }
       }
     }, 900)
 
@@ -703,12 +713,12 @@ export default function SimulacaoFluxo() {
       if ((participantes[0]?.canal === 'email' || participantes[0]?.canal === 'ambos') && participantes[0]?.email) {
         addEmailMsg(0, `✅ Confirmado por ${participantes[2]?.nome || 'P3'}`, interp(msgs.confirmado_p1, v))
       }
-      // Fluxo de refeições corporativo → validação pelo líder
-      if (tipoFluxo === 'refeicoes' && participantes[3]?.nome) {
+      // Fluxo de refeições corporativo → validação pelo próprio Líder (P1)
+      if (tipoFluxo === 'refeicoes') {
         const vL = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
         setTimeout(() => {
-          addMsg(3, interp(msgs.notif_lider || '🔍 Validação de entrega pendente.\n\nProtocolo: *{cod}*\n\n🔗 *{link_lider}*', vL))
-          setFase('lider_valida')
+          addMsg(0, interp(msgs.notif_validacao || '🔍 Valide a entrega recebida.\n\nProtocolo: *{cod}*\n\n🔗 *{link_lider}*', vL))
+          setFase('p1_valida')
         }, 700)
       } else {
         setFase('concluido')
@@ -721,13 +731,12 @@ export default function SimulacaoFluxo() {
     }, 900)
   }
 
-  // ── LÍDER VALIDA entrega
+  // ── LÍDER VALIDA entrega (P1 = Líder, phone 0)
   const liderValida = () => {
     const v = buildVars(pedido, instanceId)
-    addMsg(3, '✅ Entrega confirmada!', true)
+    addMsg(0, '✅ Entrega confirmada!', true)
     setTimeout(() => {
-      addMsg(3, interp(msgs.lider_ok_msg || '✅ *Entrega Validada!*\n\nProtocolo: *{cod}*\nValidado por: *{nome_lider}*', v))
-      addMsg(0, interp(msgs.concluido_p1 || '🎉 *Pedido Finalizado!*\n\nEntrega validada pelo líder.\nProtocolo: *{cod}*', v))
+      addMsg(0, interp(msgs.validado_ok || '✅ *Entrega Validada!*\n\nProtocolo: *{cod}*', v))
       setFase('concluido')
       const vEnd = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
       setTimeout(() => {
@@ -737,18 +746,17 @@ export default function SimulacaoFluxo() {
     }, 700)
   }
 
-  // ── LÍDER REPORTA ocorrência
+  // ── LÍDER REPORTA ocorrência (P1 = Líder, phone 0)
   const liderReportaOcorrencia = () => {
     const ocorr = ocorrenciaInput.trim() || 'Ocorrência não especificada'
     const v = { ...buildVars(pedido, instanceId), ocorrencia: ocorr }
-    addMsg(3, `⚠️ Ocorrência: ${ocorr}`, true)
+    addMsg(0, `⚠️ Ocorrência: ${ocorr}`, true)
     setTimeout(() => {
-      addMsg(3, `⚠️ *Ocorrência Registrada*\n\nProtocolo: *${codigo}*\nDescrição: *${ocorr}*`)
-      addMsg(0, `⚠️ *Pedido Finalizado com Ocorrência*\n\nOcorrência registrada pelo líder:\n"${ocorr}"\n\n🎫 Protocolo: *${codigo}*`)
+      addMsg(0, `⚠️ *Ocorrência Registrada*\n\nProtocolo: *${codigo}*\nDescrição: *${ocorr}*`)
       setFase('concluido')
       const vEnd = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
       setTimeout(() => {
-        addMsg(0, `✅ *Fluxo Encerrado com Ocorrência*\n\nID: ${vEnd.instance_id}`, false, true)
+        addMsg(0, `⚠️ *Fluxo Encerrado com Ocorrência*\n\nDescrição: "${ocorr}"\nID: ${vEnd.instance_id}`, false, true)
         notificarExtras(vEnd)
       }, 500)
     }, 700)
@@ -756,8 +764,8 @@ export default function SimulacaoFluxo() {
 
   // ── Notificar P4/P5 ao concluir
   const notificarExtras = (v) => {
-    // Para refeicoes, P4 é o Líder (já participou do fluxo) — extras começam em P5
-    const sliceFrom = tipoFluxo === 'refeicoes' ? 4 : 3
+    // Extras começam em P4 (índice 3) para todos os templates
+    const sliceFrom = 3
     participantes.slice(sliceFrom).forEach((p, i) => {
       if (!p.nome) return
       const msgTxt = interp(msgs.notif_extra, { ...v, papel_extra: p.papel, nome_extra: p.nome })
@@ -788,7 +796,7 @@ export default function SimulacaoFluxo() {
   const acoes3 = fase === 'p3_confirma'
     ? [{ label: '✅ Confirmar Recebimento', cor: '#10b981', onClick: p3Confirma }]
     : []
-  const acoes4 = fase === 'lider_valida'
+  const acoesValida = fase === 'p1_valida'
     ? [
         { label: '✅ Entrega OK', cor: '#10b981', onClick: liderValida },
         { label: '⚠️ Ocorrência', cor: '#f59e0b', onClick: liderReportaOcorrencia },
@@ -800,10 +808,10 @@ export default function SimulacaoFluxo() {
     { key: 'p1_input',   label: `1. ${participantes[0]?.papel || 'P1'}` },
     { key: 'p2_decide',  label: `2. ${participantes[1]?.papel || 'P2'}` },
     ...(participantes[2]?.nome ? [{ key: 'p3_confirma', label: `3. ${participantes[2]?.papel || 'P3'}` }] : []),
-    ...(tipoFluxo === 'refeicoes' && participantes[3]?.nome ? [{ key: 'lider_valida', label: `4. ${participantes[3]?.papel || 'Líder'}` }] : []),
+    ...(tipoFluxo === 'refeicoes' ? [{ key: 'p1_valida', label: `4. ${participantes[0]?.papel || 'Líder'} valida` }] : []),
     { key: 'concluido',  label: '✅ Concluído' },
   ]
-  const faseOrder = ['p1_input', 'enviando', 'p2_decide', 'p3_confirma', 'lider_valida', 'concluido']
+  const faseOrder = ['p1_input', 'enviando', 'p2_decide', 'p3_confirma', 'p1_valida', 'concluido']
   const faseIdx = faseOrder.indexOf(fase)
 
   const p = participantes
@@ -1060,16 +1068,18 @@ export default function SimulacaoFluxo() {
                 <PhoneMock papel={p[0]?.papel || 'P1'} nome={p[0]?.nome} cor={p[0]?.cor || '#6366f1'}
                   messages={msgsPhone[0]} inputAtivo={fase === 'p1_input'}
                   inputPlaceholder={TEMPLATES[tipoFluxo]?.inputPlaceholder || 'Mensagem...'}
-                  onEnviar={p1Envia} acoes={[]}
-                  ativo={fase === 'p1_input' || fase === 'enviando'}
+                  onEnviar={p1Envia} acoes={acoesValida}
+                  badge={fase === 'p1_valida' ? 'Validar entrega ⚡' : ''}
+                  ativo={fase === 'p1_input' || fase === 'enviando' || fase === 'p1_valida'}
                 />
               )}
               {(p[0]?.canal === 'email' || p[0]?.canal === 'ambos') && (
                 <EmailInboxMock papel={p[0]?.papel || 'P1'} nome={p[0]?.nome} cor={p[0]?.cor || '#6366f1'}
                   emails={msgsEmail[0]} inputAtivo={fase === 'p1_input'}
                   inputPlaceholder={TEMPLATES[tipoFluxo]?.inputPlaceholder || 'Mensagem...'}
-                  onEnviar={p1Envia} acoes={[]}
-                  ativo={fase === 'p1_input' || fase === 'enviando'}
+                  onEnviar={p1Envia} acoes={acoesValida}
+                  badge={fase === 'p1_valida' ? 'Validar entrega ⚡' : ''}
+                  ativo={fase === 'p1_input' || fase === 'enviando' || fase === 'p1_valida'}
                 />
               )}
               {/* P2 */}
@@ -1102,19 +1112,17 @@ export default function SimulacaoFluxo() {
                   ativo={fase === 'p3_confirma'}
                 />
               )}
-              {/* P4 — Líder (validação) no fluxo de refeições */}
+              {/* P4 */}
               {p[3] && (p[3]?.canal !== 'email') && (
                 <PhoneMock papel={p[3]?.papel || 'P4'} nome={p[3]?.nome || '—'} cor={p[3]?.cor || '#ec4899'}
-                  messages={msgsPhone[3]} inputAtivo={false} acoes={acoes4}
-                  badge={fase === 'lider_valida' ? 'Validar entrega ⚡' : (fase === 'concluido' && msgsPhone[3].length > 0 ? 'Validado ✓' : '')}
-                  ativo={fase === 'lider_valida'}
+                  messages={msgsPhone[3]} inputAtivo={false} acoes={[]}
+                  badge={fase === 'concluido' && msgsPhone[3].length > 0 ? 'Notificado ✓' : ''}
+                  ativo={false}
                 />
               )}
               {p[3] && (p[3]?.canal === 'email' || p[3]?.canal === 'ambos') && (
                 <EmailInboxMock papel={p[3]?.papel || 'P4'} nome={p[3]?.nome || '—'} cor={p[3]?.cor || '#ec4899'}
-                  emails={msgsEmail[3]} inputAtivo={false} acoes={acoes4}
-                  badge={fase === 'lider_valida' ? 'Validar entrega ⚡' : ''}
-                  ativo={fase === 'lider_valida'}
+                  emails={msgsEmail[3]} inputAtivo={false} acoes={[]} ativo={false}
                 />
               )}
               {/* P5 */}
@@ -1147,8 +1155,8 @@ export default function SimulacaoFluxo() {
               </div>
             )}
 
-            {/* Ocorrência — validação pelo Líder */}
-            {fase === 'lider_valida' && (
+            {/* Ocorrência — validação pelo Líder (P1) */}
+            {fase === 'p1_valida' && (
               <div className="pf" style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: '14px 18px', maxWidth: 480, margin: '14px auto 0' }}>
                 <label style={{ color: '#475569', fontSize: 12, display: 'block', marginBottom: 6 }}>
                   ⚠️ Descreva a ocorrência antes de clicar em "Ocorrência" (opcional)
