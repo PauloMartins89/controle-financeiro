@@ -106,7 +106,6 @@ async function resolverResponsavel(db, responsible, instancia, entidadeData) {
         .select('id, email, raw_user_meta_data')
         .eq('id', instancia.iniciado_por)
         .single()
-        .catch(() => ({ data: null }))
       return u
         ? { user_id: u.id, nome: u.raw_user_meta_data?.full_name || u.email, tipo }
         : { user_id: instancia.iniciado_por, nome: 'Solicitante', tipo }
@@ -127,7 +126,6 @@ async function resolverResponsavel(db, responsible, instancia, entidadeData) {
         .eq('ativo', true)
         .limit(1)
         .single()
-        .catch(() => ({ data: null }))
       if (!membro) return null
       return { user_id: membro.user_id, nome: config.nome || 'Responsável do perfil', tipo }
     }
@@ -141,7 +139,6 @@ async function resolverResponsavel(db, responsible, instancia, entidadeData) {
         .select('lider_nome, lider_telefone')
         .eq('id', equipeId)
         .single()
-        .catch(() => ({ data: null }))
       if (!equipe) return null
       return { user_id: null, nome: equipe.lider_nome, telefone: equipe.lider_telefone, tipo }
     }
@@ -154,7 +151,6 @@ async function resolverResponsavel(db, responsible, instancia, entidadeData) {
         .select('supervisor_nome, supervisor_telefone')
         .eq('id', equipeId)
         .single()
-        .catch(() => ({ data: null }))
       if (!equipe) return null
       return { user_id: null, nome: equipe.supervisor_nome, telefone: equipe.supervisor_telefone, tipo }
     }
@@ -166,7 +162,6 @@ async function resolverResponsavel(db, responsible, instancia, entidadeData) {
         .eq('workspace_id', instancia.workspace_id)
         .eq('chave', 'comprador_responsavel_id')
         .maybeSingle()
-        .catch(() => ({ data: null }))
       if (!cfg?.valor) return null
       return { user_id: cfg.valor, nome: 'Comprador', tipo }
     }
@@ -588,7 +583,6 @@ async function criarTarefaParaEtapa(db, instancia, step, acaoAnterior) {
     .select('tipo_entidade')
     .eq('id', instancia.definition_id)
     .single()
-    .catch(() => ({ data: null }))
 
   let entidadeData = null
   if (def?.tipo_entidade) {
@@ -597,7 +591,6 @@ async function criarTarefaParaEtapa(db, instancia, step, acaoAnterior) {
       .select('*')
       .eq('id', instancia.entidade_id)
       .single()
-      .catch(() => ({ data: null }))
     entidadeData = data
   }
 
@@ -607,7 +600,6 @@ async function criarTarefaParaEtapa(db, instancia, step, acaoAnterior) {
     .select('*')
     .eq('step_id', step.id)
     .maybeSingle()
-    .catch(() => ({ data: null }))
 
   const slaVenceEm = slaRule
     ? calcularSlaVence(slaRule.prazo_horas, slaRule.tipo_calendario)
@@ -679,7 +671,6 @@ async function dispararNotificacoes(db, instancia, proximaStep, acao, dados, exe
         .eq('step_id', proximaStep.id)
         .eq('status', 'pendente')
         .maybeSingle()
-        .catch(() => ({ data: null }))
 
       if (task?.responsavel_id) {
         // Tentar buscar telefone do usuário nas configurações
@@ -689,7 +680,6 @@ async function dispararNotificacoes(db, instancia, proximaStep, acao, dados, exe
           .eq('workspace_id', instancia.workspace_id)
           .eq('chave', `telefone_usuario_${task.responsavel_id}`)
           .maybeSingle()
-          .catch(() => ({ data: null }))
 
         if (cfgTel?.valor) {
           await sendWA(cfgTel.valor, texto)
@@ -743,7 +733,6 @@ async function handleTasks(db, query) {
         .select('nome')
         .eq('id', defId)
         .single()
-        .catch(() => ({ data: null }))
       processo_nome = def?.nome
     }
     return { ...task, processo_nome }
