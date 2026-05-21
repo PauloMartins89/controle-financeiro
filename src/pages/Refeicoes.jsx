@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
 import FlowHistory from '../components/refeicao/FlowHistory'
+import FlowTaskBell from '../components/refeicao/FlowTaskBell'
 import {
   MagnifyingGlassIcon, Cog6ToothIcon, PlusIcon, PencilIcon,
   TrashIcon, XMarkIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon,
@@ -1337,6 +1338,20 @@ export default function Refeicoes() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header title="🍽️ Refeições" subtitle="Gestão completa de refeições" />
+      {/* Barra de flow engine quando ativo */}
+      {flowEngineOn && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 24px', background: 'rgba(99,102,241,0.08)', borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
+          <span style={{ fontSize: 11, color: '#818cf8', fontWeight: 600 }}>⚡ Flow Engine ativo</span>
+          <FlowTaskBell
+            userId={ownerId}
+            workspaceId={workspaceId}
+            onSelectTask={(entidadeId) => {
+              // Navega para aprovações e abre o modal pela URL
+              nav('operacoes', 'aprovacoes')
+            }}
+          />
+        </div>
+      )}
       <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
         {secao === 'dashboard'  && <SecaoDashboard sols={sols} onNav={nav} />}
         {secao === 'cadastros'  && <SecaoCadastros workspaceId={workspaceId} ownerId={ownerId} sub={sub} />}
