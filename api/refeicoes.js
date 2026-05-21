@@ -200,8 +200,16 @@ export default async function handler(req, res) {
     await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_aprovacao', descricao: 'Enviado para aprovação do supervisor', ator: sol.lider_nome, atorTipo: 'lider' })
 
     // Notifica supervisor via WA com lista completa de colaboradores
-    const supervisorTel = sol.supervisor_telefone
-    const { data: equipeData } = await db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle()
+    // Sempre busca da equipe para garantir telefone atualizado (ignora o valor do rascunho que pode estar desatualizado)
+    const { data: equipeData } = await db.from('refei_equipes').select('nome, supervisor_telefone, supervisor_nome').eq('id', sol.equipe_id).maybeSingle()
+    const supervisorTel = equipeData?.supervisor_telefone || sol.supervisor_telefone
+    // Salva supervisor_telefone atualizado na solicitação para uso futuro (cron, reenvios)
+    if (equipeData?.supervisor_telefone) {
+      await db.from('refei_solicitacoes').update({ supervisor_telefone: equipeData.supervisor_telefone }).eq('id', sol.id)
+    }
+    if (!supervisorTel) {
+      console.warn(`[refeicoes] submit – supervisor_telefone vazio para equipe ${sol.equipe_id}, pedido ${numeroPedido}`)
+    }
     if (supervisorTel) {
       const itensNormais = itens.filter(i => !i.extra && (i.refeicao || i.cafe))
       const itensExtras  = itens.filter(i =>  i.extra && (i.refeicao || i.cafe))
