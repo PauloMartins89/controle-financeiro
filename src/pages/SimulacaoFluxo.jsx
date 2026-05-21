@@ -39,28 +39,57 @@ const VARS_HINT = '{nome_p1} {nome_p2} {nome_p3} {nome_lider} {papel_p1} {papel_
 const TEMPLATES = {
   refeicoes: {
     label: 'Refeições 🍽️',
-    inputPlaceholder: 'Ex: 2 almoços para 22/05, turno manhã...',
+    inputPlaceholder: 'Ex: 3 almoços para 22/05, turno manhã...',
     participantes: [
       { papel: 'Líder',       icon: '👤', cor: '#6366f1', obrig: true,  email: '', canal: 'whatsapp' },
       { papel: 'Supervisor',  icon: '✍️', cor: '#f59e0b', obrig: true,  email: '', canal: 'whatsapp' },
       { papel: 'Restaurante', icon: '🍽️', cor: '#10b981', obrig: false, email: '', canal: 'whatsapp' },
     ],
     msgs: {
-      boas:              'Olá, *{nome_p1}*! 👋\n\nSou o assistente de pedidos de refeição.\n\nDigite sua solicitação:\n(ex: 2 almoços para 22/05, turno manhã)',
-      confirm_p1:        '✅ *Pedido registrado!*\n\n🎫 Protocolo: *{cod}*\n\nEnviado para aprovação de *{nome_p2}*...',
-      notif_p2:          '📋 *Solicitação de Refeição*\n\nLíder: *{nome_p1}*\nPedido: *{pedido}*\nProtocolo: *{cod}*\n\n🔗 *{link_p2}*\n\nUse os botões abaixo:',
-      aguarda_p1:        '📨 Aguardando resposta de *{nome_p2}*...\n\n🎫 Protocolo: *{cod}*',
-      aprovado_p2:       '✅ *Aprovação registrada!*\n\nProtocolo: *{cod}*\nAprovado por: *{nome_p2}*',
-      aprovado_p1:       '🎉 *Pedido Aprovado!*\n\nAprovado por *{nome_p2}*.\n🎫 Protocolo: *{cod}*',
-      reprovado_p1:      '❌ *Pedido Reprovado*\n\nReprovado por *{nome_p2}*.\nMotivo: *{motivo}*\n🎫 Protocolo: *{cod}*\n\nEntre em contato com seu gestor.',
+      // ─── Abertura: bot envia link do formulário ao líder ────────────────
+      boas: '🍽️ *Solicitação de Refeição*\n\nClique para fazer seu pedido:\nhttps://smartpro.app.br/refeicao/{cod}\n\n_Após enviar, aguarde aprovação do supervisor._',
+
+      // ─── Confirmação ao líder após submeter o formulário ────────────────
+      confirm_p1: '✅ *Pedido {cod} enviado!*\nPedido: {pedido}\n\n*Aguardando aprovação do supervisor.*',
+
+      // ─── Notificação ao supervisor (com link de aprovação sem login) ────
+      notif_p2: '🍽️ *Solicitação de Refeição — {cod}*\nSolicitante: *{nome_p1}*\nPedido: *{pedido}*\n\n👇 Toque para aprovar ou reprovar (sem logar):\n{link_p2}\n\nResponda *SIM* para aprovar ou *NÃO* para reprovar.',
+
+      // ─── Indicador de espera no chat do líder ───────────────────────────
+      aguarda_p1: '📨 Aguardando resposta de *{nome_p2}*...',
+
+      // ─── Feedback no chat do supervisor ─────────────────────────────────
+      aprovado_p2: '✅ *Aprovado!*\n\nProtocolo: *{cod}*',
+
+      // ─── Mensagem real enviada ao líder quando aprovado ─────────────────
+      aprovado_p1: '✅ Pedido *{cod}* aprovado!\n\nO restaurante foi notificado para preparação.',
+
+      // ─── Mensagem real enviada ao líder quando reprovado ────────────────
+      reprovado_p1: '❌ Pedido *{cod}* reprovado.\nMotivo: *{motivo}*\n\nAcesse o link para editar e reenviar:\nhttps://smartpro.app.br/refeicao/{cod}',
+
+      // ─── Sistema: consolidação automática (após aprovação) ──────────────
       sistema_consolida: '⚙️ *Sistema · Pedido consolidado*\n\nSeu pedido foi consolidado e encaminhado ao restaurante.\n🎫 Protocolo: *{cod}*',
-      notif_p3:          '📦 *Novo Pedido — Ação Necessária*\n\nLíder: *{nome_p1}*\nPedido: *{pedido}*\nProtocolo: *{cod}*\nAprovado por: *{nome_p2}*\n\n🔗 Confirmar recebimento:\n*{link_p3}*',
-      confirmado_p3:     '✅ *Recebimento confirmado!*\n\nProtocolo: *{cod}*\nStatus: em acompanhamento',
-      confirmado_p1:     '🍽️ *Pedido em Acompanhamento*\n\nRestaurante confirmou o recebimento.\nSeu pedido está sendo preparado!',
-      notif_validacao:   '🔍 *Valide a entrega recebida*\n\nA entrega foi registrada pelo sistema.\nProtocolo: *{cod}*\n\nA refeição chegou corretamente?\n\n🔗 *{link_lider}*',
-      validado_ok:       '✅ *Entrega Validada!*\n\nEntrega confirmada por *{nome_p1}*.\n🎫 Protocolo: *{cod}*\n\nFluxo concluído com sucesso!',
-      concluido:         '✅ *Fluxo Corporativo Concluído!*\n\n1. {papel_p1} → Solicitou ✓\n2. {papel_p2} → Aprovou ✓\n3. Sistema → Consolidou e enviou ✓\n4. {papel_p3} → Confirmou ✓\n5. {papel_p1} → Validou entrega ✓\n\nID: {instance_id}',
-      notif_extra:       '🔔 *Informativo*\n\nPedido finalizado!\n{papel_p1}: {nome_p1}\nPedido: {pedido}\nProtocolo: *{cod}*',
+
+      // ─── Mensagem real enviada ao restaurante ───────────────────────────
+      notif_p3: '📋 *Pedido Aprovado: {cod}*\nSolicitante: *{nome_p1}*\nPedido: *{pedido}*\n─────────────────────\n\nResponda *PREPARANDO* quando iniciar ou *ENTREGUE* após entregar.\n\n🔗 Confirmar: {link_p3}',
+
+      // ─── Feedback no chat do restaurante ────────────────────────────────
+      confirmado_p3: '✅ *Pedido confirmado!*\n\nProtocolo: *{cod}*\nStatus: em preparo 🍽️',
+
+      // ─── Notificação ao líder quando restaurante confirma ───────────────
+      confirmado_p1: '🍽️ *Pedido em Acompanhamento*\n\nO restaurante confirmou o recebimento.\nSeu pedido está sendo preparado!',
+
+      // ─── Solicitação de validação de entrega ao líder ───────────────────
+      notif_validacao: '🔍 *Valide a entrega recebida*\n\nProtocolo: *{cod}*\nA refeição chegou corretamente?\n\n🔗 {link_lider}',
+
+      // ─── Confirmação de entrega OK ───────────────────────────────────────
+      validado_ok: '✅ *Entrega Validada!*\n\nEntrega confirmada por *{nome_p1}*.\n🎫 Protocolo: *{cod}*\n\nFluxo concluído com sucesso! 🎉',
+
+      // ─── Mensagem final de conclusão (sistema) ───────────────────────────
+      concluido: '✅ *Fluxo Corporativo Concluído!*\n\n1. {papel_p1} → Solicitou ✓\n2. {papel_p2} → Aprovou ✓\n3. Sistema → Consolidou e enviou ✓\n4. {papel_p1} → Validou entrega ✓\n\nID: {instance_id}',
+
+      // ─── Notificação informativa para participantes extras ───────────────
+      notif_extra: '🔔 *Informativo*\n\nPedido finalizado!\n{papel_p1}: {nome_p1}\nPedido: {pedido}\nProtocolo: *{cod}*',
     },
   },
   compras: {
