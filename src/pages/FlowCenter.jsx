@@ -129,8 +129,9 @@ function ActionButtons({ instanceId, status, onAction }) {
   const userId = useStore(s => s.currentUser?.id)
   const [acoes, setAcoes] = useState([])
   const [resolvedId, setResolvedId] = useState(null)
-  const [loading, setLoading] = useState(false)
   const [executing, setExecuting] = useState(null)
+  const [motivoAcao, setMotivoAcao] = useState(null) // { acao } aguardando motivo
+  const [motivoText, setMotivoText] = useState('')
 
   useEffect(() => {
     setAcoes([])
@@ -144,31 +145,33 @@ function ActionButtons({ instanceId, status, onAction }) {
       .catch(() => {})
   }, [instanceId])
 
-  async function exec(acao) {
+  async function executar(acao, dados) {
     const iid = resolvedId || instanceId
-    if (acao.campos_obrigatorios?.includes('motivo')) {
-      const motivo = window.prompt(`Motivo para "${acao.label}":`)
-      if (!motivo) return
-      setExecuting(acao.id)
-      const r = await fetch('/api/flow-engine?action=execute', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instance_id: iid, acao_id: acao.id, executado_por: userId, dados: { motivo }, origem: 'humano' }),
-      })
-      const j = await r.json()
-      setExecuting(null)
-      if (r.ok) { toast.success('Executado!'); onAction() }
-      else toast.error(j.error || 'Erro')
-      return
-    }
     setExecuting(acao.id)
     const r = await fetch('/api/flow-engine?action=execute', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instance_id: iid, acao_id: acao.id, executado_por: userId, dados: {}, origem: 'humano' }),
+      body: JSON.stringify({ instance_id: iid, acao_id: acao.id, executado_por: userId, dados, origem: 'humano' }),
     })
     const j = await r.json()
     setExecuting(null)
-    if (r.ok) { toast.success('Executado!'); onAction() }
-    else toast.error(j.error || 'Erro')
+    if (r.ok) { toast.success('Executado com sucesso!'); onAction() }
+    else toast.error(j.error || 'Erro ao executar')
+  }
+
+  function exec(acao) {
+    if (acao.campos_obrigatorios?.includes('motivo')) {
+      setMotivoText('')
+      setMotivoAcao(acao)
+      return
+    }
+    executar(acao, {})
+  }
+
+  async function confirmarMotivo() {
+    if (!motivoText.trim()) return
+    const acao = motivoAcao
+    setMotivoAcao(null)
+    await executar(acao, { motivo: motivoText.trim() })
   }
 
   if (acoes.length === 0) return null
@@ -180,21 +183,44 @@ function ActionButtons({ instanceId, status, onAction }) {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-      {acoes.map(a => (
-        <button
-          key={a.id}
-          onClick={() => exec(a)}
-          disabled={executing === a.id}
-          style={{
-            padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            fontSize: 12, fontWeight: 700, ...tipoStyle(a.tipo),
-            opacity: executing === a.id ? 0.6 : 1,
-          }}
-        >
-          {executing === a.id ? '...' : a.label}
-        </button>
-      ))}
+    <div style={{ marginTop: 12 }}>
+      {/* Botões */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {acoes.map(a => (
+          <button
+            key={a.id}
+            onClick={() => exec(a)}
+            disabled={!!executing}
+            style={{
+              padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700, ...tipoStyle(a.tipo),
+              opacity: executing === a.id ? 0.6 : 1,
+            }}
+          >
+            {executing === a.id ? '...' : a.label}
+          </button>
+        ))}
+      </div>
+      {/* Mini-form de motivo (substitui window.prompt) */}
+      {motivoAcao && (
+        <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            autoFocus
+            className="input"
+            value={motivoText}
+            onChange={e => setMotivoText(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && confirmarMotivo()}
+            placeholder={`Motivo para "${motivoAcao.label}"...`}
+            style={{ flex: 1, minWidth: 200, fontSize: 12, padding: '6px 10px' }}
+          />
+          <button onClick={confirmarMotivo} disabled={!motivoText.trim()} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: '#ef4444', color: '#fff', opacity: motivoText.trim() ? 1 : 0.5 }}>
+            Confirmar
+          </button>
+          <button onClick={() => setMotivoAcao(null)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer', fontSize: 12, background: 'none', color: 'var(--text-secondary)' }}>
+            Cancelar
+          </button>
+        </div>
+      )}
     </div>
   )
 }
