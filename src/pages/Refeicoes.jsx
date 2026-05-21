@@ -673,7 +673,7 @@ function SecaoCadastros({ workspaceId, ownerId, sub }) {
 }
 
 // ─── Modal de Detalhe / Aprovação ────────────────────────────────────────────
-function DetailModal({ sol, onClose, onUpdated }) {
+function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspaceId }) {
   const [itens, setItens]   = useState([])
   const [motivo, setMotivo] = useState('')
   const [saving, setSaving] = useState(false)
@@ -686,18 +686,46 @@ function DetailModal({ sol, onClose, onUpdated }) {
   async function aprovar(acao) {
     if (acao === 'reprovado' && !motivo.trim()) { toast.error('Informe o motivo'); return }
     setSaving(true)
-    const r = await fetch('/api/refeicoes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'aprovar', solicitacaoId: sol.id, acao, motivo }),
-    })
-    if (r.ok) {
-      toast.success(acao === 'aprovado' ? 'Aprovado!' : 'Reprovado')
-      onUpdated()
-      onClose()
-    } else {
+    try {
+      if (useFlowEngine) {
+        const instRes = await fetch(`/api/flow-engine?action=instance&entidade_tipo=refei_solicitacoes&entidade_id=${sol.id}`)
+        if (instRes.ok) {
+          const { instancia } = await instRes.json()
+          const actRes = await fetch(`/api/flow-engine?action=actions&instance_id=${instancia.id}`)
+          const { acoes } = await actRes.json()
+          const acaoNome = acao === 'aprovado' ? 'aprovar' : 'reprovar'
+          const acaoObj = acoes.find(a => a.nome === acaoNome)
+          if (!acaoObj) throw new Error(`Ação "${acaoNome}" não disponível nesta etapa`)
+          const execRes = await fetch('/api/flow-engine?action=execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              instance_id: instancia.id,
+              acao_id: acaoObj.id,
+              executado_por: userId,
+              dados: acao === 'reprovado' ? { motivo } : {},
+              origem: 'humano',
+            }),
+          })
+          const j = await execRes.json()
+          if (!execRes.ok) throw new Error(j.error || 'Erro no motor de fluxo')
+          toast.success(acao === 'aprovado' ? 'Aprovado! ✅ (Flow Engine)' : 'Reprovado ❌ (Flow Engine)')
+          onUpdated()
+          onClose()
+          return
+        }
+        // sem instância → cai no caminho antigo (compatibilidade)
+      }
+      const r = await fetch('/api/refeicoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'aprovar', solicitacaoId: sol.id, acao, motivo }),
+      })
       const j = await r.json()
-      toast.error(j.error || 'Erro')
+      if (r.ok) { toast.success(acao === 'aprovado' ? 'Aprovado!' : 'Reprovado'); onUpdated(); onClose() }
+      else toast.error(j.error || 'Erro')
+    } catch (err) {
+      toast.error(err.message || 'Erro')
     }
     setSaving(false)
   }
@@ -856,7 +884,7 @@ function SecaoDashboard({ sols, onNav }) {
 }
 
 // ─── Seção: Solicitações ──────────────────────────────────────────────────────
-function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading }) {
+function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useFlowEngine }) {
   const [busca,        setBusca]        = useState('')
   const [filtroStatus, setFiltroStatus] = useState('todos')
   const [filtroData,   setFiltroData]   = useState('')
@@ -975,13 +1003,13 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading }) {
           </div>
         )
       })}
-      {detailSol && <DetailModal sol={detailSol} onClose={() => setDetailSol(null)} onUpdated={onReload} />}
+      {detailSol && <DetailModal sol={detailSol} onClose={() => setDetailSol(null)} onUpdated={onReload} useFlowEngine={useFlowEngine} userId={ownerId} workspaceId={workspaceId} />}
     </div>
   )
 }
 
 // ─── Seção: Aprovações ────────────────────────────────────────────────────────
-function SecaoAprovacoes({ sols, onReload }) {
+function SecaoAprovacoes({ sols, onReload, useFlowEngine, userId, workspaceId }) {
   const [subFiltro, setSubFiltro] = useState('pendente')
   const [detailSol, setDetailSol] = useState(null)
 
@@ -1025,7 +1053,7 @@ function SecaoAprovacoes({ sols, onReload }) {
           </tbody>
         </table>
       </div>
-      {detailSol && <DetailModal sol={detailSol} onClose={() => setDetailSol(null)} onUpdated={onReload} />}
+      {detailSol && <DetailModal sol={detailSol} onClose={() => setDetailSol(null)} onUpdated={onReload} useFlowEngine={useFlowEngine} userId={userId} workspaceId={workspaceId} />}
     </div>
   )
 }
@@ -1203,6 +1231,19 @@ export default function Refeicoes() {
   const workspaceId = useStore(s => s.workspaceId)
   const ownerId     = useStore(s => s.currentUser?.id)
 
+  const [flowEngineOn, setFlowEngineOn] = useState(false)
+
+  useEffect(() => {
+    if (!workspaceId) return
+    supabase
+      .from('configuracoes')
+      .select('valor')
+      .eq('workspace_id', workspaceId)
+      .eq('chave', 'flow_engine_refeicoes')
+      .maybeSingle()
+      .then(({ data }) => setFlowEngineOn(data?.valor === 'true'))
+  }, [workspaceId])
+
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -1246,8 +1287,8 @@ export default function Refeicoes() {
       <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
         {secao === 'dashboard'  && <SecaoDashboard sols={sols} onNav={nav} />}
         {secao === 'cadastros'  && <SecaoCadastros workspaceId={workspaceId} ownerId={ownerId} sub={sub} />}
-        {secao === 'operacoes'  && sub === 'solicitacoes' && <SecaoSolicitacoes sols={sols} workspaceId={workspaceId} ownerId={ownerId} onReload={load} loading={loading} />}
-        {secao === 'operacoes'  && sub === 'aprovacoes'   && <SecaoAprovacoes sols={sols} onReload={load} />}
+        {secao === 'operacoes'  && sub === 'solicitacoes' && <SecaoSolicitacoes sols={sols} workspaceId={workspaceId} ownerId={ownerId} onReload={load} loading={loading} useFlowEngine={flowEngineOn} />}
+        {secao === 'operacoes'  && sub === 'aprovacoes'   && <SecaoAprovacoes sols={sols} onReload={load} useFlowEngine={flowEngineOn} userId={ownerId} workspaceId={workspaceId} />}
         {secao === 'operacoes'  && sub === 'fechamentos'  && <SecaoFechamentos workspaceId={workspaceId} ownerId={ownerId} />}
         {secao === 'relatorios' && <SecaoRelatorios sub={sub} sols={sols} />}
       </div>

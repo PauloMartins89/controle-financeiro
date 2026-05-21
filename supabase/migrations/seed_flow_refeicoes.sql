@@ -2,10 +2,8 @@
 -- SmartPro Flow Center — Seed: Processo de Refeições
 -- Popula o fluxo de "Solicitação de Refeição" no banco.
 --
--- ANTES DE EXECUTAR:
---   1. Execute add_flow_center.sql para criar as tabelas
---   2. Substitua :WORKSPACE_ID pelo UUID real da empresa
---   3. Substitua :ADMIN_USER_ID pelo UUID do usuário admin
+-- ANTES DE EXECUTAR: execute add_flow_center.sql para criar as tabelas.
+-- Os UUIDs de workspace e admin são detectados automaticamente.
 --
 -- Fluxo: Rascunho → Pendente → Aprovado → Entregue → Fechado
 --                            ↘ Reprovado
@@ -13,8 +11,9 @@
 
 DO $$
 DECLARE
-  v_workspace_id    uuid := '00000000-0000-0000-0000-000000000000'; -- ← substituir
-  v_admin_user_id   uuid := '00000000-0000-0000-0000-000000000001'; -- ← substituir
+  -- detectados automaticamente
+  v_workspace_id    uuid;
+  v_admin_user_id   uuid;
 
   v_def_id          uuid;
   v_ver_id          uuid;
@@ -36,6 +35,25 @@ DECLARE
   v_act_reabrir     uuid;  -- reprovado → rascunho
 
 BEGIN
+
+  -- ─────────────────────────────────────────────
+  -- 0. AUTO-DETECTAR workspace e admin
+  -- ─────────────────────────────────────────────
+  SELECT id INTO v_workspace_id FROM workspaces WHERE ativo = true ORDER BY created_at LIMIT 1;
+  IF v_workspace_id IS NULL THEN
+    SELECT id INTO v_workspace_id FROM workspaces ORDER BY created_at LIMIT 1;
+  END IF;
+  IF v_workspace_id IS NULL THEN
+    RAISE EXCEPTION 'Nenhum workspace encontrado. Verifique a tabela workspaces.';
+  END IF;
+
+  SELECT id INTO v_admin_user_id FROM auth.users WHERE email = 'ph.mar89s@gmail.com' LIMIT 1;
+  IF v_admin_user_id IS NULL THEN
+    SELECT id INTO v_admin_user_id FROM auth.users ORDER BY created_at LIMIT 1;
+  END IF;
+
+  RAISE NOTICE 'workspace_id detectado: %', v_workspace_id;
+  RAISE NOTICE 'admin_user_id detectado: %', v_admin_user_id;
 
   -- ─────────────────────────────────────────────
   -- 1. DEFINIÇÃO DO PROCESSO
@@ -186,9 +204,12 @@ BEGIN
   -- ─────────────────────────────────────────────
   -- 8. FEATURE FLAG (desligada por padrão)
   -- ─────────────────────────────────────────────
-  INSERT INTO configuracoes (workspace_id, chave, valor)
-  VALUES (v_workspace_id, 'flow_engine_refeicoes', 'false')
-  ON CONFLICT (workspace_id, chave) DO NOTHING;
+  INSERT INTO configuracoes (workspace_id, chave, valor, user_id)
+  SELECT v_workspace_id, 'flow_engine_refeicoes', 'false', v_admin_user_id
+  WHERE NOT EXISTS (
+    SELECT 1 FROM configuracoes
+    WHERE workspace_id = v_workspace_id AND chave = 'flow_engine_refeicoes'
+  );
 
   RAISE NOTICE '✅ Processo "Solicitação de Refeição" criado com sucesso!';
   RAISE NOTICE '   definition_id: %', v_def_id;
