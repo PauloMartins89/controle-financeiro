@@ -701,6 +701,319 @@ function StartNewTab({ workspaceId }) {
   )
 }
 
+// ─── Componente: Simulador de Cenário ────────────────────────────────────────
+function SimulatorTab({ workspaceId }) {
+  const [definitions, setDefinitions] = useState([])
+  const [selectedDef, setSelectedDef] = useState('')
+  const [flowData, setFlowData] = useState(null)
+  const [loadingFlow, setLoadingFlow] = useState(false)
+
+  // Campos do cenário
+  const [campos, setCampos] = useState({
+    nome_solicitante: '', celular_solicitante: '', email_solicitante: '',
+    nome_supervisor: '', celular_supervisor: '', email_supervisor: '',
+    valor_total: '', categoria: '', descricao: '',
+  })
+  const [extraKeys, setExtraKeys] = useState([])   // chaves extras adicionadas pelo usuário
+  const [extraVals, setExtraVals] = useState({})
+
+  // Estado da simulação
+  const [simAtiva, setSimAtiva] = useState(false)
+  const [stepAtualId, setStepAtualId] = useState(null)
+  const [caminho, setCaminho] = useState([])   // [{ step, acao_escolhida }]
+
+  // Carregar definições
+  useEffect(() => {
+    if (!workspaceId) return
+    supabase.from('flow_definitions')
+      .select('id, nome, modulo, tipo_entidade')
+      .eq('workspace_id', workspaceId).eq('ativo', true)
+      .then(({ data }) => { setDefinitions(data || []); if (data?.length) setSelectedDef(data[0].id) })
+  }, [workspaceId])
+
+  // Carregar dados do fluxo ao trocar seleção
+  useEffect(() => {
+    if (!selectedDef) return
+    setLoadingFlow(true)
+    setFlowData(null)
+    setSimAtiva(false)
+    setCaminho([])
+    supabase.from('flow_versions').select('id').eq('definition_id', selectedDef).eq('is_current', true).maybeSingle()
+      .then(async ({ data: ver }) => {
+        if (!ver) { setLoadingFlow(false); return }
+        const [{ data: steps }, { data: transitions }, { data: actions }, { data: resps }] = await Promise.all([
+          supabase.from('flow_steps').select('*').eq('version_id', ver.id).order('ordem', { ascending: true }),
+          supabase.from('flow_transitions').select('*').eq('version_id', ver.id),
+          supabase.from('flow_actions').select('*').eq('version_id', ver.id),
+          supabase.from('flow_responsibles').select('*').eq('step_id', ver.id),
+        ])
+        // flow_responsibles usa step_id, buscar por steps
+        const stepIds = (steps || []).map(s => s.id)
+        const { data: respsOk } = await supabase.from('flow_responsibles').select('*').in('step_id', stepIds)
+        setFlowData({ steps: steps || [], transitions: transitions || [], actions: actions || [], resps: respsOk || [] })
+        setLoadingFlow(false)
+      })
+  }, [selectedDef])
+
+  const iniciarSim = () => {
+    if (!flowData) return
+    const inicial = flowData.steps.find(s => s.is_initial)
+    if (!inicial) { toast.error('Fluxo sem etapa inicial'); return }
+    setStepAtualId(inicial.id)
+    setCaminho([{ step: inicial, acao_escolhida: null }])
+    setSimAtiva(true)
+  }
+
+  const escolherAcao = (acao) => {
+    if (!flowData || !stepAtualId) return
+    // Encontrar transição ligada a esta ação
+    const trans = flowData.transitions.find(t => t.acao_id === acao.id && t.step_origem_id === stepAtualId)
+    if (!trans) { toast.error('Sem transição para esta ação'); return }
+    const proximo = flowData.steps.find(s => s.id === trans.step_destino_id)
+    if (!proximo) { toast.error('Etapa destino não encontrada'); return }
+    setStepAtualId(proximo.id)
+    setCaminho(prev => [...prev, { step: proximo, acao_escolhida: acao.nome }])
+  }
+
+  const resetar = () => { setSimAtiva(false); setStepAtualId(null); setCaminho([]) }
+
+  const contexto = { ...campos, ...extraVals }
+  const stepAtual = flowData?.steps.find(s => s.id === stepAtualId)
+  const acoesAtual = flowData?.actions.filter(a => a.step_id === stepAtualId) || []
+  const respsAtual = flowData?.resps.filter(r => r.step_id === stepAtualId) || []
+  const isFinal = stepAtual?.is_final
+
+  const resolverResponsavel = (tipo) => {
+    if (tipo === 'solicitante') return { nome: campos.nome_solicitante || '?', celular: campos.celular_solicitante, email: campos.email_solicitante }
+    if (tipo === 'supervisor_equipe') return { nome: campos.nome_supervisor || '?', celular: campos.celular_supervisor, email: campos.email_supervisor }
+    if (tipo === 'lider_equipe') return { nome: campos.nome_supervisor || '?', celular: campos.celular_supervisor, email: campos.email_supervisor }
+    return { nome: tipo, celular: '', email: '' }
+  }
+
+  const inputStyle = { width: '100%', background: '#111827', border: '1px solid #1e293b', color: '#f1f5f9', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box' }
+  const labelStyle = { display: 'block', fontSize: 10, color: '#475569', marginBottom: 4, fontWeight: 700, letterSpacing: 0.5 }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 20, alignItems: 'start' }}>
+
+      {/* Painel Esquerdo: Configuração do Cenário */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+        {/* Processo */}
+        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+          <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>PROCESSO</div>
+          <select value={selectedDef} onChange={e => setSelectedDef(e.target.value)} style={{ ...inputStyle, background: '#1e293b' }}>
+            {definitions.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+          </select>
+          {loadingFlow && <div style={{ fontSize: 11, color: '#475569', marginTop: 8 }}>Carregando fluxo...</div>}
+          {flowData && <div style={{ fontSize: 11, color: '#475569', marginTop: 8 }}>{flowData.steps.length} etapas · {flowData.actions.length} ações</div>}
+        </div>
+
+        {/* Solicitante */}
+        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+          <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>🙋 SOLICITANTE</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div><label style={labelStyle}>NOME</label><input style={inputStyle} placeholder="Ex: João Silva" value={campos.nome_solicitante} onChange={e => setCampos(p => ({ ...p, nome_solicitante: e.target.value }))} /></div>
+            <div><label style={labelStyle}>CELULAR</label><input style={inputStyle} placeholder="(11) 99999-9999" value={campos.celular_solicitante} onChange={e => setCampos(p => ({ ...p, celular_solicitante: e.target.value }))} /></div>
+            <div><label style={labelStyle}>E-MAIL</label><input style={inputStyle} placeholder="joao@empresa.com" value={campos.email_solicitante} onChange={e => setCampos(p => ({ ...p, email_solicitante: e.target.value }))} /></div>
+          </div>
+        </div>
+
+        {/* Supervisor */}
+        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+          <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>👔 SUPERVISOR / APROVADOR</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div><label style={labelStyle}>NOME</label><input style={inputStyle} placeholder="Ex: Maria Santos" value={campos.nome_supervisor} onChange={e => setCampos(p => ({ ...p, nome_supervisor: e.target.value }))} /></div>
+            <div><label style={labelStyle}>CELULAR</label><input style={inputStyle} placeholder="(11) 88888-8888" value={campos.celular_supervisor} onChange={e => setCampos(p => ({ ...p, celular_supervisor: e.target.value }))} /></div>
+            <div><label style={labelStyle}>E-MAIL</label><input style={inputStyle} placeholder="maria@empresa.com" value={campos.email_supervisor} onChange={e => setCampos(p => ({ ...p, email_supervisor: e.target.value }))} /></div>
+          </div>
+        </div>
+
+        {/* Contexto da solicitação */}
+        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+          <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>📋 DADOS DA SOLICITAÇÃO</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div><label style={labelStyle}>VALOR TOTAL (R$)</label><input style={inputStyle} placeholder="Ex: 5000" type="number" value={campos.valor_total} onChange={e => setCampos(p => ({ ...p, valor_total: e.target.value }))} /></div>
+            <div><label style={labelStyle}>CATEGORIA</label><input style={inputStyle} placeholder="Ex: frota, ti, refeitório" value={campos.categoria} onChange={e => setCampos(p => ({ ...p, categoria: e.target.value }))} /></div>
+            <div><label style={labelStyle}>DESCRIÇÃO</label><input style={inputStyle} placeholder="Ex: Almoço da equipe sul" value={campos.descricao} onChange={e => setCampos(p => ({ ...p, descricao: e.target.value }))} /></div>
+            {/* Campos extras */}
+            {extraKeys.map((k, i) => (
+              <div key={i}><label style={labelStyle}>{k.toUpperCase()}</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input style={{ ...inputStyle, flex: 1 }} value={extraVals[k] || ''} onChange={e => setExtraVals(p => ({ ...p, [k]: e.target.value }))} />
+                  <button onClick={() => { setExtraKeys(p => p.filter((_, j) => j !== i)); setExtraVals(p => { const c = { ...p }; delete c[k]; return c }) }}
+                    style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid #ef444440', color: '#ef4444', borderRadius: 6, padding: '0 10px', cursor: 'pointer', fontSize: 14 }}>×</button>
+                </div>
+              </div>
+            ))}
+            <button onClick={() => { const k = prompt('Nome do campo (ex: equipe):'); if (k?.trim()) setExtraKeys(p => [...p, k.trim()]) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px dashed #334155', color: '#475569', borderRadius: 8, padding: '7px 12px', fontSize: 12, cursor: 'pointer' }}>
+              <PlusIcon style={{ width: 13, height: 13 }} /> Adicionar campo
+            </button>
+          </div>
+        </div>
+
+        {/* Botão iniciar */}
+        <button onClick={simAtiva ? resetar : iniciarSim}
+          disabled={!flowData || loadingFlow}
+          style={{ padding: '12px 20px', background: simAtiva ? 'rgba(239,68,68,0.15)' : (flowData ? '#6366f1' : '#1e293b'), border: simAtiva ? '1px solid #ef4444' : 'none', color: simAtiva ? '#ef4444' : (flowData ? '#fff' : '#475569'), borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: flowData ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+          {simAtiva ? <><XCircleIcon style={{ width: 16, height: 16 }} /> Resetar Simulação</> : <><PlayIcon style={{ width: 16, height: 16 }} /> Iniciar Simulação</>}
+        </button>
+      </div>
+
+      {/* Painel Direito: Simulação */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {!simAtiva && (
+          <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 48, textAlign: 'center', color: '#475569' }}>
+            <BeakerIcon style={{ width: 40, height: 40, margin: '0 auto 12px', opacity: 0.2 }} />
+            <div style={{ fontSize: 14, marginBottom: 6 }}>Preencha os dados e clique em <strong style={{ color: '#6366f1' }}>Iniciar Simulação</strong></div>
+            <div style={{ fontSize: 12 }}>O fluxo será percorrido passo a passo — sem criar nada no banco</div>
+          </div>
+        )}
+
+        {simAtiva && (
+          <>
+            {/* Trilha do caminho percorrido */}
+            {caminho.length > 0 && (
+              <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+                <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>CAMINHO PERCORRIDO</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                  {caminho.map((item, i) => {
+                    const sc = stepColor(item.step.status_valor)
+                    const isAtual = i === caminho.length - 1
+                    return (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {i > 0 && item.acao_escolhida && (
+                          <div style={{ fontSize: 10, color: '#475569', background: 'rgba(99,102,241,0.1)', border: '1px solid #6366f130', borderRadius: 10, padding: '2px 8px' }}>
+                            {item.acao_escolhida}
+                          </div>
+                        )}
+                        {i > 0 && <ChevronRightIcon style={{ width: 12, height: 12, color: '#374151', flexShrink: 0 }} />}
+                        <div style={{ background: sc.bg, border: `1.5px solid ${isAtual ? sc.border : sc.border + '60'}`, borderRadius: 8, padding: '5px 12px', fontSize: 12, color: sc.text, fontWeight: isAtual ? 700 : 400 }}>
+                          {item.step.nome}
+                          {isAtual && <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.7 }}>← atual</span>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Etapa atual */}
+            {stepAtual && (
+              <div style={{ background: '#0f172a', border: `1.5px solid ${stepColor(stepAtual.status_valor).border}`, borderRadius: 12, padding: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: stepColor(stepAtual.status_valor).dot, flexShrink: 0 }} />
+                  <span style={{ fontSize: 16, fontWeight: 800, color: stepColor(stepAtual.status_valor).text }}>{stepAtual.nome}</span>
+                  {isFinal && <span style={{ fontSize: 11, background: 'rgba(107,114,128,0.2)', color: '#9ca3af', borderRadius: 10, padding: '2px 10px' }}>ETAPA FINAL</span>}
+                </div>
+
+                {/* Quem recebe nesta etapa */}
+                {respsAtual.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, color: '#475569', marginBottom: 10, fontWeight: 700 }}>📨 QUEM RECEBE ESTA ETAPA</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {respsAtual.map((r, i) => {
+                        const pessoa = resolverResponsavel(r.tipo)
+                        return (
+                          <div key={i} style={{ background: '#111827', border: '1px solid #1e293b', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                            <div style={{ fontSize: 22, flexShrink: 0 }}>
+                              {r.tipo === 'solicitante' ? '🙋' : r.tipo === 'supervisor_equipe' || r.tipo === 'lider_equipe' ? '👔' : '👤'}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 700 }}>{r.tipo.replace(/_/g, ' ').toUpperCase()}</div>
+                              <div style={{ fontSize: 14, color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>{pessoa.nome || <span style={{ color: '#475569', fontStyle: 'italic' }}>não preenchido</span>}</div>
+                              <div style={{ display: 'flex', gap: 16, marginTop: 6, flexWrap: 'wrap' }}>
+                                {pessoa.celular && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#10b981' }}>
+                                    <span>📱</span> {pessoa.celular}
+                                  </div>
+                                )}
+                                {pessoa.email && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#6366f1' }}>
+                                    <span>✉️</span> {pessoa.email}
+                                  </div>
+                                )}
+                                {!pessoa.celular && !pessoa.email && (
+                                  <span style={{ fontSize: 11, color: '#374151', fontStyle: 'italic' }}>sem contato preenchido</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {respsAtual.length === 0 && (
+                  <div style={{ marginBottom: 16, padding: '10px 14px', background: '#111827', borderRadius: 8, fontSize: 12, color: '#475569' }}>
+                    ⚠ Nenhum responsável configurado para esta etapa
+                  </div>
+                )}
+
+                {/* Ações disponíveis */}
+                {!isFinal && (
+                  <div>
+                    <div style={{ fontSize: 11, color: '#475569', marginBottom: 10, fontWeight: 700 }}>⚡ ESCOLHA A PRÓXIMA AÇÃO</div>
+                    {acoesAtual.length === 0 && (
+                      <div style={{ fontSize: 12, color: '#374151', fontStyle: 'italic' }}>Nenhuma ação cadastrada nesta etapa</div>
+                    )}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                      {acoesAtual.map(acao => {
+                        const ac = actionColor(acao.nome)
+                        const temTransicao = flowData.transitions.some(t => t.acao_id === acao.id && t.step_origem_id === stepAtualId)
+                        const destino = flowData.transitions.find(t => t.acao_id === acao.id && t.step_origem_id === stepAtualId)
+                        const stepDestino = destino ? flowData.steps.find(s => s.id === destino.step_destino_id) : null
+                        return (
+                          <button key={acao.id} onClick={() => escolherAcao(acao)}
+                            disabled={!temTransicao}
+                            title={!temTransicao ? 'Sem transição configurada' : `Vai para: ${stepDestino?.nome || '?'}`}
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '12px 18px', borderRadius: 10, cursor: temTransicao ? 'pointer' : 'not-allowed', border: `1.5px solid ${ac.border}`, background: ac.bg, color: ac.text, fontSize: 13, fontWeight: 600, opacity: temTransicao ? 1 : 0.35, minWidth: 140 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 16 }}>{ac.icon}</span> {acao.nome}
+                            </div>
+                            {stepDestino && <div style={{ fontSize: 10, color: stepColor(stepDestino.status_valor).text, opacity: 0.8 }}>→ {stepDestino.nome}</div>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {isFinal && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'rgba(16,185,129,0.08)', border: '1px solid #10b98130', borderRadius: 10 }}>
+                    <CheckCircleIcon style={{ width: 20, height: 20, color: '#10b981' }} />
+                    <div>
+                      <div style={{ fontSize: 13, color: '#10b981', fontWeight: 700 }}>Fluxo concluído!</div>
+                      <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>Caminho percorrido: {caminho.length} etapas</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Resumo do contexto usado */}
+            <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+              <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>📦 CONTEXTO DA SIMULAÇÃO</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {Object.entries(contexto).filter(([, v]) => v).map(([k, v]) => (
+                  <div key={k} style={{ background: '#111827', border: '1px solid #1e293b', borderRadius: 8, padding: '5px 10px', fontSize: 11 }}>
+                    <span style={{ color: '#475569' }}>{k}: </span><span style={{ color: '#94a3b8', fontWeight: 600 }}>{v}</span>
+                  </div>
+                ))}
+                {!Object.values(contexto).some(Boolean) && <span style={{ fontSize: 11, color: '#374151', fontStyle: 'italic' }}>Nenhum campo preenchido</span>}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Página Principal: Flow Lab ───────────────────────────────────────────────
 export default function FlowLab() {
   const workspaceId = useStore(s => s.workspaceId)
@@ -709,6 +1022,7 @@ export default function FlowLab() {
   const tabs = [
     { id: 'map',   label: '🗺 Mapa do Fluxo',      desc: 'Visualize etapas e responsáveis' },
     { id: 'test',  label: '⚗️ Testar Instância',   desc: 'Execute ações passo a passo' },
+    { id: 'sim',   label: '🧪 Simular Cenário',     desc: 'Teste com dados fictícios' },
     { id: 'start', label: '▶ Iniciar Novo',         desc: 'Inicie um fluxo manualmente' },
   ]
 
@@ -744,6 +1058,7 @@ export default function FlowLab() {
         {/* Conteúdo */}
         {tab === 'map'   && <FlowMapTab workspaceId={workspaceId} />}
         {tab === 'test'  && <InstanceTesterTab workspaceId={workspaceId} />}
+        {tab === 'sim'   && <SimulatorTab workspaceId={workspaceId} />}
         {tab === 'start' && <StartNewTab workspaceId={workspaceId} />}
       </div>
 
