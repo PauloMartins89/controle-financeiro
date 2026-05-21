@@ -85,7 +85,7 @@ async function processRefeiApproval(supabase, tokenCompact, acao, fromPhone) {
     await zapiSendText(fromPhone, '⚠️ Solicitação não encontrada. O link pode ter expirado.')
     return
   }
-  if (sol.status !== 'pendente') {
+  if (!['pendente', 'aguardando_aprovacao'].includes(sol.status)) {
     const statusTxt = { aprovado: 'já aprovado', reprovado: 'já reprovado', entregue: 'já entregue', fechado: 'fechado' }
     await zapiSendText(fromPhone, `ℹ️ Este pedido já foi processado (${statusTxt[sol.status] || sol.status}).`)
     return
@@ -101,33 +101,44 @@ async function processRefeiApproval(supabase, tokenCompact, acao, fromPhone) {
   }).eq('id', sol.id)
 
   if (acao === 'aprovado') {
-    // Notifica restaurante
-    const [{ data: rest }, { data: itens }] = await Promise.all([
+    // Usa o fluxo automático: notifica restaurante e avança status
+    const { data: itens } = await supabase.from('refei_itens').select('*').eq('solicitacao_id', sol.id)
+    // Chama o endpoint interno de aprovação para reutilizar triggerRestauranteFlow
+    // Como estamos no webhook não podemos chamar a função diretamente, replicamos a lógica
+    const [{ data: rest }, { data: equipe }] = await Promise.all([
       supabase.from('refei_restaurantes').select('*').eq('id', sol.restaurante_id).maybeSingle(),
-      supabase.from('refei_itens').select('*').eq('solicitacao_id', sol.id),
+      supabase.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle(),
     ])
+    const fmtBRL2 = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
     if (rest?.telefone_wa) {
+      const nomes   = (itens || []).map(i => `• ${i.colaborador_nome}${i.refeicao ? ' 🍽️' : ''}${i.cafe ? ' ☕' : ''}`)
       const qtdRef  = (itens || []).filter(i => i.refeicao).length
       const qtdCafe = (itens || []).filter(i => i.cafe).length
-      const linhas = [
-        `📋 *Pedido Aprovado: ${sol.numero_pedido}*`,
-        `Data: ${fmtData(sol.data_refeicao)}`,
+      const confirmaLinha = rest.confirma_pedido
+        ? `\n\n✅ *Confirme o recebimento:*\n${APP_URL}/rc/${sol.token_restaurante}`
+        : `\n\nResponda *PREPARANDO* ao iniciar ou *ENTREGUE* após entregar.`
+      const msg = [
+        `🏪 *Pedido Confirmado: ${sol.ticket || sol.numero_pedido}*`,
+        `Equipe: ${equipe?.nome || '—'}`,
+        `📅 Data: ${fmtData(sol.data_refeicao)}`,
         `─────────────────────`,
-        qtdRef  > 0 ? `🍽️ Refeição: ${qtdRef}` : null,
-        qtdCafe > 0 ? `☕ Café: ${qtdCafe}` : null,
+        ...nomes,
         `─────────────────────`,
-        `*Total: ${fmtBRL(sol.valor_total)}*`,
-        ``,
-        `Responda *PREPARANDO* quando iniciar ou *ENTREGUE* após entregar.`,
-      ].filter(Boolean)
-      await zapiSendText(rest.telefone_wa, linhas.join('\n'))
+        `🍽️ ${qtdRef} refeição(ões)  ☕ ${qtdCafe} café(s)`,
+        `*Total: ${fmtBRL2(sol.valor_total)}*${confirmaLinha}`,
+      ].join('\n')
+      await zapiSendText(rest.telefone_wa, msg)
     }
-    // Confirma para o líder
-    if (sol.lider_telefone) {
-      await zapiSendText(sol.lider_telefone, `✅ Pedido *${sol.numero_pedido}* aprovado!\nData: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado para preparação.`)
-    }
+    await supabase.from('refei_solicitacoes').update({
+      status: 'enviado_restaurante',
+      env_restaurante_em: new Date().toISOString(),
+    }).eq('id', sol.id)
+    const msgLider = rest?.confirma_pedido
+      ? `✅ Pedido *${sol.ticket || sol.numero_pedido}* aprovado!\n📅 Data: ${fmtData(sol.data_refeicao)}\n\nO restaurante receberá a solicitação e confirmará o recebimento.`
+      : `✅ Pedido *${sol.ticket || sol.numero_pedido}* aprovado!\n📅 Data: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado.`
+    if (sol.lider_telefone) await zapiSendText(sol.lider_telefone, msgLider)
     // Confirma para o supervisor
-    await zapiSendText(fromPhone, `✅ *${sol.numero_pedido} aprovado!*\nTotal: ${fmtBRL(sol.valor_total)}\nO restaurante e o líder foram notificados.`)
+    await zapiSendText(fromPhone, `✅ *${sol.numero_pedido} aprovado!*\nO restaurante e o líder foram notificados.`)
   } else {
     // Notifica líder
     if (sol.lider_telefone) {
@@ -135,6 +146,32 @@ async function processRefeiApproval(supabase, tokenCompact, acao, fromPhone) {
     }
     // Confirma para o supervisor
     await zapiSendText(fromPhone, `❌ *${sol.numero_pedido} reprovado.* O líder foi notificado.`)
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Processa validação de entrega pelo líder via SIM/NÃO ou link
+// ────────────────────────────────────────────────────────────────────────────────
+async function processRefeiValidacao(supabase, solId, resultado, fromPhone) {
+  const { data: sol } = await supabase
+    .from('refei_solicitacoes').select('*').eq('id', solId).maybeSingle()
+  if (!sol) return
+
+  const novoStatus = resultado === 'correto' ? 'finalizado' : 'finalizado_com_ocorrencia'
+  await supabase.from('refei_solicitacoes').update({
+    status:              novoStatus,
+    validado_em:         new Date().toISOString(),
+    resultado_validacao: resultado,
+  }).eq('id', sol.id)
+
+  const fmtData2 = d => d ? String(d).split('-').reverse().join('/') : '—'
+  if (resultado === 'correto') {
+    await zapiSendText(fromPhone, `✅ *${sol.ticket || sol.numero_pedido}* — Entrega confirmada! Obrigado.`)
+  } else {
+    await zapiSendText(
+      fromPhone,
+      `⚠️ *${sol.ticket || sol.numero_pedido}* — Ocorrência registrada.\nSe quiser detalhar, acesse: ${APP_URL}/vr/${sol.token_lider}`,
+    )
   }
 }
 
@@ -216,13 +253,14 @@ export default async function handler(req, res) {
         const supabase = getSupabase()
         if (supabase && fromPhone) {
           // Busca a solicitação pendente mais recente para este supervisor (todas as variantes de número)
+          // 1️⃣ Verifica se é supervisor com pedido aguardando aprovação
           let sol = null
           for (const v of phoneVariants) {
             const { data } = await supabase
               .from('refei_solicitacoes')
               .select('token_aprovacao')
               .eq('supervisor_telefone', v)
-              .eq('status', 'pendente')
+              .in('status', ['pendente', 'aguardando_aprovacao'])
               .order('criado_em', { ascending: false })
               .limit(1)
               .maybeSingle()
@@ -232,6 +270,25 @@ export default async function handler(req, res) {
             const acao = (txtRaw === 'SIM') ? 'aprovado' : 'reprovado'
             const tokenCompact = sol.token_aprovacao.replace(/-/g, '')
             await processRefeiApproval(supabase, tokenCompact, acao, fromPhone)
+            return res.status(200).json({ ok: true })
+          }
+
+          // 2️⃣ Verifica se é líder com pedido aguardando validação de entrega
+          let solValidacao = null
+          for (const v of phoneVariants) {
+            const { data } = await supabase
+              .from('refei_solicitacoes')
+              .select('id')
+              .eq('lider_telefone', v)
+              .eq('status', 'aguardando_validacao')
+              .order('data_refeicao', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            if (data) { solValidacao = data; break }
+          }
+          if (solValidacao) {
+            const resultado = (txtRaw === 'SIM') ? 'correto' : 'com_ocorrencia'
+            await processRefeiValidacao(supabase, solValidacao.id, resultado, fromPhone)
             return res.status(200).json({ ok: true })
           }
         }

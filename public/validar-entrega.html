@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Validar Entrega — SmartProd</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #111827;
+      min-height: 100dvh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-bottom: 48px;
+      color: #e5e7eb;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 480px;
+      margin: 24px 12px;
+      background: #1f2937;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.6);
+    }
+    .header {
+      background: linear-gradient(135deg, #1a3a2f 0%, #1e293b 100%);
+      padding: 28px 24px 22px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .badge-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6ee7b7;
+      background: #064e3b;
+      border: 1px solid #10b981;
+      border-radius: 20px;
+      padding: 3px 10px;
+    }
+    .badge-status {
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 20px;
+      padding: 3px 10px;
+      background: #78350f;
+      color: #fcd34d;
+      border: 1px solid #d97706;
+    }
+    .badge-status.finalizado  { background: #064e3b; color: #6ee7b7; border-color: #10b981; }
+    .badge-status.ocorrencia  { background: #7f1d1d; color: #fca5a5; border-color: #ef4444; }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f9fafb;
+      margin-bottom: 14px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .meta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 5px 11px;
+    }
+    .meta-badge.blue  { background: #1e3a5f; color: #93c5fd; }
+    .meta-badge.amber { background: #78350f; color: #fcd34d; }
+    .meta-badge.green { background: #064e3b; color: #6ee7b7; }
+    .section { padding: 0 24px 20px; }
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      margin-top: 20px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .stat-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-label { font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
+    .stat-val   { font-size: 18px; font-weight: 800; color: #f9fafb; }
+    .stat-val.green { color: #34d399; }
+    .colab-list { display: flex; flex-direction: column; gap: 6px; }
+    .colab-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .colab-nome { font-weight: 600; font-size: 14px; color: #e5e7eb; }
+    .colab-icons { display: flex; gap: 6px; font-size: 16px; }
+    .question-box {
+      margin: 0 24px 20px;
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+    }
+    .question-box p {
+      font-size: 15px;
+      font-weight: 600;
+      color: #d1fae5;
+      margin-bottom: 4px;
+    }
+    .question-box small {
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .ocorrencia-area {
+      padding: 0 24px 20px;
+      display: none;
+    }
+    .ocorrencia-area label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #f9fafb;
+      font-size: 14px;
+      padding: 10px 14px;
+      resize: vertical;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      min-height: 80px;
+    }
+    textarea:focus { border-color: rgba(99,102,241,0.5); }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 24px 28px;
+    }
+    .btn-grid-full { padding: 0 24px 28px; }
+    button {
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      width: 100%;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.5; cursor: default; transform: none; }
+    .btn-ocorrencia { background: rgba(220,38,38,0.25); color: #fca5a5; }
+    .btn-correto    { background: rgba(16,185,129,0.25); color: #6ee7b7; }
+    .btn-confirmar  { background: rgba(99,102,241,0.3);  color: #c7d2fe; }
+    .btn-ocorrencia:hover:not(:disabled) { background: rgba(220,38,38,0.4); }
+    .btn-correto:hover:not(:disabled)    { background: rgba(16,185,129,0.4); }
+    .btn-confirmar:hover:not(:disabled)  { background: rgba(99,102,241,0.5); }
+    .result-box {
+      margin: 0 24px 28px;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      display: none;
+    }
+    .result-box.success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); }
+    .result-box.warning { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); }
+    .result-box p { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .result-box small { font-size: 13px; color: #9ca3af; }
+    .result-box.success p { color: #6ee7b7; }
+    .result-box.warning p { color: #fcd34d; }
+    .toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ef4444;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .loader {
+      display: flex; align-items: center; justify-content: center;
+      padding: 48px 24px;
+      flex-direction: column; gap: 16px;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #10b981;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader p { font-size: 14px; color: #6b7280; }
+    .erro-box {
+      margin: 0 24px 28px;
+      background: rgba(220,38,38,0.1);
+      border: 1px solid rgba(220,38,38,0.25);
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      font-size: 14px;
+      color: #fca5a5;
+    }
+  </style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<div class="wrap">
+  <!-- Estado: carregando -->
+  <div id="state-loading" class="loader">
+    <div class="spinner"></div>
+    <p>Carregando pedido…</p>
+  </div>
+
+  <!-- Estado: erro -->
+  <div id="state-erro" style="display:none">
+    <div class="header" style="background:linear-gradient(135deg,#4b1a1a,#1e293b)">
+      <div class="header-top"><span class="badge-num">ERRO</span></div>
+      <h1>Não foi possível carregar</h1>
+    </div>
+    <div class="erro-box" id="erro-msg">Pedido não encontrado.</div>
+  </div>
+
+  <!-- Estado: conteúdo -->
+  <div id="state-content" style="display:none">
+    <div class="header">
+      <div class="header-top">
+        <span class="badge-num" id="badge-num">—</span>
+        <span class="badge-status" id="badge-status">Validação Pendente</span>
+      </div>
+      <h1>Confirmar Entrega</h1>
+      <div class="meta-grid">
+        <span class="meta-badge blue" id="meta-data">📅 —</span>
+        <span class="meta-badge amber" id="meta-rest">🏪 —</span>
+        <span class="meta-badge green" id="meta-equipe">👥 —</span>
+        <span class="meta-badge blue" id="meta-total">💰 —</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Resumo</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Refeições</div>
+          <div class="stat-val green" id="stat-ref">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Cafés</div>
+          <div class="stat-val green" id="stat-cafe">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Total</div>
+          <div class="stat-val" id="stat-total">—</div>
+        </div>
+      </div>
+
+      <div class="section-label">Colaboradores</div>
+      <div class="colab-list" id="colab-list"></div>
+    </div>
+
+    <!-- Pergunta de validação -->
+    <div class="question-box" id="question-box">
+      <p>A refeição foi entregue corretamente?</p>
+      <small>Responda abaixo para finalizar o pedido</small>
+    </div>
+
+    <div class="btn-grid" id="btn-validar">
+      <button class="btn-ocorrencia" id="btn-ocorrencia" onclick="mostrarOcorrencia()">⚠️ Houve problema</button>
+      <button class="btn-correto"    id="btn-correto"    onclick="confirmar('correto')">✅ Tudo certo</button>
+    </div>
+
+    <!-- Área de ocorrência (aparece ao clicar "Houve problema") -->
+    <div class="ocorrencia-area" id="ocorrencia-area">
+      <label>Descreva o problema</label>
+      <textarea id="ocorrencia-text" placeholder="Ex: Faltou 2 refeições, pedido chegou frio, houve atraso…" rows="3"></textarea>
+    </div>
+    <div class="btn-grid-full" id="btn-confirmar-ocorrencia" style="display:none">
+      <button class="btn-confirmar" id="btn-enviar-ocorrencia" onclick="confirmar('com_ocorrencia')">📋 Registrar ocorrência</button>
+    </div>
+
+    <!-- Resultado -->
+    <div class="result-box" id="result-box">
+      <p id="result-msg">—</p>
+      <small id="result-sub">—</small>
+    </div>
+  </div>
+</div>
+
+<script>
+  const APP_URL = ''   // mesmo origin
+
+  function getToken() {
+    // Suporte a /vr/<token> via rewrite ou ?token=<token>
+    const params = new URLSearchParams(location.search)
+    if (params.get('token')) return params.get('token')
+    // extrai do path /vr/<uuid>
+    const m = location.pathname.match(/\/vr\/([0-9a-f\-]+)/i)
+    return m ? m[1] : null
+  }
+
+  const token = getToken()
+
+  function fmtBRL(v) {
+    return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  }
+  function fmtData(d) {
+    return d ? String(d).split('-').reverse().join('/') : '—'
+  }
+
+  function showToast(msg, color) {
+    const t = document.getElementById('toast')
+    t.textContent = msg
+    t.style.background = color || '#ef4444'
+    t.style.opacity = '1'
+    setTimeout(() => { t.style.opacity = '0' }, 3500)
+  }
+
+  async function load() {
+    if (!token) {
+      document.getElementById('state-loading').style.display = 'none'
+      document.getElementById('state-erro').style.display = 'block'
+      document.getElementById('erro-msg').textContent = 'Link inválido: token não encontrado.'
+      return
+    }
+    try {
+      const r = await fetch(`/api/refeicoes?action=load-validar&token=${token}`)
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}))
+        throw new Error(err.error || 'Erro ao carregar pedido')
+      }
+      const { sol, itens, equipe, restaurante } = await r.json()
+      renderSol(sol, itens || [], equipe, restaurante)
+    } catch (e) {
+      document.getElementById('state-loading').style.display = 'none'
+      document.getElementById('state-erro').style.display = 'block'
+      document.getElementById('erro-msg').textContent = e.message
+    }
+  }
+
+  function renderSol(sol, itens, equipe, rest) {
+    document.getElementById('state-loading').style.display = 'none'
+
+    // Se já finalizado, mostra resultado direto
+    const jaConcluido = ['finalizado', 'finalizado_com_ocorrencia'].includes(sol.status)
+
+    document.getElementById('badge-num').textContent = sol.ticket || sol.numero_pedido || '—'
+    document.getElementById('meta-data').textContent   = '📅 ' + fmtData(sol.data_refeicao)
+    document.getElementById('meta-rest').textContent   = '🏪 ' + (rest?.nome || '—')
+    document.getElementById('meta-equipe').textContent = '👥 ' + (equipe?.nome || '—')
+    document.getElementById('meta-total').textContent  = '💰 ' + fmtBRL(sol.valor_total)
+
+    const qtdRef  = itens.filter(i => i.refeicao).length
+    const qtdCafe = itens.filter(i => i.cafe).length
+    document.getElementById('stat-ref').textContent   = qtdRef
+    document.getElementById('stat-cafe').textContent  = qtdCafe
+    document.getElementById('stat-total').textContent = fmtBRL(sol.valor_total)
+
+    const list = document.getElementById('colab-list')
+    list.innerHTML = itens.map(i => `
+      <div class="colab-item">
+        <span class="colab-nome">${i.colaborador_nome}</span>
+        <span class="colab-icons">
+          ${i.refeicao ? '🍽️' : ''}
+          ${i.cafe ? '☕' : ''}
+        </span>
+      </div>`).join('')
+
+    if (jaConcluido) {
+      document.getElementById('question-box').style.display = 'none'
+      document.getElementById('btn-validar').style.display = 'none'
+      const rb = document.getElementById('result-box')
+      if (sol.status === 'finalizado') {
+        rb.className = 'result-box success'
+        document.getElementById('result-msg').textContent = '✅ Entrega confirmada'
+        document.getElementById('result-sub').textContent = 'Este pedido já foi validado com sucesso.'
+      } else {
+        rb.className = 'result-box warning'
+        document.getElementById('result-msg').textContent = '⚠️ Ocorrência registrada'
+        document.getElementById('result-sub').textContent = sol.ocorrencia || 'Ocorrência registrada anteriormente.'
+      }
+      rb.style.display = 'block'
+
+      const bs = document.getElementById('badge-status')
+      bs.textContent = sol.status === 'finalizado' ? 'Finalizado' : 'Com Ocorrência'
+      bs.className   = 'badge-status ' + (sol.status === 'finalizado' ? 'finalizado' : 'ocorrencia')
+    }
+
+    document.getElementById('state-content').style.display = 'block'
+  }
+
+  function mostrarOcorrencia() {
+    document.getElementById('ocorrencia-area').style.display = 'block'
+    document.getElementById('btn-confirmar-ocorrencia').style.display = 'block'
+    document.getElementById('btn-validar').style.display = 'none'
+  }
+
+  async function confirmar(resultado) {
+    const ocorrencia = resultado === 'com_ocorrencia'
+      ? document.getElementById('ocorrencia-text')?.value?.trim()
+      : null
+
+    const btnId = resultado === 'correto' ? 'btn-correto' : 'btn-enviar-ocorrencia'
+    const btn = document.getElementById(btnId)
+    btn.disabled = true
+    btn.textContent = 'Enviando…'
+
+    try {
+      const r = await fetch('/api/refeicoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'validar-entrega-link', token, resultado, ocorrencia }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || 'Erro ao validar')
+
+      // Oculta tudo e mostra resultado
+      document.getElementById('question-box').style.display = 'none'
+      document.getElementById('btn-validar').style.display = 'none'
+      document.getElementById('ocorrencia-area').style.display = 'none'
+      document.getElementById('btn-confirmar-ocorrencia').style.display = 'none'
+
+      const rb = document.getElementById('result-box')
+      const bs = document.getElementById('badge-status')
+      if (resultado === 'correto') {
+        rb.className = 'result-box success'
+        document.getElementById('result-msg').textContent = '✅ Entrega confirmada!'
+        document.getElementById('result-sub').textContent = 'Obrigado. O pedido foi finalizado com sucesso.'
+        bs.textContent = 'Finalizado'
+        bs.className   = 'badge-status finalizado'
+      } else {
+        rb.className = 'result-box warning'
+        document.getElementById('result-msg').textContent = '⚠️ Ocorrência registrada'
+        document.getElementById('result-sub').textContent = ocorrencia || 'O administrador será notificado.'
+        bs.textContent = 'Com Ocorrência'
+        bs.className   = 'badge-status ocorrencia'
+      }
+      rb.style.display = 'block'
+    } catch (e) {
+      showToast(e.message)
+      btn.disabled = false
+      btn.textContent = resultado === 'correto' ? '✅ Tudo certo' : '📋 Registrar ocorrência'
+    }
+  }
+
+  load()
+</script>
+</body>
+</html>

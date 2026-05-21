@@ -174,6 +174,70 @@ async function handleRefeicoesPendentes(db, res) {
   return res.status(200).json({ sent, pendentes: pendentes.length })
 }
 
+// ── Cron: enviar link de validação de entrega ao líder (dia seguinte) ────────
+// Executa diariamente às 10:00 UTC; busca pedidos com status enviado/confirmado
+// onde data_refeicao = ontem → muda para aguardando_validacao e notifica líder.
+async function handleRefeicoesValidacao(db, res) {
+  const fmtData = d => d ? String(d).split('-').reverse().join('/') : '—'
+
+  // Calcula "ontem" no formato YYYY-MM-DD
+  const ontem = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  const { data: pedidos } = await db
+    .from('refei_solicitacoes')
+    .select('id, numero_pedido, ticket, data_refeicao, lider_telefone, token_lider')
+    .in('status', ['enviado_restaurante', 'confirmado_restaurante', 'preparando', 'entregue'])
+    .eq('data_refeicao', ontem)
+
+  if (!pedidos?.length) return res.status(200).json({ sent: 0, validacoes: 0 })
+
+  const now = new Date().toISOString()
+  let sent = 0
+
+  for (const sol of pedidos) {
+    try {
+      await db.from('refei_solicitacoes').update({
+        status:           'aguardando_validacao',
+        validacao_cron_em: now,
+      }).eq('id', sol.id)
+
+      if (sol.lider_telefone) {
+        const codigo = sol.ticket || sol.numero_pedido
+        const msg = [
+          `🔔 *Validação de Entrega — ${codigo}*`,
+          `📅 Data do pedido: ${fmtData(sol.data_refeicao)}`,
+          ``,
+          `A refeição foi entregue conforme esperado?`,
+          ``,
+          `Responda *SIM* se tudo certo, ou *NÃO* se houve algum problema.`,
+          ``,
+          `Ou acesse o link para mais opções:`,
+          `${APP_URL}/vr/${sol.token_lider}`,
+        ].join('\n')
+
+        const phone = String(sol.lider_telefone).replace(/\D/g, '')
+        const r = await fetch(
+          `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+            },
+            body: JSON.stringify({ phone, message: msg }),
+          }
+        )
+        if (r.ok) sent++
+        else console.error(`[cron:validacao] sendWA falhou ${r.status} para ${phone}`)
+      }
+    } catch (err) {
+      console.error(`[cron:validacao] exception para sol ${sol.id}:`, err.message)
+    }
+  }
+
+  return res.status(200).json({ sent, validacoes: pedidos.length })
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -181,8 +245,9 @@ export default async function handler(req, res) {
   }
   const db = getDb()
   const type = req.query.type
-  if (type === 'lembretes')          return handleLembretes(db, res)
-  if (type === 'relatorio')          return handleRelatorio(db, res)
-  if (type === 'refeicoes-pendentes') return handleRefeicoesPendentes(db, res)
-  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes' })
+  if (type === 'lembretes')            return handleLembretes(db, res)
+  if (type === 'relatorio')            return handleRelatorio(db, res)
+  if (type === 'refeicoes-pendentes')  return handleRefeicoesPendentes(db, res)
+  if (type === 'refeicoes-validacao')  return handleRefeicoesValidacao(db, res)
+  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao' })
 }

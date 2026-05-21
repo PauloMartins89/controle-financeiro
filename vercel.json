@@ -24,11 +24,17 @@
     {
       "path": "/api/cron?type=refeicoes-pendentes",
       "schedule": "0 11 * * 1-6"
+    },
+    {
+      "path": "/api/cron?type=refeicoes-validacao",
+      "schedule": "0 10 * * *"
     }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/ar/:token", "destination": "/aprovar.html?token=:token" },
+    { "source": "/rc/:token", "destination": "/confirmar-restaurante.html?token=:token" },
+    { "source": "/vr/:token", "destination": "/validar-entrega.html?token=:token" },
     { "source": "/limpar", "destination": "/limpar.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

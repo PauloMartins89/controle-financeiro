@@ -49,6 +49,64 @@ async function sendWA(to, text) {
 
 const APP_URL = process.env.APP_URL || 'https://dividiai.app.br'
 
+// ── Helper: disparar fluxo restaurante após aprovação ────────────────────────
+// Chamado tanto pelo aprovar (admin) quanto pelo aprovar-link (supervisor).
+// 1. Notifica restaurante via WA (com link de confirmação se confirma_pedido=true)
+// 2. Atualiza status para 'enviado_restaurante'
+// 3. Notifica líder que pedido foi aprovado e restaurante notificado
+async function triggerRestauranteFlow(db, sol, itens) {
+  const [{ data: rest }, { data: equipe }] = await Promise.all([
+    db.from('refei_restaurantes').select('*').eq('id', sol.restaurante_id).maybeSingle(),
+    db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle(),
+  ])
+
+  const now     = new Date().toISOString()
+  const nomes   = (itens || []).map(i => `• ${i.colaborador_nome}${i.refeicao ? ' 🍽️' : ''}${i.cafe ? ' ☕' : ''}`)
+  const qtdRef  = (itens || []).filter(i => i.refeicao).length
+  const qtdCafe = (itens || []).filter(i => i.cafe).length
+
+  // Notifica restaurante
+  if (rest?.telefone_wa) {
+    const confirmaLinha = rest.confirma_pedido
+      ? `\n\n✅ *Confirme o recebimento:*\n${APP_URL}/rc/${sol.token_restaurante}`
+      : `\n\nResponda *PREPARANDO* ao iniciar ou *ENTREGUE* após entregar.`
+
+    const msg = [
+      `🏪 *Pedido Confirmado: ${sol.ticket || sol.numero_pedido}*`,
+      `Equipe: ${equipe?.nome || '—'}`,
+      `📅 Data: ${fmtData(sol.data_refeicao)}`,
+      `─────────────────────`,
+      ...nomes,
+      `─────────────────────`,
+      `🍽️ ${qtdRef} refeição(ões)  ☕ ${qtdCafe} café(s)`,
+      `*Total: ${fmtBRL(sol.valor_total)}*${confirmaLinha}`,
+    ].join('\n')
+    await sendWA(rest.telefone_wa, msg)
+  }
+
+  // Atualiza status → enviado_restaurante
+  await db.from('refei_solicitacoes').update({
+    status:              'enviado_restaurante',
+    env_restaurante_em:  now,
+  }).eq('id', sol.id)
+
+  await logEvento(db, {
+    solicitacaoId: sol.id,
+    tipo:          'enviado_restaurante',
+    descricao:     `Pedido enviado ao restaurante ${rest?.nome || ''}`.trim(),
+    ator:          'Sistema',
+    atorTipo:      'sistema',
+  })
+
+  // Notifica líder
+  const msgLider = rest?.confirma_pedido
+    ? `✅ Pedido *${sol.ticket || sol.numero_pedido}* aprovado!\n📅 Data: ${fmtData(sol.data_refeicao)}\n\nO restaurante receberá a solicitação e confirmará o recebimento.`
+    : `✅ Pedido *${sol.ticket || sol.numero_pedido}* aprovado!\n📅 Data: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado. Você receberá confirmação no dia da entrega.`
+  if (sol.lider_telefone) await sendWA(sol.lider_telefone, msgLider)
+
+  return rest
+}
+
 function fmtBRL(v) {
   return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
@@ -333,32 +391,10 @@ export default async function handler(req, res) {
       dados:         motivo ? { motivo } : null,
     })
 
-    // Notifica restaurante se aprovado
+    // Notifica restaurante e avança status → enviado_restaurante
     if (acao === 'aprovado') {
-      const { data: rest } = await db.from('refei_restaurantes').select('*').eq('id', sol.restaurante_id).maybeSingle()
       const { data: itens } = await db.from('refei_itens').select('*').eq('solicitacao_id', sol.id)
-
-      if (rest?.telefone_wa) {
-        const qtdRef  = (itens || []).filter(i => i.refeicao).length
-        const qtdCafe = (itens || []).filter(i => i.cafe).length
-        const linhas = [
-          `📋 *Pedido Aprovado: ${sol.numero_pedido}*`,
-          `Data: ${fmtData(sol.data_refeicao)}`,
-          `─────────────────────`,
-          qtdRef  > 0 ? `🍽️ Refeição: ${qtdRef}` : null,
-          qtdCafe > 0 ? `☕ Café: ${qtdCafe}` : null,
-          `─────────────────────`,
-          `*Total geral: ${fmtBRL(sol.valor_total)}*`,
-          ``,
-          `Responda *PREPARANDO* quando iniciar ou *ENTREGUE* após entregar.`,
-        ].filter(v => v !== null)
-        await sendWA(rest.telefone_wa, linhas.join('\n'))
-      }
-
-      // Notifica líder
-      if (sol.lider_telefone) {
-        await sendWA(sol.lider_telefone, `✅ Pedido *${sol.numero_pedido}* aprovado!\nData: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado para preparação.`)
-      }
+      await triggerRestauranteFlow(db, sol, itens)
     } else {
       // Notifica líder da reprovação
       if (sol.lider_telefone) {
@@ -366,7 +402,7 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ ok: true, mensagem: acao === 'aprovado' ? 'Pedido aprovado!' : 'Pedido reprovado' })
+    return res.status(200).json({ ok: true, mensagem: acao === 'aprovado' ? 'Pedido aprovado e restaurante notificado!' : 'Pedido reprovado' })
   }
 
   // ── GET: carrega resumo para aprovação pública (token_aprovacao) ─────────
@@ -434,31 +470,10 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Erro ao atualizar solicitação' })
       }
 
-      // Notifica restaurante se aprovado
+      // Notifica restaurante e avança status → enviado_restaurante
       if (acao === 'aprovado') {
-        const [{ data: rest }, { data: itens }] = await Promise.all([
-          db.from('refei_restaurantes').select('*').eq('id', sol.restaurante_id).maybeSingle(),
-          db.from('refei_itens').select('*').eq('solicitacao_id', sol.id),
-        ])
-        if (rest?.telefone_wa) {
-          const refeicaoNomes = (itens || []).filter(i => i.refeicao).map(i => i.colaborador_nome)
-          const cafeNomes     = (itens || []).filter(i => i.cafe).map(i => i.colaborador_nome)
-          const linhas = [
-            `📋 *Pedido Aprovado: ${sol.numero_pedido}*`,
-            `Data: ${fmtData(sol.data_refeicao)}`,
-            `─────────────────────`,
-            refeicaoNomes.length > 0 ? `🍽️ Refeição (${refeicaoNomes.length}): ${refeicaoNomes.join(', ')}` : null,
-            cafeNomes.length     > 0 ? `☕ Café (${cafeNomes.length}): ${cafeNomes.join(', ')}` : null,
-            `─────────────────────`,
-            `*Total: ${fmtBRL(sol.valor_total)}*`,
-            ``,
-            `Responda *PREPARANDO* quando iniciar ou *ENTREGUE* após entregar.`,
-          ].filter(Boolean)
-          await sendWA(rest.telefone_wa, linhas.join('\n'))
-        }
-        if (sol.lider_telefone) {
-          await sendWA(sol.lider_telefone, `✅ Pedido *${sol.numero_pedido}* aprovado!\nData: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado para preparação.`)
-        }
+        const { data: itens } = await db.from('refei_itens').select('*').eq('solicitacao_id', sol.id)
+        await triggerRestauranteFlow(db, sol, itens)
       } else {
         if (sol.lider_telefone) {
           await sendWA(sol.lider_telefone, `❌ Pedido *${sol.numero_pedido}* reprovado.\nMotivo: ${motivo || '—'}\n\nAcesse o link para editar e reenviar: ${APP_URL}/refeicao/${sol.token_lider}`)
@@ -480,6 +495,26 @@ export default async function handler(req, res) {
     const { data: equipe } = await db.from('refei_equipes').select('*').eq('id', equipeId).maybeSingle()
     if (!equipe) return res.status(404).json({ error: 'Equipe não encontrada' })
     if (!equipe.lider_telefone) return res.status(400).json({ error: 'Equipe sem telefone do líder cadastrado' })
+
+    // ── Bloqueio: líder tem pedido aguardando validação de entrega? ──────────
+    const { data: bloqueado } = await db
+      .from('refei_solicitacoes')
+      .select('numero_pedido, data_refeicao, token_lider')
+      .eq('equipe_id', equipeId)
+      .eq('status', 'aguardando_validacao')
+      .order('data_refeicao', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (bloqueado) {
+      return res.status(409).json({
+        error:          'bloqueado',
+        mensagem:       `Confirme a entrega do pedido ${bloqueado.numero_pedido} (${fmtData(bloqueado.data_refeicao)}) antes de criar um novo pedido.`,
+        link_validacao: `${APP_URL}/vr/${bloqueado.token_lider}`,
+        numero_pedido:  bloqueado.numero_pedido,
+      })
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     // Reusa rascunho existente ou cria novo
     const { data: existente } = await db
@@ -696,6 +731,118 @@ export default async function handler(req, res) {
       await sendWA(sol.lider_telefone, `🔄 Pedido *${sol.ticket || sol.numero_pedido}* reaberto para correção.\nAcesse o link para editar e reenviar: ${APP_URL}/refeicao/${sol.token_lider}`)
     }
     return res.status(200).json({ ok: true, mensagem: 'Pedido reaberto para correção! 🔄' })
+  }
+
+  // ── GET: carrega dados para confirmação pelo restaurante ─────────────────────
+  if (req.method === 'GET' && action === 'load-confirmar-restaurante') {
+    const { token } = req.query
+    if (!token) return res.status(400).json({ error: 'Token obrigatório' })
+
+    const { data: sol } = await db
+      .from('refei_solicitacoes').select('*').eq('token_restaurante', token).maybeSingle()
+
+    if (!sol) return res.status(404).json({ error: 'Pedido não encontrado' })
+
+    const [{ data: itens }, { data: equipe }] = await Promise.all([
+      db.from('refei_itens').select('*').eq('solicitacao_id', sol.id),
+      db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle(),
+    ])
+
+    return res.status(200).json({ sol, itens: itens || [], equipe })
+  }
+
+  // ── POST: restaurante confirma recebimento via link público ─────────────────
+  if (req.method === 'POST' && action === 'confirmar-restaurante') {
+    const { token } = req.body || {}
+    if (!token) return res.status(400).json({ error: 'Token obrigatório' })
+
+    const { data: sol } = await db
+      .from('refei_solicitacoes').select('*').eq('token_restaurante', token).maybeSingle()
+
+    if (!sol) return res.status(404).json({ error: 'Pedido não encontrado' })
+    if (sol.status !== 'enviado_restaurante') {
+      return res.status(409).json({ error: 'Este pedido já foi processado', status: sol.status })
+    }
+
+    const now = new Date().toISOString()
+    await db.from('refei_solicitacoes').update({
+      status:             'confirmado_restaurante',
+      confirmado_rest_em: now,
+    }).eq('id', sol.id)
+
+    await logEvento(db, {
+      solicitacaoId: sol.id,
+      tipo:          'confirmado_restaurante',
+      descricao:     'Restaurante confirmou o recebimento do pedido via link',
+      atorTipo:      'restaurante',
+    })
+
+    // Notifica líder
+    if (sol.lider_telefone) {
+      const { data: rest } = await db.from('refei_restaurantes').select('nome').eq('id', sol.restaurante_id).maybeSingle()
+      await sendWA(
+        sol.lider_telefone,
+        `✅ *${sol.ticket || sol.numero_pedido}* confirmado pelo restaurante${rest?.nome ? ` ${rest.nome}` : ''}!\n📅 Data: ${fmtData(sol.data_refeicao)}\n\nVocê receberá o link de confirmação de entrega no dia.`,
+      )
+    }
+
+    return res.status(200).json({ ok: true })
+  }
+
+  // ── GET: carrega dados do pedido para validação de entrega pelo líder ────────
+  if (req.method === 'GET' && action === 'load-validar') {
+    const { token } = req.query
+    if (!token) return res.status(400).json({ error: 'Token obrigatório' })
+
+    const { data: sol } = await db
+      .from('refei_solicitacoes').select('*').eq('token_lider', token).maybeSingle()
+
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+
+    const [{ data: itens }, { data: equipe }, { data: rest }] = await Promise.all([
+      db.from('refei_itens').select('*').eq('solicitacao_id', sol.id),
+      db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle(),
+      db.from('refei_restaurantes').select('nome').eq('id', sol.restaurante_id).maybeSingle(),
+    ])
+
+    return res.status(200).json({ sol, itens: itens || [], equipe, restaurante: rest })
+  }
+
+  // ── POST: líder valida entrega via link público ──────────────────────────────
+  if (req.method === 'POST' && action === 'validar-entrega-link') {
+    const { token, resultado, ocorrencia } = req.body || {}
+    if (!token || !resultado) return res.status(400).json({ error: 'Dados incompletos' })
+    if (!['correto', 'com_ocorrencia'].includes(resultado)) {
+      return res.status(400).json({ error: 'resultado deve ser "correto" ou "com_ocorrencia"' })
+    }
+
+    const { data: sol } = await db
+      .from('refei_solicitacoes').select('*').eq('token_lider', token).maybeSingle()
+
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+    if (!['entregue', 'aguardando_validacao', 'confirmado_restaurante'].includes(sol.status)) {
+      return res.status(409).json({ error: 'Status inválido para validação', status: sol.status })
+    }
+
+    const now        = new Date().toISOString()
+    const novoStatus = resultado === 'correto' ? 'finalizado' : 'finalizado_com_ocorrencia'
+
+    await db.from('refei_solicitacoes').update({
+      status:               novoStatus,
+      validado_em:          now,
+      resultado_validacao:  resultado,
+      ocorrencia:           ocorrencia || null,
+    }).eq('id', sol.id)
+
+    await logEvento(db, {
+      solicitacaoId: sol.id,
+      tipo:          resultado === 'correto' ? 'entrega_confirmada' : 'ocorrencia_registrada',
+      descricao:     resultado === 'correto' ? 'Entrega confirmada pelo líder' : `Líder registrou ocorrência: ${ocorrencia}`,
+      atorTipo:      'lider',
+      dados:         ocorrencia ? { ocorrencia } : null,
+    })
+
+    return res.status(200).json({ ok: true, status: novoStatus })
   }
 
   return res.status(404).json({ error: 'Endpoint não encontrado' })

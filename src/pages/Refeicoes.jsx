@@ -38,6 +38,7 @@ const STATUS = {
   reprovado:                   { label: 'Reprovado',            color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   icon: XCircleIcon },
   consolidado:                 { label: 'Consolidado',          color: '#6366f1', bg: 'rgba(99,102,241,0.15)',  icon: CheckCircleIcon },
   enviado_restaurante:         { label: 'No Restaurante',       color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)',  icon: BuildingStorefrontIcon },
+  confirmado_restaurante:      { label: 'Confirmado Rest.',      color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', icon: CheckCircleIcon },
   em_acompanhamento:           { label: 'Em Acompanhamento',    color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   icon: ClockIcon },
   entregue:                    { label: 'Entregue',             color: '#34d399', bg: 'rgba(52,211,153,0.15)',  icon: CheckCircleIcon },
   aguardando_validacao:        { label: 'Aguard. Validação',    color: '#f97316', bg: 'rgba(249,115,22,0.15)',  icon: ClockIcon },
@@ -102,7 +103,7 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
   async function save() {
     if (!form.nome?.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
-    const payload = { nome: form.nome, cnpj: form.cnpj || null, numero_pedido: form.numero_pedido || null, valor_refeicao: form.valor_refeicao || 0, valor_cafe: form.valor_cafe || 0, telefone_wa: form.telefone_wa || null, ativo: !!form.ativo, workspace_id: workspaceId, owner_id: ownerId }
+    const payload = { nome: form.nome, cnpj: form.cnpj || null, numero_pedido: form.numero_pedido || null, valor_refeicao: form.valor_refeicao || 0, valor_cafe: form.valor_cafe || 0, telefone_wa: form.telefone_wa || null, ativo: !!form.ativo, confirma_pedido: !!form.confirma_pedido, workspace_id: workspaceId, owner_id: ownerId }
     if (modal.mode === 'new') {
       const { error } = await supabase.from('refei_restaurantes').insert(payload)
       if (error) toast.error(error.message); else { toast.success('Criado'); setModal(null); load() }
@@ -160,6 +161,10 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
             <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8 }}>
               <input type="checkbox" id="rAtivo" checked={!!form.ativo} onChange={e => f('ativo', e.target.checked)} style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
               <label htmlFor="rAtivo" style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Ativo</label>
+            </div>
+            <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(139,92,246,0.08)', borderRadius: 8, padding: '8px 12px', border: '1px solid rgba(139,92,246,0.15)' }}>
+              <input type="checkbox" id="rConfirma" checked={!!form.confirma_pedido} onChange={e => f('confirma_pedido', e.target.checked)} style={{ width: 14, height: 14, accentColor: '#8b5cf6', cursor: 'pointer' }} />
+              <label htmlFor="rConfirma" style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', flex: 1 }}>Restaurante confirma via link antes da entrega</label>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
