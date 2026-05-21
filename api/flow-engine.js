@@ -947,7 +947,50 @@ async function handleBackfill(db, query) {
   const comInstancia = new Set((existentes || []).map(e => e.entidade_id))
   const orfas = solicitacoes.filter(s => !comInstancia.has(s.id))
 
-  if (!orfas.length) return { status: 200, body: { criadas: 0, mensagem: 'Todas as solicitações já possuem flow_instance' } }
+  // Também busca instâncias presas no passo inicial ('rascunho') quando entidade é 'pendente'
+  const pendentesNoFlow = solicitacoes.filter(s => comInstancia.has(s.id) && s.status === 'pendente')
+  const avancadas = []
+
+  for (const sol of pendentesNoFlow) {
+    try {
+      const { data: inst } = await db
+        .from('flow_instances')
+        .select(`id, current_step_id, flow_steps!inner(nome, status_valor)`)
+        .eq('entidade_tipo', entidadeTipo)
+        .eq('entidade_id', sol.id)
+        .eq('status', 'ativo')
+        .maybeSingle()
+
+      if (!inst) continue
+      const stepStatus = inst.flow_steps?.status_valor || inst.flow_steps?.nome || ''
+      if (!['rascunho', 'draft'].includes(stepStatus.toLowerCase())) continue
+
+      // Presa no Rascunho mas entidade é pendente — avançar com ação 'enviar'
+      const { data: acaoEnviar } = await db
+        .from('flow_actions')
+        .select('id')
+        .eq('step_id', inst.current_step_id)
+        .eq('nome', 'enviar')
+        .maybeSingle()
+
+      if (!acaoEnviar) continue
+
+      const execResult = await handleExecute(db, {
+        instance_id:   inst.id,
+        acao_id:       acaoEnviar.id,
+        executado_por: null,
+        dados:         {},
+        origem:        'backfill-advance',
+      })
+
+      avancadas.push({ id: sol.id, numero_pedido: sol.numero_pedido, ok: execResult.status === 200, instance_id: inst.id })
+    } catch (err) {
+      avancadas.push({ id: sol.id, ok: false, erro: err?.message })
+    }
+  }
+
+  if (!orfas.length && !avancadas.length) return { status: 200, body: { criadas: 0, avancadas: 0, mensagem: 'Todas as solicitações já possuem flow_instance atualizado' } }
+  if (!orfas.length) return { status: 200, body: { criadas: 0, avancadas: avancadas.filter(a => a.ok).length, resultados_avancadas: avancadas } }
 
   const resultados = []
 
@@ -991,7 +1034,8 @@ async function handleBackfill(db, query) {
   }
 
   const criadas = resultados.filter(r => r.ok).length
-  return { status: 200, body: { criadas, total_orfas: orfas.length, resultados } }
+  const qtdAvancadas = avancadas.filter(a => a.ok).length
+  return { status: 200, body: { criadas, avancadas: qtdAvancadas, total_orfas: orfas.length, resultados, resultados_avancadas: avancadas } }
 }
 
 // ─────────────────────────────────────────────
