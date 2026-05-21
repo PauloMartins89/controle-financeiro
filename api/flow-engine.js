@@ -644,7 +644,6 @@ async function dispararNotificacoes(db, instancia, proximaStep, acao, dados, exe
     .eq('step_id', proximaStep.id)
     .eq('evento', 'entrada_etapa')
     .eq('ativo', true)
-    .catch(() => ({ data: [] }))
 
   if (!notifs || notifs.length === 0) return
 
@@ -653,7 +652,6 @@ async function dispararNotificacoes(db, instancia, proximaStep, acao, dados, exe
   if (executadoPorId) {
     const { data: userMeta } = await db
       .rpc('get_user_name', { uid: executadoPorId })
-      .catch(() => ({ data: null }))
     nomeExecutor = userMeta || 'Usuário'
   }
 
