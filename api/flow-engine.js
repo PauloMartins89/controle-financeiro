@@ -423,13 +423,18 @@ async function handleExecute(db, body) {
   }
 
   // ── 4. Determinar próxima etapa via transições ───────────
-  const { data: transicoes } = await db
+  const { data: transicoes, error: transErr } = await db
     .from('flow_transitions')
-    .select('*, flow_steps!flow_transitions_step_destino_id_fkey(*)')
+    .select('*')
     .eq('version_id', instancia.version_id)
     .eq('step_origem_id', instancia.current_step_id)
     .eq('acao_id', acao_id)
     .order('ordem', { ascending: true })
+
+  console.error('[flow-engine execute] transicoes', {
+    version_id: instancia.version_id, step_origem_id: instancia.current_step_id,
+    acao_id, found: transicoes?.length ?? 0, err: transErr?.message,
+  })
 
   // Contexto de avaliação = dados_contexto da instância + dados da ação
   const contextoAvaliacao = {
@@ -440,12 +445,8 @@ async function handleExecute(db, body) {
   let proximaStep = null
   for (const transicao of transicoes || []) {
     if (avaliarCondicao(transicao.condicao, contextoAvaliacao)) {
-      proximaStep = transicao['flow_steps!flow_transitions_step_destino_id_fkey']
-        || transicao.flow_steps
-        || null
-
-      // Se não veio joined, buscar
-      if (!proximaStep && transicao.step_destino_id) {
+      // Buscar step destino diretamente (mais confiável que join)
+      if (transicao.step_destino_id) {
         const { data: s } = await db
           .from('flow_steps')
           .select('*')
