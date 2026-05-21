@@ -1,15 +1,11 @@
-// api/cnpj.js
-// GET /api/cnpj?cnpj=DIGITS
-// Tenta BrasilAPI primeiro; se bloquear (Cloudflare 403), usa ReceitaWS como fallback
-// Normaliza ReceitaWS para o mesmo formato BrasilAPI
+﻿// api/cnpj.js
+// GET  /api/cnpj?cnpj=DIGITS   — consulta CNPJ (BrasilAPI → ReceitaWS)
+// POST /api/cnpj                — busca CNPJ por nome via Casa dos Dados
 
 function normalizeReceitaWS(d) {
-  // telefone: "(12) 3904-4343" → ddd_telefone_1: "1239044343"
   const telRaw = (d.telefone || '').replace(/\D/g, '')
   const ddd1   = telRaw.length >= 10 ? telRaw.slice(0, 2) : ''
   const tel1   = telRaw.length >= 10 ? telRaw.slice(2)    : ''
-
-  // natureza_juridica: "205-4 - Sociedade Anônima Fechada" → apenas o texto
   const natJur = (d.natureza_juridica || '').replace(/^\d+[-\s]+/, '')
 
   return {
@@ -57,45 +53,46 @@ function normalizeReceitaWS(d) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
-
-  const digits = (req.query.cnpj || '').replace(/\D/g, '')
-  if (digits.length !== 14) {
-    return res.status(400).json({ error: 'CNPJ deve ter 14 dígitos' })
-  }
-
-  // ── 1ª tentativa: BrasilAPI ────────────────────────────────────────────────
-  try {
-    const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(3000),
-    })
-    if (r.ok) {
-      return res.status(200).json(await r.json())
+  // ── GET: consulta CNPJ ─────────────────────────────────────────────────────
+  if (req.method === 'GET') {
+    const digits = (req.query.cnpj || '').replace(/\D/g, '')
+    if (digits.length !== 14) {
+      return res.status(400).json({ error: 'CNPJ deve ter 14 dígitos' })
     }
-  } catch { /* cai no fallback */ }
 
-  // ── 2ª tentativa: ReceitaWS (fallback) ────────────────────────────────────
-  try {
-    const r = await fetch(`https://receitaws.com.br/v1/cnpj/${digits}`, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(6000),
-    })
-    if (!r.ok) throw new Error(`ReceitaWS ${r.status}`)
-    const d = await r.json()
-    if (d.status === 'ERROR') throw new Error(d.message || 'CNPJ não encontrado')
-    return res.status(200).json(normalizeReceitaWS(d))
-  } catch (err) {
-    return res.status(502).json({ error: err.message || 'Serviço de CNPJ indisponível. Tente novamente.' })
+    // 1ª tentativa: BrasilAPI
+    try {
+      const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(3000),
+      })
+      if (r.ok) {
+        const data = await r.json()
+        data._source = 'brasilapi'
+        return res.status(200).json(data)
+      }
+    } catch { /* cai no fallback */ }
+
+    // 2ª tentativa: ReceitaWS (fallback)
+    try {
+      const r = await fetch(`https://receitaws.com.br/v1/cnpj/${digits}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(6000),
+      })
+      if (!r.ok) throw new Error(`ReceitaWS ${r.status}`)
+      const d = await r.json()
+      if (d.status === 'ERROR') throw new Error(d.message || 'CNPJ não encontrado')
+      return res.status(200).json(normalizeReceitaWS(d))
+    } catch (err) {
+      return res.status(502).json({ error: err.message || 'Serviço de CNPJ indisponível. Tente novamente.' })
+    }
   }
-}
 
-
-  // ── POST: busca CNPJ por nome de empresa via Casa dos Dados (gratuito) ───────
+  // ── POST: busca CNPJ por nome de empresa via Casa dos Dados ───────────────
   if (req.method === 'POST') {
     const { mode, nome, cidade, uf } = req.body || {}
 
