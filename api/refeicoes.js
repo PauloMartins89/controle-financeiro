@@ -486,6 +486,12 @@ export default async function handler(req, res) {
     let tokenLider
     if (existente) {
       tokenLider = existente.token_lider
+      // Atualiza supervisor_telefone caso tenha sido cadastrado/alterado após o rascunho ser criado
+      await db.from('refei_solicitacoes').update({
+        supervisor_telefone: equipe.supervisor_telefone,
+        lider_nome:          equipe.lider_nome,
+        lider_telefone:      equipe.lider_telefone,
+      }).eq('token_lider', tokenLider)
     } else {
       const { data: novo } = await db.from('refei_solicitacoes').insert({
         workspace_id:        equipe.workspace_id,
@@ -532,7 +538,7 @@ export default async function handler(req, res) {
       .maybeSingle()
 
     if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
-    if (sol.status !== 'pendente') return res.status(400).json({ error: 'Pedido não está pendente' })
+    if (!['pendente', 'aguardando_aprovacao'].includes(sol.status)) return res.status(400).json({ error: 'Pedido não está aguardando aprovação' })
     if (!sol.supervisor_telefone) return res.status(400).json({ error: 'Supervisor sem telefone cadastrado' })
 
     const link = `${APP_URL}/ar/${sol.token_aprovacao}`
