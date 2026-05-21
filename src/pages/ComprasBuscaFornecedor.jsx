@@ -468,12 +468,10 @@ function AbaCnpj({ onAdicionar, adicionados, hint, hintCidade }) {
     if (digits.length !== 14) { toast.error('CNPJ deve ter 14 dígitos'); return }
     setLoading(true); setEmpresa(null)
     try {
-      const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
-      if (!r.ok) {
-        const err = await r.json().catch(()=>({}))
-        throw new Error(err.message || 'CNPJ não encontrado ou inativo')
-      }
-      setEmpresa(await r.json())
+      const r = await fetch(`/api/cnpj?cnpj=${digits}`)
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.message || data.error || 'CNPJ não encontrado ou inativo')
+      setEmpresa(data)
     } catch (err) {
       toast.error(err.message)
     }
@@ -490,10 +488,13 @@ function AbaCnpj({ onAdicionar, adicionados, hint, hintCidade }) {
     setEmpresa(null)
     setCnpj('')
     try {
-      const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
-        body: { mode: 'cnpj_search', nome: nomeBusca.trim(), cidade: cidadeBusca.trim() },
+      const r = await fetch('/api/cnpj', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'cnpj_search', nome: nomeBusca.trim(), cidade: cidadeBusca.trim() }),
       })
-      if (error || !data?.cnpjs?.length) {
+      const data = await r.json()
+      if (!r.ok || !data?.cnpjs?.length) {
         toast.error('CNPJ não encontrado. Tente o nome completo ou inclua a cidade.')
         return
       }
@@ -514,11 +515,13 @@ function AbaCnpj({ onAdicionar, adicionados, hint, hintCidade }) {
     setEmpresa(null)
     setCnpj('')
     setAutoSearching(true)
-    supabase.functions.invoke('busca-fornecedores', {
-      body: { mode: 'cnpj_search', nome: hint, cidade: hintCidade || '' },
-    }).then(({ data, error }) => {
+    fetch('/api/cnpj', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'cnpj_search', nome: hint, cidade: hintCidade || '' }),
+    }).then(r => r.json()).then(data => {
       setAutoSearching(false)
-      if (error || !data?.cnpjs?.length) {
+      if (!data?.cnpjs?.length) {
         setAutoMsg('notfound')
         return
       }
