@@ -468,12 +468,21 @@ function AbaCnpj({ onAdicionar, adicionados, hint, hintCidade }) {
     if (digits.length !== 14) { toast.error('CNPJ deve ter 14 dígitos'); return }
     setLoading(true); setEmpresa(null)
     try {
-      const r = await fetch(`/api/cnpj?cnpj=${digits}`)
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 10000)
+      const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`, {
+        signal: controller.signal,
+      })
+      clearTimeout(timer)
       const data = await r.json()
-      if (!r.ok) throw new Error(data.message || data.error || 'CNPJ não encontrado ou inativo')
+      if (!r.ok) throw new Error(data.message || data.type || 'CNPJ não encontrado ou inativo')
       setEmpresa(data)
     } catch (err) {
-      toast.error(err.message)
+      if (err.name === 'AbortError') {
+        toast.error('Consulta demorou demais. Tente novamente.')
+      } else {
+        toast.error(err.message || 'Erro ao consultar CNPJ')
+      }
     }
     setLoading(false)
   }
