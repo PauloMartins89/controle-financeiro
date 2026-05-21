@@ -481,6 +481,32 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         }
         return res.status(200).end()
       }
+
+      // ── Verifica se é telefone de restaurante de refeições ────────────────
+      let restFound = null
+      for (const v of fromVariants) {
+        const { data: rData } = await db.from('refei_restaurantes')
+          .select('id, nome').eq('telefone_wa', v).eq('ativo', true).limit(1).maybeSingle()
+        if (rData) { restFound = rData; break }
+      }
+      if (restFound) {
+        // Restaurante respondeu uma mensagem — busca o pedido mais recente enviado
+        const { data: solRest } = await db.from('refei_solicitacoes')
+          .select('token_restaurante, numero_pedido, status')
+          .eq('restaurante_id', restFound.id)
+          .in('status', ['enviado_restaurante', 'confirmado_restaurante', 'entregue'])
+          .order('criado_em', { ascending: false })
+          .limit(1).maybeSingle()
+        if (solRest?.token_restaurante) {
+          const linkRest = `${APP_URL}/rc/${solRest.token_restaurante}`
+          await sendWA(from, `✅ Olá, *${restFound.nome}*! Para confirmar ou ver os detalhes do pedido *${solRest.numero_pedido}*, acesse:\n${linkRest}`)
+        } else {
+          await sendWA(from, `✅ Olá, *${restFound.nome}*! Nenhum pedido ativo no momento. Aguarde o envio da próxima solicitação.`)
+        }
+        return res.status(200).end()
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       await sendWA(from, `Olá! 👋 Seu número não está vinculado ao Dividi Aí.\n\nAcesse *${APP_URL}* → Admin para cadastrar.`)
       return res.status(200).end()
     }

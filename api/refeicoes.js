@@ -629,7 +629,7 @@ export default async function handler(req, res) {
     const { solicitacaoId, userId } = req.body || {}
     if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
     const { data: sol } = await db.from('refei_solicitacoes')
-      .select('*, refei_restaurantes(nome, telefone_wa)')
+      .select('*, refei_restaurantes(nome, telefone_wa, confirma_pedido)')
       .eq('id', solicitacaoId).maybeSingle()
     if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
     if (sol.status !== 'consolidado') return res.status(409).json({ error: 'Pedido precisa estar consolidado' })
@@ -642,6 +642,10 @@ export default async function handler(req, res) {
       const qtdRef  = (itens || []).filter(i => i.refeicao).length
       const qtdCafe = (itens || []).filter(i => i.cafe).length
       const nomes   = (itens || []).map(i => `• ${i.colaborador_nome}${i.refeicao ? ' 🍽️' : ''}${i.cafe ? ' ☕' : ''}`)
+      const linkRestaurante = `${APP_URL}/rc/${sol.token_restaurante}`
+      const confirmaLinha = sol.refei_restaurantes?.confirma_pedido
+        ? `\n\n✅ *Confirme o recebimento do pedido:*\n${linkRestaurante}`
+        : `\n\n📋 *Acesse os detalhes:*\n${linkRestaurante}`
       const msg = [
         `🏪 *Pedido Confirmado: ${sol.ticket || sol.numero_pedido}*`,
         `📅 Data: ${fmtData(sol.data_refeicao)}`,
@@ -649,7 +653,7 @@ export default async function handler(req, res) {
         ...nomes,
         `─────────────────────`,
         `🍽️ ${qtdRef} refeição(ões)  ☕ ${qtdCafe} café(s)`,
-        `*Total: ${fmtBRL(sol.valor_total)}*`,
+        `*Total: ${fmtBRL(sol.valor_total)}*${confirmaLinha}`,
       ].join('\n')
       await sendWA(sol.refei_restaurantes.telefone_wa, msg)
     }
@@ -680,17 +684,17 @@ export default async function handler(req, res) {
     await db.from('refei_solicitacoes').update({ status: 'aguardando_validacao', validacao_env_em: now }).eq('id', sol.id)
     await logEvento(db, { solicitacaoId: sol.id, tipo: 'validacao_enviada', descricao: 'Validação enviada ao líder para confirmação', ator: 'Sistema', atorTipo: 'sistema' })
     if (sol.lider_telefone) {
-      const validUrl = `${APP_URL}/refeicao/validar/${sol.token_lider}`
+      const validUrl = `${APP_URL}/vr/${sol.token_lider}`
       await sendWA(sol.lider_telefone, [
         `🍽️ *Confirmação de Entrega — ${sol.ticket || sol.numero_pedido}*`,
         `Olá${sol.lider_nome ? ', ' + sol.lider_nome : ''}!`,
         ``,
-        `Sua refeição do dia ${fmtData(sol.data_refeicao)} foi entregue?`,
+        `Sua refeição do dia ${fmtData(sol.data_refeicao)} foi entregue conforme esperado?`,
         ``,
-        `✅ Tudo certo: ${validUrl}?ok=1`,
-        `⚠️ Houve problema: ${validUrl}?ok=0`,
+        `Acesse o link para confirmar:`,
+        validUrl,
         ``,
-        `_Responda para registrar a confirmação._`,
+        `Ou responda *SIM* se tudo certo, *NÃO* se houve problema.`,
       ].join('\n'))
     }
     return res.status(200).json({ ok: true, mensagem: 'Validação enviada ao líder! 📱' })
