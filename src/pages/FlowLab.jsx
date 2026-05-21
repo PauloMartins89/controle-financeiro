@@ -721,6 +721,8 @@ function SimulatorTab({ workspaceId }) {
   const [simAtiva, setSimAtiva] = useState(false)
   const [stepAtualId, setStepAtualId] = useState(null)
   const [caminho, setCaminho] = useState([])   // [{ step, acao_escolhida }]
+  const [enviando, setEnviando] = useState(false)
+  const [simResult, setSimResult] = useState(null)
 
   // Carregar definições
   useEffect(() => {
@@ -775,7 +777,31 @@ function SimulatorTab({ workspaceId }) {
     setCaminho(prev => [...prev, { step: proximo, acao_escolhida: acao.nome }])
   }
 
-  const resetar = () => { setSimAtiva(false); setStepAtualId(null); setCaminho([]) }
+  const resetar = () => { setSimAtiva(false); setStepAtualId(null); setCaminho([]); setSimResult(null) }
+
+  const executarComDadosReais = async () => {
+    if (!flowData || !selectedDef) return
+    setEnviando(true)
+    setSimResult(null)
+    try {
+      const resp = await fetch('/api/flow-engine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'sim_start',
+          definition_id: selectedDef,
+          workspace_id: workspaceId,
+          dados_simulacao: { ...campos, ...extraVals },
+        }),
+      })
+      const data = await resp.json()
+      setSimResult({ ok: resp.ok, data })
+      if (resp.ok) toast.success(data.mensagem || 'Registro criado!')
+      else toast.error(data.error || 'Erro ao criar registro')
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   const contexto = { ...campos, ...extraVals }
   const stepAtual = flowData?.steps.find(s => s.id === stepAtualId)
@@ -853,12 +879,52 @@ function SimulatorTab({ workspaceId }) {
           </div>
         </div>
 
-        {/* Botão iniciar */}
+        {/* Botão iniciar simulação visual */}
         <button onClick={simAtiva ? resetar : iniciarSim}
           disabled={!flowData || loadingFlow}
           style={{ padding: '12px 20px', background: simAtiva ? 'rgba(239,68,68,0.15)' : (flowData ? '#6366f1' : '#1e293b'), border: simAtiva ? '1px solid #ef4444' : 'none', color: simAtiva ? '#ef4444' : (flowData ? '#fff' : '#475569'), borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: flowData ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-          {simAtiva ? <><XCircleIcon style={{ width: 16, height: 16 }} /> Resetar Simulação</> : <><PlayIcon style={{ width: 16, height: 16 }} /> Iniciar Simulação</>}
+          {simAtiva ? <><XCircleIcon style={{ width: 16, height: 16 }} /> Resetar Simulação</> : <><PlayIcon style={{ width: 16, height: 16 }} /> Iniciar Simulação Visual</>}
         </button>
+
+        {/* Botão executar com dados reais */}
+        <button onClick={executarComDadosReais}
+          disabled={!flowData || loadingFlow || enviando}
+          style={{ padding: '12px 20px', background: flowData ? 'rgba(16,185,129,0.15)' : '#1e293b', border: flowData ? '1px solid #10b981' : '1px solid #1e293b', color: flowData ? '#10b981' : '#475569', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: flowData ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+          {enviando ? <ArrowPathIcon style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> : <span>📲</span>}
+          {enviando ? 'Criando e enviando...' : 'Criar Registro + Enviar WhatsApp'}
+        </button>
+
+        {/* Resultado do sim_start */}
+        {simResult && (
+          <div style={{ background: simResult.ok ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.06)', border: `1px solid ${simResult.ok ? '#10b98140' : '#ef444440'}`, borderRadius: 10, padding: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              {simResult.ok
+                ? <CheckCircleIcon style={{ width: 16, height: 16, color: '#10b981' }} />
+                : <XCircleIcon style={{ width: 16, height: 16, color: '#ef4444' }} />}
+              <span style={{ fontSize: 12, fontWeight: 700, color: simResult.ok ? '#10b981' : '#ef4444' }}>
+                {simResult.ok ? simResult.data.mensagem : simResult.data.error}
+              </span>
+              <button onClick={() => setSimResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16 }}>×</button>
+            </div>
+            {simResult.ok && simResult.data.notificacoes?.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {simResult.data.notificacoes.map((n, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#94a3b8', background: '#111827', borderRadius: 8, padding: '7px 10px' }}>
+                    <span style={{ fontSize: 14 }}>{n.enviado ? '✅' : '❌'}</span>
+                    <span><strong>{n.para}</strong>{n.nome ? ` (${n.nome})` : ''}</span>
+                    <span style={{ color: '#475569' }}>📱 {n.celular}</span>
+                    {!n.enviado && n.erro && <span style={{ color: '#ef4444' }}>{n.erro}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {simResult.ok && simResult.data.instance_id && (
+              <div style={{ marginTop: 8, fontSize: 11, color: '#475569' }}>
+                Registro: <span style={{ color: '#6366f1', fontFamily: 'monospace' }}>{simResult.data.instance_id}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Painel Direito: Simulação */}

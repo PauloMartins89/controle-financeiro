@@ -1039,6 +1039,107 @@ async function handleBackfill(db, query) {
 }
 
 // ─────────────────────────────────────────────
+// AÇÃO: sim_start — cria instância de teste e envia WhatsApp para os números informados
+// POST /api/flow-engine  body: { action:'sim_start', definition_id, workspace_id, dados_simulacao }
+// ─────────────────────────────────────────────
+async function handleSimStart(db, body) {
+  const { definition_id, workspace_id, dados_simulacao = {} } = body
+
+  if (!definition_id || !workspace_id) {
+    return { status: 400, body: { error: 'definition_id e workspace_id são obrigatórios' } }
+  }
+
+  // Carregar definição para saber tipo_entidade e etapa inicial
+  const { data: def } = await db
+    .from('flow_definitions')
+    .select('nome, tipo_entidade, flow_versions!flow_versions_definition_id_fkey(id, is_current, flow_steps(*))')
+    .eq('id', definition_id)
+    .eq('ativo', true)
+    .single()
+
+  if (!def) return { status: 404, body: { error: 'Processo não encontrado' } }
+
+  const version = def.flow_versions?.find(v => v.is_current)
+  if (!version) return { status: 404, body: { error: 'Sem versão ativa' } }
+
+  const stepInicial = version.flow_steps?.find(s => s.is_initial)
+  if (!stepInicial) return { status: 500, body: { error: 'Processo sem etapa inicial' } }
+
+  // Gerar UUID fake para a entidade (não precisa existir na tabela de negócio)
+  const fakeEntidadeId = crypto.randomUUID()
+
+  // Criar instância real via handleStart (update na entidade falha silenciosamente — OK)
+  const startResult = await handleStart(db, {
+    definition_id,
+    entidade_tipo: def.tipo_entidade,
+    entidade_id: fakeEntidadeId,
+    workspace_id,
+    dados_contexto: {
+      ...dados_simulacao,
+      _is_simulacao: true,
+      _sim_criado_em: new Date().toISOString(),
+    },
+  })
+
+  if (startResult.status !== 201) return startResult
+
+  const instanceIdCurto = startResult.body.instance_id?.substring(0, 8)
+
+  // Enviar WhatsApp para os números informados
+  const notificacoes = []
+  const { nome_solicitante, celular_solicitante, nome_supervisor, celular_supervisor } = dados_simulacao
+
+  if (celular_solicitante) {
+    const msg = [
+      `🧪 *[SIMULAÇÃO DE FLUXO]*`,
+      ``,
+      `Olá${nome_solicitante ? ', *' + nome_solicitante + '*' : ''}!`,
+      ``,
+      `Você está testando o processo *${def.nome}*.`,
+      ``,
+      `📍 Etapa inicial: *${stepInicial.nome}*`,
+      ``,
+      `Esta mensagem confirma que a notificação chegaria corretamente ao *solicitante*.`,
+      ``,
+      `_ID da simulação: ${instanceIdCurto}_`,
+    ].join('\n')
+    const wa = await sendWA(celular_solicitante, msg)
+    notificacoes.push({ para: 'solicitante', nome: nome_solicitante || '', celular: celular_solicitante, enviado: wa.ok, erro: wa.error })
+  }
+
+  if (celular_supervisor) {
+    const msg = [
+      `🧪 *[SIMULAÇÃO DE FLUXO]*`,
+      ``,
+      `Olá${nome_supervisor ? ', *' + nome_supervisor + '*' : ''}!`,
+      ``,
+      `Você está sendo testado como *aprovador* no processo *${def.nome}*.`,
+      ``,
+      `📋 Você receberia esta notificação quando a solicitação chegar para aprovação.`,
+      nome_solicitante ? `👤 Solicitante: ${nome_solicitante}` : '',
+      (dados_simulacao.valor_total ? `💰 Valor: R$ ${dados_simulacao.valor_total}` : ''),
+      ``,
+      `_ID da simulação: ${instanceIdCurto}_`,
+    ].filter(Boolean).join('\n')
+    const wa = await sendWA(celular_supervisor, msg)
+    notificacoes.push({ para: 'supervisor', nome: nome_supervisor || '', celular: celular_supervisor, enviado: wa.ok, erro: wa.error })
+  }
+
+  const enviadas = notificacoes.filter(n => n.enviado).length
+  return {
+    status: 201,
+    body: {
+      ok: true,
+      instance_id: startResult.body.instance_id,
+      current_step: startResult.body.current_step,
+      processo: def.nome,
+      notificacoes,
+      mensagem: `Registro criado${enviadas > 0 ? ` e ${enviadas} WhatsApp(s) enviado(s)` : ' (nenhum celular informado)'}`,
+    }
+  }
+}
+
+// ─────────────────────────────────────────────
 // HANDLER PRINCIPAL
 // ─────────────────────────────────────────────
 export default async function handler(req, res) {
@@ -1054,9 +1155,10 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'POST') {
       switch (action) {
-        case 'start':    result = await handleStart(db, req.body);    break
-        case 'execute':  result = await handleExecute(db, req.body);  break
-        case 'simulate': result = await handleSimulate(db, req.body); break
+        case 'start':     result = await handleStart(db, req.body);     break
+        case 'execute':   result = await handleExecute(db, req.body);   break
+        case 'simulate':  result = await handleSimulate(db, req.body);  break
+        case 'sim_start': result = await handleSimStart(db, req.body);  break
         default:
           return res.status(400).json({ error: `Ação POST desconhecida: ${action}` })
       }
