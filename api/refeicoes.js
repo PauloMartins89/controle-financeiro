@@ -752,7 +752,7 @@ export default async function handler(req, res) {
 
     const [{ data: itens }, { data: equipe }, { data: rest }] = await Promise.all([
       db.from('refei_itens').select('*').eq('solicitacao_id', sol.id),
-      db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle(),
+      db.from('refei_equipes').select('nome, supervisor_nome').eq('id', sol.equipe_id).maybeSingle(),
       db.from('refei_restaurantes').select('nome, confirma_pedido').eq('id', sol.restaurante_id).maybeSingle(),
     ])
 

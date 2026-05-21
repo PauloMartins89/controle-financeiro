@@ -76,6 +76,7 @@ export default function RefeicaoConfirmarRestaurante() {
   )
 
   const { sol, equipe, restaurante, itens } = data
+  const supervisorNome = sol.supervisor_nome || equipe?.supervisor_nome || null
   const jaConfirmado = done || !['enviado_restaurante'].includes(sol.status)
   const precisaConfirmar = restaurante?.confirma_pedido
 
@@ -133,7 +134,7 @@ export default function RefeicaoConfirmarRestaurante() {
         <Divider />
 
         {/* Líder e Supervisor */}
-        {(sol.lider_nome || sol.supervisor_nome) && (
+        {(sol.lider_nome || supervisorNome) && (
           <>
             <div style={{ padding: '16px 24px' }}>
               <SectionLabel>Responsáveis</SectionLabel>
@@ -144,10 +145,10 @@ export default function RefeicaoConfirmarRestaurante() {
                     <span style={{ fontWeight: 600, fontSize: 14, color: '#e5e7eb' }}>{sol.lider_nome}</span>
                   </div>
                 )}
-                {sol.supervisor_nome && (
+                {supervisorNome && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: T.rowBg, border: `1px solid ${T.border}`, borderRadius: 10, padding: '10px 14px' }}>
                     <span style={{ fontSize: 12, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>Aprovado por</span>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: '#e5e7eb' }}>{sol.supervisor_nome}</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: '#e5e7eb' }}>{supervisorNome}</span>
                   </div>
                 )}
               </div>
