@@ -81,7 +81,7 @@ function InstanceRow({ inst, onAction }) {
         </td>
         {/* Status */}
         <td style={{ padding: '11px 14px' }}>
-          <StatusPill status={inst.status} />
+          <StatusPill status={inst.flow_steps?.status_valor || inst.status} />
         </td>
         {/* SLA */}
         <td style={{ padding: '11px 14px' }}>
@@ -222,14 +222,15 @@ export default function FlowCenter() {
 
   // Stats
   const stats = useMemo(() => {
-    const ativas = instances.filter(i => i.status !== 'fechado')
+    const bStatus = i => i.flow_steps?.status_valor || i.status
+    const ativas = instances.filter(i => bStatus(i) !== 'fechado')
     const vencidas = ativas.filter(i => i.sla_vence_em && new Date(i.sla_vence_em) < new Date())
     return {
       total:     instances.length,
       ativas:    ativas.length,
-      pendentes: instances.filter(i => i.status === 'pendente').length,
+      pendentes: instances.filter(i => bStatus(i) === 'pendente').length,
       vencidas:  vencidas.length,
-      fechadas:  instances.filter(i => i.status === 'fechado').length,
+      fechadas:  instances.filter(i => bStatus(i) === 'fechado').length,
     }
   }, [instances])
 
@@ -242,9 +243,10 @@ export default function FlowCenter() {
   const filtradas = useMemo(() => {
     let list = instances
 
-    if (filtroStatus === 'ativos') list = list.filter(i => i.status !== 'fechado')
+    const bSt = i => i.flow_steps?.status_valor || i.status
+    if (filtroStatus === 'ativos') list = list.filter(i => bSt(i) !== 'fechado')
     else if (filtroStatus === 'vencidos') list = list.filter(i => i.sla_vence_em && new Date(i.sla_vence_em) < new Date())
-    else if (filtroStatus === 'fechados') list = list.filter(i => i.status === 'fechado')
+    else if (filtroStatus === 'fechados') list = list.filter(i => bSt(i) === 'fechado')
 
     if (filtroModulo !== 'todos') list = list.filter(i => i.flow_definitions?.modulo === filtroModulo)
 
