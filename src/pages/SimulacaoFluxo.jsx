@@ -34,9 +34,9 @@ const TEMPLATES = {
     label: 'Refeições 🍽️',
     inputPlaceholder: 'Ex: 1 almoço para 22/05, 2 pessoas...',
     participantes: [
-      { papel: 'Solicitante',  icon: '👤', cor: '#6366f1', obrig: true  },
-      { papel: 'Supervisor',   icon: '✍️', cor: '#f59e0b', obrig: true  },
-      { papel: 'Restaurante',  icon: '🍽️', cor: '#10b981', obrig: false },
+      { papel: 'Solicitante',  icon: '👤', cor: '#6366f1', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Supervisor',   icon: '✍️', cor: '#f59e0b', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Restaurante',  icon: '🍽️', cor: '#10b981', obrig: false, email: '', canal: 'whatsapp' },
     ],
     msgs: {
       boas:          'Olá, *{nome_p1}*! 👋\n\nSou o assistente de pedidos de refeição.\n\nDigite sua solicitação:\n(ex: 1 almoço para 2 pessoas, dia 22/05)',
@@ -57,9 +57,9 @@ const TEMPLATES = {
     label: 'Compras 🛒',
     inputPlaceholder: 'Ex: 5 caixas de papel A4, urgente...',
     participantes: [
-      { papel: 'Comprador',   icon: '🛒', cor: '#6366f1', obrig: true  },
-      { papel: 'Aprovador',   icon: '✍️', cor: '#f59e0b', obrig: true  },
-      { papel: 'Fornecedor',  icon: '🏭', cor: '#10b981', obrig: false },
+      { papel: 'Comprador',   icon: '🛒', cor: '#6366f1', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Aprovador',   icon: '✍️', cor: '#f59e0b', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Fornecedor',  icon: '🏭', cor: '#10b981', obrig: false, email: '', canal: 'whatsapp' },
     ],
     msgs: {
       boas:          'Olá, *{nome_p1}*! 👋\n\nSou o assistente de cotação de compras.\n\nDescreva o item que precisa comprar:',
@@ -80,9 +80,9 @@ const TEMPLATES = {
     label: 'Financeiro 💰',
     inputPlaceholder: 'Ex: Pagamento fornecedor, R$ 5.000...',
     participantes: [
-      { papel: 'Solicitante',   icon: '💳', cor: '#6366f1', obrig: true  },
-      { papel: 'Gerente Fin.',  icon: '💰', cor: '#f59e0b', obrig: true  },
-      { papel: 'Diretoria',     icon: '🏦', cor: '#10b981', obrig: false },
+      { papel: 'Solicitante',   icon: '💳', cor: '#6366f1', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Gerente Fin.',  icon: '💰', cor: '#f59e0b', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Diretoria',     icon: '🏦', cor: '#10b981', obrig: false, email: '', canal: 'whatsapp' },
     ],
     msgs: {
       boas:          'Olá, *{nome_p1}*! 👋\n\nSou o assistente financeiro.\n\nDescreva a solicitação (tipo, valor, justificativa):',
@@ -103,9 +103,9 @@ const TEMPLATES = {
     label: 'Campo 📍',
     inputPlaceholder: 'Ex: Avaria no equipamento X, setor 3...',
     participantes: [
-      { papel: 'Operador',       icon: '📍', cor: '#6366f1', obrig: true  },
-      { papel: 'Coordenador',    icon: '📋', cor: '#f59e0b', obrig: true  },
-      { papel: 'Base / Suporte', icon: '🏢', cor: '#10b981', obrig: false },
+      { papel: 'Operador',       icon: '📍', cor: '#6366f1', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Coordenador',    icon: '📋', cor: '#f59e0b', obrig: true,  email: '', canal: 'whatsapp' },
+      { papel: 'Base / Suporte', icon: '🏢', cor: '#10b981', obrig: false, email: '', canal: 'whatsapp' },
     ],
     msgs: {
       boas:          'Olá, *{nome_p1}*! 👋\n\nDescreva a ocorrência ou solicitação de campo:',
@@ -286,6 +286,135 @@ function PhoneMock({ papel, nome, cor, messages, inputAtivo, inputPlaceholder, o
 }
 
 // ─────────────────────────────────────────────
+// Componente: caixa de e-mail simulada
+// ─────────────────────────────────────────────
+function EmailInboxMock({ papel, nome, cor, emails, inputAtivo, inputPlaceholder, onEnviar, acoes, badge, ativo }) {
+  const [texto, setTexto] = useState('')
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [emails])
+
+  const enviar = () => {
+    if (!texto.trim()) return
+    onEnviar?.(texto.trim())
+    setTexto('')
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, minWidth: 270, maxWidth: 320, flex: '0 0 auto' }}>
+      {/* Label */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 28 }}>
+        <div style={{ width: 9, height: 9, borderRadius: '50%', background: cor, boxShadow: ativo ? `0 0 10px ${cor}` : 'none', transition: 'box-shadow 0.4s' }} />
+        <span style={{ color: '#e2e8f0', fontWeight: 800, fontSize: 12 }}>{papel}</span>
+        <span style={{ color: cor, fontSize: 10, background: cor + '18', border: `1px solid ${cor}30`, padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>📧 E-mail</span>
+        {nome && <span style={{ color: '#475569', fontSize: 11 }}>· {nome}</span>}
+        {badge && (
+          <span style={{ background: `${cor}22`, color: cor, border: `1px solid ${cor}50`, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, animation: 'pulse 1.5s infinite' }}>
+            {badge}
+          </span>
+        )}
+      </div>
+
+      {/* Envelope */}
+      <div style={{
+        width: '100%', background: '#0d0d1e',
+        borderRadius: 16,
+        border: `2px solid ${ativo ? cor + '60' : cor + '20'}`,
+        boxShadow: ativo ? `0 0 0 1px ${cor}30, 0 20px 60px rgba(0,0,0,0.6)` : '0 20px 60px rgba(0,0,0,0.4)',
+        overflow: 'hidden',
+        transition: 'border-color 0.4s, box-shadow 0.4s',
+      }}>
+        {/* Header */}
+        <div style={{ background: '#111124', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${cor}20` }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>📧</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 12, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome || papel}</div>
+            <div style={{ color: '#334155', fontSize: 10 }}>Caixa de Entrada · SmartPro Flow</div>
+          </div>
+          <div style={{ fontSize: 18, color: cor, opacity: 0.6 }}>✉️</div>
+        </div>
+
+        {/* E-mails */}
+        <div style={{ height: 320, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: 8, background: '#09091a' }}>
+          {emails.length === 0 && (
+            <div style={{ color: '#1a2540', fontSize: 11, textAlign: 'center', margin: 'auto' }}>Sem e-mails</div>
+          )}
+          {emails.map((em, i) => (
+            <div key={i} style={{
+              background: em.saida ? '#0f1e35' : '#10102a',
+              border: `1px solid ${em.saida ? '#1e3a5f' : cor + '30'}`,
+              borderRadius: 10, padding: '10px 12px',
+              animation: 'fadeIn 0.3s ease',
+            }}>
+              {em.assunto && (
+                <div style={{ fontSize: 11, fontWeight: 800, color: cor, marginBottom: 5, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span>{em.saida ? '📤' : '📨'}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{em.assunto}</span>
+                </div>
+              )}
+              <pre style={{ margin: 0, fontFamily: 'inherit', fontSize: 11.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#c8d4e0', lineHeight: 1.55 }}>
+                {em.corpo}
+              </pre>
+              {em.linkAcao?.length > 0 && (
+                <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {em.linkAcao.map((la, j) => (
+                    <button key={j} onClick={la.onClick}
+                      style={{ padding: '6px 14px', background: la.cor || cor, border: 'none', borderRadius: 8, color: '#fff', fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+                      {la.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ color: '#1e3050', fontSize: 9.5, marginTop: 5, textAlign: 'right' }}>{em.hora}</div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input */}
+        {inputAtivo && (
+          <div style={{ background: '#111124', padding: '8px', borderTop: `1px solid ${cor}20`, display: 'flex', gap: 6 }}>
+            <input
+              value={texto}
+              onChange={e => setTexto(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && enviar()}
+              placeholder={inputPlaceholder || 'Escrever e-mail...'}
+              style={{ flex: 1, background: '#0f0f1e', border: `1px solid ${cor}30`, borderRadius: 8, padding: '9px 12px', color: '#e2e8f0', fontSize: 12, outline: 'none' }}
+              autoFocus
+            />
+            <button onClick={enviar}
+              style={{ width: 36, height: 36, borderRadius: 8, background: texto.trim() ? cor : '#1e1e3f', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 14, flexShrink: 0, transition: 'background 0.2s' }}>
+              ✉️
+            </button>
+          </div>
+        )}
+
+        {/* Acões */}
+        {acoes?.length > 0 && (
+          <div style={{ background: '#111124', padding: '8px', borderTop: `1px solid ${cor}20`, display: 'flex', gap: 6 }}>
+            {acoes.map((a, i) => (
+              <button key={i} onClick={a.onClick} disabled={a.disabled}
+                style={{ flex: 1, padding: '10px 6px', background: a.disabled ? '#1a2030' : (a.cor || cor), border: 'none', borderRadius: 9, color: '#fff', fontSize: 12, fontWeight: 700, cursor: a.disabled ? 'not-allowed' : 'pointer', opacity: a.disabled ? 0.45 : 1, transition: 'opacity 0.2s' }}>
+                {a.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        {!inputAtivo && !acoes?.length && (
+          <div style={{ height: 24, background: '#090910', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ color: '#1a2540', fontSize: 9 }}>Caixa de Entrada</div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
 // Página principal
 // ─────────────────────────────────────────────
 export default function SimulacaoFluxo() {
@@ -311,11 +440,20 @@ export default function SimulacaoFluxo() {
 
   // Mensagens por phone (até 5)
   const [msgsPhone, setMsgsPhone] = useState([[], [], [], [], []])
+  // Mensagens por caixa de e-mail (até 5)
+  const [msgsEmail, setMsgsEmail] = useState([[], [], [], [], []])
 
   const addMsg = (idx, texto, saida = false, sistema = false) =>
     setMsgsPhone(prev => {
       const n = prev.map(a => [...a])
       n[idx] = [...n[idx], { texto, saida, sistema, hora: agora() }]
+      return n
+    })
+
+  const addEmailMsg = (idx, assunto, corpo, saida = false, linkAcao = null) =>
+    setMsgsEmail(prev => {
+      const n = prev.map(a => [...a])
+      n[idx] = [...n[idx], { assunto, corpo, saida, linkAcao, hora: agora() }]
       return n
     })
 
@@ -353,6 +491,8 @@ export default function SimulacaoFluxo() {
       obrig: false,
       nome: '',
       cel: '',
+      email: '',
+      canal: 'whatsapp',
     }])
   }
 
@@ -400,17 +540,27 @@ export default function SimulacaoFluxo() {
 
   // ── INICIAR
   const iniciar = () => {
-    if (!participantes[0]?.nome?.trim() || !participantes[0]?.cel?.trim()) {
-      toast.error(`Preencha nome e celular do ${participantes[0]?.papel || 'Participante 1'}`)
-      return
+    const precisaCel = (p) => !p?.canal || p.canal === 'whatsapp' || p.canal === 'ambos'
+    if (!participantes[0]?.nome?.trim()) {
+      toast.error(`Preencha o nome do ${participantes[0]?.papel || 'Participante 1'}`); return
     }
-    if (!participantes[1]?.nome?.trim() || !participantes[1]?.cel?.trim()) {
-      toast.error(`Preencha nome e celular do ${participantes[1]?.papel || 'Participante 2'}`)
-      return
+    if (precisaCel(participantes[0]) && !participantes[0]?.cel?.trim()) {
+      toast.error(`Preencha o celular do ${participantes[0]?.papel || 'Participante 1'}`); return
+    }
+    if (!participantes[1]?.nome?.trim()) {
+      toast.error(`Preencha o nome do ${participantes[1]?.papel || 'Participante 2'}`); return
+    }
+    if (precisaCel(participantes[1]) && !participantes[1]?.cel?.trim()) {
+      toast.error(`Preencha o celular do ${participantes[1]?.papel || 'Participante 2'}`); return
     }
     setFase('p1_input')
     const v = buildVars('', null)
-    setTimeout(() => addMsg(0, interp(msgs.boas, v)), 400)
+    setTimeout(() => {
+      addMsg(0, interp(msgs.boas, v))
+      if ((participantes[0]?.canal === 'email' || participantes[0]?.canal === 'ambos') && participantes[0]?.email) {
+        addEmailMsg(0, `Boas-vindas — ${TEMPLATES[tipoFluxo].label}`, interp(msgs.boas, v))
+      }
+    }, 400)
   }
 
   // ── P1 ENVIA
@@ -447,6 +597,15 @@ export default function SimulacaoFluxo() {
 
     setTimeout(() => {
       addMsg(1, interp(msgs.notif_p2, v))
+      if ((participantes[1]?.canal === 'email' || participantes[1]?.canal === 'ambos') && participantes[1]?.email) {
+        addEmailMsg(1, `[Aprovação Necessária] ${texto}`,
+          interp(msgs.notif_p2, v), false,
+          [
+            { label: '✅ Aprovar',   cor: '#10b981', onClick: p2Aprova },
+            { label: '❌ Reprovar', cor: '#ef4444', onClick: p2Reprova },
+          ]
+        )
+      }
       setFase('p2_decide')
     }, 2200)
 
@@ -461,7 +620,7 @@ export default function SimulacaoFluxo() {
 
     addMsg(1, '✅ Aprovado!', true)
 
-    if (participantes[2]?.cel) {
+    if (participantes[2]?.cel && (participantes[2]?.canal !== 'email')) {
       enviarWA(
         participantes[2].cel,
         `🧪 [SIMULAÇÃO]\n📦 Pedido aprovado!\n\nSolicitante: ${participantes[0]?.nome}\nPedido: ${pedido}\nCódigo: ${codigo}\nAprovado por: ${participantes[1]?.nome}`,
@@ -471,11 +630,20 @@ export default function SimulacaoFluxo() {
     setTimeout(() => {
       addMsg(1, interp(msgs.aprovado_p2, v))
       addMsg(0, interp(msgs.aprovado_p1, v))
+      if ((participantes[0]?.canal === 'email' || participantes[0]?.canal === 'ambos') && participantes[0]?.email) {
+        addEmailMsg(0, `✅ Aprovado! Código: ${codigo}`, interp(msgs.aprovado_p1, v))
+      }
 
       if (participantes[2]?.nome) {
         const vFull = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
         setTimeout(() => {
           addMsg(2, interp(msgs.notif_p3, vFull))
+          if ((participantes[2]?.canal === 'email' || participantes[2]?.canal === 'ambos') && participantes[2]?.email) {
+            addEmailMsg(2, `[Confirmação Necessária] ${pedido || 'Pedido aprovado'}`,
+              interp(msgs.notif_p3, vFull), false,
+              [{ label: '✅ Confirmar Recebimento', cor: '#10b981', onClick: p3Confirma }]
+            )
+          }
           setFase('p3_confirma')
         }, 600)
       } else {
@@ -502,6 +670,9 @@ export default function SimulacaoFluxo() {
     setTimeout(() => {
       addMsg(1, `❌ *Reprovação registrada.*\n\nMotivo: *${motivo}*\nCódigo: *${codigo}*`)
       addMsg(0, interp(msgs.reprovado_p1, v))
+      if ((participantes[0]?.canal === 'email' || participantes[0]?.canal === 'ambos') && participantes[0]?.email) {
+        addEmailMsg(0, `❌ Reprovado — Código: ${codigo}`, interp(msgs.reprovado_p1, v))
+      }
       setFase('concluido')
     }, 900)
 
@@ -515,6 +686,9 @@ export default function SimulacaoFluxo() {
     setTimeout(() => {
       addMsg(2, interp(msgs.confirmado_p3, v))
       addMsg(0, interp(msgs.confirmado_p1, v))
+      if ((participantes[0]?.canal === 'email' || participantes[0]?.canal === 'ambos') && participantes[0]?.email) {
+        addEmailMsg(0, `✅ Confirmado por ${participantes[2]?.nome || 'P3'}`, interp(msgs.confirmado_p1, v))
+      }
       setFase('concluido')
       const vEnd = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
       setTimeout(() => {
@@ -531,7 +705,10 @@ export default function SimulacaoFluxo() {
       const msgTxt = interp(msgs.notif_extra, { ...v, papel_extra: p.papel, nome_extra: p.nome })
       setTimeout(() => {
         addMsg(3 + i, msgTxt)
-        if (p.cel) enviarWA(p.cel, `🧪 [SIMULAÇÃO]\n${msgTxt}`)
+        if ((p.canal === 'email' || p.canal === 'ambos') && p.email) {
+          addEmailMsg(3 + i, `Informativo — ${codigo}`, msgTxt)
+        }
+        if (p.cel && p.canal !== 'email') enviarWA(p.cel, `🧪 [SIMULAÇÃO]\n${msgTxt}`)
       }, 300 * (i + 1))
     })
   }
@@ -539,6 +716,7 @@ export default function SimulacaoFluxo() {
   const resetar = () => {
     setFase('setup')
     setMsgsPhone([[], [], [], [], []])
+    setMsgsEmail([[], [], [], [], []])
     setInstanceId(null); setPedido(''); setMotivoReprova('')
   }
 
@@ -688,6 +866,22 @@ export default function SimulacaoFluxo() {
                       onChange={e => atualizarParticipante(part.id, 'cel', e.target.value)}
                       style={{ ...inputSt, marginTop: 7 }}
                     />
+                    <input
+                      type="email"
+                      placeholder="E-mail (opcional)"
+                      value={part.email || ''}
+                      onChange={e => atualizarParticipante(part.id, 'email', e.target.value)}
+                      style={{ ...inputSt, marginTop: 7 }}
+                    />
+                    <select
+                      value={part.canal || 'whatsapp'}
+                      onChange={e => atualizarParticipante(part.id, 'canal', e.target.value)}
+                      style={{ ...inputSt, marginTop: 7, appearance: 'none', cursor: 'pointer' }}
+                    >
+                      <option value="whatsapp">📱 WhatsApp</option>
+                      <option value="email">📧 E-mail</option>
+                      <option value="ambos">📱📧 Ambos (WA + E-mail)</option>
+                    </select>
                   </div>
                 ))}
               </div>
@@ -787,38 +981,77 @@ export default function SimulacaoFluxo() {
         {fase !== 'setup' && (
           <>
             <div className="pf" style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 12, justifyContent: participantes.length <= 3 ? 'center' : 'flex-start', alignItems: 'flex-start' }}>
-              <PhoneMock papel={p[0]?.papel || 'P1'} nome={p[0]?.nome} cor={p[0]?.cor || '#6366f1'}
-                messages={msgsPhone[0]} inputAtivo={fase === 'p1_input'}
-                inputPlaceholder={TEMPLATES[tipoFluxo]?.inputPlaceholder || 'Mensagem...'}
-                onEnviar={p1Envia} acoes={[]}
-                ativo={fase === 'p1_input' || fase === 'enviando'}
-              />
-              {p[1] && (
+              {/* P1 */}
+              {(p[0]?.canal !== 'email') && (
+                <PhoneMock papel={p[0]?.papel || 'P1'} nome={p[0]?.nome} cor={p[0]?.cor || '#6366f1'}
+                  messages={msgsPhone[0]} inputAtivo={fase === 'p1_input'}
+                  inputPlaceholder={TEMPLATES[tipoFluxo]?.inputPlaceholder || 'Mensagem...'}
+                  onEnviar={p1Envia} acoes={[]}
+                  ativo={fase === 'p1_input' || fase === 'enviando'}
+                />
+              )}
+              {(p[0]?.canal === 'email' || p[0]?.canal === 'ambos') && (
+                <EmailInboxMock papel={p[0]?.papel || 'P1'} nome={p[0]?.nome} cor={p[0]?.cor || '#6366f1'}
+                  emails={msgsEmail[0]} inputAtivo={fase === 'p1_input'}
+                  inputPlaceholder={TEMPLATES[tipoFluxo]?.inputPlaceholder || 'Mensagem...'}
+                  onEnviar={p1Envia} acoes={[]}
+                  ativo={fase === 'p1_input' || fase === 'enviando'}
+                />
+              )}
+              {/* P2 */}
+              {p[1] && (p[1]?.canal !== 'email') && (
                 <PhoneMock papel={p[1]?.papel || 'P2'} nome={p[1]?.nome} cor={p[1]?.cor || '#f59e0b'}
                   messages={msgsPhone[1]} inputAtivo={false} acoes={acoes2}
                   badge={fase === 'p2_decide' ? 'Ação necessária ⚡' : ''}
                   ativo={fase === 'p2_decide'}
                 />
               )}
-              {p[2] && (
+              {p[1] && (p[1]?.canal === 'email' || p[1]?.canal === 'ambos') && (
+                <EmailInboxMock papel={p[1]?.papel || 'P2'} nome={p[1]?.nome} cor={p[1]?.cor || '#f59e0b'}
+                  emails={msgsEmail[1]} inputAtivo={false} acoes={acoes2}
+                  badge={fase === 'p2_decide' ? 'Ação necessária ⚡' : ''}
+                  ativo={fase === 'p2_decide'}
+                />
+              )}
+              {/* P3 */}
+              {p[2] && (p[2]?.canal !== 'email') && (
                 <PhoneMock papel={p[2]?.papel || 'P3'} nome={p[2]?.nome || '—'} cor={p[2]?.cor || '#10b981'}
                   messages={msgsPhone[2]} inputAtivo={false} acoes={acoes3}
                   badge={fase === 'p3_confirma' ? 'Confirmar ⚡' : ''}
                   ativo={fase === 'p3_confirma'}
                 />
               )}
-              {p[3] && (
+              {p[2] && (p[2]?.canal === 'email' || p[2]?.canal === 'ambos') && (
+                <EmailInboxMock papel={p[2]?.papel || 'P3'} nome={p[2]?.nome || '—'} cor={p[2]?.cor || '#10b981'}
+                  emails={msgsEmail[2]} inputAtivo={false} acoes={acoes3}
+                  badge={fase === 'p3_confirma' ? 'Confirmar ⚡' : ''}
+                  ativo={fase === 'p3_confirma'}
+                />
+              )}
+              {/* P4 */}
+              {p[3] && (p[3]?.canal !== 'email') && (
                 <PhoneMock papel={p[3]?.papel || 'P4'} nome={p[3]?.nome || '—'} cor={p[3]?.cor || '#ec4899'}
                   messages={msgsPhone[3]} inputAtivo={false} acoes={[]}
                   badge={fase === 'concluido' && msgsPhone[3].length > 0 ? 'Notificado ✓' : ''}
                   ativo={false}
                 />
               )}
-              {p[4] && (
+              {p[3] && (p[3]?.canal === 'email' || p[3]?.canal === 'ambos') && (
+                <EmailInboxMock papel={p[3]?.papel || 'P4'} nome={p[3]?.nome || '—'} cor={p[3]?.cor || '#ec4899'}
+                  emails={msgsEmail[3]} inputAtivo={false} acoes={[]} ativo={false}
+                />
+              )}
+              {/* P5 */}
+              {p[4] && (p[4]?.canal !== 'email') && (
                 <PhoneMock papel={p[4]?.papel || 'P5'} nome={p[4]?.nome || '—'} cor={p[4]?.cor || '#3b82f6'}
                   messages={msgsPhone[4]} inputAtivo={false} acoes={[]}
                   badge={fase === 'concluido' && msgsPhone[4].length > 0 ? 'Notificado ✓' : ''}
                   ativo={false}
+                />
+              )}
+              {p[4] && (p[4]?.canal === 'email' || p[4]?.canal === 'ambos') && (
+                <EmailInboxMock papel={p[4]?.papel || 'P5'} nome={p[4]?.nome || '—'} cor={p[4]?.cor || '#3b82f6'}
+                  emails={msgsEmail[4]} inputAtivo={false} acoes={[]} ativo={false}
                 />
               )}
             </div>

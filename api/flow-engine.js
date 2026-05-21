@@ -50,6 +50,88 @@ async function sendWA(to, text) {
 }
 
 // ─────────────────────────────────────────────
+// Gerar token de ação seguro (links de e-mail / WhatsApp)
+// Insere em flow_action_tokens e retorna { token, url }
+// ─────────────────────────────────────────────
+async function generateActionToken(db, {
+  instance_id, step_id, acao_id, workspace_id,
+  participante_ref   = null,
+  acao_permitida,             // ex: 'aprovar,reprovar' | 'confirmar'
+  expira_horas       = 168,   // 7 dias
+  uso_unico          = true,
+  dados_extras       = {},    // { processo, solicitante, descricao, valor }
+}) {
+  const { data: tk, error } = await db
+    .from('flow_action_tokens')
+    .insert({
+      instance_id, step_id, acao_id, workspace_id,
+      participante_ref,
+      acao_permitida,
+      expira_em:   new Date(Date.now() + expira_horas * 3600_000).toISOString(),
+      uso_unico,
+      dados_extras,
+    })
+    .select('id, token')
+    .single()
+
+  if (error || !tk) {
+    console.error('[generateActionToken] erro:', error?.message)
+    return null
+  }
+
+  const base = process.env.NEXT_PUBLIC_APP_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://smartpro.app.br')
+
+  return {
+    token:      tk.token,
+    url:        `${base}/api/flow-action?token=${tk.token}`,
+    url_aprovar:   `${base}/api/flow-action?token=${tk.token}&acao=aprovar`,
+    url_reprovar:  `${base}/api/flow-action?token=${tk.token}&acao=reprovar`,
+    url_confirmar: `${base}/api/flow-action?token=${tk.token}&acao=confirmar`,
+  }
+}
+
+// ─────────────────────────────────────────────
+// Enviar e-mail via provedor (Fase 1 = simulado)
+// Fase 3: integrar Resend / SendGrid / SMTP
+// ─────────────────────────────────────────────
+async function sendEmail(db, {
+  instance_id, workspace_id,
+  to, cc = null, bcc = null,
+  subject, bodyHtml,
+  tipo_acao = 'notificacao',
+}) {
+  if (!to) return { ok: false, error: 'e-mail destinatário obrigatório' }
+
+  // ── Fase 3: descomentar e configurar RESEND_API_KEY nas env vars ──
+  // import { Resend } from 'resend'
+  // const resend = new Resend(process.env.RESEND_API_KEY)
+  // const from = process.env.EMAIL_FROM || 'SmartPro <noreply@smartpro.app.br>'
+  // const { data, error } = await resend.emails.send({ from, to, cc, bcc, subject, html: bodyHtml })
+  // if (error) return { ok: false, error: error.message }
+  // return { ok: true, id: data?.id }
+  // ─────────────────────────────────────────────────────────────────
+
+  // Fase 1: registrar no histórico como "simulado"
+  if (instance_id && workspace_id) {
+    await db.from('flow_history').insert({
+      instance_id,
+      workspace_id,
+      acao_nome: 'email_enviado',
+      origem:    'email',
+      dados: {
+        to, cc, bcc, subject, tipo_acao,
+        _simulado:  true,
+        _provider:  'nenhum (Fase 1 — integre Resend para envio real)',
+      },
+    }).catch(() => {})
+  }
+
+  console.log('[sendEmail SIMULADO]', { to, subject, tipo_acao })
+  return { ok: true, simulado: true }
+}
+
+// ─────────────────────────────────────────────
 // Motor de Regras — avalia condição JSONb contra contexto
 // ─────────────────────────────────────────────
 function avaliarCondicao(condicao, contexto) {
@@ -658,9 +740,10 @@ async function dispararNotificacoes(db, instancia, proximaStep, acao, dados, exe
   }
 
   for (const notif of notifs) {
-    if (notif.canal !== 'whatsapp') continue // outros canais: implementar futuramente
-
     const texto = renderTemplate(notif.template_texto, vars)
+
+    // ── Canal: WhatsApp ──────────────────────────────────────────
+    if (notif.canal === 'whatsapp') {
 
     if (notif.destinatario_tipo === 'responsavel_atual') {
       // Buscar tarefa recém-criada para obter o telefone
@@ -688,8 +771,75 @@ async function dispararNotificacoes(db, instancia, proximaStep, acao, dados, exe
     }
 
     if (notif.destinatario_tipo === 'fixo' && notif.destinatario_config?.telefone) {
-      await sendWA(notif.destinatario_config.telefone, texto)
-    }
+        await sendWA(notif.destinatario_config.telefone, texto)
+      }
+    } // fim canal whatsapp
+
+    // ── Canal: E-mail ─────────────────────────────────────────────
+    if (notif.canal === 'email' && notif.email_to) {
+      const emailTo      = renderTemplate(notif.email_to,      vars)
+      const emailSubject = renderTemplate(notif.email_subject || 'Notificação SmartPro', vars)
+      const emailBody    = notif.email_body_html
+        ? renderTemplate(notif.email_body_html, vars)
+        : `<p>${texto.replace(/\n/g, '<br>')}</p>`
+
+      // Gerar token de ação se configurado
+      let tokenLinks = {}
+      if (notif.email_gerar_token && notif.acao_id) {
+        const tk = await generateActionToken(db, {
+          instance_id:    instancia.id,
+          step_id:        proximaStep.id,
+          acao_id:        notif.acao_id,
+          workspace_id:   instancia.workspace_id,
+          participante_ref: notif.destinatario_tipo,
+          acao_permitida: notif.email_tipo_acao === 'aprovacao' ? 'aprovar,reprovar'
+            : notif.email_tipo_acao === 'confirmacao' ? 'confirmar' : 'aprovar',
+          expira_horas:   notif.email_expirar_horas || 168,
+          dados_extras:   { ...vars },
+        })
+        if (tk) tokenLinks = tk
+      }
+
+      // Substituir variáveis de link no corpo do e-mail
+      const bodyFinal = emailBody
+        .replace(/{link_aprovar}/g,   tokenLinks.url_aprovar   || tokenLinks.url || '#')
+        .replace(/{link_reprovar}/g,  tokenLinks.url_reprovar  || '#')
+        .replace(/{link_confirmar}/g, tokenLinks.url_confirmar || tokenLinks.url || '#')
+        .replace(/{link_acao}/g,      tokenLinks.url           || '#')
+
+      await sendEmail(db, {
+        instance_id:  instancia.id,
+        workspace_id: instancia.workspace_id,
+        to:           emailTo,
+        cc:           notif.email_cc ? renderTemplate(notif.email_cc, vars) : null,
+        bcc:          notif.email_bcc ? renderTemplate(notif.email_bcc, vars) : null,
+        subject:      emailSubject,
+        bodyHtml:     bodyFinal,
+        tipo_acao:    notif.email_tipo_acao || 'notificacao',
+      })
+    } // fim canal email
+
+    // ── Canal: Webhook ────────────────────────────────────────────
+    if (notif.canal === 'webhook' && notif.webhook_url) {
+      const payload = notif.webhook_payload
+        ? JSON.parse(renderTemplate(JSON.stringify(notif.webhook_payload), vars))
+        : vars
+
+      fetch(notif.webhook_url, {
+        method:  notif.webhook_method || 'POST',
+        headers: { 'Content-Type': 'application/json', ...(notif.webhook_headers || {}) },
+        body:    JSON.stringify(payload),
+      })
+        .then(() => db.from('flow_history').insert({
+          instance_id:  instancia.id,
+          workspace_id: instancia.workspace_id,
+          acao_nome:    'webhook_executado',
+          origem:       'webhook',
+          dados:        { url: notif.webhook_url, method: notif.webhook_method },
+        }).catch(() => {}))
+        .catch(err => console.error('[webhook]', err?.message))
+    } // fim canal webhook
+
   }
 }
 
@@ -1170,7 +1320,8 @@ export default async function handler(req, res) {
         case 'execute':   result = await handleExecute(db, req.body);   break
         case 'simulate':  result = await handleSimulate(db, req.body);  break
         case 'sim_start': result = await handleSimStart(db, req.body);  break
-        case 'wa_send':   result = await handleWaSend(db, req.body);    break
+        case 'wa_send':        result = await handleWaSend(db, req.body);           break
+        case 'token_generate': result = await handleTokenGenerate(db, req.body);      break
         default:
           return res.status(400).json({ error: `Ação POST desconhecida: ${action}` })
       }
@@ -1179,7 +1330,8 @@ export default async function handler(req, res) {
         case 'tasks':    result = await handleTasks(db, req.query);      break
         case 'instance': result = await handleInstance(db, req.query);   break
         case 'actions':  result = await handleActions(db, req.query);    break
-        case 'backfill': result = await handleBackfill(db, req.query);   break
+        case 'backfill':     result = await handleBackfill(db, req.query);     break
+        case 'action_token': result = await handleActionTokenInfo(db, req.query); break
         default:
           return res.status(400).json({ error: `Ação GET desconhecida: ${action}` })
       }
@@ -1194,4 +1346,66 @@ export default async function handler(req, res) {
   }
 }
 
-export { handleStart, handleExecute }
+// ─────────────────────────────────────────────
+// AÇÃO: token_generate — gera token de ação para links de e-mail
+// POST /api/flow-engine  body: { action:'token_generate', instance_id, step_id, acao_id,
+//                                workspace_id, participante_ref, acao_permitida,
+//                                expira_horas, uso_unico, dados_extras }
+// ─────────────────────────────────────────────
+async function handleTokenGenerate(db, body) {
+  const {
+    instance_id, step_id, acao_id, workspace_id,
+    participante_ref, acao_permitida,
+    expira_horas = 168, uso_unico = true, dados_extras = {},
+  } = body
+
+  if (!instance_id || !step_id || !acao_id || !workspace_id || !acao_permitida) {
+    return { status: 400, body: { error: 'instance_id, step_id, acao_id, workspace_id e acao_permitida são obrigatórios' } }
+  }
+
+  const result = await generateActionToken(db, {
+    instance_id, step_id, acao_id, workspace_id,
+    participante_ref, acao_permitida,
+    expira_horas, uso_unico, dados_extras,
+  })
+
+  if (!result) {
+    return { status: 500, body: { error: 'Erro ao gerar token de ação' } }
+  }
+
+  return { status: 201, body: { ok: true, ...result } }
+}
+
+// ─────────────────────────────────────────────
+// AÇÃO: action_token — consulta info de um token (sem executar)
+// GET /api/flow-engine?action=action_token&token=xxx
+// ─────────────────────────────────────────────
+async function handleActionTokenInfo(db, query) {
+  const { token } = query
+  if (!token) return { status: 400, body: { error: 'token obrigatório' } }
+
+  const { data: tk, error } = await db
+    .from('flow_action_tokens')
+    .select('id, acao_permitida, status, expira_em, uso_unico, participante_ref, dados_extras, created_at')
+    .eq('token', token)
+    .maybeSingle()
+
+  if (error || !tk) return { status: 404, body: { error: 'Token não encontrado' } }
+
+  const expirado = new Date(tk.expira_em) < new Date()
+  return {
+    status: 200,
+    body: {
+      status:          tk.status,
+      acao_permitida:  tk.acao_permitida,
+      expira_em:       tk.expira_em,
+      expirado,
+      uso_unico:       tk.uso_unico,
+      participante_ref: tk.participante_ref,
+      dados_extras:    tk.dados_extras,
+      valido:          tk.status === 'pendente' && !expirado,
+    },
+  }
+}
+
+export { handleStart, handleExecute, generateActionToken, sendEmail }
