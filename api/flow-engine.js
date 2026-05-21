@@ -335,7 +335,7 @@ async function handleStart(db, body) {
     await db.from(def.tipo_entidade)
       .update({ status: stepInicial.status_valor, updated_at: new Date().toISOString() })
       .eq('id', entidade_id)
-      .catch(() => {}) // silencioso — tabela pode não ter updated_at
+    // silencioso — tabela pode não ter updated_at
   }
 
   // Resolver responsável e criar tarefa
@@ -545,7 +545,7 @@ async function handleExecute(db, body) {
     await db.from(def.tipo_entidade)
       .update(updatePayload)
       .eq('id', instancia.entidade_id)
-      .catch(() => {})
+    // erro ignorado silenciosamente
   }
 
   // ── 10. Criar tarefas para o responsável da próxima etapa ─
