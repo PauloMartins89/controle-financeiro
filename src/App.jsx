@@ -206,6 +206,12 @@ export default function App() {
   const set = useStore.setState
   const enabledModules = useStore(s => s.enabledModules)
 
+  // Inicializa o tema antes de qualquer página renderizar
+  useEffect(() => {
+    const theme = localStorage.getItem('theme') || 'dark'
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [])
+
   useEffect(() => {
     if (!supabase) return
 
