@@ -935,13 +935,15 @@ async function handleBackfill(db, query) {
   // Busca solicitações recentes sem flow_instance (últimos 60 dias, qualquer status exceto fechado/cancelado)
   const entidadeTipo = modulo === 'refeicoes' ? 'refei_solicitacoes' : modulo
   const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: solicitacoes } = await db
+  const { data: solicitacoes, error: solsErr } = await db
     .from(entidadeTipo)
-    .select('id, status, numero_pedido, created_at')
+    .select('id, status, numero_pedido, criado_em')
     .eq('workspace_id', workspace_id)
     .not('status', 'in', '(fechado,cancelado,encerrado)')
-    .gte('created_at', cutoff)
-    .order('created_at', { ascending: false })
+    .gte('criado_em', cutoff)
+    .order('criado_em', { ascending: false })
+
+  if (solsErr) return { status: 500, body: { error: 'Erro ao buscar solicitações', detail: solsErr.message } }
 
   if (!solicitacoes?.length) return { status: 200, body: { criadas: 0, mensagem: 'Nenhuma solicitação elegível encontrada' } }
 
