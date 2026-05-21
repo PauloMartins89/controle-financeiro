@@ -11,7 +11,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
-import flowEngineHandler from './_flow-engine.js'
+import flowEngineHandler, { handleStart, handleExecute } from './_flow-engine.js'
 
 function getDb() {
   return createClient(
@@ -229,10 +229,61 @@ export default async function handler(req, res) {
       await sendWA(sol.lider_telefone, msgLider)
     }
 
+    // Auto-iniciar instância no Flow Engine se a flag estiver ativa
+    try {
+      const { data: flag } = await db
+        .from('configuracoes')
+        .select('valor')
+        .eq('workspace_id', sol.workspace_id)
+        .eq('chave', 'flow_engine_refeicoes')
+        .maybeSingle()
+
+      if (flag?.valor === 'true') {
+        const { data: flowDef } = await db
+          .from('flow_definitions')
+          .select('id')
+          .eq('workspace_id', sol.workspace_id)
+          .eq('modulo', 'refeicoes')
+          .eq('ativo', true)
+          .maybeSingle()
+
+        if (flowDef) {
+          const startResult = await handleStart(db, {
+            definition_id:  flowDef.id,
+            entidade_tipo:  'refei_solicitacoes',
+            entidade_id:    sol.id,
+            workspace_id:   sol.workspace_id,
+            dados_contexto: { valor_total: valorTotal, numero_pedido: numeroPedido },
+          })
+
+          if (startResult.status === 201) {
+            // Executar ação 'enviar' para avançar do rascunho para pendente
+            const { data: acaoEnviar } = await db
+              .from('flow_actions')
+              .select('id')
+              .eq('step_id', startResult.body.current_step.id)
+              .eq('nome', 'enviar')
+              .maybeSingle()
+
+            if (acaoEnviar) {
+              await handleExecute(db, {
+                instance_id:   startResult.body.instance_id,
+                acao_id:       acaoEnviar.id,
+                executado_por: null,
+                dados:         {},
+                origem:        'sistema',
+              })
+            }
+          }
+        }
+      }
+    } catch (flowErr) {
+      console.error('[refeicoes] flow auto-start error:', flowErr?.message)
+      // silencioso — não bloqueia o submit
+    }
+
     return res.status(200).json({ ok: true, numeroPedido, valorTotal })
   }
-
-  // ── POST: aprovar / reprovar (admin) ──────────────────────────────────────
   if (req.method === 'POST' && action === 'aprovar') {
     const { solicitacaoId, acao, motivo } = req.body || {}
     if (!solicitacaoId || !acao) return res.status(400).json({ error: 'Dados incompletos' })

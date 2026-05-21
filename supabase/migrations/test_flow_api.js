@@ -22,12 +22,12 @@
     return
   }
 
-  const base = '/api/flow-engine'
+  const base = '/api/refeicoes?module=flow'
   const h = { 'Content-Type': 'application/json' }
 
   // ── 1. Estado atual da instância ────────────────────────────────────────
   console.group('1️⃣  Estado da instância')
-  const r1 = await fetch(`${base}?action=instance&instance_id=${INSTANCE_ID}`)
+  const r1 = await fetch(`${base}&action=instance&instance_id=${INSTANCE_ID}`)
   const d1 = await r1.json()
   if (!r1.ok) { console.error('❌ Erro:', d1); console.groupEnd(); return }
   console.log('Instância:', d1.instancia)
@@ -37,7 +37,7 @@
 
   // ── 2. Ações disponíveis ─────────────────────────────────────────────────
   console.group('2️⃣  Ações disponíveis')
-  const r2 = await fetch(`${base}?action=actions&instance_id=${INSTANCE_ID}`)
+  const r2 = await fetch(`${base}&action=actions&instance_id=${INSTANCE_ID}`)
   const d2 = await r2.json()
   if (!r2.ok) { console.error('❌ Erro:', d2); console.groupEnd(); return }
   console.log('Ações:', d2.acoes.map(a => `${a.nome} → ${a.label}`))
@@ -52,7 +52,7 @@
 
   // ── 3. Executar ação "aprovar" ───────────────────────────────────────────
   console.group('3️⃣  Executar aprovação')
-  const r3 = await fetch(`${base}?action=execute`, {
+  const r3 = await fetch(`${base}&action=execute`, {
     method: 'POST',
     headers: h,
     body: JSON.stringify({
@@ -72,7 +72,7 @@
 
   // ── 4. Verificar novo estado ─────────────────────────────────────────────
   console.group('4️⃣  Estado após aprovação')
-  const r4 = await fetch(`${base}?action=instance&instance_id=${INSTANCE_ID}`)
+  const r4 = await fetch(`${base}&action=instance&instance_id=${INSTANCE_ID}`)
   const d4 = await r4.json()
   console.log('Etapa atual:', d4.instancia.flow_steps?.nome, '|', d4.instancia.flow_steps?.status_valor)
   console.log('Histórico completo:', d4.historico.map(h => `${h.acao_nome}: ${h.step_origem_nome} → ${h.step_destino_nome}`))
