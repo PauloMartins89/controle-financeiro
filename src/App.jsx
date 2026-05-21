@@ -16,6 +16,7 @@ import Recorrentes from './pages/Recorrentes'
 import Timeline from './pages/Timeline'
 import Previsao from './pages/Previsao'
 import Negocios from './pages/Negocios'
+import ProspectarClientes from './pages/ProspectarClientes'
 import Proventos from './pages/Proventos'
 import Importar from './pages/Importar'
 import Compras from './pages/Compras'
@@ -452,6 +453,7 @@ export default function App() {
                   <Route path="/timeline" element={<Timeline />} />
                   <Route path="/previsao" element={<Previsao />} />
                   <Route path="/negocios" element={<Negocios />} />
+                  <Route path="/prospectar" element={<ProspectarClientes />} />
                   <Route path="/proventos" element={<Proventos />} />
                   <Route path="/importar" element={<Importar />} />
                   <Route path="/escanear" element={<EscanearRecibo />} />

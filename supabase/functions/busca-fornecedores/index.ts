@@ -66,7 +66,9 @@ serve(async (req) => {
       ? `${cidade.trim()}, ${uf.trim()}, Brasil`
       : `${cidade.trim()}, Brasil`
 
-    const q = `fornecedor de ${query.trim()} em ${cidade.trim()}${uf?.trim() ? ` ${uf.trim()}` : ''} Brasil`
+    const q = body.prospectMode
+      ? `${query.trim()} em ${cidade.trim()}${uf?.trim() ? ` ${uf.trim()}` : ''} Brasil`
+      : `fornecedor de ${query.trim()} em ${cidade.trim()}${uf?.trim() ? ` ${uf.trim()}` : ''} Brasil`
 
     const resp = await fetch('https://google.serper.dev/maps', {
       method: 'POST',

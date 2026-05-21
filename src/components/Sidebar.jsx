@@ -29,8 +29,9 @@ const navGroups = [
       { to: '/veiculos',    icon: TruckIcon,                 label: 'Veículos',      moduleKey: 'veiculos' },
       { to: '/timeline',    icon: ChartBarIcon,              label: 'Histórico',     moduleKey: 'timeline' },
       { to: '/balanco',     icon: PresentationChartLineIcon, label: 'Balanço',       moduleKey: 'balanco' },
-      { to: '/previsao',    icon: BanknotesIcon,             label: 'Caixa',         moduleKey: 'previsao' },      { to: '/proventos',   icon: ArrowTrendingUpIcon,        label: 'Proventos',     moduleKey: 'proventos' },
-      { to: '/negocios',    icon: BuildingOffice2Icon,        label: 'Negócios',      moduleKey: 'negocios' },    ],
+      { to: '/previsao',    icon: BanknotesIcon,             label: 'Caixa',         moduleKey: 'previsao' },      { to: '/proventos',   icon: ArrowTrendingUpIcon,        label: 'Proventos',          moduleKey: 'proventos' },
+      { to: '/negocios',    icon: BuildingOffice2Icon,        label: 'Negócios',           moduleKey: 'negocios' },
+      { to: '/prospectar',  icon: MagnifyingGlassIcon,        label: 'Prospectar Clientes', moduleKey: 'negocios' },    ],
   },
   {
     title: 'Gerencial',
