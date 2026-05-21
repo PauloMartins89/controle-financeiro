@@ -72,7 +72,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`, {
       headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(3000),
     })
     if (r.ok) {
       return res.status(200).json(await r.json())
@@ -83,7 +83,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetch(`https://receitaws.com.br/v1/cnpj/${digits}`, {
       headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(6000),
     })
     if (!r.ok) throw new Error(`ReceitaWS ${r.status}`)
     const d = await r.json()
