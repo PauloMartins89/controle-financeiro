@@ -42,6 +42,7 @@ import CotacaoPublica from './pages/CotacaoPublica'
 import AprovarPublica from './pages/AprovarPublica'
 import RefeicaoPublica from './pages/RefeicaoPublica'
 import RefeicaoAprovar from './pages/RefeicaoAprovar'
+import RefeicaoValidar from './pages/RefeicaoValidar'
 import Refeicoes from './pages/Refeicoes'
 import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
@@ -437,6 +438,7 @@ export default function App() {
         <Route path="/aprovar/:token" element={<AprovarPublica />} />
         <Route path="/refeicao/:token" element={<RefeicaoPublica />} />
         <Route path="/ar/:token" element={<RefeicaoAprovar />} />
+        <Route path="/vr/:token" element={<RefeicaoValidar />} />
         <Route path="/*" element={
           <RequireAuth>
             <RequireSubscription>
