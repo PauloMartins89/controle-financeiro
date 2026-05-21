@@ -1039,6 +1039,17 @@ async function handleBackfill(db, query) {
 }
 
 // ─────────────────────────────────────────────
+// AÇÃO: wa_send — envia WhatsApp direto para um número (uso interno / simulação)
+// POST /api/flow-engine  body: { action:'wa_send', to, message }
+// ─────────────────────────────────────────────
+async function handleWaSend(_db, body) {
+  const { to, message } = body
+  if (!to || !message) return { status: 400, body: { error: 'to e message são obrigatórios' } }
+  const result = await sendWA(to, message)
+  return { status: result.ok ? 200 : 500, body: result }
+}
+
+// ─────────────────────────────────────────────
 // AÇÃO: sim_start — cria instância de teste e envia WhatsApp para os números informados
 // POST /api/flow-engine  body: { action:'sim_start', definition_id, workspace_id, dados_simulacao }
 // ─────────────────────────────────────────────
@@ -1159,6 +1170,7 @@ export default async function handler(req, res) {
         case 'execute':   result = await handleExecute(db, req.body);   break
         case 'simulate':  result = await handleSimulate(db, req.body);  break
         case 'sim_start': result = await handleSimStart(db, req.body);  break
+        case 'wa_send':   result = await handleWaSend(db, req.body);    break
         default:
           return res.status(400).json({ error: `Ação POST desconhecida: ${action}` })
       }
