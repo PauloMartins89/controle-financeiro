@@ -389,15 +389,29 @@ async function handleExecute(db, body) {
     .eq('id', instancia.current_step_id)
     .single()
 
-  const { data: acao } = await db
+  if (!acao_id) {
+    return { status: 400, body: { error: 'acao_id é obrigatório' } }
+  }
+
+  // Buscar ação apenas pelo id (sem filtro step_id para evitar falsos negativos)
+  const { data: acao, error: acaoErr } = await db
     .from('flow_actions')
     .select('*')
     .eq('id', acao_id)
-    .eq('step_id', instancia.current_step_id)
-    .single()
+    .maybeSingle()
+
+  console.error('[flow-engine execute] debug', {
+    acao_id, current_step_id: instancia.current_step_id,
+    acao_step_id: acao?.step_id, found: !!acao, acaoErr: acaoErr?.message,
+  })
 
   if (!acao) {
-    return { status: 403, body: { error: 'Ação não disponível nesta etapa' } }
+    return { status: 403, body: { error: 'Ação não encontrada no banco de dados' } }
+  }
+
+  // Validar que a ação pertence à etapa atual
+  if (acao.step_id !== instancia.current_step_id) {
+    return { status: 403, body: { error: `Ação não pertence à etapa atual (step esperado: ${instancia.current_step_id}, step da ação: ${acao.step_id})` } }
   }
 
   // ── 3. Validar campos obrigatórios da ação ───────────────
