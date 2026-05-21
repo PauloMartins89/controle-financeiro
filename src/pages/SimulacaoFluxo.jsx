@@ -5,6 +5,124 @@ import toast from 'react-hot-toast'
 
 const agora = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 const gerarCodigo = () => 'SIM-' + Math.random().toString(36).toUpperCase().substring(2, 7)
+const interp = (tpl = '', vars = {}) =>
+  tpl.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`))
+
+const PALETA = ['#6366f1', '#f59e0b', '#10b981', '#ec4899', '#3b82f6']
+const ICONS_PAPEL = ['👤', '✍️', '🍽️', '📋', '🔔', '🏢', '💰', '🛒', '🏭', '📍', '🚀', '🧑\u200d💼']
+
+// ─── Labels amigáveis das chaves de mensagem ──────────────────────────
+const MSG_LABELS = {
+  boas:          'Boas-vindas ao P1 (início)',
+  confirm_p1:    'P1 · Confirmação de envio',
+  notif_p2:      'P2 · Notificação (aprovador)',
+  aguarda_p1:    'P1 · Aguardando resposta do P2',
+  aprovado_p2:   'P2 · Resposta de aprovação',
+  aprovado_p1:   'P1 · Notificação de aprovação',
+  reprovado_p1:  'P1 · Notificação de reprovação',
+  notif_p3:      'P3 · Notificação ao 3º participante',
+  confirmado_p3: 'P3 · Confirmação do 3º participante',
+  confirmado_p1: 'P1 · Aviso após P3 confirmar',
+  concluido:     'Conclusão do fluxo (P1)',
+  notif_extra:   'P4/P5 · Notificação para participantes extras',
+}
+const VARS_HINT = '{nome_p1} {nome_p2} {nome_p3} {papel_p1} {papel_p2} {papel_p3} {pedido} {cod} {link_p2} {link_p3} {motivo} {instance_id} {msg_p3}'
+
+// ─── Templates de fluxo ───────────────────────────────────────────────
+const TEMPLATES = {
+  refeicoes: {
+    label: 'Refeições 🍽️',
+    inputPlaceholder: 'Ex: 1 almoço para 22/05, 2 pessoas...',
+    participantes: [
+      { papel: 'Solicitante',  icon: '👤', cor: '#6366f1', obrig: true  },
+      { papel: 'Supervisor',   icon: '✍️', cor: '#f59e0b', obrig: true  },
+      { papel: 'Restaurante',  icon: '🍽️', cor: '#10b981', obrig: false },
+    ],
+    msgs: {
+      boas:          'Olá, *{nome_p1}*! 👋\n\nSou o assistente de pedidos de refeição.\n\nDigite sua solicitação:\n(ex: 1 almoço para 2 pessoas, dia 22/05)',
+      confirm_p1:    '✅ *Pedido recebido!*\n\nCódigo: *{cod}*\n\nEnviando para aprovação de *{nome_p2}*...',
+      notif_p2:      '📋 *Solicitação de Refeição*\n\nSolicitante: *{nome_p1}*\nPedido: *{pedido}*\nCódigo: *{cod}*\n\n🔗 *{link_p2}*\n\nUse os botões abaixo para responder:',
+      aguarda_p1:    '📨 Notificação enviada para *{nome_p2}*.\n\nAguardando resposta...',
+      aprovado_p2:   '✅ *Aprovação registrada!*\n\nCódigo: *{cod}*\nPor: *{nome_p2}*',
+      aprovado_p1:   '🎉 *Pedido Aprovado!*\n\nAprovado por *{nome_p2}*.\nCódigo: *{cod}*\n\n{msg_p3}',
+      reprovado_p1:  '❌ *Pedido Reprovado*\n\nReprovado por *{nome_p2}*.\nMotivo: *{motivo}*\nCódigo: *{cod}*\n\nEntre em contato com seu gestor.',
+      notif_p3:      '📦 *Novo Pedido Aprovado*\n\nSolicitante: *{nome_p1}*\nPedido: *{pedido}*\nCódigo: *{cod}*\nAprovado por: *{nome_p2}*\n\n🔗 Confirmar preparo:\n*{link_p3}*',
+      confirmado_p3: '✅ *Recebimento confirmado!*\n\nCódigo: *{cod}*\nStatus: em preparo',
+      confirmado_p1: '🍽️ *Pedido em Preparo!*\n\n{nome_p3} confirmou o recebimento.\nSeu pedido está sendo preparado!',
+      concluido:     '✅ *Simulação completa!*\n\nFluxo de ponta a ponta:\n1. {papel_p1} → Enviou ✓\n2. {papel_p2} → Aprovou ✓\n3. {papel_p3} → Confirmou ✓\n\nID: {instance_id}',
+      notif_extra:   '🔔 *Informativo*\n\nFluxo de refeição concluído!\n{papel_p1}: {nome_p1}\nPedido: {pedido}\nCódigo: *{cod}*',
+    },
+  },
+  compras: {
+    label: 'Compras 🛒',
+    inputPlaceholder: 'Ex: 5 caixas de papel A4, urgente...',
+    participantes: [
+      { papel: 'Comprador',   icon: '🛒', cor: '#6366f1', obrig: true  },
+      { papel: 'Aprovador',   icon: '✍️', cor: '#f59e0b', obrig: true  },
+      { papel: 'Fornecedor',  icon: '🏭', cor: '#10b981', obrig: false },
+    ],
+    msgs: {
+      boas:          'Olá, *{nome_p1}*! 👋\n\nSou o assistente de cotação de compras.\n\nDescreva o item que precisa comprar:',
+      confirm_p1:    '✅ *Solicitação enviada!*\n\nCódigo: *{cod}*\n\nAguardando aprovação de *{nome_p2}*...',
+      notif_p2:      '🛒 *Solicitação de Compra*\n\nComprador: *{nome_p1}*\nItem: *{pedido}*\nCódigo: *{cod}*\n\n🔗 *{link_p2}*\n\nAprove ou reprove:',
+      aguarda_p1:    '📨 Solicitação enviada para *{nome_p2}*.\n\nAguardando aprovação...',
+      aprovado_p2:   '✅ *Compra aprovada!*\n\nCódigo: *{cod}*\nPor: *{nome_p2}*',
+      aprovado_p1:   '✅ *Compra Aprovada!*\n\nAprovado por *{nome_p2}*.\nCódigo: *{cod}*\n\n{msg_p3}',
+      reprovado_p1:  '❌ *Compra Reprovada*\n\nReprovado por *{nome_p2}*.\nMotivo: *{motivo}*\nCódigo: *{cod}*',
+      notif_p3:      '📋 *Cotação Solicitada*\n\nComprador: *{nome_p1}*\nItem: *{pedido}*\nCódigo: *{cod}*\n\n🔗 Confirmar disponibilidade:\n*{link_p3}*',
+      confirmado_p3: '✅ *Pedido aceito!*\n\nCódigo: *{cod}*\nStatus: em processamento',
+      confirmado_p1: '📦 *Fornecedor Confirmado!*\n\n{nome_p3} aceitou o pedido de compra.',
+      concluido:     '✅ *Fluxo de Compras Concluído!*\n\n1. {papel_p1} → Solicitou ✓\n2. {papel_p2} → Aprovou ✓\n3. {papel_p3} → Confirmou ✓\n\nID: {instance_id}',
+      notif_extra:   '🔔 *Informativo*\n\nCompra aprovada!\n{papel_p1}: {nome_p1}\nItem: {pedido}\nCódigo: *{cod}*',
+    },
+  },
+  financeiro: {
+    label: 'Financeiro 💰',
+    inputPlaceholder: 'Ex: Pagamento fornecedor, R$ 5.000...',
+    participantes: [
+      { papel: 'Solicitante',   icon: '💳', cor: '#6366f1', obrig: true  },
+      { papel: 'Gerente Fin.',  icon: '💰', cor: '#f59e0b', obrig: true  },
+      { papel: 'Diretoria',     icon: '🏦', cor: '#10b981', obrig: false },
+    ],
+    msgs: {
+      boas:          'Olá, *{nome_p1}*! 👋\n\nSou o assistente financeiro.\n\nDescreva a solicitação (tipo, valor, justificativa):',
+      confirm_p1:    '✅ *Solicitação enviada!*\n\nCódigo: *{cod}*\n\nEnviando para análise de *{nome_p2}*...',
+      notif_p2:      '💰 *Solicitação Financeira*\n\nSolicitante: *{nome_p1}*\nDescrição: *{pedido}*\nCódigo: *{cod}*\n\n🔗 *{link_p2}*',
+      aguarda_p1:    '📨 Enviado para *{nome_p2}*.\n\nAguardando análise...',
+      aprovado_p2:   '✅ *Aprovado!*\n\nCódigo: *{cod}*\nGerente: *{nome_p2}*',
+      aprovado_p1:   '✅ *Aprovado pelo Gerente!*\n\nAprovado por *{nome_p2}*.\nCódigo: *{cod}*\n\n{msg_p3}',
+      reprovado_p1:  '❌ *Solicitação Reprovada*\n\nReprovado por *{nome_p2}*.\nMotivo: *{motivo}*\nCódigo: *{cod}*',
+      notif_p3:      '📊 *Aprovação da Diretoria*\n\nSolicitante: *{nome_p1}*\nDescrição: *{pedido}*\nCódigo: *{cod}*\n\n🔗 *{link_p3}*',
+      confirmado_p3: '✅ *Aprovado pela Diretoria!*\n\nCódigo: *{cod}*\nStatus: liberado',
+      confirmado_p1: '🏦 *Aprovação Final!*\n\n{nome_p3} deu a aprovação da Diretoria.',
+      concluido:     '✅ *Fluxo Financeiro Concluído!*\n\n1. {papel_p1} → Solicitou ✓\n2. {papel_p2} → Aprovou ✓\n3. {papel_p3} → Confirmou ✓\n\nID: {instance_id}',
+      notif_extra:   '🔔 *Informativo Financeiro*\n\nSolicitação aprovada!\nSolicitante: {nome_p1}\nCódigo: *{cod}*',
+    },
+  },
+  campo: {
+    label: 'Campo 📍',
+    inputPlaceholder: 'Ex: Avaria no equipamento X, setor 3...',
+    participantes: [
+      { papel: 'Operador',       icon: '📍', cor: '#6366f1', obrig: true  },
+      { papel: 'Coordenador',    icon: '📋', cor: '#f59e0b', obrig: true  },
+      { papel: 'Base / Suporte', icon: '🏢', cor: '#10b981', obrig: false },
+    ],
+    msgs: {
+      boas:          'Olá, *{nome_p1}*! 👋\n\nDescreva a ocorrência ou solicitação de campo:',
+      confirm_p1:    '✅ *Registro enviado!*\n\nCódigo: *{cod}*\n\nNotificando *{nome_p2}*...',
+      notif_p2:      '📍 *Registro de Campo*\n\nOperador: *{nome_p1}*\nOcorrência: *{pedido}*\nCódigo: *{cod}*\n\n🔗 *{link_p2}*',
+      aguarda_p1:    '📨 Enviado para *{nome_p2}*.\n\nAguardando resposta...',
+      aprovado_p2:   '✅ *Validado!*\n\nCódigo: *{cod}*\nCoordenador: *{nome_p2}*',
+      aprovado_p1:   '✅ *Validado pelo Coordenador!*\n\nPor *{nome_p2}*.\nCódigo: *{cod}*\n\n{msg_p3}',
+      reprovado_p1:  '❌ *Registro Negado*\n\nNegado por *{nome_p2}*.\nMotivo: *{motivo}*\nCódigo: *{cod}*',
+      notif_p3:      '🏢 *Registro de Campo*\n\nOperador: *{nome_p1}*\nOcorrência: *{pedido}*\nCódigo: *{cod}*\n\n🔗 Confirmar recebimento:\n*{link_p3}*',
+      confirmado_p3: '✅ *Recebido na Base!*\n\nCódigo: *{cod}*',
+      confirmado_p1: '🏢 *Base Confirmada!*\n\n{nome_p3} recebeu o registro.',
+      concluido:     '✅ *Ocorrência Processada!*\n\n1. {papel_p1} → Registrou ✓\n2. {papel_p2} → Validou ✓\n3. {papel_p3} → Confirmou ✓\n\nID: {instance_id}',
+      notif_extra:   '🔔 *Informativo de Campo*\n\nOcorrência processada!\nOperador: {nome_p1}\nCódigo: *{cod}*',
+    },
+  },
+}
 
 // ─────────────────────────────────────────────
 // Componente: tela de celular WhatsApp
@@ -24,11 +142,11 @@ function PhoneMock({ papel, nome, cor, messages, inputAtivo, inputPlaceholder, o
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, minWidth: 285, maxWidth: 310 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, minWidth: 260, maxWidth: 295, flex: '0 0 auto' }}>
       {/* Label acima do celular */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 28 }}>
         <div style={{ width: 9, height: 9, borderRadius: '50%', background: cor, boxShadow: ativo ? `0 0 10px ${cor}` : 'none', transition: 'box-shadow 0.4s' }} />
-        <span style={{ color: '#e2e8f0', fontWeight: 800, fontSize: 13 }}>{papel}</span>
+        <span style={{ color: '#e2e8f0', fontWeight: 800, fontSize: 12 }}>{papel}</span>
         {nome && <span style={{ color: '#475569', fontSize: 11 }}>· {nome}</span>}
         {badge && (
           <span style={{ background: `${cor}22`, color: cor, border: `1px solid ${cor}50`, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, animation: 'pulse 1.5s infinite' }}>
@@ -76,7 +194,7 @@ function PhoneMock({ papel, nome, cor, messages, inputAtivo, inputPlaceholder, o
         <div style={{
           background: '#0B141A',
           backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Ccircle cx=\'10\' cy=\'10\' r=\'1\' fill=\'rgba(255,255,255,0.01)\'/%3E%3C/svg%3E")',
-          height: 350,
+          height: 320,
           overflowY: 'auto',
           padding: '10px 8px',
           display: 'flex',
@@ -104,9 +222,7 @@ function PhoneMock({ papel, nome, cor, messages, inputAtivo, inputPlaceholder, o
                 fontSize: 12,
                 border: msg.sistema ? '1px solid #1e3a5f' : 'none',
               }}>
-                <pre style={{ margin: 0, fontFamily: 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.55 }}>
-                  {renderMsgTexto(msg.texto)}
-                </pre>
+                <pre style={{ margin: 0, fontFamily: 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.55 }}>{msg.texto}</pre>
                 <div style={{ color: 'rgba(255,255,255,0.28)', fontSize: 9.5, textAlign: 'right', marginTop: 3 }}>
                   {msg.hora}{msg.saida ? ' ✓✓' : ''}
                 </div>
@@ -169,24 +285,22 @@ function PhoneMock({ papel, nome, cor, messages, inputAtivo, inputPlaceholder, o
   )
 }
 
-// Render texto com bold (*palavra*)
-function renderMsgTexto(texto) {
-  return texto
-}
-
 // ─────────────────────────────────────────────
 // Página principal
 // ─────────────────────────────────────────────
 export default function SimulacaoFluxo() {
   const { workspaceId } = useStore()
 
-  const [setup, setSetup] = useState({
-    nome_sol: '', cel_sol: '',
-    nome_sup: '', cel_sup: '',
-    nome_res: '', cel_res: '',
-  })
+  // ── Configuração do fluxo
+  const [tipoFluxo, setTipoFluxo] = useState('refeicoes')
+  const [participantes, setParticipantes] = useState(() =>
+    TEMPLATES.refeicoes.participantes.map((p, i) => ({ ...p, id: i + 1, nome: '', cel: '' }))
+  )
+  const [msgs, setMsgs] = useState(() => ({ ...TEMPLATES.refeicoes.msgs }))
+  const [mostrarMsgs, setMostrarMsgs] = useState(false)
+
+  // ── Estado da simulação
   const [fase, setFase] = useState('setup')
-  // setup | sol_input | enviando | sup_decide | res_confirma | concluido
   const [codigo] = useState(gerarCodigo)
   const [pedido, setPedido] = useState('')
   const [instanceId, setInstanceId] = useState(null)
@@ -195,16 +309,15 @@ export default function SimulacaoFluxo() {
   const [executando, setExecutando] = useState(false)
   const [motivoReprova, setMotivoReprova] = useState('')
 
-  const [msgs1, setMsgs1] = useState([]) // solicitante
-  const [msgs2, setMsgs2] = useState([]) // supervisor
-  const [msgs3, setMsgs3] = useState([]) // restaurante
+  // Mensagens por phone (até 5)
+  const [msgsPhone, setMsgsPhone] = useState([[], [], [], [], []])
 
-  const add1 = (texto, saida = false, sistema = false) =>
-    setMsgs1(p => [...p, { texto, saida, sistema, hora: agora() }])
-  const add2 = (texto, saida = false, sistema = false) =>
-    setMsgs2(p => [...p, { texto, saida, sistema, hora: agora() }])
-  const add3 = (texto, saida = false, sistema = false) =>
-    setMsgs3(p => [...p, { texto, saida, sistema, hora: agora() }])
+  const addMsg = (idx, texto, saida = false, sistema = false) =>
+    setMsgsPhone(prev => {
+      const n = prev.map(a => [...a])
+      n[idx] = [...n[idx], { texto, saida, sistema, hora: agora() }]
+      return n
+    })
 
   // Carregar definições de fluxo
   useEffect(() => {
@@ -221,47 +334,94 @@ export default function SimulacaoFluxo() {
       })
   }, [workspaceId])
 
-  const s = setup
+  // ── Mudar tipo de fluxo
+  const mudarTipo = (tipo) => {
+    setTipoFluxo(tipo)
+    setParticipantes(TEMPLATES[tipo].participantes.map((p, i) => ({ ...p, id: i + 1, nome: '', cel: '' })))
+    setMsgs({ ...TEMPLATES[tipo].msgs })
+  }
 
-  // ── Enviar WhatsApp real via flow-engine ──────────────
+  // ── Adicionar participante (até 5)
+  const adicionarParticipante = () => {
+    if (participantes.length >= 5) return
+    const idx = participantes.length
+    setParticipantes(p => [...p, {
+      id: idx + 1,
+      papel: `Participante ${idx + 1}`,
+      icon: ICONS_PAPEL[idx % ICONS_PAPEL.length],
+      cor: PALETA[idx % PALETA.length],
+      obrig: false,
+      nome: '',
+      cel: '',
+    }])
+  }
+
+  const removerParticipante = (id) => {
+    if (participantes.length <= 3) return
+    setParticipantes(p => p.filter(x => x.id !== id))
+  }
+
+  const atualizarParticipante = (id, campo, valor) =>
+    setParticipantes(p => p.map(x => x.id === id ? { ...x, [campo]: valor } : x))
+
+  // ── Variáveis para interpolação
+  const buildVars = (pedidoAtual, instanceIdAtual) => {
+    const p = participantes
+    return {
+      nome_p1: p[0]?.nome || 'P1',
+      nome_p2: p[1]?.nome || 'P2',
+      nome_p3: p[2]?.nome || 'P3',
+      papel_p1: p[0]?.papel || 'Participante 1',
+      papel_p2: p[1]?.papel || 'Participante 2',
+      papel_p3: p[2]?.papel || 'Participante 3',
+      pedido: pedidoAtual || pedido,
+      cod: codigo,
+      link_p2: `https://smartpro.app.br/aprovar?sim=${codigo}`,
+      link_p3: `https://smartpro.app.br/confirmar?sim=${codigo}`,
+      instance_id: (instanceIdAtual || instanceId)?.substring(0, 8) || codigo,
+      motivo: motivoReprova || 'Não informado',
+      msg_p3: p[2]?.nome
+        ? `${p[2]?.papel} *${p[2]?.nome}* foi notificado.`
+        : 'Aguarde o próximo passo.',
+    }
+  }
+
+  // ── Enviar WA real
   const enviarWA = async (to, message) => {
+    if (!to) return
     try {
       await fetch('/api/flow-engine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'wa_send', to, message }),
       })
-    } catch (e) { /* silencioso */ }
+    } catch { /* silencioso */ }
   }
 
-  // ── FASE: iniciar simulação ───────────────────────────
+  // ── INICIAR
   const iniciar = () => {
-    if (!s.nome_sol?.trim() || !s.cel_sol?.trim()) {
-      toast.error('Preencha nome e celular do solicitante')
+    if (!participantes[0]?.nome?.trim() || !participantes[0]?.cel?.trim()) {
+      toast.error(`Preencha nome e celular do ${participantes[0]?.papel || 'Participante 1'}`)
       return
     }
-    if (!s.nome_sup?.trim() || !s.cel_sup?.trim()) {
-      toast.error('Preencha nome e celular do supervisor')
+    if (!participantes[1]?.nome?.trim() || !participantes[1]?.cel?.trim()) {
+      toast.error(`Preencha nome e celular do ${participantes[1]?.papel || 'Participante 2'}`)
       return
     }
-    setFase('sol_input')
-    setTimeout(() => {
-      add1(`Olá, *${s.nome_sol}*! 👋\n\nSou o assistente de pedidos de refeição.\n\nDigite sua solicitação abaixo:\n(ex: 1 almoço para 2 pessoas, dia 22/05)`)
-    }, 400)
+    setFase('p1_input')
+    const v = buildVars('', null)
+    setTimeout(() => addMsg(0, interp(msgs.boas, v)), 400)
   }
 
-  // ── FASE: solicitante digita e envia ─────────────────
-  const solEnvia = async (texto) => {
+  // ── P1 ENVIA
+  const p1Envia = async (texto) => {
     setPedido(texto)
-    add1(texto, true)
+    addMsg(0, texto, true)
     setFase('enviando')
+    const v = buildVars(texto, null)
 
-    // Bot confirma imediatamente
-    setTimeout(() => {
-      add1(`✅ *Pedido recebido!*\n\nCódigo: *${codigo}*\n\nEnviando para aprovação de *${s.nome_sup}*...`)
-    }, 700)
+    setTimeout(() => addMsg(0, interp(msgs.confirm_p1, v)), 600)
 
-    // Criar registro real + enviar WA para solicitante e supervisor
     try {
       const resp = await fetch('/api/flow-engine', {
         method: 'POST',
@@ -271,9 +431,9 @@ export default function SimulacaoFluxo() {
           definition_id: defSelecionada || undefined,
           workspace_id: workspaceId,
           dados_simulacao: {
-            nome_solicitante: s.nome_sol, celular_solicitante: s.cel_sol,
-            nome_supervisor:  s.nome_sup, celular_supervisor:  s.cel_sup,
-            nome_restaurante: s.nome_res, celular_restaurante: s.cel_res,
+            nome_solicitante: participantes[0]?.nome, celular_solicitante: participantes[0]?.cel,
+            nome_supervisor:  participantes[1]?.nome, celular_supervisor:  participantes[1]?.cel,
+            nome_restaurante: participantes[2]?.nome, celular_restaurante: participantes[2]?.cel,
             pedido: texto, codigo,
           },
         }),
@@ -281,76 +441,49 @@ export default function SimulacaoFluxo() {
       const data = await resp.json()
       if (resp.ok) {
         setInstanceId(data.instance_id)
-        toast.success(`Registro criado · WA enviado para ${s.nome_sup}`)
+        toast.success('Registro criado · WA enviado')
       }
-    } catch (e) {
-      toast.error('Erro ao criar registro')
-    }
-
-    // Mensagem chega ao supervisor
-    const linkAprovar = `https://smartpro.app.br/aprovar?sim=${codigo}`
-    setTimeout(() => {
-      add2(
-        `📋 *Solicitação de Refeição*\n\n` +
-        `Solicitante: *${s.nome_sol}*\n` +
-        `Pedido: *${texto}*\n` +
-        `Código: *${codigo}*\n\n` +
-        `🔗 *${linkAprovar}*\n\n` +
-        `Use os botões abaixo para responder:`
-      )
-      setFase('sup_decide')
-    }, 2400)
+    } catch { toast.error('Erro ao criar registro') }
 
     setTimeout(() => {
-      add1(`📨 Notificação enviada para *${s.nome_sup}*.\n\nAguardando resposta...`)
-    }, 2900)
+      addMsg(1, interp(msgs.notif_p2, v))
+      setFase('p2_decide')
+    }, 2200)
+
+    setTimeout(() => addMsg(0, interp(msgs.aguarda_p1, v)), 2700)
   }
 
-  // ── FASE: supervisor aprova ───────────────────────────
-  const supAprova = async () => {
+  // ── P2 APROVA
+  const p2Aprova = async () => {
     if (executando) return
     setExecutando(true)
-    add2('✅ Aprovado!', true)
+    const v = buildVars(pedido, instanceId)
 
-    // Envia WA real ao restaurante
-    if (s.cel_res) {
+    addMsg(1, '✅ Aprovado!', true)
+
+    if (participantes[2]?.cel) {
       enviarWA(
-        s.cel_res,
-        `🧪 [SIMULAÇÃO]\n📦 Pedido aprovado!\n\nSolicitante: ${s.nome_sol}\nPedido: ${pedido}\nCódigo: ${codigo}\nAprovado por: ${s.nome_sup}`,
+        participantes[2].cel,
+        `🧪 [SIMULAÇÃO]\n📦 Pedido aprovado!\n\nSolicitante: ${participantes[0]?.nome}\nPedido: ${pedido}\nCódigo: ${codigo}\nAprovado por: ${participantes[1]?.nome}`,
       )
     }
 
     setTimeout(() => {
-      add2(`✅ *Aprovação registrada!*\n\nCódigo: *${codigo}*\nPor: *${s.nome_sup}*`)
-      add1(
-        `🎉 *Pedido Aprovado!*\n\n` +
-        `Aprovado por *${s.nome_sup}*.\n` +
-        `Código: *${codigo}*\n\n` +
-        (s.nome_res ? `O restaurante *${s.nome_res}* foi notificado.` : 'Aguarde o preparo.')
-      )
+      addMsg(1, interp(msgs.aprovado_p2, v))
+      addMsg(0, interp(msgs.aprovado_p1, v))
 
-      if (s.cel_res && s.nome_res) {
-        const linkConfirmar = `https://smartpro.app.br/confirmar?sim=${codigo}`
+      if (participantes[2]?.nome) {
+        const vFull = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
         setTimeout(() => {
-          add3(
-            `📦 *Novo Pedido Aprovado*\n\n` +
-            `Solicitante: *${s.nome_sol}*\n` +
-            `Pedido: *${pedido}*\n` +
-            `Código: *${codigo}*\n` +
-            `Aprovado por: *${s.nome_sup}*\n\n` +
-            `🔗 Confirmar preparo:\n*${linkConfirmar}*`
-          )
-          setFase('res_confirma')
+          addMsg(2, interp(msgs.notif_p3, vFull))
+          setFase('p3_confirma')
         }, 600)
       } else {
         setFase('concluido')
+        const vEnd = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
         setTimeout(() => {
-          add1(
-            `✅ *Simulação concluída!*\n\n` +
-            `Fluxo executado:\n1. Solicitante → Enviou ✓\n2. Supervisor → Aprovou ✓\n\n` +
-            `ID: ${instanceId?.substring(0, 8) || codigo}`,
-            false, true
-          )
+          addMsg(0, interp(msgs.concluido, vEnd), false, true)
+          notificarExtras(vEnd)
         }, 400)
       }
     }, 900)
@@ -358,103 +491,106 @@ export default function SimulacaoFluxo() {
     setExecutando(false)
   }
 
-  // ── FASE: supervisor reprova ──────────────────────────
-  const supReprova = async () => {
+  // ── P2 REPROVA
+  const p2Reprova = async () => {
     if (executando) return
     setExecutando(true)
     const motivo = motivoReprova.trim() || 'Não informado'
-    add2(`❌ Reprovado\nMotivo: ${motivo}`, true)
+    const v = { ...buildVars(pedido, instanceId), motivo }
 
+    addMsg(1, `❌ Reprovado\nMotivo: ${motivo}`, true)
     setTimeout(() => {
-      add2(`❌ *Reprovação registrada.*\n\nMotivo: *${motivo}*\nCódigo: *${codigo}*`)
-      add1(
-        `❌ *Pedido Reprovado*\n\n` +
-        `Reprovado por *${s.nome_sup}*.\n` +
-        `Motivo: *${motivo}*\n` +
-        `Código: *${codigo}*\n\n` +
-        `Entre em contato com seu gestor.`
-      )
+      addMsg(1, `❌ *Reprovação registrada.*\n\nMotivo: *${motivo}*\nCódigo: *${codigo}*`)
+      addMsg(0, interp(msgs.reprovado_p1, v))
       setFase('concluido')
     }, 900)
 
     setExecutando(false)
   }
 
-  // ── FASE: restaurante confirma ────────────────────────
-  const resConfirma = () => {
-    add3('Pedido confirmado! ✅', true)
+  // ── P3 CONFIRMA
+  const p3Confirma = () => {
+    const v = buildVars(pedido, instanceId)
+    addMsg(2, 'Pedido confirmado! ✅', true)
     setTimeout(() => {
-      add3(`✅ *Recebimento confirmado!*\n\nCódigo: *${codigo}*\nStatus: em preparo`)
-      add1(`🍽️ *Pedido em Preparo!*\n\n${s.nome_res} confirmou o recebimento.\nSeu pedido está sendo preparado!`)
+      addMsg(2, interp(msgs.confirmado_p3, v))
+      addMsg(0, interp(msgs.confirmado_p1, v))
       setFase('concluido')
+      const vEnd = { ...v, instance_id: instanceId?.substring(0, 8) || codigo }
       setTimeout(() => {
-        add1(
-          `✅ *Simulação completa!*\n\n` +
-          `Fluxo executado de ponta a ponta:\n` +
-          `1. Solicitante → Pedido enviado ✓\n` +
-          `2. Supervisor → Aprovado ✓\n` +
-          `3. Restaurante → Confirmado ✓\n\n` +
-          `ID: ${instanceId?.substring(0, 8) || codigo}`,
-          false, true
-        )
+        addMsg(0, interp(msgs.concluido, vEnd), false, true)
+        notificarExtras(vEnd)
       }, 500)
     }, 900)
   }
 
+  // ── Notificar P4/P5 ao concluir
+  const notificarExtras = (v) => {
+    participantes.slice(3).forEach((p, i) => {
+      if (!p.nome) return
+      const msgTxt = interp(msgs.notif_extra, { ...v, papel_extra: p.papel, nome_extra: p.nome })
+      setTimeout(() => {
+        addMsg(3 + i, msgTxt)
+        if (p.cel) enviarWA(p.cel, `🧪 [SIMULAÇÃO]\n${msgTxt}`)
+      }, 300 * (i + 1))
+    })
+  }
+
   const resetar = () => {
     setFase('setup')
-    setMsgs1([]); setMsgs2([]); setMsgs3([])
+    setMsgsPhone([[], [], [], [], []])
     setInstanceId(null); setPedido(''); setMotivoReprova('')
   }
 
-  // Ações dos celulares por fase
-  const acoes2 = fase === 'sup_decide' ? [
-    { label: '✅ Aprovar', cor: '#10b981', onClick: supAprova, disabled: executando },
-    { label: '❌ Reprovar', cor: '#ef4444', onClick: supReprova, disabled: executando },
-  ] : []
-  const acoes3 = fase === 'res_confirma' ? [
-    { label: '✅ Confirmar Recebimento', cor: '#10b981', onClick: resConfirma },
-  ] : []
+  // ── Ações dos phones
+  const acoes2 = fase === 'p2_decide'
+    ? [
+        { label: '✅ Aprovar', cor: '#10b981', onClick: p2Aprova, disabled: executando },
+        { label: '❌ Reprovar', cor: '#ef4444', onClick: p2Reprova, disabled: executando },
+      ]
+    : []
+  const acoes3 = fase === 'p3_confirma'
+    ? [{ label: '✅ Confirmar Recebimento', cor: '#10b981', onClick: p3Confirma }]
+    : []
 
-  // Progress steps
+  // ── Progress steps (dinâmico)
   const steps = [
-    { key: 'sol_input',   label: '1. Solicitante' },
-    { key: 'sup_decide',  label: '2. Supervisor' },
-    { key: 'res_confirma',label: '3. Restaurante' },
-    { key: 'concluido',   label: '✅ Concluído' },
+    { key: 'p1_input',   label: `1. ${participantes[0]?.papel || 'P1'}` },
+    { key: 'p2_decide',  label: `2. ${participantes[1]?.papel || 'P2'}` },
+    ...(participantes[2]?.nome ? [{ key: 'p3_confirma', label: `3. ${participantes[2]?.papel || 'P3'}` }] : []),
+    { key: 'concluido',  label: '✅ Concluído' },
   ]
-  const faseOrder = ['sol_input', 'enviando', 'sup_decide', 'res_confirma', 'concluido']
+  const faseOrder = ['p1_input', 'enviando', 'p2_decide', 'p3_confirma', 'concluido']
   const faseIdx = faseOrder.indexOf(fase)
+
+  const p = participantes
 
   return (
     <div style={{ minHeight: '100vh', background: '#07070f', color: '#e2e8f0', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
         @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        .phone-fade { animation: fadeIn 0.4s ease; }
+        .pf { animation: fadeIn 0.4s ease; }
+        .icon-btn:hover { opacity: 0.7 !important; }
       `}</style>
 
-      <div style={{ maxWidth: 1060, margin: '0 auto', padding: '28px 20px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px' }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+        {/* ── Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <h1 style={{
-              margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: -0.5,
-              background: 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>
+            <h1 style={{ margin: 0, fontSize: 21, fontWeight: 900, letterSpacing: -0.5, background: 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               📱 Simulação Interativa de Fluxo
             </h1>
-            <p style={{ margin: '4px 0 0', color: '#334155', fontSize: 13 }}>
-              3 participantes · WhatsApp real · Fluxo de ponta a ponta
+            <p style={{ margin: '3px 0 0', color: '#334155', fontSize: 12 }}>
+              {participantes.length} participante{participantes.length > 1 ? 's' : ''} · WhatsApp real · Fluxo de ponta a ponta
             </p>
           </div>
           {fase !== 'setup' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ color: '#334155', fontSize: 11 }}>Código da simulação</div>
-                <div style={{ color: '#6366f1', fontWeight: 900, fontFamily: 'monospace', fontSize: 17 }}>{codigo}</div>
+                <div style={{ color: '#334155', fontSize: 11 }}>Código</div>
+                <div style={{ color: '#6366f1', fontWeight: 900, fontFamily: 'monospace', fontSize: 16 }}>{codigo}</div>
                 {instanceId && <div style={{ color: '#1e3a5f', fontSize: 10, fontFamily: 'monospace' }}>ID: {instanceId.substring(0, 8)}</div>}
               </div>
               <button onClick={resetar}
@@ -465,167 +601,231 @@ export default function SimulacaoFluxo() {
           )}
         </div>
 
-        {/* ── SETUP ────────────────────────────────────────── */}
+        {/* ── SETUP */}
         {fase === 'setup' && (
-          <div className="phone-fade" style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 18, padding: 28 }}>
-            <div style={{ marginBottom: 24 }}>
-              <h3 style={{ margin: '0 0 4px', color: '#e2e8f0', fontSize: 16, fontWeight: 800 }}>⚙️ Configurar participantes</h3>
-              <p style={{ margin: 0, color: '#334155', fontSize: 13 }}>
-                Preencha os dados. WhatsApp real será enviado para cada celular em cada etapa.
-              </p>
-            </div>
+          <div className="pf">
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24 }}>
-              {[
-                { campo: 'sol', label: 'Solicitante',          cor: '#6366f1', icon: '👤', obrig: true },
-                { campo: 'sup', label: 'Supervisor / Aprovador', cor: '#f59e0b', icon: '✍️', obrig: true },
-                { campo: 'res', label: 'Restaurante',           cor: '#10b981', icon: '🍽️', obrig: false },
-              ].map(({ campo, label, cor, icon, obrig }) => (
-                <div key={campo}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${cor}30` }}>
-                    <span style={{ fontSize: 15 }}>{icon}</span>
-                    <span style={{ color: cor, fontWeight: 800, fontSize: 13 }}>{label}</span>
-                    {!obrig && <span style={{ color: '#334155', fontSize: 10 }}>(opcional)</span>}
-                  </div>
-                  <input
-                    placeholder={`Nome do(a) ${label.split(' ')[0].toLowerCase()}`}
-                    value={setup[`nome_${campo}`]}
-                    onChange={e => setSetup(p => ({ ...p, [`nome_${campo}`]: e.target.value }))}
-                    style={inputSt}
-                  />
-                  <input
-                    placeholder="Celular com DDI: 5511999..."
-                    value={setup[`cel_${campo}`]}
-                    onChange={e => setSetup(p => ({ ...p, [`cel_${campo}`]: e.target.value }))}
-                    style={{ ...inputSt, marginTop: 8 }}
-                  />
-                </div>
-              ))}
-            </div>
-
-            {definicoes.length > 0 && (
-              <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <label style={{ color: '#334155', fontSize: 12, whiteSpace: 'nowrap' }}>Processo real:</label>
-                <select
-                  value={defSelecionada}
-                  onChange={e => setDefSelecionada(e.target.value)}
-                  style={{ ...inputSt, width: 'auto', minWidth: 240, flex: 'none' }}>
-                  <option value="">Apenas simulação visual</option>
-                  {definicoes.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
-                </select>
+            {/* Tipo de fluxo */}
+            <div style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: '#475569', fontWeight: 700, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Tipo de Fluxo</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {Object.entries(TEMPLATES).map(([key, tpl]) => (
+                  <button key={key} onClick={() => mudarTipo(key)}
+                    style={{ padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer', background: tipoFluxo === key ? '#6366f1' : 'transparent', border: `1px solid ${tipoFluxo === key ? '#6366f1' : '#1e1e3f'}`, color: tipoFluxo === key ? '#fff' : '#475569', transition: 'all 0.15s' }}>
+                    {tpl.label}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
-            <div style={{ marginTop: 24, display: 'flex', gap: 12, alignItems: 'center' }}>
-              <button onClick={iniciar}
-                style={{
-                  padding: '14px 32px',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                  border: 'none', color: '#fff', borderRadius: 12,
-                  fontSize: 15, fontWeight: 900, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  boxShadow: '0 8px 30px rgba(99,102,241,0.3)',
-                }}>
-                🚀 Iniciar Simulação
+            {/* Participantes */}
+            <div style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 14, padding: '20px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 800 }}>⚙️ Participantes</div>
+                  <div style={{ fontSize: 12, color: '#334155', marginTop: 2 }}>WhatsApp real enviado para cada celular em cada etapa</div>
+                </div>
+                {participantes.length < 5 && (
+                  <button onClick={adicionarParticipante}
+                    style={{ padding: '8px 14px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1', borderRadius: 9, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    + Participante
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+                {participantes.map((part, idx) => (
+                  <div key={part.id} style={{ background: '#0a0a18', border: `1px solid ${part.cor}25`, borderRadius: 12, padding: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 8, borderBottom: `1px solid ${part.cor}20` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 15 }}>{part.icon}</span>
+                        {idx >= 3 ? (
+                          <input
+                            value={part.papel}
+                            onChange={e => atualizarParticipante(part.id, 'papel', e.target.value)}
+                            style={{ ...inputSt, padding: '3px 8px', fontSize: 12, color: part.cor, fontWeight: 800, background: 'transparent', border: 'none', outline: 'none', width: 120 }}
+                          />
+                        ) : (
+                          <span style={{ color: part.cor, fontWeight: 800, fontSize: 12 }}>{part.papel}</span>
+                        )}
+                        {!part.obrig && idx < 3 && <span style={{ color: '#334155', fontSize: 10 }}>(opcional)</span>}
+                      </div>
+                      {idx >= 3 && (
+                        <button onClick={() => removerParticipante(part.id)} className="icon-btn"
+                          style={{ background: 'none', border: 'none', color: '#ef444460', cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1 }}>✕</button>
+                      )}
+                    </div>
+
+                    {idx >= 3 && (
+                      <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+                        {ICONS_PAPEL.map(ic => (
+                          <button key={ic} onClick={() => atualizarParticipante(part.id, 'icon', ic)}
+                            style={{ background: part.icon === ic ? part.cor + '30' : 'transparent', border: `1px solid ${part.icon === ic ? part.cor : 'transparent'}`, borderRadius: 6, padding: '2px 4px', cursor: 'pointer', fontSize: 13 }}>
+                            {ic}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {idx >= 3 && (
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                        {PALETA.map(c => (
+                          <button key={c} onClick={() => atualizarParticipante(part.id, 'cor', c)}
+                            style={{ width: 18, height: 18, borderRadius: '50%', background: c, border: `2px solid ${part.cor === c ? '#fff' : 'transparent'}`, cursor: 'pointer', padding: 0 }} />
+                        ))}
+                      </div>
+                    )}
+
+                    <input
+                      placeholder={`Nome do(a) ${part.papel.split(' ')[0].toLowerCase()}`}
+                      value={part.nome}
+                      onChange={e => atualizarParticipante(part.id, 'nome', e.target.value)}
+                      style={inputSt}
+                    />
+                    <input
+                      placeholder="Celular com DDI: 5511999..."
+                      value={part.cel}
+                      onChange={e => atualizarParticipante(part.id, 'cel', e.target.value)}
+                      style={{ ...inputSt, marginTop: 7 }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Personalizar mensagens */}
+            <div style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 14, marginBottom: 16, overflow: 'hidden' }}>
+              <button onClick={() => setMostrarMsgs(v => !v)}
+                style={{ width: '100%', padding: '14px 20px', background: 'none', border: 'none', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left' }}>
+                <div>
+                  <span style={{ fontWeight: 800, fontSize: 14 }}>💬 Personalizar Mensagens</span>
+                  <span style={{ color: '#334155', fontSize: 12, marginLeft: 10 }}>Edite os textos que o bot envia em cada etapa</span>
+                </div>
+                <span style={{ color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: mostrarMsgs ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
               </button>
-              <span style={{ color: '#1e293b', fontSize: 12 }}>Restaurante é opcional</span>
+
+              {mostrarMsgs && (
+                <div style={{ padding: '0 20px 20px', borderTop: '1px solid #1a1a35' }}>
+                  <div style={{ background: '#0a0a18', border: '1px solid #1e2a4a', borderRadius: 9, padding: '10px 14px', margin: '14px 0', fontSize: 11.5, color: '#334155', lineHeight: 1.8, fontFamily: 'monospace' }}>
+                    <span style={{ color: '#475569', fontWeight: 700 }}>Variáveis: </span>{VARS_HINT}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
+                    {Object.entries(msgs).map(([key, val]) => (
+                      <div key={key}>
+                        <label style={{ display: 'block', fontSize: 11, color: '#475569', fontWeight: 700, marginBottom: 4 }}>
+                          {MSG_LABELS[key] || key}
+                        </label>
+                        <textarea
+                          value={val}
+                          onChange={e => setMsgs(m => ({ ...m, [key]: e.target.value }))}
+                          rows={4}
+                          style={{ ...inputSt, fontFamily: 'monospace', fontSize: 11.5, resize: 'vertical', lineHeight: 1.5 }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => setMsgs({ ...TEMPLATES[tipoFluxo].msgs })}
+                    style={{ marginTop: 12, padding: '7px 16px', background: 'transparent', border: '1px solid #1e1e3f', color: '#475569', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
+                    ↺ Restaurar padrões
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Processo real + Iniciar */}
+            <div style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 14, padding: '18px 20px' }}>
+              {definicoes.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <label style={{ color: '#334155', fontSize: 12, whiteSpace: 'nowrap' }}>Processo real:</label>
+                  <select value={defSelecionada} onChange={e => setDefSelecionada(e.target.value)}
+                    style={{ ...inputSt, width: 'auto', minWidth: 240 }}>
+                    <option value="">Apenas simulação visual</option>
+                    {definicoes.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                  </select>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <button onClick={iniciar}
+                  style={{ padding: '13px 30px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 30px rgba(99,102,241,0.3)' }}>
+                  🚀 Iniciar Simulação
+                </button>
+                <span style={{ color: '#1e293b', fontSize: 12 }}>P1 e P2 obrigatórios · P3–P5 opcionais</span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* ── PROGRESS BAR ─────────────────────────────────── */}
+        {/* ── PROGRESS BAR */}
         {fase !== 'setup' && (
-          <div className="phone-fade" style={{
-            background: '#0f0f1e', border: '1px solid #1a1a35',
-            borderRadius: 12, padding: '12px 20px', marginBottom: 24,
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>
+          <div className="pf" style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 12, padding: '12px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {steps.map((step, i) => {
-              const stepOrder = ['sol_input', 'sup_decide', 'res_confirma', 'concluido']
-              const stepIdx = stepOrder.indexOf(step.key)
-              const done = faseIdx > ['sol_input', 'enviando', 'sup_decide', 'res_confirma', 'concluido'].indexOf(step.key === 'sol_input' ? 'enviando' : step.key)
-              const active = step.key === 'sol_input'
-                ? (fase === 'sol_input' || fase === 'enviando')
+              const done = faseIdx > faseOrder.indexOf(step.key === 'p1_input' ? 'enviando' : step.key)
+              const active = step.key === 'p1_input'
+                ? (fase === 'p1_input' || fase === 'enviando')
                 : fase === step.key
               return (
                 <React.Fragment key={step.key}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{
-                      width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                      background: done ? '#10b981' : (active ? '#6366f1' : '#1a1a35'),
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 900,
-                      color: done || active ? '#fff' : '#334155',
-                      boxShadow: active ? '0 0 12px rgba(99,102,241,0.5)' : 'none',
-                      transition: 'all 0.3s',
-                    }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, background: done ? '#10b981' : (active ? '#6366f1' : '#1a1a35'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: done || active ? '#fff' : '#334155', boxShadow: active ? '0 0 12px rgba(99,102,241,0.5)' : 'none', transition: 'all 0.3s' }}>
                       {done ? '✓' : i + 1}
                     </div>
                     <span style={{ fontSize: 12, fontWeight: active ? 700 : 400, color: active ? '#e2e8f0' : (done ? '#10b981' : '#334155'), whiteSpace: 'nowrap' }}>
                       {step.label}
                     </span>
                   </div>
-                  {i < steps.length - 1 && (
-                    <div style={{ flex: 1, height: 1, background: done ? '#10b981' : '#1a1a35', maxWidth: 50, transition: 'background 0.4s' }} />
-                  )}
+                  {i < steps.length - 1 && <div style={{ flex: 1, height: 1, background: done ? '#10b981' : '#1a1a35', maxWidth: 40, minWidth: 10, transition: 'background 0.4s' }} />}
                 </React.Fragment>
               )
             })}
             {fase === 'enviando' && (
-              <span style={{ marginLeft: 'auto', color: '#f59e0b', fontSize: 11, animation: 'pulse 1.2s infinite' }}>
-                ⏳ Enviando...
-              </span>
+              <span style={{ marginLeft: 'auto', color: '#f59e0b', fontSize: 11, animation: 'pulse 1.2s infinite' }}>⏳ Enviando...</span>
             )}
           </div>
         )}
 
-        {/* ── 3 PHONES ─────────────────────────────────────── */}
+        {/* ── PHONES GRID */}
         {fase !== 'setup' && (
           <>
-            <div className="phone-fade" style={{
-              display: 'flex', gap: 18, overflowX: 'auto',
-              paddingBottom: 12, justifyContent: 'center', alignItems: 'flex-start',
-            }}>
-              <PhoneMock
-                papel="Solicitante"
-                nome={s.nome_sol}
-                cor="#6366f1"
-                messages={msgs1}
-                inputAtivo={fase === 'sol_input'}
-                inputPlaceholder="Ex: 1 almoço para 22/05, 2 pessoas..."
-                onEnviar={solEnvia}
-                acoes={[]}
-                ativo={fase === 'sol_input' || fase === 'enviando'}
+            <div className="pf" style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 12, justifyContent: participantes.length <= 3 ? 'center' : 'flex-start', alignItems: 'flex-start' }}>
+              <PhoneMock papel={p[0]?.papel || 'P1'} nome={p[0]?.nome} cor={p[0]?.cor || '#6366f1'}
+                messages={msgsPhone[0]} inputAtivo={fase === 'p1_input'}
+                inputPlaceholder={TEMPLATES[tipoFluxo]?.inputPlaceholder || 'Mensagem...'}
+                onEnviar={p1Envia} acoes={[]}
+                ativo={fase === 'p1_input' || fase === 'enviando'}
               />
-              <PhoneMock
-                papel="Supervisor"
-                nome={s.nome_sup}
-                cor="#f59e0b"
-                messages={msgs2}
-                inputAtivo={false}
-                acoes={acoes2}
-                badge={fase === 'sup_decide' ? 'Ação necessária ⚡' : ''}
-                ativo={fase === 'sup_decide'}
-              />
-              <PhoneMock
-                papel="Restaurante"
-                nome={s.nome_res || '—'}
-                cor="#10b981"
-                messages={msgs3}
-                inputAtivo={false}
-                acoes={acoes3}
-                badge={fase === 'res_confirma' ? 'Confirmar ⚡' : ''}
-                ativo={fase === 'res_confirma'}
-              />
+              {p[1] && (
+                <PhoneMock papel={p[1]?.papel || 'P2'} nome={p[1]?.nome} cor={p[1]?.cor || '#f59e0b'}
+                  messages={msgsPhone[1]} inputAtivo={false} acoes={acoes2}
+                  badge={fase === 'p2_decide' ? 'Ação necessária ⚡' : ''}
+                  ativo={fase === 'p2_decide'}
+                />
+              )}
+              {p[2] && (
+                <PhoneMock papel={p[2]?.papel || 'P3'} nome={p[2]?.nome || '—'} cor={p[2]?.cor || '#10b981'}
+                  messages={msgsPhone[2]} inputAtivo={false} acoes={acoes3}
+                  badge={fase === 'p3_confirma' ? 'Confirmar ⚡' : ''}
+                  ativo={fase === 'p3_confirma'}
+                />
+              )}
+              {p[3] && (
+                <PhoneMock papel={p[3]?.papel || 'P4'} nome={p[3]?.nome || '—'} cor={p[3]?.cor || '#ec4899'}
+                  messages={msgsPhone[3]} inputAtivo={false} acoes={[]}
+                  badge={fase === 'concluido' && msgsPhone[3].length > 0 ? 'Notificado ✓' : ''}
+                  ativo={false}
+                />
+              )}
+              {p[4] && (
+                <PhoneMock papel={p[4]?.papel || 'P5'} nome={p[4]?.nome || '—'} cor={p[4]?.cor || '#3b82f6'}
+                  messages={msgsPhone[4]} inputAtivo={false} acoes={[]}
+                  badge={fase === 'concluido' && msgsPhone[4].length > 0 ? 'Notificado ✓' : ''}
+                  ativo={false}
+                />
+              )}
             </div>
 
-            {/* Campo motivo reprovação (abaixo dos phones) */}
-            {fase === 'sup_decide' && (
-              <div className="phone-fade" style={{
-                background: '#0f0f1e', border: '1px solid rgba(239,68,68,0.12)',
-                borderRadius: 12, padding: '14px 18px', marginTop: 16,
-                maxWidth: 400, margin: '14px auto 0',
-              }}>
+            {/* Motivo reprovação */}
+            {fase === 'p2_decide' && (
+              <div className="pf" style={{ background: '#0f0f1e', border: '1px solid rgba(239,68,68,0.12)', borderRadius: 12, padding: '14px 18px', marginTop: 14, maxWidth: 420, margin: '14px auto 0' }}>
                 <label style={{ color: '#475569', fontSize: 12, display: 'block', marginBottom: 6 }}>
                   💬 Motivo da reprovação (preencha antes de clicar Reprovar)
                 </label>
@@ -633,27 +833,22 @@ export default function SimulacaoFluxo() {
                   value={motivoReprova}
                   onChange={e => setMotivoReprova(e.target.value)}
                   placeholder="Ex: Data inválida, orçamento excedido..."
-                  style={{ ...inputSt }}
+                  style={inputSt}
                 />
               </div>
             )}
 
             {/* Resultado final */}
             {fase === 'concluido' && (
-              <div className="phone-fade" style={{
-                background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)',
-                borderRadius: 12, padding: 20, marginTop: 20, textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
-                <div style={{ color: '#10b981', fontWeight: 900, fontSize: 16, marginBottom: 4 }}>
-                  Simulação concluída com sucesso!
-                </div>
+              <div className="pf" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: 20, marginTop: 20, textAlign: 'center' }}>
+                <div style={{ fontSize: 26, marginBottom: 8 }}>🎉</div>
+                <div style={{ color: '#10b981', fontWeight: 900, fontSize: 15, marginBottom: 4 }}>Simulação concluída com sucesso!</div>
                 <div style={{ color: '#334155', fontSize: 13, marginBottom: 16 }}>
-                  O fluxo foi executado de ponta a ponta com registro real no banco de dados.
+                  Fluxo executado de ponta a ponta com registro real no banco de dados.
                 </div>
                 {instanceId && (
                   <div style={{ color: '#475569', fontSize: 12, fontFamily: 'monospace', marginBottom: 16 }}>
-                    Instância criada: <span style={{ color: '#6366f1' }}>{instanceId}</span>
+                    Instância: <span style={{ color: '#6366f1' }}>{instanceId}</span>
                   </div>
                 )}
                 <button onClick={resetar}
