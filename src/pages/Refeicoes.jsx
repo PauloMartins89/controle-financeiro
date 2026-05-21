@@ -688,15 +688,15 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
     setSaving(true)
     try {
       if (useFlowEngine) {
-        const instRes = await fetch(`/api/flow-engine?action=instance&entidade_tipo=refei_solicitacoes&entidade_id=${sol.id}`)
+        const instRes = await fetch(`/api/refeicoes?module=flow&action=instance&entidade_tipo=refei_solicitacoes&entidade_id=${sol.id}`)
         if (instRes.ok) {
           const { instancia } = await instRes.json()
-          const actRes = await fetch(`/api/flow-engine?action=actions&instance_id=${instancia.id}`)
+          const actRes = await fetch(`/api/refeicoes?module=flow&action=actions&instance_id=${instancia.id}`)
           const { acoes } = await actRes.json()
           const acaoNome = acao === 'aprovado' ? 'aprovar' : 'reprovar'
           const acaoObj = acoes.find(a => a.nome === acaoNome)
           if (!acaoObj) throw new Error(`Ação "${acaoNome}" não disponível nesta etapa`)
-          const execRes = await fetch('/api/flow-engine?action=execute', {
+          const execRes = await fetch('/api/refeicoes?module=flow&action=execute', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

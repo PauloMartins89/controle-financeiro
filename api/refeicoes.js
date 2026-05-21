@@ -11,6 +11,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
+import flowEngineHandler from './_flow-engine.js'
 
 function getDb() {
   return createClient(
@@ -62,6 +63,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(200).end()
+
+  // Delegar para o motor de fluxo quando module=flow
+  if (req.query?.module === 'flow') return flowEngineHandler(req, res)
 
   const db = getDb()
   const action = req.query?.action || req.body?.action
