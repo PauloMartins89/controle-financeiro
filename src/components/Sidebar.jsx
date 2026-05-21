@@ -88,7 +88,7 @@ const navGroups = [
       { to: '/refeicoes/cadastros/colaboradores',       icon: UsersIcon,                  label: 'Colaboradores',    moduleKey: 'refeicoes' },
       { to: '/refeicoes/cadastros/cdc',                 icon: BuildingOffice2Icon,        label: 'Centros de Custo', moduleKey: 'refeicoes' },
       { to: '/refeicoes/cadastros/regionais',           icon: MagnifyingGlassIcon,        label: 'Regionais',        moduleKey: 'refeicoes' },
-      { to: '/refeicoes/cadastros/parametros',          icon: Cog6ToothIcon,              label: 'Parâmetros',       moduleKey: 'refeicoes' },
+      { to: '/refeicoes/cadastros/parametros',          icon: Cog6ToothIcon,              label: 'Regras',           moduleKey: 'refeicoes' },
       { to: '/refeicoes/operacoes/solicitacoes',        icon: ClipboardDocumentListIcon,  label: 'Solicitações',     moduleKey: 'refeicoes' },
       { to: '/refeicoes/operacoes/aprovacoes',          icon: CheckCircleIcon,            label: 'Aprovações',       moduleKey: 'refeicoes' },
       { to: '/refeicoes/operacoes/fechamentos',         icon: DocumentTextIcon,           label: 'Fechamentos',      moduleKey: 'refeicoes' },

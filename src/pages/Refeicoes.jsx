@@ -607,57 +607,228 @@ function CrudColaboradores({ workspaceId }) {
   )
 }
 
-// ─── Parâmetros ───────────────────────────────────────────────────────────────
-function CrudParametros({ workspaceId, ownerId }) {
-  const [form, setForm] = useState({ antecedencia_horas: 2, teto_por_equipe: '', aprovacao_obrigatoria: true, permite_refeicao: true, permite_cafe: true })
-  const [saving, setSaving] = useState(false)
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  useEffect(() => {
-    if (!workspaceId) return
-    supabase.from('refei_parametros').select('*').eq('workspace_id', workspaceId).maybeSingle()
-      .then(({ data }) => { if (data) setForm({ ...data }) })
-  }, [workspaceId])
-  async function save() {
-    setSaving(true)
-    const payload = { workspace_id: workspaceId, antecedencia_horas: Number(form.antecedencia_horas) || 2, teto_por_equipe: Number(form.teto_por_equipe) || null, aprovacao_obrigatoria: !!form.aprovacao_obrigatoria, permite_refeicao: !!form.permite_refeicao, permite_cafe: !!form.permite_cafe, atualizado_em: new Date().toISOString() }
-    const { error } = await supabase.from('refei_parametros').upsert(payload, { onConflict: 'workspace_id' })
-    if (error) toast.error(error.message); else toast.success('Parâmetros salvos')
-    setSaving(false)
-  }
+// ─── Toggle Row (helper) ──────────────────────────────────────────────────────
+function ToggleRow({ checked, onChange, label, desc }) {
   return (
-    <div style={{ maxWidth: 480 }}>
-      <div className="card" style={{ padding: 24 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div>
-            <label style={lbl}>Antecedência (horas)</label>
-            <input type="number" min={0} className="input" value={form.antecedencia_horas} onChange={e => f('antecedencia_horas', e.target.value)} />
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Horas antes para envio do formulário</div>
-          </div>
-          <div>
-            <label style={lbl}>Teto por equipe</label>
-            <input type="number" min={0} className="input" value={form.teto_por_equipe || ''} onChange={e => f('teto_por_equipe', e.target.value)} placeholder="Sem limite" />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input type="checkbox" id="p_aprov" checked={!!form.aprovacao_obrigatoria} onChange={e => f('aprovacao_obrigatoria', e.target.checked)} style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
-            <label htmlFor="p_aprov" style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Aprovação obrigatória</label>
-          </div>
-          <div />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input type="checkbox" id="p_ref" checked={!!form.permite_refeicao} onChange={e => f('permite_refeicao', e.target.checked)} style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
-            <label htmlFor="p_ref" style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Permite refeição 🍽️</label>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input type="checkbox" id="p_cafe" checked={!!form.permite_cafe} onChange={e => f('permite_cafe', e.target.checked)} style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
-            <label htmlFor="p_cafe" style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Permite café ☕</label>
-          </div>
-        </div>
-        <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={save} disabled={saving} className="btn-primary" style={{ fontSize: 13, padding: '8px 18px' }}>{saving ? 'Salvando...' : 'Salvar Parâmetros'}</button>
-        </div>
+    <div onClick={onChange} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', borderRadius: 10, border: `1px solid ${checked ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', userSelect: 'none', transition: 'border-color 0.15s' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{label}</div>
+        {desc && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{desc}</div>}
+      </div>
+      <div style={{ width: 44, height: 24, borderRadius: 12, background: checked ? 'var(--accent)' : 'var(--bg-secondary)', border: '1px solid var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0, marginLeft: 14 }}>
+        <div style={{ position: 'absolute', top: 3, left: checked ? 23 : 3, width: 16, height: 16, borderRadius: '50%', background: checked ? '#fff' : 'var(--text-secondary)', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
       </div>
     </div>
   )
 }
+
+// ─── Regras de Refeição ───────────────────────────────────────────────────────
+function CrudRegras({ workspaceId, ownerId }) {
+  const DIAS_SEMANA = [
+    { n: 1, label: 'SEG' }, { n: 2, label: 'TER' }, { n: 3, label: 'QUA' },
+    { n: 4, label: 'QUI' }, { n: 5, label: 'SEX' }, { n: 6, label: 'SÁB' }, { n: 0, label: 'DOM' },
+  ]
+  const DEFAULT = {
+    dias_semana: [1, 2, 3, 4, 5],
+    antecedencia_horas: 2,
+    horario_corte: '10:00',
+    teto_por_equipe: '',
+    teto_valor_colaborador: '',
+    max_refeicoes_dia: 1,
+    permite_refeicao: true,
+    permite_cafe: true,
+    permite_extra: true,
+    tipo_aprovacao: 'obrigatoria',
+    valor_aprovacao_automatica: '',
+    prazo_aprovacao_horas: 24,
+    notifica_lider_resultado: true,
+    notifica_supervisor_pendente: true,
+  }
+  const [form, setForm]     = useState(DEFAULT)
+  const [saving, setSaving] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  useEffect(() => {
+    if (!workspaceId) return
+    supabase.from('refei_parametros').select('*').eq('workspace_id', workspaceId).maybeSingle()
+      .then(({ data }) => {
+        if (data) setForm({ ...DEFAULT, ...data, dias_semana: data.dias_semana || [1, 2, 3, 4, 5] })
+        setLoaded(true)
+      })
+  }, [workspaceId])
+
+  function toggleDia(n) {
+    const dias = form.dias_semana || []
+    f('dias_semana', dias.includes(n) ? dias.filter(d => d !== n) : [...dias, n].sort((a, b) => (a || 7) - (b || 7)))
+  }
+
+  async function save() {
+    if (!form.dias_semana?.length) { toast.error('Selecione pelo menos 1 dia da semana'); return }
+    setSaving(true)
+    const payload = {
+      workspace_id:                 workspaceId,
+      antecedencia_horas:           Number(form.antecedencia_horas) || 2,
+      horario_corte:                form.horario_corte || '10:00',
+      dias_semana:                  form.dias_semana,
+      teto_por_equipe:              Number(form.teto_por_equipe) || null,
+      teto_valor_colaborador:       Number(form.teto_valor_colaborador) || null,
+      max_refeicoes_dia:            Number(form.max_refeicoes_dia) || 1,
+      permite_refeicao:             !!form.permite_refeicao,
+      permite_cafe:                 !!form.permite_cafe,
+      permite_extra:                !!form.permite_extra,
+      aprovacao_obrigatoria:        form.tipo_aprovacao === 'obrigatoria',
+      tipo_aprovacao:               form.tipo_aprovacao || 'obrigatoria',
+      valor_aprovacao_automatica:   form.tipo_aprovacao === 'por_valor' ? (Number(form.valor_aprovacao_automatica) || null) : null,
+      prazo_aprovacao_horas:        Number(form.prazo_aprovacao_horas) || 24,
+      notifica_lider_resultado:     !!form.notifica_lider_resultado,
+      notifica_supervisor_pendente: !!form.notifica_supervisor_pendente,
+      atualizado_em:                new Date().toISOString(),
+    }
+    const { error } = await supabase.from('refei_parametros').upsert(payload, { onConflict: 'workspace_id' })
+    if (error) toast.error(error.message)
+    else toast.success('Regras salvas! ✓')
+    setSaving(false)
+  }
+
+  if (!loaded) return <div style={{ color: 'var(--text-secondary)', padding: 40, textAlign: 'center', fontSize: 13 }}>Carregando...</div>
+
+  const sCard = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 22px', marginBottom: 16 }
+
+  function SH({ emoji, title, sub: subtitle }) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid var(--border)' }}>
+        <span style={{ fontSize: 20, lineHeight: 1, marginTop: 1 }}>{emoji}</span>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--text-primary)' }}>{title}</div>
+          {subtitle && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{subtitle}</div>}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ maxWidth: 740 }}>
+
+      {/* ── 1. Dias e Horários ── */}
+      <div style={sCard}>
+        <SH emoji="📅" title="Dias e Horários" sub="Em quais dias as refeições são permitidas e qual o horário limite para pedidos" />
+        <div style={{ marginBottom: 16 }}>
+          <label style={lbl}>Dias da semana permitidos</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+            {DIAS_SEMANA.map(d => {
+              const on = (form.dias_semana || []).includes(d.n)
+              return (
+                <button key={d.n} onClick={() => toggleDia(d.n)}
+                  style={{ padding: '7px 16px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`, background: on ? 'var(--accent)' : 'transparent', color: on ? '#fff' : 'var(--text-secondary)', transition: 'all 0.15s' }}>
+                  {d.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div>
+            <label style={lbl}>Horário de corte</label>
+            <input type="time" className="input" value={form.horario_corte || '10:00'} onChange={e => f('horario_corte', e.target.value)} />
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Hora limite para envio do formulário pelo líder</div>
+          </div>
+          <div>
+            <label style={lbl}>Antecedência mínima (horas)</label>
+            <input type="number" min={0} className="input" value={form.antecedencia_horas} onChange={e => f('antecedencia_horas', e.target.value)} placeholder="2" />
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Horas antes da refeição para encerrar pedidos</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 2. Limites e Cotas ── */}
+      <div style={sCard}>
+        <SH emoji="📊" title="Limites e Cotas" sub="Controle de volume e valor por equipe e colaborador" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          <div>
+            <label style={lbl}>Teto por equipe (itens)</label>
+            <input type="number" min={0} className="input" value={form.teto_por_equipe || ''} onChange={e => f('teto_por_equipe', e.target.value)} placeholder="Sem limite" />
+          </div>
+          <div>
+            <label style={lbl}>Valor máx. / colaborador / dia (R$)</label>
+            <input type="number" min={0} step="0.01" className="input" value={form.teto_valor_colaborador || ''} onChange={e => f('teto_valor_colaborador', e.target.value)} placeholder="Sem limite" />
+          </div>
+          <div>
+            <label style={lbl}>Máx. refeições / colaborador / dia</label>
+            <input type="number" min={1} max={10} className="input" value={form.max_refeicoes_dia || 1} onChange={e => f('max_refeicoes_dia', e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. Tipos Habilitados ── */}
+      <div style={sCard}>
+        <SH emoji="✅" title="Tipos Habilitados" sub="O que pode ser solicitado pelos líderes no formulário" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ToggleRow checked={!!form.permite_refeicao} onChange={() => f('permite_refeicao', !form.permite_refeicao)} label="🍽️ Refeição (Almoço / Jantar)" desc="Permite solicitar refeições no formulário do líder" />
+          <ToggleRow checked={!!form.permite_cafe}     onChange={() => f('permite_cafe',     !form.permite_cafe)}     label="☕ Café da Manhã / Lanche"        desc="Permite solicitar café junto com a refeição" />
+          <ToggleRow checked={!!form.permite_extra}    onChange={() => f('permite_extra',    !form.permite_extra)}    label="➕ Extras (com justificativa)"    desc="Permite adicionar pessoas fora da lista oficial da equipe" />
+        </div>
+      </div>
+
+      {/* ── 4. Fluxo de Aprovação ── */}
+      <div style={sCard}>
+        <SH emoji="🔄" title="Fluxo de Aprovação" sub="Como os pedidos são processados antes de ir para o restaurante" />
+        <div style={{ marginBottom: 16 }}>
+          <label style={lbl}>Tipo de aprovação</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 6 }}>
+            {[
+              { id: 'obrigatoria', emoji: '👤', title: 'Obrigatória',  desc: 'Supervisor sempre aprova' },
+              { id: 'automatica',  emoji: '⚡', title: 'Automática',   desc: 'Aprovação sem intervenção' },
+              { id: 'por_valor',   emoji: '💰', title: 'Por Valor',    desc: 'Auto-aprova abaixo de R$X' },
+            ].map(opt => {
+              const active = form.tipo_aprovacao === opt.id
+              return (
+                <button key={opt.id} onClick={() => f('tipo_aprovacao', opt.id)}
+                  style={{ padding: '12px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `2px solid ${active ? 'var(--accent)' : 'var(--border)'}`, background: active ? 'var(--accent-glow)' : 'transparent', color: active ? 'var(--accent)' : 'var(--text-secondary)', textAlign: 'center', transition: 'all 0.15s' }}>
+                  <div style={{ fontSize: 20, marginBottom: 5 }}>{opt.emoji}</div>
+                  <div>{opt.title}</div>
+                  <div style={{ fontSize: 10, fontWeight: 400, marginTop: 3, opacity: 0.75 }}>{opt.desc}</div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        {form.tipo_aprovacao === 'por_valor' && (
+          <div style={{ marginBottom: 16 }}>
+            <label style={lbl}>Auto-aprovar pedidos abaixo de (R$)</label>
+            <input type="number" min={0} step="0.01" className="input" style={{ maxWidth: 220 }} value={form.valor_aprovacao_automatica || ''} onChange={e => f('valor_aprovacao_automatica', e.target.value)} placeholder="Ex: 150.00" />
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Pedidos com valor total abaixo deste limite são aprovados automaticamente</div>
+          </div>
+        )}
+        {form.tipo_aprovacao !== 'automatica' && (
+          <div>
+            <label style={lbl}>Prazo para aprovação (horas)</label>
+            <input type="number" min={1} className="input" style={{ maxWidth: 180 }} value={form.prazo_aprovacao_horas || 24} onChange={e => f('prazo_aprovacao_horas', e.target.value)} />
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Tempo que o supervisor tem para aprovar antes de ser alertado novamente</div>
+          </div>
+        )}
+      </div>
+
+      {/* ── 5. Notificações ── */}
+      <div style={sCard}>
+        <SH emoji="🔔" title="Notificações WhatsApp" sub="Quais mensagens automáticas são enviadas durante o processo" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ToggleRow checked={!!form.notifica_lider_resultado}     onChange={() => f('notifica_lider_resultado',     !form.notifica_lider_resultado)}     label="Notificar líder do resultado"          desc="Envia WA informando se o pedido foi aprovado ou reprovado" />
+          <ToggleRow checked={!!form.notifica_supervisor_pendente} onChange={() => f('notifica_supervisor_pendente', !form.notifica_supervisor_pendente)} label="Alertar supervisor sobre pendências" desc="Lembrete quando o pedido aguarda aprovação além do prazo" />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 24 }}>
+        <button onClick={save} disabled={saving} className="btn-primary" style={{ fontSize: 14, padding: '11px 28px', fontWeight: 800 }}>
+          {saving ? 'Salvando...' : '💾 Salvar Regras'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Alias para compatibilidade
+const CrudParametros = CrudRegras
 
 // ─── Seção: Cadastros ─────────────────────────────────────────────────────────
 function SecaoCadastros({ workspaceId, ownerId, sub }) {
