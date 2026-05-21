@@ -37,21 +37,39 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'nome é obrigatório' })
     }
 
+    const cidadeNorm = cidade?.trim()
+      ? cidade.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      : null
+
     const body = {
       query: {
         termo: [nome.trim()],
+        atividade_principal: [],
+        ...(cidadeNorm ? { municipio: [cidadeNorm] } : {}),
+        ...(uf?.trim()  ? { uf: [uf.trim().toUpperCase()] } : {}),
         situacao_cadastral: 'ATIVA',
-        ...(cidade?.trim() ? { municipio: [cidade.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')] } : {}),
-        ...(uf?.trim()     ? { uf: [uf.trim().toUpperCase()] } : {}),
       },
-      extras: { somente_mei: false, excluir_mei: false, somente_matriz: true },
+      extras: {
+        somente_mei: false,
+        excluir_mei: false,
+        com_contato_telefonico: false,
+        somente_fixo: false,
+        somente_celular: false,
+        somente_matriz: true,
+      },
       page: 1,
     }
 
     try {
       const r = await fetch('https://api.casadosdados.com.br/v2/public/cnpj/pesquisa', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Origin': 'https://casadosdados.com.br',
+          'Referer': 'https://casadosdados.com.br/',
+        },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(10000),
       })
