@@ -128,24 +128,31 @@ function InstanceRow({ inst, onAction }) {
 function ActionButtons({ instanceId, status, onAction }) {
   const userId = useStore(s => s.currentUser?.id)
   const [acoes, setAcoes] = useState([])
+  const [resolvedId, setResolvedId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [executing, setExecuting] = useState(null)
 
   useEffect(() => {
+    setAcoes([])
+    setResolvedId(null)
     fetch(`/api/flow-engine?action=actions&instance_id=${instanceId}`)
       .then(r => r.ok ? r.json() : null)
-      .then(d => setAcoes(d?.acoes || []))
+      .then(d => {
+        setAcoes(d?.acoes || [])
+        setResolvedId(d?.instance_id || instanceId)
+      })
       .catch(() => {})
   }, [instanceId])
 
   async function exec(acao) {
+    const iid = resolvedId || instanceId
     if (acao.campos_obrigatorios?.includes('motivo')) {
       const motivo = window.prompt(`Motivo para "${acao.label}":`)
       if (!motivo) return
       setExecuting(acao.id)
       const r = await fetch('/api/flow-engine?action=execute', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instance_id: instanceId, acao_id: acao.id, executado_por: userId, dados: { motivo }, origem: 'humano' }),
+        body: JSON.stringify({ instance_id: iid, acao_id: acao.id, executado_por: userId, dados: { motivo }, origem: 'humano' }),
       })
       const j = await r.json()
       setExecuting(null)
@@ -156,7 +163,7 @@ function ActionButtons({ instanceId, status, onAction }) {
     setExecuting(acao.id)
     const r = await fetch('/api/flow-engine?action=execute', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instance_id: instanceId, acao_id: acao.id, executado_por: userId, dados: {}, origem: 'humano' }),
+      body: JSON.stringify({ instance_id: iid, acao_id: acao.id, executado_por: userId, dados: {}, origem: 'humano' }),
     })
     const j = await r.json()
     setExecuting(null)
