@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
@@ -84,7 +84,7 @@ function FlowMapTab({ workspaceId }) {
     })
   }, [selectedDef])
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 60, color: '#6b7280' }}>Carregando mapa...</div>
+  if (loading) return <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>Carregando mapa...</div>
 
   // Montar mapa: para cada step, quais ações saem dele e para onde vão
   const stepMap = {}
@@ -104,15 +104,15 @@ function FlowMapTab({ workspaceId }) {
     <div style={{ padding: '0 0 40px' }}>
       {/* Seletor de processo */}
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <label style={{ color: '#94a3b8', fontSize: 13, whiteSpace: 'nowrap' }}>Processo:</label>
+        <label style={{ color: 'var(--text-secondary)', fontSize: 13, whiteSpace: 'nowrap' }}>Processo:</label>
         <select
           value={selectedDef || ''}
           onChange={e => setSelectedDef(e.target.value)}
-          style={{ background: '#1e293b', border: '1px solid #334155', color: '#f1f5f9', borderRadius: 8, padding: '7px 12px', fontSize: 14, cursor: 'pointer' }}
+          style={{ background: 'var(--bg-card-hover)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 8, padding: '7px 12px', fontSize: 14, cursor: 'pointer' }}
         >
           {definitions.map(d => <option key={d.id} value={d.id}>{d.nome} ({d.modulo})</option>)}
         </select>
-        {flowData && <span style={{ color: '#475569', fontSize: 12 }}>{stepList.length} etapas · {flowData.transitions.length} transições</span>}
+        {flowData && <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{stepList.length} etapas · {flowData.transitions.length} transições</span>}
       </div>
 
       {/* Pipeline visual horizontal */}
@@ -138,12 +138,12 @@ function FlowMapTab({ workspaceId }) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: sc.dot, flexShrink: 0 }} />
                         <span style={{ color: sc.text, fontWeight: 700, fontSize: 13, lineHeight: 1.3 }}>{step.nome}</span>
-                        {step.is_final && <span style={{ fontSize: 10, color: '#6b7280', background: 'rgba(107,114,128,0.15)', padding: '1px 6px', borderRadius: 10 }}>FINAL</span>}
+                        {step.is_final && <span style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'rgba(107,114,128,0.15)', padding: '1px 6px', borderRadius: 10 }}>FINAL</span>}
                       </div>
 
                       {/* Status valor */}
                       {step.status_valor && (
-                        <div style={{ fontSize: 11, color: '#475569' }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                           status: <span style={{ color: sc.dot }}>{step.status_valor}</span>
                         </div>
                       )}
@@ -151,9 +151,9 @@ function FlowMapTab({ workspaceId }) {
                       {/* Responsáveis */}
                       {resps.length > 0 && (
                         <div style={{ borderTop: `1px solid ${sc.border}30`, paddingTop: 8, marginTop: 2 }}>
-                          <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>👤 RESPONSÁVEL</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>👤 RESPONSÁVEL</div>
                           {resps.map((r, ri) => (
-                            <div key={ri} style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 7px', marginBottom: 3 }}>
+                            <div key={ri} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 7px', marginBottom: 3 }}>
                               {r.tipo === 'supervisor_equipe' ? '👔 Supervisor' :
                                r.tipo === 'lider_equipe' ? '👷 Líder' :
                                r.tipo === 'solicitante' ? '🙋 Solicitante' :
@@ -167,13 +167,13 @@ function FlowMapTab({ workspaceId }) {
                       {/* Ações disponíveis neste step */}
                       {stepActions.length > 0 && (
                         <div style={{ borderTop: `1px solid ${sc.border}30`, paddingTop: 8, marginTop: 2 }}>
-                          <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>⚡ AÇÕES</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>⚡ AÇÕES</div>
                           {stepActions.map(a => {
                             const ac = actionColor(a.nome)
                             return (
                               <div key={a.id} style={{ fontSize: 11, color: ac.text, background: ac.bg, border: `1px solid ${ac.border}40`, borderRadius: 6, padding: '3px 7px', marginBottom: 3 }}>
                                 {ac.icon} {a.nome}
-                                {a.requer_motivo && <span style={{ color: '#6b7280', marginLeft: 4 }}>(motivo)</span>}
+                                {a.requer_motivo && <span style={{ color: 'var(--text-secondary)', marginLeft: 4 }}>(motivo)</span>}
                               </div>
                             )
                           })}
@@ -192,7 +192,7 @@ function FlowMapTab({ workspaceId }) {
                               <div style={{ fontSize: 10, color: ac2.text, background: ac2.bg, border: `1px solid ${ac2.border}40`, borderRadius: 10, padding: '2px 7px', whiteSpace: 'nowrap', maxWidth: 74, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {ac?.nome || '→'}
                               </div>
-                              <div style={{ color: '#475569', fontSize: 16 }}>→</div>
+                              <div style={{ color: 'var(--text-secondary)', fontSize: 16 }}>→</div>
                             </div>
                           )
                         })}
@@ -205,8 +205,8 @@ function FlowMapTab({ workspaceId }) {
           </div>
 
           {/* Legenda de responsáveis completa */}
-          <div style={{ marginTop: 32, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 20 }}>
-            <div style={{ fontSize: 12, color: '#475569', fontWeight: 700, marginBottom: 14, letterSpacing: 1 }}>MAPA DE RESPONSABILIDADE — QUEM FAZ O QUÊ</div>
+          <div style={{ marginTop: 32, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 14, letterSpacing: 1 }}>MAPA DE RESPONSABILIDADE — QUEM FAZ O QUÊ</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
               {stepList.map(step => {
                 const sc = stepColor(step.status_valor)
@@ -214,16 +214,16 @@ function FlowMapTab({ workspaceId }) {
                 const stepActions = flowData.actions.filter(a => a.step_id === step.id)
                 const outgoing = stepMap[step.id]?.outgoing || []
                 return (
-                  <div key={step.id} style={{ background: '#111827', border: `1px solid ${sc.border}50`, borderRadius: 10, padding: 14 }}>
+                  <div key={step.id} style={{ background: 'var(--bg-card)', border: `1px solid ${sc.border}50`, borderRadius: 10, padding: 14 }}>
                     <div style={{ color: sc.text, fontWeight: 700, fontSize: 13, marginBottom: 8 }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot, display: 'inline-block', marginRight: 6 }} />
                       {step.nome}
                     </div>
                     {resps.length > 0 && (
                       <div style={{ marginBottom: 8 }}>
-                        <span style={{ fontSize: 10, color: '#475569' }}>Responsável: </span>
+                        <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Responsável: </span>
                         {resps.map((r, i) => (
-                          <span key={i} style={{ fontSize: 11, color: '#94a3b8' }}>
+                          <span key={i} style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
                             {r.tipo === 'supervisor_equipe' ? '👔 Supervisor da Equipe' :
                              r.tipo === 'lider_equipe' ? '👷 Líder da Equipe' :
                              r.tipo === 'solicitante' ? '🙋 Quem Solicitou' :
@@ -235,7 +235,7 @@ function FlowMapTab({ workspaceId }) {
                     )}
                     {stepActions.length > 0 && (
                       <div style={{ marginBottom: 8 }}>
-                        <span style={{ fontSize: 10, color: '#475569' }}>Pode fazer: </span>
+                        <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Pode fazer: </span>
                         {stepActions.map((a, i) => {
                           const ac = actionColor(a.nome)
                           return (
@@ -248,7 +248,7 @@ function FlowMapTab({ workspaceId }) {
                     )}
                     {outgoing.length > 0 && (
                       <div>
-                        <span style={{ fontSize: 10, color: '#475569' }}>Vai para: </span>
+                        <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Vai para: </span>
                         {outgoing.map((t, i) => {
                           const toStep = stepList.find(s => s.id === t.to_step_id)
                           const sc2 = stepColor(toStep?.status_valor)
@@ -269,7 +269,7 @@ function FlowMapTab({ workspaceId }) {
       )}
 
       {!flowData && !loading && (
-        <div style={{ textAlign: 'center', padding: 60, color: '#475569' }}>
+        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
           <MapIcon style={{ width: 40, height: 40, margin: '0 auto 12px', opacity: 0.3 }} />
           <div>Nenhum fluxo ativo encontrado</div>
         </div>
@@ -376,10 +376,10 @@ function InstanceTesterTab({ workspaceId }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, minHeight: 500 }}>
       {/* Coluna Esquerda: Lista de instâncias */}
-      <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ padding: '12px 14px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#94a3b8', fontSize: 13, fontWeight: 600 }}>Instâncias</span>
-          <button onClick={loadInstances} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: 2 }}>
+          <span style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }}>Instâncias</span>
+          <button onClick={loadInstances} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 2 }}>
             <ArrowPathIcon style={{ width: 14, height: 14 }} />
           </button>
         </div>
@@ -397,7 +397,7 @@ function InstanceTesterTab({ workspaceId }) {
         {/* Lista */}
         <div style={{ overflowY: 'auto', maxHeight: 520 }}>
           {instances.length === 0 && (
-            <div style={{ padding: 20, textAlign: 'center', color: '#475569', fontSize: 12 }}>Nenhuma instância</div>
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 12 }}>Nenhuma instância</div>
           )}
           {instances.map(inst => {
             const ctx = inst.dados_contexto || {}
@@ -415,7 +415,7 @@ function InstanceTesterTab({ workspaceId }) {
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot, flexShrink: 0 }} />
                   <span style={{ fontSize: 11, color: sc.text }}>{inst.flow_steps?.nome || '?'}</span>
                 </div>
-                <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>{fmtRelativo(inst.updated_at)}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{fmtRelativo(inst.updated_at)}</div>
               </button>
             )
           })}
@@ -425,14 +425,14 @@ function InstanceTesterTab({ workspaceId }) {
       {/* Coluna Direita: Detalhes + Ações */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {!selectedId && (
-          <div style={{ flex: 1, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#475569' }}>
+          <div style={{ flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: 'var(--text-secondary)' }}>
             <BeakerIcon style={{ width: 40, height: 40, opacity: 0.3 }} />
             <div style={{ fontSize: 14 }}>Selecione uma instância para testar</div>
           </div>
         )}
 
         {selectedId && loadingInstance && (
-          <div style={{ flex: 1, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 13 }}>
+          <div style={{ flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
             Carregando...
           </div>
         )}
@@ -440,8 +440,8 @@ function InstanceTesterTab({ workspaceId }) {
         {selectedId && !loadingInstance && instanceData && (
           <>
             {/* Estado atual */}
-            <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 20 }}>
-              <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>ESTADO ATUAL</div>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>ESTADO ATUAL</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                 {[
                   { label: 'Processo', value: instanceData.processo || '—' },
@@ -453,8 +453,8 @@ function InstanceTesterTab({ workspaceId }) {
                 ].map(({ label, value }) => {
                   const sc = label === 'Etapa' ? stepColor(instanceData.current_step?.status_valor) : null
                   return (
-                    <div key={label} style={{ background: '#111827', borderRadius: 8, padding: '10px 14px' }}>
-                      <div style={{ fontSize: 10, color: '#475569', marginBottom: 4 }}>{label}</div>
+                    <div key={label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '10px 14px' }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>{label}</div>
                       <div style={{ fontSize: 13, color: sc ? sc.text : '#e2e8f0', fontWeight: 600 }}>{value}</div>
                     </div>
                   )
@@ -463,8 +463,8 @@ function InstanceTesterTab({ workspaceId }) {
             </div>
 
             {/* Ações disponíveis */}
-            <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 20 }}>
-              <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>
                 AÇÕES DISPONÍVEIS {availableActions.length === 0 && <span style={{ color: '#374151', fontSize: 10, fontWeight: 400 }}>(nenhuma — etapa final ou instância inativa)</span>}
               </div>
 
@@ -488,8 +488,8 @@ function InstanceTesterTab({ workspaceId }) {
 
               {/* Mini form de motivo */}
               {motivoFor && (
-                <div style={{ background: '#111827', border: '1px solid #374151', borderRadius: 10, padding: 16 }}>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
+                <div style={{ background: 'var(--bg-card)', border: '1px solid #374151', borderRadius: 10, padding: 16 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>
                     Motivo para <strong style={{ color: actionColor(motivoFor.nome).text }}>{motivoFor.nome}</strong>:
                   </div>
                   <textarea
@@ -498,7 +498,7 @@ function InstanceTesterTab({ workspaceId }) {
                     placeholder="Descreva o motivo..."
                     autoFocus
                     rows={3}
-                    style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9', borderRadius: 8, padding: '8px 12px', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 8, padding: '8px 12px', fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
                   />
                   <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                     <button onClick={() => executeAction(motivoFor, motivo)}
@@ -507,7 +507,7 @@ function InstanceTesterTab({ workspaceId }) {
                       Confirmar
                     </button>
                     <button onClick={() => { setMotivoFor(null); setMotivo('') }}
-                      style={{ padding: '7px 16px', background: 'transparent', border: '1px solid #374151', color: '#94a3b8', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
+                      style={{ padding: '7px 16px', background: 'transparent', border: '1px solid #374151', color: 'var(--text-secondary)', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
                       Cancelar
                     </button>
                   </div>
@@ -517,20 +517,20 @@ function InstanceTesterTab({ workspaceId }) {
 
             {/* Histórico da instância */}
             {instanceData.history && instanceData.history.length > 0 && (
-              <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>HISTÓRICO</div>
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>HISTÓRICO</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {instanceData.history.map((h, i) => {
                     const sc = stepColor(h.to_step?.status_valor)
                     return (
-                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '8px 12px', background: '#111827', borderRadius: 8, fontSize: 12 }}>
+                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '8px 12px', background: 'var(--bg-card)', borderRadius: 8, fontSize: 12 }}>
                         <span style={{ width: 8, height: 8, borderRadius: '50%', background: sc.dot, flexShrink: 0, marginTop: 3 }} />
                         <div style={{ flex: 1 }}>
-                          <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{h.acao_nome || h.acao_id?.substring(0, 8)}</span>
-                          <span style={{ color: '#475569', marginLeft: 8 }}>→ {h.to_step?.nome || '?'}</span>
-                          {h.dados?.motivo && <div style={{ color: '#6b7280', marginTop: 2, fontSize: 11 }}>"{h.dados.motivo}"</div>}
+                          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{h.acao_nome || h.acao_id?.substring(0, 8)}</span>
+                          <span style={{ color: 'var(--text-secondary)', marginLeft: 8 }}>→ {h.to_step?.nome || '?'}</span>
+                          {h.dados?.motivo && <div style={{ color: 'var(--text-secondary)', marginTop: 2, fontSize: 11 }}>"{h.dados.motivo}"</div>}
                         </div>
-                        <span style={{ color: '#475569', fontSize: 11, whiteSpace: 'nowrap' }}>{fmtRelativo(h.executado_em)}</span>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 11, whiteSpace: 'nowrap' }}>{fmtRelativo(h.executado_em)}</span>
                       </div>
                     )
                   })}
@@ -542,7 +542,7 @@ function InstanceTesterTab({ workspaceId }) {
 
         {/* Resposta da última ação */}
         {lastResult && (
-          <div style={{ background: '#0a0f1a', border: `1px solid ${lastResult.ok ? '#1a3a2a' : '#3a1a1a'}`, borderRadius: 12, padding: 16 }}>
+          <div style={{ background: 'var(--bg-secondary)', border: `1px solid ${lastResult.ok ? '#1a3a2a' : '#3a1a1a'}`, borderRadius: 12, padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               {lastResult.ok
                 ? <CheckCircleIcon style={{ width: 16, height: 16, color: '#10b981' }} />
@@ -550,9 +550,9 @@ function InstanceTesterTab({ workspaceId }) {
               <span style={{ fontSize: 12, color: lastResult.ok ? '#10b981' : '#ef4444', fontWeight: 700 }}>
                 {lastResult.ok ? `✓ "${lastResult.acao}" executado (${lastResult.status})` : `✗ Erro — "${lastResult.acao}" (${lastResult.status})`}
               </span>
-              <button onClick={() => setLastResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
+              <button onClick={() => setLastResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
             </div>
-            <pre style={{ margin: 0, fontSize: 11, color: '#6b7280', overflowX: 'auto', fontFamily: 'monospace' }}>
+            <pre style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', overflowX: 'auto', fontFamily: 'monospace' }}>
               {JSON.stringify(lastResult.data, null, 2)}
             </pre>
           </div>
@@ -638,25 +638,25 @@ function StartNewTab({ workspaceId }) {
 
   return (
     <div style={{ maxWidth: 540 }}>
-      <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1 }}>INICIAR NOVO FLUXO MANUALMENTE</div>
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 1 }}>INICIAR NOVO FLUXO MANUALMENTE</div>
 
         {/* Processo */}
         <div>
-          <label style={{ display: 'block', fontSize: 11, color: '#475569', marginBottom: 6 }}>PROCESSO</label>
+          <label style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>PROCESSO</label>
           <select value={selectedDef} onChange={e => setSelectedDef(e.target.value)}
-            style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#f1f5f9', borderRadius: 8, padding: '9px 12px', fontSize: 14 }}>
+            style={{ width: '100%', background: 'var(--bg-card-hover)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 8, padding: '9px 12px', fontSize: 14 }}>
             {definitions.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
           </select>
         </div>
 
         {/* Entidade */}
         <div>
-          <label style={{ display: 'block', fontSize: 11, color: '#475569', marginBottom: 6 }}>
+          <label style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
             SOLICITAÇÃO {loadingEntities && <span style={{ color: '#374151' }}>(carregando...)</span>}
           </label>
           <select value={selectedEntity} onChange={e => setSelectedEntity(e.target.value)}
-            style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#f1f5f9', borderRadius: 8, padding: '9px 12px', fontSize: 14 }}>
+            style={{ width: '100%', background: 'var(--bg-card-hover)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 8, padding: '9px 12px', fontSize: 14 }}>
             <option value=''>— Selecione —</option>
             {entities.map(e => (
               <option key={e.id} value={e.id}>
@@ -665,8 +665,8 @@ function StartNewTab({ workspaceId }) {
             ))}
           </select>
           {selEntity && (
-            <div style={{ marginTop: 8, fontSize: 11, color: '#475569' }}>
-              Status atual: <span style={{ color: '#94a3b8' }}>{selEntity.status}</span>
+            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
+              Status atual: <span style={{ color: 'var(--text-secondary)' }}>{selEntity.status}</span>
               {selEntity.has_instance && <span style={{ color: '#f59e0b', marginLeft: 8 }}>⚠ Já possui flow_instance</span>}
             </div>
           )}
@@ -682,7 +682,7 @@ function StartNewTab({ workspaceId }) {
 
       {/* Resultado */}
       {result && (
-        <div style={{ marginTop: 16, background: '#0a0f1a', border: `1px solid ${result.ok ? '#1a3a2a' : '#3a1a1a'}`, borderRadius: 12, padding: 16 }}>
+        <div style={{ marginTop: 16, background: 'var(--bg-secondary)', border: `1px solid ${result.ok ? '#1a3a2a' : '#3a1a1a'}`, borderRadius: 12, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             {result.ok
               ? <CheckCircleIcon style={{ width: 16, height: 16, color: '#10b981' }} />
@@ -690,9 +690,9 @@ function StartNewTab({ workspaceId }) {
             <span style={{ fontSize: 12, color: result.ok ? '#10b981' : '#ef4444', fontWeight: 700 }}>
               {result.ok ? `✓ Fluxo iniciado (${result.status})` : `✗ Erro (${result.status})`}
             </span>
-            <button onClick={() => setResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
+            <button onClick={() => setResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>×</button>
           </div>
-          <pre style={{ margin: 0, fontSize: 11, color: '#6b7280', overflowX: 'auto', fontFamily: 'monospace' }}>
+          <pre style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', overflowX: 'auto', fontFamily: 'monospace' }}>
             {JSON.stringify(result.data, null, 2)}
           </pre>
         </div>
@@ -816,8 +816,8 @@ function SimulatorTab({ workspaceId }) {
     return { nome: tipo, celular: '', email: '' }
   }
 
-  const inputStyle = { width: '100%', background: '#111827', border: '1px solid #1e293b', color: '#f1f5f9', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box' }
-  const labelStyle = { display: 'block', fontSize: 10, color: '#475569', marginBottom: 4, fontWeight: 700, letterSpacing: 0.5 }
+  const inputStyle = { width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box' }
+  const labelStyle = { display: 'block', fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, fontWeight: 700, letterSpacing: 0.5 }
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: 20, alignItems: 'start' }}>
@@ -826,17 +826,17 @@ function SimulatorTab({ workspaceId }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* Processo */}
-        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
-          <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>PROCESSO</div>
-          <select value={selectedDef} onChange={e => setSelectedDef(e.target.value)} style={{ ...inputStyle, background: '#1e293b' }}>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 18 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>PROCESSO</div>
+          <select value={selectedDef} onChange={e => setSelectedDef(e.target.value)} style={{ ...inputStyle, background: 'var(--bg-card-hover)' }}>
             {definitions.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
           </select>
-          {loadingFlow && <div style={{ fontSize: 11, color: '#475569', marginTop: 8 }}>Carregando fluxo...</div>}
-          {flowData && <div style={{ fontSize: 11, color: '#475569', marginTop: 8 }}>{flowData.steps.length} etapas · {flowData.actions.length} ações</div>}
+          {loadingFlow && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>Carregando fluxo...</div>}
+          {flowData && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 8 }}>{flowData.steps.length} etapas · {flowData.actions.length} ações</div>}
         </div>
 
         {/* Solicitante */}
-        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 18 }}>
           <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>🙋 SOLICITANTE</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div><label style={labelStyle}>NOME</label><input style={inputStyle} placeholder="Ex: João Silva" value={campos.nome_solicitante} onChange={e => setCampos(p => ({ ...p, nome_solicitante: e.target.value }))} /></div>
@@ -846,7 +846,7 @@ function SimulatorTab({ workspaceId }) {
         </div>
 
         {/* Supervisor */}
-        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 18 }}>
           <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>👔 SUPERVISOR / APROVADOR</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div><label style={labelStyle}>NOME</label><input style={inputStyle} placeholder="Ex: Maria Santos" value={campos.nome_supervisor} onChange={e => setCampos(p => ({ ...p, nome_supervisor: e.target.value }))} /></div>
@@ -856,7 +856,7 @@ function SimulatorTab({ workspaceId }) {
         </div>
 
         {/* Contexto da solicitação */}
-        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 18 }}>
           <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>📋 DADOS DA SOLICITAÇÃO</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div><label style={labelStyle}>VALOR TOTAL (R$)</label><input style={inputStyle} placeholder="Ex: 5000" type="number" value={campos.valor_total} onChange={e => setCampos(p => ({ ...p, valor_total: e.target.value }))} /></div>
@@ -873,7 +873,7 @@ function SimulatorTab({ workspaceId }) {
               </div>
             ))}
             <button onClick={() => { const k = prompt('Nome do campo (ex: equipe):'); if (k?.trim()) setExtraKeys(p => [...p, k.trim()]) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px dashed #334155', color: '#475569', borderRadius: 8, padding: '7px 12px', fontSize: 12, cursor: 'pointer' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px dashed #334155', color: 'var(--text-secondary)', borderRadius: 8, padding: '7px 12px', fontSize: 12, cursor: 'pointer' }}>
               <PlusIcon style={{ width: 13, height: 13 }} /> Adicionar campo
             </button>
           </div>
@@ -904,22 +904,22 @@ function SimulatorTab({ workspaceId }) {
               <span style={{ fontSize: 12, fontWeight: 700, color: simResult.ok ? '#10b981' : '#ef4444' }}>
                 {simResult.ok ? simResult.data.mensagem : simResult.data.error}
               </span>
-              <button onClick={() => setSimResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16 }}>×</button>
+              <button onClick={() => setSimResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 16 }}>×</button>
             </div>
             {simResult.ok && simResult.data.notificacoes?.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {simResult.data.notificacoes.map((n, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#94a3b8', background: '#111827', borderRadius: 8, padding: '7px 10px' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: 8, padding: '7px 10px' }}>
                     <span style={{ fontSize: 14 }}>{n.enviado ? '✅' : '❌'}</span>
                     <span><strong>{n.para}</strong>{n.nome ? ` (${n.nome})` : ''}</span>
-                    <span style={{ color: '#475569' }}>📱 {n.celular}</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>📱 {n.celular}</span>
                     {!n.enviado && n.erro && <span style={{ color: '#ef4444' }}>{n.erro}</span>}
                   </div>
                 ))}
               </div>
             )}
             {simResult.ok && simResult.data.instance_id && (
-              <div style={{ marginTop: 8, fontSize: 11, color: '#475569' }}>
+              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-secondary)' }}>
                 Registro: <span style={{ color: '#6366f1', fontFamily: 'monospace' }}>{simResult.data.instance_id}</span>
               </div>
             )}
@@ -931,7 +931,7 @@ function SimulatorTab({ workspaceId }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {!simAtiva && (
-          <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 48, textAlign: 'center', color: '#475569' }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
             <BeakerIcon style={{ width: 40, height: 40, margin: '0 auto 12px', opacity: 0.2 }} />
             <div style={{ fontSize: 14, marginBottom: 6 }}>Preencha os dados e clique em <strong style={{ color: '#6366f1' }}>Iniciar Simulação</strong></div>
             <div style={{ fontSize: 12 }}>O fluxo será percorrido passo a passo — sem criar nada no banco</div>
@@ -942,8 +942,8 @@ function SimulatorTab({ workspaceId }) {
           <>
             {/* Trilha do caminho percorrido */}
             {caminho.length > 0 && (
-              <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
-                <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>CAMINHO PERCORRIDO</div>
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 18 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 1, marginBottom: 14 }}>CAMINHO PERCORRIDO</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
                   {caminho.map((item, i) => {
                     const sc = stepColor(item.step.status_valor)
@@ -951,7 +951,7 @@ function SimulatorTab({ workspaceId }) {
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {i > 0 && item.acao_escolhida && (
-                          <div style={{ fontSize: 10, color: '#475569', background: 'rgba(99,102,241,0.1)', border: '1px solid #6366f130', borderRadius: 10, padding: '2px 8px' }}>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'rgba(99,102,241,0.1)', border: '1px solid #6366f130', borderRadius: 10, padding: '2px 8px' }}>
                             {item.acao_escolhida}
                           </div>
                         )}
@@ -969,7 +969,7 @@ function SimulatorTab({ workspaceId }) {
 
             {/* Etapa atual */}
             {stepAtual && (
-              <div style={{ background: '#0f172a', border: `1.5px solid ${stepColor(stepAtual.status_valor).border}`, borderRadius: 12, padding: 20 }}>
+              <div style={{ background: 'var(--bg-secondary)', border: `1.5px solid ${stepColor(stepAtual.status_valor).border}`, borderRadius: 12, padding: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: stepColor(stepAtual.status_valor).dot, flexShrink: 0 }} />
                   <span style={{ fontSize: 16, fontWeight: 800, color: stepColor(stepAtual.status_valor).text }}>{stepAtual.nome}</span>
@@ -979,18 +979,18 @@ function SimulatorTab({ workspaceId }) {
                 {/* Quem recebe nesta etapa */}
                 {respsAtual.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 11, color: '#475569', marginBottom: 10, fontWeight: 700 }}>📨 QUEM RECEBE ESTA ETAPA</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, fontWeight: 700 }}>📨 QUEM RECEBE ESTA ETAPA</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {respsAtual.map((r, i) => {
                         const pessoa = resolverResponsavel(r.tipo)
                         return (
-                          <div key={i} style={{ background: '#111827', border: '1px solid #1e293b', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                          <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                             <div style={{ fontSize: 22, flexShrink: 0 }}>
                               {r.tipo === 'solicitante' ? '🙋' : r.tipo === 'supervisor_equipe' || r.tipo === 'lider_equipe' ? '👔' : '👤'}
                             </div>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 700 }}>{r.tipo.replace(/_/g, ' ').toUpperCase()}</div>
-                              <div style={{ fontSize: 14, color: '#f1f5f9', fontWeight: 600, marginTop: 2 }}>{pessoa.nome || <span style={{ color: '#475569', fontStyle: 'italic' }}>não preenchido</span>}</div>
+                              <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700 }}>{r.tipo.replace(/_/g, ' ').toUpperCase()}</div>
+                              <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 600, marginTop: 2 }}>{pessoa.nome || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>não preenchido</span>}</div>
                               <div style={{ display: 'flex', gap: 16, marginTop: 6, flexWrap: 'wrap' }}>
                                 {pessoa.celular && (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#10b981' }}>
@@ -1015,7 +1015,7 @@ function SimulatorTab({ workspaceId }) {
                 )}
 
                 {respsAtual.length === 0 && (
-                  <div style={{ marginBottom: 16, padding: '10px 14px', background: '#111827', borderRadius: 8, fontSize: 12, color: '#475569' }}>
+                  <div style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--bg-card)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
                     ⚠ Nenhum responsável configurado para esta etapa
                   </div>
                 )}
@@ -1023,7 +1023,7 @@ function SimulatorTab({ workspaceId }) {
                 {/* Ações disponíveis */}
                 {!isFinal && (
                   <div>
-                    <div style={{ fontSize: 11, color: '#475569', marginBottom: 10, fontWeight: 700 }}>⚡ ESCOLHA A PRÓXIMA AÇÃO</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10, fontWeight: 700 }}>⚡ ESCOLHA A PRÓXIMA AÇÃO</div>
                     {acoesAtual.length === 0 && (
                       <div style={{ fontSize: 12, color: '#374151', fontStyle: 'italic' }}>Nenhuma ação cadastrada nesta etapa</div>
                     )}
@@ -1054,7 +1054,7 @@ function SimulatorTab({ workspaceId }) {
                     <CheckCircleIcon style={{ width: 20, height: 20, color: '#10b981' }} />
                     <div>
                       <div style={{ fontSize: 13, color: '#10b981', fontWeight: 700 }}>Fluxo concluído!</div>
-                      <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>Caminho percorrido: {caminho.length} etapas</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Caminho percorrido: {caminho.length} etapas</div>
                     </div>
                   </div>
                 )}
@@ -1062,12 +1062,12 @@ function SimulatorTab({ workspaceId }) {
             )}
 
             {/* Resumo do contexto usado */}
-            <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 18 }}>
-              <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>📦 CONTEXTO DA SIMULAÇÃO</div>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 18 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>📦 CONTEXTO DA SIMULAÇÃO</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {Object.entries(contexto).filter(([, v]) => v).map(([k, v]) => (
-                  <div key={k} style={{ background: '#111827', border: '1px solid #1e293b', borderRadius: 8, padding: '5px 10px', fontSize: 11 }}>
-                    <span style={{ color: '#475569' }}>{k}: </span><span style={{ color: '#94a3b8', fontWeight: 600 }}>{v}</span>
+                  <div key={k} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 11 }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>{k}: </span><span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{v}</span>
                   </div>
                 ))}
                 {!Object.values(contexto).some(Boolean) && <span style={{ fontSize: 11, color: '#374151', fontStyle: 'italic' }}>Nenhum campo preenchido</span>}
@@ -1093,23 +1093,23 @@ export default function FlowLab() {
   ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#030712' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
       <Header />
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 20px' }}>
         {/* Título */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <BeakerIcon style={{ width: 22, height: 22, color: '#6366f1' }} />
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>Flow Lab</h1>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>Flow Lab</h1>
             <span style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, letterSpacing: 1 }}>LABORATÓRIO</span>
           </div>
-          <p style={{ margin: 0, color: '#475569', fontSize: 13 }}>
+          <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>
             Ferramenta de teste visual do motor de fluxo — sem precisar chamar APIs manualmente
           </p>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 4 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 4 }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               style={{ flex: 1, padding: '10px 16px', borderRadius: 9, border: 'none', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',

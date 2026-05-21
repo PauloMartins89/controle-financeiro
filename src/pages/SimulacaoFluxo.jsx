@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+﻿import React, { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import toast from 'react-hot-toast'
@@ -146,7 +146,7 @@ function PhoneMock({ papel, nome, cor, messages, inputAtivo, inputPlaceholder, o
       {/* Label acima do celular */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 28 }}>
         <div style={{ width: 9, height: 9, borderRadius: '50%', background: cor, boxShadow: ativo ? `0 0 10px ${cor}` : 'none', transition: 'box-shadow 0.4s' }} />
-        <span style={{ color: '#e2e8f0', fontWeight: 800, fontSize: 12 }}>{papel}</span>
+        <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 12 }}>{papel}</span>
         {nome && <span style={{ color: '#475569', fontSize: 11 }}>· {nome}</span>}
         {badge && (
           <span style={{ background: `${cor}22`, color: cor, border: `1px solid ${cor}50`, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, animation: 'pulse 1.5s infinite' }}>
@@ -259,7 +259,7 @@ function PhoneMock({ papel, nome, cor, messages, inputAtivo, inputPlaceholder, o
                 onChange={e => setTexto(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && enviar()}
                 placeholder={inputPlaceholder || 'Mensagem...'}
-                style={{ flex: 1, background: '#2A3942', border: 'none', borderRadius: 20, padding: '9px 14px', color: '#e2e8f0', fontSize: 12.5, outline: 'none' }}
+                style={{ flex: 1, background: '#2A3942', border: 'none', borderRadius: 20, padding: '9px 14px', color: 'var(--text-primary)', fontSize: 12.5, outline: 'none' }}
                 autoFocus
               />
               <button onClick={enviar}
@@ -307,7 +307,7 @@ function EmailInboxMock({ papel, nome, cor, emails, inputAtivo, inputPlaceholder
       {/* Label */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, height: 28 }}>
         <div style={{ width: 9, height: 9, borderRadius: '50%', background: cor, boxShadow: ativo ? `0 0 10px ${cor}` : 'none', transition: 'box-shadow 0.4s' }} />
-        <span style={{ color: '#e2e8f0', fontWeight: 800, fontSize: 12 }}>{papel}</span>
+        <span style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 12 }}>{papel}</span>
         <span style={{ color: cor, fontSize: 10, background: cor + '18', border: `1px solid ${cor}30`, padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>📧 E-mail</span>
         {nome && <span style={{ color: '#475569', fontSize: 11 }}>· {nome}</span>}
         {badge && (
@@ -330,14 +330,14 @@ function EmailInboxMock({ papel, nome, cor, emails, inputAtivo, inputPlaceholder
         <div style={{ background: '#111124', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${cor}20` }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>📧</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 12, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome || papel}</div>
-            <div style={{ color: '#334155', fontSize: 10 }}>Caixa de Entrada · SmartPro Flow</div>
+            <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 12, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome || papel}</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 10 }}>Caixa de Entrada · SmartPro Flow</div>
           </div>
           <div style={{ fontSize: 18, color: cor, opacity: 0.6 }}>✉️</div>
         </div>
 
         {/* E-mails */}
-        <div style={{ height: 320, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: 8, background: '#09091a' }}>
+        <div style={{ height: 320, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--bg-secondary)' }}>
           {emails.length === 0 && (
             <div style={{ color: '#1a2540', fontSize: 11, textAlign: 'center', margin: 'auto' }}>Sem e-mails</div>
           )}
@@ -381,7 +381,7 @@ function EmailInboxMock({ papel, nome, cor, emails, inputAtivo, inputPlaceholder
               onChange={e => setTexto(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && enviar()}
               placeholder={inputPlaceholder || 'Escrever e-mail...'}
-              style={{ flex: 1, background: '#0f0f1e', border: `1px solid ${cor}30`, borderRadius: 8, padding: '9px 12px', color: '#e2e8f0', fontSize: 12, outline: 'none' }}
+              style={{ flex: 1, background: 'var(--bg-secondary)', border: `1px solid ${cor}30`, borderRadius: 8, padding: '9px 12px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }}
               autoFocus
             />
             <button onClick={enviar}
@@ -744,7 +744,7 @@ export default function SimulacaoFluxo() {
   const p = participantes
 
   return (
-    <div style={{ minHeight: '100vh', background: '#07070f', color: '#e2e8f0', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
         @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -760,14 +760,14 @@ export default function SimulacaoFluxo() {
             <h1 style={{ margin: 0, fontSize: 21, fontWeight: 900, letterSpacing: -0.5, background: 'linear-gradient(90deg, #6366f1 0%, #10b981 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               📱 Simulação Interativa de Fluxo
             </h1>
-            <p style={{ margin: '3px 0 0', color: '#334155', fontSize: 12 }}>
+            <p style={{ margin: '3px 0 0', color: 'var(--text-secondary)', fontSize: 12 }}>
               {participantes.length} participante{participantes.length > 1 ? 's' : ''} · WhatsApp real · Fluxo de ponta a ponta
             </p>
           </div>
           {fase !== 'setup' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ color: '#334155', fontSize: 11 }}>Código</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 11 }}>Código</div>
                 <div style={{ color: '#6366f1', fontWeight: 900, fontFamily: 'monospace', fontSize: 16 }}>{codigo}</div>
                 {instanceId && <div style={{ color: '#1e3a5f', fontSize: 10, fontFamily: 'monospace' }}>ID: {instanceId.substring(0, 8)}</div>}
               </div>
@@ -783,8 +783,14 @@ export default function SimulacaoFluxo() {
         {fase === 'setup' && (
           <div className="pf">
 
+            {/* ── Grid: Tipo de Fluxo + Iniciar | Participantes ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 340px) 1fr', gap: 16, marginBottom: 16, alignItems: 'start' }}>
+
+            {/* Coluna esquerda */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
             {/* Tipo de fluxo */}
-            <div style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 14, padding: '16px 20px', marginBottom: 16 }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px' }}>
               <div style={{ fontSize: 12, color: '#475569', fontWeight: 700, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>Tipo de Fluxo</div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {Object.entries(TEMPLATES).map(([key, tpl]) => (
@@ -796,12 +802,34 @@ export default function SimulacaoFluxo() {
               </div>
             </div>
 
-            {/* Participantes */}
-            <div style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 14, padding: '20px', marginBottom: 16 }}>
+            {/* Processo real + Iniciar */}
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px' }}>
+              {definicoes.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <label style={{ color: 'var(--text-secondary)', fontSize: 12, whiteSpace: 'nowrap' }}>Processo real:</label>
+                  <select value={defSelecionada} onChange={e => setDefSelecionada(e.target.value)}
+                    style={{ ...inputSt, width: 'auto', minWidth: 240 }}>
+                    <option value=''>Apenas simulação visual</option>
+                    {definicoes.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                  </select>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <button onClick={iniciar}
+                  style={{ padding: '13px 30px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 30px rgba(99,102,241,0.3)' }}>
+                  🚀 Iniciar Simulação
+                </button>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>P1 e P2 obrigatórios · P3–P5 opcionais</span>
+              </div>
+            </div>
+            </div>{/* /col-esquerda */}
+
+            {/* Participantes - coluna direita */}
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
-                  <div style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 800 }}>⚙️ Participantes</div>
-                  <div style={{ fontSize: 12, color: '#334155', marginTop: 2 }}>WhatsApp real enviado para cada celular em cada etapa</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 800 }}>⚙️ Participantes</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>WhatsApp real enviado para cada celular em cada etapa</div>
                 </div>
                 {participantes.length < 5 && (
                   <button onClick={adicionarParticipante}
@@ -813,7 +841,7 @@ export default function SimulacaoFluxo() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
                 {participantes.map((part, idx) => (
-                  <div key={part.id} style={{ background: '#0a0a18', border: `1px solid ${part.cor}25`, borderRadius: 12, padding: 14 }}>
+                  <div key={part.id} style={{ background: 'var(--bg-card)', border: `1px solid ${part.cor}25`, borderRadius: 12, padding: 14 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, paddingBottom: 8, borderBottom: `1px solid ${part.cor}20` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 15 }}>{part.icon}</span>
@@ -826,7 +854,7 @@ export default function SimulacaoFluxo() {
                         ) : (
                           <span style={{ color: part.cor, fontWeight: 800, fontSize: 12 }}>{part.papel}</span>
                         )}
-                        {!part.obrig && idx < 3 && <span style={{ color: '#334155', fontSize: 10 }}>(opcional)</span>}
+                        {!part.obrig && idx < 3 && <span style={{ color: 'var(--text-secondary)', fontSize: 10 }}>(opcional)</span>}
                       </div>
                       {idx >= 3 && (
                         <button onClick={() => removerParticipante(part.id)} className="icon-btn"
@@ -885,22 +913,23 @@ export default function SimulacaoFluxo() {
                   </div>
                 ))}
               </div>
-            </div>
+            </div>{/* /col-direita */}
+            </div>{/* /grid */}
 
             {/* Personalizar mensagens */}
-            <div style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 14, marginBottom: 16, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 14, marginBottom: 16, overflow: 'hidden' }}>
               <button onClick={() => setMostrarMsgs(v => !v)}
-                style={{ width: '100%', padding: '14px 20px', background: 'none', border: 'none', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left' }}>
+                style={{ width: '100%', padding: '14px 20px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', textAlign: 'left' }}>
                 <div>
                   <span style={{ fontWeight: 800, fontSize: 14 }}>💬 Personalizar Mensagens</span>
-                  <span style={{ color: '#334155', fontSize: 12, marginLeft: 10 }}>Edite os textos que o bot envia em cada etapa</span>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: 12, marginLeft: 10 }}>Edite os textos que o bot envia em cada etapa</span>
                 </div>
                 <span style={{ color: '#475569', transition: 'transform 0.2s', display: 'inline-block', transform: mostrarMsgs ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
               </button>
 
               {mostrarMsgs && (
-                <div style={{ padding: '0 20px 20px', borderTop: '1px solid #1a1a35' }}>
-                  <div style={{ background: '#0a0a18', border: '1px solid #1e2a4a', borderRadius: 9, padding: '10px 14px', margin: '14px 0', fontSize: 11.5, color: '#334155', lineHeight: 1.8, fontFamily: 'monospace' }}>
+                <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border)' }}>
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid #1e2a4a', borderRadius: 9, padding: '10px 14px', margin: '14px 0', fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.8, fontFamily: 'monospace' }}>
                     <span style={{ color: '#475569', fontWeight: 700 }}>Variáveis: </span>{VARS_HINT}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14 }}>
@@ -926,32 +955,12 @@ export default function SimulacaoFluxo() {
               )}
             </div>
 
-            {/* Processo real + Iniciar */}
-            <div style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 14, padding: '18px 20px' }}>
-              {definicoes.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                  <label style={{ color: '#334155', fontSize: 12, whiteSpace: 'nowrap' }}>Processo real:</label>
-                  <select value={defSelecionada} onChange={e => setDefSelecionada(e.target.value)}
-                    style={{ ...inputSt, width: 'auto', minWidth: 240 }}>
-                    <option value="">Apenas simulação visual</option>
-                    {definicoes.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
-                  </select>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <button onClick={iniciar}
-                  style={{ padding: '13px 30px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', borderRadius: 12, fontSize: 15, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 30px rgba(99,102,241,0.3)' }}>
-                  🚀 Iniciar Simulação
-                </button>
-                <span style={{ color: '#1e293b', fontSize: 12 }}>P1 e P2 obrigatórios · P3–P5 opcionais</span>
-              </div>
-            </div>
           </div>
         )}
 
         {/* ── PROGRESS BAR */}
         {fase !== 'setup' && (
-          <div className="pf" style={{ background: '#0f0f1e', border: '1px solid #1a1a35', borderRadius: 12, padding: '12px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <div className="pf" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
             {steps.map((step, i) => {
               const done = faseIdx > faseOrder.indexOf(step.key === 'p1_input' ? 'enviando' : step.key)
               const active = step.key === 'p1_input'
@@ -1058,7 +1067,7 @@ export default function SimulacaoFluxo() {
 
             {/* Motivo reprovação */}
             {fase === 'p2_decide' && (
-              <div className="pf" style={{ background: '#0f0f1e', border: '1px solid rgba(239,68,68,0.12)', borderRadius: 12, padding: '14px 18px', marginTop: 14, maxWidth: 420, margin: '14px auto 0' }}>
+              <div className="pf" style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(239,68,68,0.12)', borderRadius: 12, padding: '14px 18px', marginTop: 14, maxWidth: 420, margin: '14px auto 0' }}>
                 <label style={{ color: '#475569', fontSize: 12, display: 'block', marginBottom: 6 }}>
                   💬 Motivo da reprovação (preencha antes de clicar Reprovar)
                 </label>
@@ -1076,7 +1085,7 @@ export default function SimulacaoFluxo() {
               <div className="pf" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: 20, marginTop: 20, textAlign: 'center' }}>
                 <div style={{ fontSize: 26, marginBottom: 8 }}>🎉</div>
                 <div style={{ color: '#10b981', fontWeight: 900, fontSize: 15, marginBottom: 4 }}>Simulação concluída com sucesso!</div>
-                <div style={{ color: '#334155', fontSize: 13, marginBottom: 16 }}>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
                   Fluxo executado de ponta a ponta com registro real no banco de dados.
                 </div>
                 {instanceId && (
@@ -1085,7 +1094,7 @@ export default function SimulacaoFluxo() {
                   </div>
                 )}
                 <button onClick={resetar}
-                  style={{ padding: '11px 24px', background: '#1e293b', border: '1px solid #334155', color: '#e2e8f0', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ padding: '11px 24px', background: '#1e293b', border: '1px solid #334155', color: 'var(--text-primary)', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                   🔄 Nova Simulação
                 </button>
               </div>
@@ -1103,7 +1112,7 @@ const inputSt = {
   border: '1px solid #2a2a4a',
   borderRadius: 8,
   padding: '10px 14px',
-  color: '#e2e8f0',
+  color: 'var(--text-primary)',
   fontSize: 13,
   outline: 'none',
   boxSizing: 'border-box',

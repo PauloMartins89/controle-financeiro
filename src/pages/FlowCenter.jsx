@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
@@ -26,8 +26,8 @@ function slaStatus(dt) {
   if (diff < 0) return { label: 'Vencido', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' }
   const h = Math.floor(diff / 3600000)
   if (h < 2) return { label: `${h}h ${Math.floor((diff % 3600000)/60000)}m`, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' }
-  if (h < 24) return { label: `${h}h`, color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' }
-  return { label: `${Math.floor(h/24)}d`, color: '#94a3b8', bg: 'rgba(148,163,184,0.08)' }
+  if (h < 24) return { label: `${h}h`, color: 'var(--text-secondary)', bg: 'rgba(148,163,184,0.08)' }
+  return { label: `${Math.floor(h/24)}d`, color: 'var(--text-secondary)', bg: 'rgba(148,163,184,0.08)' }
 }
 
 const STATUS_CFG = {
@@ -36,7 +36,7 @@ const STATUS_CFG = {
   aprovado:  { label: 'Aprovado',  color: '#10b981', bg: 'rgba(16,185,129,0.12)'  },
   reprovado: { label: 'Reprovado', color: '#ef4444', bg: 'rgba(239,68,68,0.12)'   },
   entregue:  { label: 'Entregue',  color: '#6366f1', bg: 'rgba(99,102,241,0.12)'  },
-  fechado:   { label: 'Fechado',   color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+  fechado:   { label: 'Fechado',   color: 'var(--text-secondary)', bg: 'rgba(148,163,184,0.12)' },
 }
 
 function StatusPill({ status }) {
