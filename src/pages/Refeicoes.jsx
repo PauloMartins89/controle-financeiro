@@ -1153,7 +1153,7 @@ function SecaoDashboard({ sols, onNav }) {
     return {
       total:     ativos.length,
       hoje:      hoje.length,
-      pendentes: ativos.filter(s => s.status === 'pendente').length,
+      pendentes: ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status)).length,
       aprovados: ativos.filter(s => s.status === 'aprovado').length,
       valor:     ativos.reduce((acc, s) => acc + (Number(s.valor_total) || 0), 0),
     }
@@ -1286,7 +1286,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
         const key = equipe.id || '__sem_equipe__'
         const isOpen = !collapsed[key]
         const vTotal = solsGrupo.reduce((acc, s) => acc + (Number(s.valor_total) || 0), 0)
-        const nPend = solsGrupo.filter(s => s.status === 'pendente').length
+        const nPend = solsGrupo.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status)).length
         return (
           <div key={key} className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
             <div onClick={() => toggleGroup(key)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', cursor: 'pointer', borderBottom: isOpen ? '1px solid var(--border)' : 'none', background: 'rgba(255,255,255,0.02)' }}>
@@ -1321,7 +1321,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
                         <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--text-primary)' }}>{sol.total_cafes || 0}</td>
                         <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 800, color: '#10b981', whiteSpace: 'nowrap' }}>{fmtBRL(sol.valor_total)}</td>
                         <td style={{ padding: '11px 14px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-                          {sol.status === 'pendente' && (
+                          {['pendente', 'aguardando_aprovacao'].includes(sol.status) && (
                             <button title="Reenviar lembrete" disabled={sendingLembrete === sol.id} onClick={async () => { setSendingLembrete(sol.id); try { const r = await fetch('/api/refeicoes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reenviar-supervisor', solicitacaoId: sol.id }) }); const j = await r.json(); if (r.ok) toast.success('Lembrete enviado!'); else toast.error(j.error || 'Erro') } finally { setSendingLembrete(null) } }} style={{ background: 'rgba(245,158,11,0.12)', border: 'none', color: '#f59e0b', borderRadius: 7, padding: '4px 8px', cursor: 'pointer', fontSize: 13, lineHeight: 1, opacity: sendingLembrete === sol.id ? 0.5 : 1 }}>{sendingLembrete === sol.id ? '...' : '🔔'}</button>
                           )}
                         </td>
@@ -1344,7 +1344,7 @@ function SecaoAprovacoes({ sols, onReload, useFlowEngine, userId, workspaceId })
   const [subFiltro, setSubFiltro] = useState('pendente')
   const [detailSol, setDetailSol] = useState(null)
 
-  const filtrado = useMemo(() => sols.filter(s => s.status === subFiltro), [sols, subFiltro])
+  const filtrado = useMemo(() => sols.filter(s => subFiltro === 'pendente' ? ['pendente', 'aguardando_aprovacao'].includes(s.status) : s.status === subFiltro), [sols, subFiltro])
 
   const SUB_TABS = [
     { id: 'pendente',  label: '⏳ Pendentes' },
