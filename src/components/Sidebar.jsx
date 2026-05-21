@@ -8,7 +8,7 @@ import {
   SignalIcon, CameraIcon, TableCellsIcon, ShoppingCartIcon, BuildingStorefrontIcon,
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
-  TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon,
+  TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -68,6 +68,12 @@ const navGroups = [
       { to: '/compras/relatorios/categoria',   icon: ChartBarIcon,               label: 'Rel. Categoria',     moduleKey: 'compras' },
       { to: '/compras/relatorios/fornecedor',  icon: PresentationChartLineIcon,  label: 'Rel. Fornecedor',    moduleKey: 'compras' },
       { to: '/compras/parametros',             icon: AdjustmentsHorizontalIcon,  label: 'Parâmetros',         moduleKey: 'compras' },
+    ],
+  },
+  {
+    title: 'Automação',
+    items: [
+      { to: '/flow-center', icon: BoltIcon, label: 'Flow Center', moduleKey: null },
     ],
   },
   {
