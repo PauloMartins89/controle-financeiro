@@ -17,6 +17,9 @@ import Timeline from './pages/Timeline'
 import Previsao from './pages/Previsao'
 import Negocios from './pages/Negocios'
 import ProspectarClientes from './pages/ProspectarClientes'
+import ProspectarDashboard from './pages/ProspectarDashboard'
+import ProspectarContratos from './pages/ProspectarContratos'
+import ProspectarRelatorios from './pages/ProspectarRelatorios'
 import Proventos from './pages/Proventos'
 import Importar from './pages/Importar'
 import Compras from './pages/Compras'
@@ -453,7 +456,11 @@ export default function App() {
                   <Route path="/timeline" element={<Timeline />} />
                   <Route path="/previsao" element={<Previsao />} />
                   <Route path="/negocios" element={<Negocios />} />
-                  <Route path="/prospectar" element={<ProspectarClientes />} />
+                  <Route path="/prospectar" element={<Navigate to="/prospectar/dashboard" replace />} />
+                  <Route path="/prospectar/dashboard" element={<ProspectarDashboard />} />
+                  <Route path="/prospectar/buscar" element={<ProspectarClientes />} />
+                  <Route path="/prospectar/contratos" element={<ProspectarContratos />} />
+                  <Route path="/prospectar/relatorios" element={<ProspectarRelatorios />} />
                   <Route path="/proventos" element={<Proventos />} />
                   <Route path="/importar" element={<Importar />} />
                   <Route path="/escanear" element={<EscanearRecibo />} />

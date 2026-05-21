@@ -31,7 +31,16 @@ const navGroups = [
       { to: '/balanco',     icon: PresentationChartLineIcon, label: 'Balanço',       moduleKey: 'balanco' },
       { to: '/previsao',    icon: BanknotesIcon,             label: 'Caixa',         moduleKey: 'previsao' },      { to: '/proventos',   icon: ArrowTrendingUpIcon,        label: 'Proventos',          moduleKey: 'proventos' },
       { to: '/negocios',    icon: BuildingOffice2Icon,        label: 'Negócios',           moduleKey: 'negocios' },
-      { to: '/prospectar',  icon: MagnifyingGlassIcon,        label: 'Prospectar Clientes', moduleKey: 'negocios' },    ],
+    ],
+  },
+  {
+    title: 'Prospectar',
+    items: [
+      { to: '/prospectar/dashboard',  icon: ChartBarIcon,              label: 'Dashboard',         moduleKey: 'negocios' },
+      { to: '/prospectar/buscar',     icon: MagnifyingGlassIcon,       label: 'Buscar Prospectos', moduleKey: 'negocios' },
+      { to: '/prospectar/contratos',  icon: DocumentTextIcon,          label: 'Contratos',         moduleKey: 'negocios' },
+      { to: '/prospectar/relatorios', icon: PresentationChartLineIcon, label: 'Relatórios',        moduleKey: 'negocios' },
+    ],
   },
   {
     title: 'Gerencial',
