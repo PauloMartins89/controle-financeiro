@@ -65,11 +65,12 @@ async function triggerRestauranteFlow(db, sol, itens) {
   const qtdRef  = (itens || []).filter(i => i.refeicao).length
   const qtdCafe = (itens || []).filter(i => i.cafe).length
 
-  // Notifica restaurante
+  // Notifica restaurante — sempre com link externo (como o supervisor recebe /ar/:token)
   if (rest?.telefone_wa) {
+    const linkRestaurante = `${APP_URL}/rc/${sol.token_restaurante}`
     const confirmaLinha = rest.confirma_pedido
-      ? `\n\n✅ *Confirme o recebimento:*\n${APP_URL}/rc/${sol.token_restaurante}`
-      : `\n\nResponda *PREPARANDO* ao iniciar ou *ENTREGUE* após entregar.`
+      ? `\n\n✅ *Confirme o recebimento do pedido:*\n${linkRestaurante}`
+      : `\n\n📋 *Acesse os detalhes do pedido:*\n${linkRestaurante}`
 
     const msg = [
       `🏪 *Pedido Confirmado: ${sol.ticket || sol.numero_pedido}*`,
@@ -82,7 +83,7 @@ async function triggerRestauranteFlow(db, sol, itens) {
       `─────────────────────`,
       `🍽️ ${qtdRef} refeição(ões)  ☕ ${qtdCafe} café(s)`,
       `*Total: ${fmtBRL(sol.valor_total)}*${confirmaLinha}`,
-    ].join('\n')
+    ].filter(v => v !== null).join('\n')
     await sendWA(rest.telefone_wa, msg)
   }
 
@@ -745,12 +746,13 @@ export default async function handler(req, res) {
 
     if (!sol) return res.status(404).json({ error: 'Pedido não encontrado' })
 
-    const [{ data: itens }, { data: equipe }] = await Promise.all([
+    const [{ data: itens }, { data: equipe }, { data: rest }] = await Promise.all([
       db.from('refei_itens').select('*').eq('solicitacao_id', sol.id),
       db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle(),
+      db.from('refei_restaurantes').select('nome, confirma_pedido').eq('id', sol.restaurante_id).maybeSingle(),
     ])
 
-    return res.status(200).json({ sol, itens: itens || [], equipe })
+    return res.status(200).json({ sol, itens: itens || [], equipe, restaurante: rest })
   }
 
   // ── POST: restaurante confirma recebimento via link público ─────────────────

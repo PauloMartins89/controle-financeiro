@@ -257,7 +257,9 @@
     <div class="btn-area" id="btn-area">
       <button class="btn-confirmar" id="btn-confirmar" onclick="confirmar()">✅ Confirmar Recebimento</button>
     </div>
-
+    <div class="info-box" id="info-apenas" style="display:none;background:rgba(16,185,129,0.08);border-color:rgba(16,185,129,0.2);color:#d1fae5">
+      ✅ Pedido recebido pelo restaurante. Certifique-se de entregar no prazo acordado.
+    </div>
     <!-- Resultado -->
     <div class="result-box success" id="result-box">
       <p id="result-msg">✅ Confirmado!</p>
@@ -303,8 +305,8 @@
         const err = await r.json().catch(() => ({}))
         throw new Error(err.error || 'Erro ao carregar pedido')
       }
-      const { sol, itens, equipe } = await r.json()
-      render(sol, itens || [], equipe)
+      const { sol, itens, equipe, restaurante } = await r.json()
+      render(sol, itens || [], equipe, restaurante)
     } catch (e) {
       document.getElementById('state-loading').style.display = 'none'
       document.getElementById('state-erro').style.display = 'block'
@@ -312,7 +314,7 @@
     }
   }
 
-  function render(sol, itens, equipe) {
+  function render(sol, itens, equipe, rest) {
     document.getElementById('state-loading').style.display = 'none'
 
     document.getElementById('badge-num').textContent    = sol.ticket || sol.numero_pedido || '—'
@@ -338,9 +340,12 @@
         </span>
       </div>`).join('')
 
+    const precisaConfirmar = rest?.confirma_pedido
+
     // Se já confirmado, mostra resultado direto
     if (sol.status === 'confirmado_restaurante') {
       document.getElementById('info-box').style.display = 'none'
+      document.getElementById('info-apenas').style.display = 'none'
       document.getElementById('btn-area').style.display = 'none'
       const bs = document.getElementById('badge-status')
       bs.textContent = 'Confirmado'
@@ -349,6 +354,11 @@
       document.getElementById('result-msg').textContent = '✅ Recebimento já confirmado'
       document.getElementById('result-sub').textContent = 'Este pedido já foi confirmado anteriormente.'
       rb.style.display = 'block'
+    } else if (!precisaConfirmar) {
+      // Modo informativo: só exibe detalhes do pedido, sem botão de confirmação
+      document.getElementById('info-box').style.display = 'none'
+      document.getElementById('btn-area').style.display = 'none'
+      document.getElementById('info-apenas').style.display = 'block'
     }
 
     document.getElementById('state-content').style.display = 'block'

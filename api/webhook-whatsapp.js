@@ -114,9 +114,10 @@ async function processRefeiApproval(supabase, tokenCompact, acao, fromPhone) {
       const nomes   = (itens || []).map(i => `• ${i.colaborador_nome}${i.refeicao ? ' 🍽️' : ''}${i.cafe ? ' ☕' : ''}`)
       const qtdRef  = (itens || []).filter(i => i.refeicao).length
       const qtdCafe = (itens || []).filter(i => i.cafe).length
+      const linkRestaurante = `${APP_URL}/rc/${sol.token_restaurante}`
       const confirmaLinha = rest.confirma_pedido
-        ? `\n\n✅ *Confirme o recebimento:*\n${APP_URL}/rc/${sol.token_restaurante}`
-        : `\n\nResponda *PREPARANDO* ao iniciar ou *ENTREGUE* após entregar.`
+        ? `\n\n✅ *Confirme o recebimento do pedido:*\n${linkRestaurante}`
+        : `\n\n📋 *Acesse os detalhes do pedido:*\n${linkRestaurante}`
       const msg = [
         `🏪 *Pedido Confirmado: ${sol.ticket || sol.numero_pedido}*`,
         `Equipe: ${equipe?.nome || '—'}`,
