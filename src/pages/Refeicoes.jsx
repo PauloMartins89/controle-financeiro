@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
+import FlowHistory from '../components/refeicao/FlowHistory'
 import {
   MagnifyingGlassIcon, Cog6ToothIcon, PlusIcon, PencilIcon,
   TrashIcon, XMarkIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon,
@@ -683,6 +684,32 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
       .then(({ data }) => setItens(data || []))
   }, [sol.id])
 
+  async function executarAcaoFlow(acaoNome) {
+    setSaving(true)
+    try {
+      const instRes = await fetch(`/api/refeicoes?module=flow&action=instance&entidade_tipo=refei_solicitacoes&entidade_id=${sol.id}`)
+      if (!instRes.ok) throw new Error('Instância não encontrada')
+      const { instancia } = await instRes.json()
+      const actRes = await fetch(`/api/refeicoes?module=flow&action=actions&instance_id=${instancia.id}`)
+      const { acoes } = await actRes.json()
+      const acaoObj = acoes.find(a => a.nome === acaoNome)
+      if (!acaoObj) throw new Error(`Ação "${acaoNome}" não disponível nesta etapa`)
+      const execRes = await fetch('/api/refeicoes?module=flow&action=execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instance_id: instancia.id, acao_id: acaoObj.id, executado_por: userId, dados: {}, origem: 'humano' }),
+      })
+      const j = await execRes.json()
+      if (!execRes.ok) throw new Error(j.error || 'Erro no motor de fluxo')
+      toast.success('Ação executada com sucesso!')
+      onUpdated()
+      onClose()
+    } catch (err) {
+      toast.error(err.message || 'Erro')
+    }
+    setSaving(false)
+  }
+
   async function aprovar(acao) {
     if (acao === 'reprovado' && !motivo.trim()) { toast.error('Informe o motivo'); return }
     setSaving(true)
@@ -799,6 +826,9 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
         </div>
       )}
 
+      {/* Histórico do Flow Engine */}
+      {useFlowEngine && <FlowHistory solicitacaoId={sol.id} />}
+
       {/* Ações */}
       {sol.status === 'pendente' && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
@@ -808,6 +838,29 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
             <button onClick={() => aprovar('reprovado')} disabled={saving} className="btn-danger" style={{ flex: 1, justifyContent: 'center', fontSize: 13 }}>❌ Reprovar</button>
             <button onClick={() => aprovar('aprovado')} disabled={saving} className="btn-success" style={{ flex: 1, justifyContent: 'center', fontSize: 13, fontWeight: 700 }}>✅ Aprovar</button>
           </div>
+        </div>
+      )}
+
+      {/* Ações extras via Flow Engine */}
+      {useFlowEngine && sol.status === 'aprovado' && (
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+          <button onClick={() => executarAcaoFlow('confirmar_entrega')} disabled={saving} className="btn-success" style={{ width: '100%', justifyContent: 'center', fontSize: 13 }}>
+            🚚 Confirmar Entrega
+          </button>
+        </div>
+      )}
+      {useFlowEngine && sol.status === 'entregue' && (
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+          <button onClick={() => executarAcaoFlow('fechar')} disabled={saving} className="btn-primary" style={{ width: '100%', justifyContent: 'center', fontSize: 13 }}>
+            🏁 Fechar Processo
+          </button>
+        </div>
+      )}
+      {useFlowEngine && sol.status === 'reprovado' && (
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+          <button onClick={() => executarAcaoFlow('reabrir')} disabled={saving} style={{ width: '100%', justifyContent: 'center', fontSize: 13, background: '#f59e0b', color: '#000', border: 'none', borderRadius: 8, padding: '10px', fontWeight: 700, cursor: 'pointer' }}>
+            🔄 Reabrir para Correção
+          </button>
         </div>
       )}
     </Modal>
