@@ -121,7 +121,7 @@ async function handleRefeicoesPendentes(db, res) {
   const { data: pendentes } = await db
     .from('refei_solicitacoes')
     .select('id, numero_pedido, data_refeicao, valor_total, total_refeicoes, total_cafes, supervisor_telefone, token_aprovacao, refei_equipes(nome, cdc)')
-    .eq('status', 'pendente')
+    .in('status', ['pendente', 'aguardando_aprovacao'])
     .lt('criado_em', limite)
 
   if (!pendentes?.length) return res.status(200).json({ sent: 0, pendentes: 0 })

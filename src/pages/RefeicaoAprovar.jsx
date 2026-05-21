@@ -83,7 +83,7 @@ export default function RefeicaoAprovar() {
 
   const { sol, equipeNome, equipeCdc, restauranteNome, itens } = data
 
-  if (done || sol.status !== 'pendente') {
+  if (done || !['pendente', 'aguardando_aprovacao'].includes(sol.status)) {
     const status = done?.acao || sol.status
     const cfg = {
       aprovado:  { icon: '✅', label: 'Aprovado!',  color: '#10b981', msg: 'O restaurante e o líder foram notificados via WhatsApp.' },
