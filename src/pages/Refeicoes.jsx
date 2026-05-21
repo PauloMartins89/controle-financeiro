@@ -857,11 +857,27 @@ function SecaoCadastros({ workspaceId, ownerId, sub }) {
 
 // ─── Modal de Detalhe / Aprovação ────────────────────────────────────────────
 function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspaceId }) {
-  const [itens,    setItens]    = useState([])
-  const [motivo,   setMotivo]   = useState('')
-  const [ocorr,    setOcorr]    = useState('')
-  const [saving,   setSaving]   = useState(false)
-  const [tab,      setTab]      = useState('resumo')  // 'resumo' | 'timeline'
+  const [itens,             setItens]             = useState([])
+  const [motivo,            setMotivo]            = useState('')
+  const [ocorr,             setOcorr]             = useState('')
+  const [saving,            setSaving]            = useState(false)
+  const [sendingSupervisor, setSendingSupervisor] = useState(false)
+  const [tab,               setTab]               = useState('resumo')  // 'resumo' | 'timeline'
+
+  async function reenviarSupervisor() {
+    setSendingSupervisor(true)
+    try {
+      const r = await fetch('/api/refeicoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reenviar-supervisor', solicitacaoId: sol.id }),
+      })
+      const j = await r.json()
+      if (r.ok) toast.success('Link enviado ao supervisor via WhatsApp!')
+      else toast.error(j.error || 'Erro ao enviar')
+    } catch { toast.error('Erro de conexão') }
+    setSendingSupervisor(false)
+  }
 
   useEffect(() => {
     supabase.from('refei_itens').select('*').eq('solicitacao_id', sol.id).order('colaborador_nome')
@@ -931,6 +947,24 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
 
     if (['pendente', 'aguardando_aprovacao'].includes(sol.status)) return (
       <div>
+        {/* Info + botão reenvio para supervisor */}
+        <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Supervisor</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+              {sol.supervisor_telefone
+                ? <span>📱 {sol.supervisor_telefone}</span>
+                : <span style={{ color: '#f87171' }}>⚠️ Telefone não cadastrado na equipe</span>}
+            </div>
+          </div>
+          <button
+            onClick={reenviarSupervisor}
+            disabled={sendingSupervisor || !sol.supervisor_telefone}
+            style={{ background: '#f59e0b', color: '#000', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: sol.supervisor_telefone ? 'pointer' : 'not-allowed', opacity: sendingSupervisor || !sol.supervisor_telefone ? 0.5 : 1, whiteSpace: 'nowrap' }}
+          >
+            {sendingSupervisor ? '...' : '📲 Enviar link ao Supervisor'}
+          </button>
+        </div>
         <label style={lbl}>Motivo (obrigatório ao reprovar)</label>
         <input className="input" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Descreva o motivo se for reprovar..." style={{ marginBottom: 12 }} />
         <div style={{ display: 'flex', gap: 10 }}>
