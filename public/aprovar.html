@@ -282,7 +282,7 @@ function render(json) {
 
   const { sol, equipeNome, equipeCdc, restauranteNome, itens } = json
 
-  if (sol.status !== 'pendente') {
+  if (!['pendente', 'aguardando_aprovacao'].includes((sol.status || '').trim())) {
     showDone(sol.status, sol, equipeNome, true)
     return
   }
