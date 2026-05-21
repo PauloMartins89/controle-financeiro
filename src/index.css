@@ -6,6 +6,7 @@
     --bg-secondary: #13161a;
     --bg-card: #1a1d22;
     --bg-card-hover: #1f2329;
+    --input-bg: #1a1d22;
     --accent: #00c896;
     --accent-hover: #00e6aa;
     --accent-glow: rgba(0, 200, 150, 0.25);
@@ -34,6 +35,7 @@
     --bg-secondary: #f0f1fa;
     --bg-card: #f5f6ff;
     --bg-card-hover: #eceeff;
+    --input-bg: #ffffff;
     --accent: #6366f1;
     --accent-hover: #4f46e5;
     --accent-glow: rgba(99,102,241,0.2);
