@@ -598,20 +598,17 @@ function RadarPanel({ empresa, onFechar }) {
     setBuscandoApollo(true)
     setApolloErro('')
     setApolloContatos([])
-    const dominio = empresa.website || ''
     try {
-      const r = await fetch('/api/apollo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ empresa: nomeEmpresa, dominio }),
+      const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
+        body: { mode: 'linkedin_search', empresa: nomeEmpresa },
       })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data.error || `Erro ${r.status}`)
-      setApolloContatos(data.contatos || [])
-      setApolloTotal(data.total || 0)
-      if (!data.contatos?.length) setApolloErro('Nenhum contato encontrado no Apollo para esta empresa.')
+      if (error) throw new Error(error.message || 'Erro ao buscar')
+      const lista = data?.contatos || []
+      setApolloContatos(lista)
+      setApolloTotal(lista.length)
+      if (!lista.length) setApolloErro('Nenhum perfil LinkedIn encontrado para esta empresa. Tente com o nome completo ou razão social.')
     } catch (err) {
-      setApolloErro(err.message || 'Erro ao buscar no Apollo')
+      setApolloErro(err.message || 'Erro ao buscar contatos')
     } finally {
       setBuscandoApollo(false)
     }
@@ -765,8 +762,8 @@ function RadarPanel({ empresa, onFechar }) {
           <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(14,165,233,0.1)', color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: 4 }}>
             <CheckCircleIcon style={{ width: 11, height: 11 }} /> Camada 1: CNPJ/QSA
           </div>
-          <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(148,163,184,0.1)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <ClockIcon style={{ width: 11, height: 11 }} /> Camada 2: LinkedIn/Apollo
+          <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(99,102,241,0.1)', color: '#6366f1', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <CheckCircleIcon style={{ width: 11, height: 11 }} /> Camada 2: LinkedIn
           </div>
           <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(167,139,250,0.1)', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 4 }}>
             <SparklesIcon style={{ width: 11, height: 11 }} /> Camada 3: Classificação IA
@@ -802,8 +799,8 @@ function RadarPanel({ empresa, onFechar }) {
             style={{ width: '100%', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', borderBottom: expandirApollo ? '1px solid var(--border)' : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <div style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: '#fff' }}>A</div>
-              <span style={{ fontWeight: 700, fontSize: 13 }}>Camada 2 — Apollo.io</span>
-              <span style={{ padding: '1px 7px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.12)', color: '#6366f1' }}>Enriquecimento</span>
+              <span style={{ fontWeight: 700, fontSize: 13 }}>Camada 2 — LinkedIn</span>
+              <span style={{ padding: '1px 7px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.12)', color: '#6366f1' }}>via Google Search</span>
               {apolloContatos.length > 0 && <span style={{ fontSize: 11, color: '#a78bfa', fontWeight: 700 }}>{apolloContatos.length} encontrados</span>}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -830,21 +827,16 @@ function RadarPanel({ empresa, onFechar }) {
               {apolloErro && (
                 <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', color: '#ef4444', fontSize: 12 }}>
                   {apolloErro}
-                  {apolloErro.includes('APOLLO_API_KEY') && (
-                    <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                      Configure a variável <code style={{ background: 'rgba(99,102,241,0.1)', padding: '1px 5px', borderRadius: 4 }}>APOLLO_API_KEY</code> no Vercel. Crie sua chave gratuita em <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank" rel="noreferrer" style={{ color: '#6366f1' }}>apollo.io → API key</a>.
-                    </div>
-                  )}
                 </div>
               )}
 
               {/* Buscar button (quando ainda não buscou) */}
               {!buscandoApollo && !apolloContatos.length && !apolloErro && (
                 <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>Encontre decisores com nome, cargo, e-mail e LinkedIn da empresa selecionada.</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>Busca perfis LinkedIn de decisores desta empresa via Google — 100% grátis.</div>
                   <button onClick={buscarApollo}
                     style={{ padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: 'linear-gradient(135deg,rgba(99,102,241,0.2),rgba(139,92,246,0.15))', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-                    <MagnifyingGlassIcon style={{ width: 14, height: 14 }} /> Buscar via Apollo
+                    <MagnifyingGlassIcon style={{ width: 14, height: 14 }} /> Buscar Decisores
                   </button>
                 </div>
               )}
@@ -909,7 +901,7 @@ function RadarPanel({ empresa, onFechar }) {
               {/* Legal note */}
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', gap: 5, alignItems: 'flex-start', marginTop: 2 }}>
                 <InformationCircleIcon style={{ width: 11, height: 11, flexShrink: 0, marginTop: 1 }} />
-                Dados via Apollo.io. E-mails com *** requerem crédito Apollo para revelar. Use em conformidade com a LGPD.
+                Perfis encontrados via Google Search (site:linkedin.com). Dados públicos — uso em conformidade com a LGPD.
               </div>
             </div>
           )}
@@ -1113,7 +1105,7 @@ export default function RadarComercial() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 320 }}>
                 {[
                   { cor: '#0ea5e9', label: 'Camada 1 — Dados públicos do CNPJ e QSA', desc: 'Sócios, endereço, telefone, capital social' },
-                  { cor: '#a78bfa', label: 'Camada 2 — Enriquecimento (em breve)', desc: 'LinkedIn, Apollo, Hunter.io, e-mails corporativos' },
+                  { cor: '#a78bfa', label: 'Camada 2 — LinkedIn', desc: 'Decisores via Google Search (gratuito)' },
                   { cor: '#10b981', label: 'Camada 3 — Classificação por IA', desc: 'Scoring por cargo, sugestão de abordagem e produto' },
                 ].map((l, i) => (
                   <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 9, border: '1px solid var(--border)' }}>
