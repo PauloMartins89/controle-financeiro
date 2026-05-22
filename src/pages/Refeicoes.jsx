@@ -1323,9 +1323,12 @@ function SecaoDashboard({ sols, onNav }) {
       return { text: `${p >= 0 ? '+' : ''}${p.toFixed(0)}%`, up: p >= 0 }
     }
 
+    const hojePedRef = hojeSols.filter(s => (s.total_refeicoes || 0) > 0).length
+    const hojePedCaf = hojeSols.filter(s => (s.total_cafes || 0) > 0).length
+
     const kpis = [
-      { icon: '🍽️', label: 'Refeições hoje',     val: hojeRef,           isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem',    footer: `Mês: ${refMes} refeições` },
-      { icon: '☕',  label: 'Cafés hoje',          val: hojeCaf,           isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem',    footer: `Mês: ${cafMes} cafés` },
+      { icon: '🍽️', label: 'Refeições hoje', val: hojePedRef, isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem', footer: `Mês: ${refMes} refeições`, secondary: hojeRef, secondaryLabel: 'refeições hoje' },
+      { icon: '☕',  label: 'Cafés hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `Mês: ${cafMes} cafés`,    secondary: hojeCaf, secondaryLabel: 'cafés hoje' },
       { icon: '⏳',  label: 'Pend. aprovação',     val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ✓' },
       { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues` },
       { icon: '🚚',  label: 'Aguard. entrega',     val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje` },
@@ -1442,23 +1445,59 @@ function SecaoDashboard({ sols, onNav }) {
 
         {/* ── KPI Row ─────────────────────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 14 }}>
-          {dash.kpis.map((k, i) => (
-            <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1.5, maxWidth: '72%' }}>{k.label}</span>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{k.icon}</div>
-              </div>
-              <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em', marginBottom: 7 }}>{k.val}</div>
-              {k.var
-                ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: k.var.up ? '#059669' : '#DC2626', background: k.var.up ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${k.var.up ? '#A7F3D0' : '#FECACA'}`, borderRadius: 999, padding: '2px 8px', marginBottom: 9 }}>
-                    {k.var.text} {k.varLabel}
+          {dash.kpis.map((k, i) => {
+            if (k.secondary !== undefined) return (
+              <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+                {/* accent top bar */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
+                {/* soft gradient wash */}
+                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${k.color}0a 0%, transparent 60%)`, borderRadius: 16, pointerEvents: 'none' }} />
+                {/* header row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, position: 'relative' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{k.label}</span>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{k.icon}</div>
+                </div>
+                {/* split value row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, position: 'relative', marginBottom: 12 }}>
+                  {/* primary — pedidos */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.03em' }}>{k.val}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: TEXT2, marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pedidos</div>
                   </div>
-                : <div style={{ height: 22, marginBottom: 1 }} />
-              }
-              <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
-            </div>
-          ))}
+                  {/* divider */}
+                  <div style={{ width: 1, height: 42, background: BORDER, flexShrink: 0, margin: '0 14px' }} />
+                  {/* secondary — refeições / cafés */}
+                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: k.color, lineHeight: 1, letterSpacing: '-0.02em', opacity: 0.9 }}>{k.secondary}</div>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: TEXT3, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{k.secondaryLabel}</div>
+                    {k.var && (
+                      <div style={{ marginTop: 5, fontSize: 9, fontWeight: 700, color: k.var.up ? '#10B981' : '#EF4444', background: k.var.up ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${k.var.up ? '#A7F3D0' : '#FECACA'}`, borderRadius: 999, padding: '2px 7px', display: 'inline-block' }}>
+                        {k.var.text}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
+              </div>
+            )
+            return (
+              <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1.5, maxWidth: '72%' }}>{k.label}</span>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{k.icon}</div>
+                </div>
+                <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em', marginBottom: 7 }}>{k.val}</div>
+                {k.var
+                  ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: k.var.up ? '#059669' : '#DC2626', background: k.var.up ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${k.var.up ? '#A7F3D0' : '#FECACA'}`, borderRadius: 999, padding: '2px 8px', marginBottom: 9 }}>
+                      {k.var.text} {k.varLabel}
+                    </div>
+                  : <div style={{ height: 22, marginBottom: 1 }} />
+                }
+                <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
+              </div>
+            )
+          })}
         </div>
 
         {/* ── Charts Row ──────────────────────────────────────────────────────── */}
