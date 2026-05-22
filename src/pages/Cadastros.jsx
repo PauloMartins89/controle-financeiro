@@ -390,19 +390,6 @@ function CadastroTab({ tipo, config, ownerId }) {
   )
 }
 
-      {/* Modal */}
-      {showModal && (
-        <CadastroModal
-          config={config}
-          item={editing && editing.id ? editing : null}
-          ownerId={ownerId}
-          onClose={() => { setShowModal(false); setEditing(null) }}
-          onSave={() => { setShowModal(false); setEditing(null); load() }}
-        />
-      )}
-    </div>
-  )
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Aba Máquinas — cadastro da hierarquia: Classe → Modelo → Equipamento + Frentes
