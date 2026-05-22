@@ -8,7 +8,7 @@ import {
   PlusIcon, PencilIcon, TrashIcon, XMarkIcon,
   ArrowUpTrayIcon, ArrowDownTrayIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XCircleIcon, BuildingOffice2Icon,
-  UserIcon, TruckIcon, UsersIcon,
+  UserIcon, TruckIcon, UsersIcon, WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -390,12 +390,354 @@ function CadastroTab({ tipo, config, ownerId }) {
   )
 }
 
+      {/* Modal */}
+      {showModal && (
+        <CadastroModal
+          config={config}
+          item={editing && editing.id ? editing : null}
+          ownerId={ownerId}
+          onClose={() => { setShowModal(false); setEditing(null) }}
+          onSave={() => { setShowModal(false); setEditing(null); load() }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Aba Máquinas — cadastro da hierarquia: Classe → Modelo → Equipamento + Frentes
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MAQ_SUBTABS = [
+  { key: 'classes',      label: 'Classes',      color: '#8b5cf6' },
+  { key: 'modelos',      label: 'Modelos',      color: '#3b82f6' },
+  { key: 'equipamentos', label: 'Equipamentos', color: '#10b981' },
+  { key: 'frentes',      label: 'Frentes',      color: '#f59e0b' },
+]
+
+function MaqModal({ subtab, item, workspaceId, classes, modelos, onClose, onSave }) {
+  const [nome,      setNome]      = useState(item?.nome      || '')
+  const [codigo,    setCodigo]    = useState(item?.codigo    || '')
+  const [classeId,  setClasseId]  = useState(item?.classe_id || '')
+  const [modeloId,  setModeloId]  = useState(item?.modelo_id || '')
+  const [saving,    setSaving]    = useState(false)
+
+  const modelosFiltrados = classeId
+    ? modelos.filter(m => m.classe_id === classeId)
+    : modelos
+
+  async function handleSave() {
+    let payload = {}
+    let table   = ''
+    if (subtab === 'classes') {
+      if (!nome.trim()) { toast.error('Informe o nome da classe'); return }
+      table   = 'maquinas_classes'
+      payload = { workspace_id: workspaceId, nome: nome.trim() }
+    } else if (subtab === 'modelos') {
+      if (!nome.trim())    { toast.error('Informe o nome do modelo'); return }
+      if (!classeId)       { toast.error('Selecione a Classe Operacional'); return }
+      table   = 'maquinas_modelos'
+      payload = { workspace_id: workspaceId, nome: nome.trim(), classe_id: classeId }
+    } else if (subtab === 'equipamentos') {
+      if (!codigo.trim())  { toast.error('Informe o Código / Matrícula'); return }
+      if (!modeloId)       { toast.error('Selecione o Modelo'); return }
+      table   = 'maquinas_equipamentos'
+      payload = { workspace_id: workspaceId, codigo: codigo.trim().toUpperCase(), nome: nome.trim() || null, modelo_id: modeloId }
+    } else if (subtab === 'frentes') {
+      if (!nome.trim()) { toast.error('Informe o nome da frente'); return }
+      table   = 'maquinas_frentes'
+      payload = { workspace_id: workspaceId, nome: nome.trim() }
+    }
+
+    setSaving(true)
+    let error
+    if (item?.id) {
+      ;({ error } = await supabase.from(table).update(payload).eq('id', item.id))
+    } else {
+      ;({ error } = await supabase.from(table).insert(payload))
+    }
+    setSaving(false)
+    if (error) { toast.error('Erro: ' + error.message); return }
+    toast.success(item?.id ? 'Atualizado!' : 'Cadastrado!')
+    onSave()
+  }
+
+  const cfg = MAQ_SUBTABS.find(s => s.key === subtab)
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 480, width: '95vw' }}>
+        <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700 }}>
+            {item?.id ? 'Editar' : 'Novo'} — {cfg?.label}
+          </h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            <XMarkIcon style={{ width: 20 }} />
+          </button>
+        </div>
+
+        <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Classe select — para modelos */}
+          {subtab === 'modelos' && (
+            <div>
+              <label style={labelStyle}>Classe Operacional *</label>
+              <select value={classeId} onChange={e => setClasseId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                <option value="">— Selecione —</option>
+                {classes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Classe + Modelo select — para equipamentos */}
+          {subtab === 'equipamentos' && (
+            <>
+              <div>
+                <label style={labelStyle}>Classe Operacional</label>
+                <select value={classeId} onChange={e => { setClasseId(e.target.value); setModeloId('') }} style={{ ...inputStyle, marginTop: 4 }}>
+                  <option value="">— Todas as classes —</option>
+                  {classes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Modelo *</label>
+                <select value={modeloId} onChange={e => setModeloId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                  <option value="">— Selecione o Modelo —</option>
+                  {modelosFiltrados.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Código — apenas equipamentos */}
+          {subtab === 'equipamentos' && (
+            <div>
+              <label style={labelStyle}>Código / Matrícula *</label>
+              <input style={{ ...inputStyle, marginTop: 4 }} placeholder="EH-03" value={codigo} onChange={e => setCodigo(e.target.value)} />
+            </div>
+          )}
+
+          {/* Nome — para todos */}
+          <div>
+            <label style={labelStyle}>
+              {subtab === 'equipamentos' ? 'Nome / Apelido (opcional)' : 'Nome *'}
+            </label>
+            <input
+              style={{ ...inputStyle, marginTop: 4 }}
+              placeholder={
+                subtab === 'classes'      ? 'Escavadeira Hidráulica' :
+                subtab === 'modelos'      ? 'CAT 320D' :
+                subtab === 'equipamentos' ? 'Nome adicional...' :
+                'Frente A'
+              }
+              value={nome}
+              onChange={e => setNome(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 22px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+          <button onClick={onClose} style={{ padding: '8px 18px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13 }}>
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', borderRadius: 8, background: cfg?.color || '#6366f1', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
+            {saving ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MaquinasTab({ workspaceId }) {
+  const [subAba,       setSubAba]       = useState('classes')
+  const [classes,      setClasses]      = useState([])
+  const [modelos,      setModelos]      = useState([])
+  const [equipamentos, setEquipamentos] = useState([])
+  const [frentes,      setFrentes]      = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [busca,        setBusca]        = useState('')
+  const [modal,        setModal]        = useState(null)  // null | { subtab, item? }
+
+  const load = async () => {
+    if (!workspaceId) return
+    setLoading(true)
+    const [cl, mo, eq, fr] = await Promise.all([
+      supabase.from('maquinas_classes').select('*').eq('workspace_id', workspaceId).order('nome'),
+      supabase.from('maquinas_modelos').select('*').eq('workspace_id', workspaceId).order('nome'),
+      supabase.from('maquinas_equipamentos').select('*').eq('workspace_id', workspaceId).order('codigo'),
+      supabase.from('maquinas_frentes').select('*').eq('workspace_id', workspaceId).order('nome'),
+    ])
+    setClasses(cl.data || [])
+    setModelos(mo.data || [])
+    setEquipamentos(eq.data || [])
+    setFrentes(fr.data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [workspaceId])
+
+  async function toggleAtivo(subtab, item) {
+    const table = { classes: 'maquinas_classes', modelos: 'maquinas_modelos', equipamentos: 'maquinas_equipamentos', frentes: 'maquinas_frentes' }[subtab]
+    const { error } = await supabase.from(table).update({ ativo: !item.ativo }).eq('id', item.id)
+    if (error) { toast.error(error.message); return }
+    load()
+  }
+
+  const activeList = { classes: classes, modelos: modelos, equipamentos: equipamentos, frentes: frentes }[subAba] || []
+  const q = busca.toLowerCase()
+  const filtered = activeList.filter(item => {
+    const fields = [item.nome, item.codigo].filter(Boolean).join(' ').toLowerCase()
+    return fields.includes(q)
+  })
+  const cfg = MAQ_SUBTABS.find(s => s.key === subAba)
+
+  const classNome  = (id) => classes.find(c => c.id === id)?.nome || '—'
+  const modeloNome = (id) => {
+    const m = modelos.find(m => m.id === id)
+    if (!m) return '—'
+    const cn = classNome(m.classe_id)
+    return cn !== '—' ? `${m.nome} (${cn})` : m.nome
+  }
+
+  return (
+    <div style={{ padding: '0 28px 28px' }}>
+      {/* Sub-abas */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
+        {MAQ_SUBTABS.map(s => (
+          <button
+            key={s.key}
+            onClick={() => { setSubAba(s.key); setBusca('') }}
+            style={{
+              padding: '7px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer',
+              background: subAba === s.key ? s.color + '22' : 'transparent',
+              border: `1px solid ${subAba === s.key ? s.color + '55' : 'var(--border)'}`,
+              color: subAba === s.key ? s.color : 'var(--text-secondary)',
+              fontWeight: subAba === s.key ? 700 : 400,
+            }}
+          >
+            {s.label}
+            <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.7 }}>
+              ({(subAba === s.key ? filtered : { classes, modelos, equipamentos, frentes }[s.key] || []).length})
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Hierarquia info */}
+      <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: '10px 16px', marginBottom: 18, fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ color: '#8b5cf6', fontWeight: 700 }}>Classes</span>
+        <span>→</span>
+        <span style={{ color: '#3b82f6', fontWeight: 700 }}>Modelos</span>
+        <span>→</span>
+        <span style={{ color: '#10b981', fontWeight: 700 }}>Equipamentos</span>
+        <span style={{ marginLeft: 16, opacity: 0.5 }}>|</span>
+        <span style={{ color: '#f59e0b', fontWeight: 700 }}>Frentes</span>
+        <span style={{ opacity: 0.7 }}>— locais de trabalho (independente)</span>
+      </div>
+
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
+          <MagnifyingGlassIcon style={{ width: 15, position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+          <input
+            placeholder={`Buscar ${cfg?.label?.toLowerCase()}...`}
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            style={{ ...inputStyle, paddingLeft: 32 }}
+          />
+        </div>
+        <button
+          onClick={() => setModal({ subtab: subAba, item: null })}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: cfg?.color || '#6366f1', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}
+        >
+          <PlusIcon style={{ width: 14 }} /> Novo
+        </button>
+      </div>
+
+      {/* Lista */}
+      {loading && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)', fontSize: 13 }}>Carregando...</div>}
+      {!loading && filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>⚙️</div>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>Nenhum {cfg?.label?.slice(0, -1).toLowerCase()} cadastrado</div>
+          <div style={{ fontSize: 12 }}>Clique em "Novo" para adicionar.</div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        {filtered.map(item => (
+          <div
+            key={item.id}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 14px', borderRadius: 9,
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              opacity: item.ativo ? 1 : 0.5,
+            }}
+          >
+            {/* Cor / indicador de hierarquia */}
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: cfg?.color, flexShrink: 0 }} />
+
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                {subAba === 'equipamentos' ? item.codigo : item.nome}
+                {subAba === 'equipamentos' && item.nome && (
+                  <span style={{ fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 8 }}>{item.nome}</span>
+                )}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>
+                {subAba === 'modelos'      && classNome(item.classe_id)}
+                {subAba === 'equipamentos' && modeloNome(item.modelo_id)}
+              </div>
+            </div>
+
+            {/* Status badge */}
+            {!item.ativo && <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(239,68,68,0.15)', color: '#ef4444', fontWeight: 700 }}>INATIVO</span>}
+
+            {/* Ações */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={() => setModal({ subtab: subAba, item })}
+                title="Editar"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 5, borderRadius: 6, color: 'var(--text-secondary)' }}
+              >
+                <PencilIcon style={{ width: 15 }} />
+              </button>
+              <button
+                onClick={() => toggleAtivo(subAba, item)}
+                title={item.ativo ? 'Desativar' : 'Ativar'}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 5, borderRadius: 6, color: item.ativo ? '#ef4444' : '#10b981' }}
+              >
+                {item.ativo ? <XCircleIcon style={{ width: 15 }} /> : <CheckCircleIcon style={{ width: 15 }} />}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Modal */}
+      {modal && (
+        <MaqModal
+          subtab={modal.subtab}
+          item={modal.item}
+          workspaceId={workspaceId}
+          classes={classes}
+          modelos={modelos}
+          onClose={() => setModal(null)}
+          onSave={() => { setModal(null); load() }}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Página principal
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Cadastros() {
   const [aba, setAba] = useState('clientes')
-  const { currentUser } = useStore()
+  const { currentUser, workspaceId } = useStore()
   const ownerId = currentUser?.owner_id || currentUser?.id
 
   const tabKeys = Object.keys(TABS_CONFIG)
@@ -404,7 +746,7 @@ export default function Cadastros() {
     <div style={{ flex: 1, overflowY: 'auto' }}>
       <Header
         title="Cadastros"
-        subtitle="Gerencie clientes, fornecedores, solicitantes e condutores"
+        subtitle="Gerencie clientes, fornecedores, solicitantes, condutores e máquinas"
       />
 
       {/* Abas */}
@@ -432,15 +774,35 @@ export default function Cadastros() {
             </button>
           )
         })}
+        {/* Aba Máquinas — tratamento especial */}
+        <button
+          onClick={() => setAba('maquinas')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '8px 16px', borderRadius: 8,
+            background: aba === 'maquinas' ? '#10b98122' : 'transparent',
+            border: `1px solid ${aba === 'maquinas' ? '#10b98155' : 'var(--border)'}`,
+            color: aba === 'maquinas' ? '#10b981' : 'var(--text-secondary)',
+            cursor: 'pointer', fontSize: 13, fontWeight: aba === 'maquinas' ? 700 : 400,
+            transition: 'all 0.15s',
+          }}
+        >
+          <WrenchScrewdriverIcon style={{ width: 16 }} />
+          Máquinas
+        </button>
       </div>
 
       <div style={{ paddingTop: 20 }}>
-        <CadastroTab
-          key={aba}
-          tipo={aba}
-          config={TABS_CONFIG[aba]}
-          ownerId={ownerId}
-        />
+        {aba === 'maquinas' ? (
+          <MaquinasTab workspaceId={workspaceId} />
+        ) : (
+          <CadastroTab
+            key={aba}
+            tipo={aba}
+            config={TABS_CONFIG[aba]}
+            ownerId={ownerId}
+          />
+        )}
       </div>
     </div>
   )

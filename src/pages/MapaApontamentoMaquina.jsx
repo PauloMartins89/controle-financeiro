@@ -118,6 +118,79 @@ function BoletimModal({ boletim, workspaceId, ownerId, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
+  // ── Cadastros cadastrais ────────────────────────────────────────────────────
+  const [cadastClasses,  setCadastClasses]  = useState([])
+  const [cadastModelos,  setCadastModelos]  = useState([])
+  const [cadastEquips,   setCadastEquips]   = useState([])
+  const [cadastFrentes,  setCadastFrentes]  = useState([])
+  // IDs selecionados para controle de cascata (não salvos no dados_extras)
+  const [selClasseId,  setSelClasseId]  = useState('')
+  const [selModeloId,  setSelModeloId]  = useState('')
+  const [frenteNova,   setFrenteNova]   = useState(false) // digitar frente nova
+
+  useEffect(() => {
+    if (!workspaceId) return
+    Promise.all([
+      supabase.from('maquinas_classes').select('id,nome').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
+      supabase.from('maquinas_modelos').select('id,nome,classe_id').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
+      supabase.from('maquinas_equipamentos').select('id,codigo,nome,modelo_id').eq('workspace_id', workspaceId).eq('ativo', true).order('codigo'),
+      supabase.from('maquinas_frentes').select('id,nome').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
+    ]).then(([cl, mo, eq, fr]) => {
+      setCadastClasses(cl.data || [])
+      setCadastModelos(mo.data || [])
+      setCadastEquips(eq.data || [])
+      setCadastFrentes(fr.data || [])
+    })
+  }, [workspaceId])
+
+  const usaCadastro = cadastClasses.length > 0 || cadastModelos.length > 0 || cadastEquips.length > 0
+
+  // Modelos filtrados pela classe selecionada
+  const modelosFiltrados = selClasseId
+    ? cadastModelos.filter(m => m.classe_id === selClasseId)
+    : cadastModelos
+
+  // Equipamentos filtrados pelo modelo selecionado
+  const equipsFiltrados = selModeloId
+    ? cadastEquips.filter(e => e.modelo_id === selModeloId)
+    : cadastEquips
+
+  function handleSelectClasse(classeId) {
+    setSelClasseId(classeId)
+    setSelModeloId('')
+    const cl = cadastClasses.find(c => c.id === classeId)
+    f('classe_operacional', cl?.nome || '')
+    f('modelo', '')
+    f('equipamento', '')
+  }
+
+  function handleSelectModelo(modeloId) {
+    setSelModeloId(modeloId)
+    const mo = cadastModelos.find(m => m.id === modeloId)
+    if (mo) {
+      f('modelo', mo.nome)
+      if (!selClasseId) {
+        const cl = cadastClasses.find(c => c.id === mo.classe_id)
+        if (cl) { setSelClasseId(cl.id); f('classe_operacional', cl.nome) }
+      }
+    }
+    f('equipamento', '')
+  }
+
+  function handleSelectEquip(equipId) {
+    const eq = cadastEquips.find(e => e.id === equipId)
+    if (!eq) { f('equipamento', ''); return }
+    f('equipamento', eq.codigo)
+    // auto-fill modelo e classe a partir do equipamento
+    const mo = cadastModelos.find(m => m.id === eq.modelo_id)
+    if (mo) {
+      setSelModeloId(mo.id)
+      f('modelo', mo.nome)
+      const cl = cadastClasses.find(c => c.id === mo.classe_id)
+      if (cl) { setSelClasseId(cl.id); f('classe_operacional', cl.nome) }
+    }
+  }
+
   const hDisp  = Number(form.horas_disponiveis) || 0
   const hTrab  = Number(form.horas_trabalhadas) || 0
   const pct    = hDisp > 0 ? (hTrab / hDisp) * 100 : null
@@ -187,16 +260,86 @@ function BoletimModal({ boletim, workspaceId, ownerId, onClose, onSaved }) {
             <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Data do Boletim *</label>
             <input type="date" className="input" style={{ fontSize: 13 }} value={form.data} onChange={e => f('data', e.target.value)} />
           </div>
-          {/* Modelo + Equipamento */}
+
+          {/* Classe + Modelo (cascata via cadastro ou texto livre) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {inp('Modelo *', 'modelo', { placeholder: 'CAT 320D' })}
-            {inp('Equipamento *', 'equipamento', { placeholder: 'EH-03' })}
+            {/* Classe Operacional */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Classe Operacional</label>
+              {usaCadastro ? (
+                <select className="input" style={{ fontSize: 13 }} value={selClasseId} onChange={e => handleSelectClasse(e.target.value)}>
+                  <option value="">— Selecione —</option>
+                  {cadastClasses.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              ) : (
+                <input className="input" style={{ fontSize: 13 }} placeholder="Escavadeira Hidráulica" value={form.classe_operacional} onChange={e => f('classe_operacional', e.target.value)} />
+              )}
+            </div>
+            {/* Modelo */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Modelo *</label>
+              {usaCadastro ? (
+                <select className="input" style={{ fontSize: 13 }} value={selModeloId} onChange={e => handleSelectModelo(e.target.value)}>
+                  <option value="">— Selecione —</option>
+                  {modelosFiltrados.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                </select>
+              ) : (
+                <input className="input" style={{ fontSize: 13 }} placeholder="CAT 320D" value={form.modelo} onChange={e => f('modelo', e.target.value)} />
+              )}
+            </div>
           </div>
-          {/* Classe Operacional + Frente */}
+
+          {/* Equipamento + Frente */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {inp('Classe Operacional', 'classe_operacional', { placeholder: 'Escavadeira Hidráulica' })}
-            {inp('Frente', 'frente', { placeholder: 'Frente A' })}
+            {/* Equipamento */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Equipamento *</label>
+              {usaCadastro ? (
+                <select className="input" style={{ fontSize: 13 }} value={cadastEquips.find(e => e.codigo === form.equipamento)?.id || ''} onChange={e => handleSelectEquip(e.target.value)}>
+                  <option value="">— Selecione —</option>
+                  {equipsFiltrados.map(e => <option key={e.id} value={e.id}>{e.codigo}{e.nome ? ` — ${e.nome}` : ''}</option>)}
+                </select>
+              ) : (
+                <input className="input" style={{ fontSize: 13 }} placeholder="EH-03" value={form.equipamento} onChange={e => f('equipamento', e.target.value)} />
+              )}
+            </div>
+            {/* Frente */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Frente</label>
+              {cadastFrentes.length > 0 && !frenteNova ? (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <select className="input" style={{ fontSize: 13, flex: 1 }} value={form.frente} onChange={e => f('frente', e.target.value)}>
+                    <option value="">— Selecione —</option>
+                    {cadastFrentes.map(fr => <option key={fr.id} value={fr.nome}>{fr.nome}</option>)}
+                  </select>
+                  <button type="button" title="Digitar nova frente" onClick={() => { setFrenteNova(true); f('frente', '') }}
+                    style={{ padding: '0 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>
+                    +
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input className="input" style={{ fontSize: 13, flex: 1 }} placeholder="Frente A" value={form.frente} onChange={e => f('frente', e.target.value)} />
+                  {cadastFrentes.length > 0 && (
+                    <button type="button" title="Selecionar da lista" onClick={() => { setFrenteNova(false); f('frente', '') }}
+                      style={{ padding: '0 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11 }}>
+                      ↩
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Texto atual preenchido (feedback visual quando usa cadastro) */}
+          {usaCadastro && (form.modelo || form.equipamento || form.classe_operacional) && (
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '7px 12px', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {form.classe_operacional && <span>📂 {form.classe_operacional}</span>}
+              {form.modelo             && <span>⚙️ {form.modelo}</span>}
+              {form.equipamento        && <span>🔖 {form.equipamento}</span>}
+            </div>
+          )}
+
           {/* Horas */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             {inp('Horas Disponíveis', 'horas_disponiveis', { type: 'number', placeholder: '8', min: '0', step: '0.25' })}
