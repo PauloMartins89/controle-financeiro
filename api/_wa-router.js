@@ -41,16 +41,31 @@ async function classificarIntent(texto) {
   return 'indefinido'
 }
 
+// ─── Verifica se módulo está habilitado para um workspace ───────────────────
+// Ausência de linha = habilitado por padrão (não quebra workspaces sem configuração)
+async function isModuloHabilitado(workspaceId, moduleKey, supabase) {
+  if (!workspaceId) return true
+  const { data } = await supabase
+    .from('workspace_modules')
+    .select('enabled')
+    .eq('workspace_id', workspaceId)
+    .eq('module_key', moduleKey)
+    .maybeSingle()
+  return data ? data.enabled !== false : true
+}
+
 // ─── Verifica se telefone está registrado no módulo de refeições ─────────────
-async function isRefeicaoRegistrado(phoneVariants, supabase) {
+// Retorna { found, workspaceId } para permitir checagem de módulo habilitado
+async function getRefeicaoInfo(phoneVariants, supabase) {
   for (const v of phoneVariants) {
     const [{ data: eq }, { data: rest }] = await Promise.all([
-      supabase.from('refei_equipes').select('id').eq('lider_telefone', v).limit(1).maybeSingle(),
-      supabase.from('refei_restaurantes').select('id').eq('telefone_wa', v).limit(1).maybeSingle(),
+      supabase.from('refei_equipes').select('id, workspace_id').eq('lider_telefone', v).limit(1).maybeSingle(),
+      supabase.from('refei_restaurantes').select('id, workspace_id').eq('telefone_wa', v).limit(1).maybeSingle(),
     ])
-    if (eq || rest) return true
+    if (eq)   return { found: true, workspaceId: eq.workspace_id }
+    if (rest) return { found: true, workspaceId: rest.workspace_id }
   }
-  return false
+  return { found: false, workspaceId: null }
 }
 
 /**
@@ -72,7 +87,7 @@ export async function rotearMensagem(body, fromPhone, phoneVariants, supabase) {
   for (const v of phoneVariants) {
     const { data } = await supabase
       .from('agenda_gestores')
-      .select('id, audio_habilitado')
+      .select('id, audio_habilitado, workspace_id')
       .eq('telefone', v)
       .eq('ativo', true)
       .limit(1)
@@ -83,15 +98,33 @@ export async function rotearMensagem(body, fromPhone, phoneVariants, supabase) {
   // Não é gestor de agenda → fluxo normal
   if (!gestor) return null
 
+  // ── Módulo de agenda habilitado para o workspace? ─────────────────────────
+  try {
+    const agendaOk = await isModuloHabilitado(gestor.workspace_id, 'agendamentos', supabase)
+    if (!agendaOk) {
+      console.log(`[_wa-router] módulo agendamentos desabilitado para workspace ${gestor.workspace_id}`)
+      return null
+    }
+  } catch (e) {
+    console.error('[_wa-router] agenda module check error:', e.message)
+  }
+
   // ── Verifica conflito com refeições ───────────────────────────────────────
   let temRefeicao = false
+  let refeicaoWorkspaceId = null
   try {
-    temRefeicao = await isRefeicaoRegistrado(phoneVariants, supabase)
+    const refeInfo = await getRefeicaoInfo(phoneVariants, supabase)
+    if (refeInfo.found) {
+      // Refeição só conta como conflito se o módulo estiver habilitado para o workspace
+      const refeicaoOk = await isModuloHabilitado(refeInfo.workspaceId, 'refeicoes', supabase)
+      temRefeicao = refeicaoOk
+      refeicaoWorkspaceId = refeInfo.workspaceId
+    }
   } catch (e) {
     console.error('[_wa-router] refei check error:', e.message)
   }
 
-  // Só agenda, sem conflito → agenda
+  // Só agenda (sem conflito ativo com refeições) → agenda
   if (!temRefeicao) return 'agenda'
 
   // ── Conflito agenda + refeição: roteamento inteligente ───────────────────

@@ -33,6 +33,8 @@ const TODOS_MODULOS = [
   { key: 'notas-fiscais', label: 'Notas Fiscais',         descricao: 'Emissão e consulta de notas fiscais' },
   // ── IA ────────────────────────────────────────────────────
   { key: 'chat_ia',       label: 'Chat IA',               descricao: 'Assistente de inteligência artificial' },
+  // ── Agenda ────────────────────────────────────────────────────────────────
+  { key: 'agendamentos',  label: 'Agendamentos',          descricao: 'Agenda de serviços via WhatsApp' },
 ]
 
 export default function PlataformaModulos() {

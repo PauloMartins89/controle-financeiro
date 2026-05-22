@@ -128,7 +128,7 @@ const navGroups = [
   {
     title: 'Agendamentos',
     items: [
-      { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agendamentos', moduleKey: null },
+      { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agendamentos', moduleKey: 'agendamentos' },
     ],
   },
   {
