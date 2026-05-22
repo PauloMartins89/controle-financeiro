@@ -124,7 +124,7 @@ function gerarEmailTemplete(empresa, produtos) {
 function gerarScript(empresa, contato, produtos) {
   const cargo = contato?.cargo || 'gestor(a)'
   const prod = produtos?.[0] || 'nossa solução'
-  return `📞 SCRIPT DE LIGAÇÃO\n\n• Cumprimento:\n"Bom dia! Posso falar com o(a) ${cargo}? Meu nome é [NOME], sou da SmartPro."\n\n• Apresentação (30 seg):\n"Somos uma plataforma de gestão operacional usada por empresas de ${empresa.cnae_fiscal_descricao || 'seu segmento'} como a ${empresa.razao_social || empresa.nome_fantasia}. Trabalhamos com ${prod}."\n\n• Gancho:\n"Tenho visto empresas similares reduzirem custos em até 15% com nosso módulo. Você tem 10 minutinhos para eu explicar como?"\n\n• Objeção — Sem tempo:\n"Entendo! Posso enviar um resumo rápido por WhatsApp e você olha quando tiver um momento?"\n\n• Fechamento:\n"Ótimo! Posso agendar uma demonstração rápida para [DIA/HORA]? Será só 20 minutos."`,
+  return `📞 SCRIPT DE LIGAÇÃO\n\n• Cumprimento:\n"Bom dia! Posso falar com o(a) ${cargo}? Meu nome é [NOME], sou da SmartPro."\n\n• Apresentação (30 seg):\n"Somos uma plataforma de gestão operacional usada por empresas de ${empresa.cnae_fiscal_descricao || 'seu segmento'} como a ${empresa.razao_social || empresa.nome_fantasia}. Trabalhamos com ${prod}."\n\n• Gancho:\n"Tenho visto empresas similares reduzirem custos em até 15% com nosso módulo. Você tem 10 minutinhos para eu explicar como?"\n\n• Objeção — Sem tempo:\n"Entendo! Posso enviar um resumo rápido por WhatsApp e você olha quando tiver um momento?"\n\n• Fechamento:\n"Ótimo! Posso agendar uma demonstração rápida para [DIA/HORA]? Será só 20 minutos."`
 }
 
 // ─── Componente: Badge de relevância ─────────────────────────────────────────
