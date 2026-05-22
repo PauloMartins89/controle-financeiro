@@ -233,24 +233,26 @@ describe('buildMessage', () => {
 const BASE = 'https://smartpro.app.br'
 
 describe('GET /api/notify — diagnóstico', () => {
-  it('400 sem lancamentoId e status', async () => {
+  it('401 sem Authorization header', async () => {
     const res = await fetch(`${BASE}/api/notify`)
     const body = await res.json()
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(401)
     expect(body.error).toBeTruthy()
   })
 
-  it('400 com apenas lancamentoId (falta status)', async () => {
-    const res = await fetch(`${BASE}/api/notify?lancamentoId=qualquer-uuid`)
+  it('401 com token inválido', async () => {
+    const res = await fetch(`${BASE}/api/notify?lancamentoId=qualquer-uuid`, {
+      headers: { Authorization: 'Bearer token-invalido' },
+    })
     const body = await res.json()
-    expect(res.status).toBe(400)
-    expect(body.error).toMatch(/status/i)
+    expect(res.status).toBe(401)
+    expect(body.error).toBeTruthy()
   })
 
-  it('404 com lancamentoId inexistente', async () => {
+  it('401 com params completos mas sem service key', async () => {
     const res = await fetch(`${BASE}/api/notify?lancamentoId=00000000-0000-0000-0000-000000000000&status=aprovado`)
     const body = await res.json()
-    expect(res.status).toBe(404)
+    expect(res.status).toBe(401)
     expect(body.error).toBeTruthy()
   })
 })
