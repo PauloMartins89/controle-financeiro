@@ -79,7 +79,7 @@ export default async function handler(req, res) {
   }
 
   // ─── POST: cria agendamento a partir do formulário ──────────────────────
-  if (req.method === 'POST') {
+  if (req.method === 'POST') { try {
     const {
       token,
       cliente_nome,
@@ -183,6 +183,10 @@ export default async function handler(req, res) {
       id:                  ag.id,
       numero_agendamento:  ag.numero_agendamento,
     })
+  } catch (err) {
+    console.error('[agenda-link POST] unhandled:', err?.message || err)
+    return res.status(500).json({ error: 'Erro interno', detail: err?.message })
+  }
   }
 
   return res.status(405).end()
