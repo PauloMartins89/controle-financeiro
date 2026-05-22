@@ -109,11 +109,14 @@ export default function RefeicaoConfirmarRestaurante() {
       <MainCard>
 
         {/* Header */}
-        <div style={{ padding: '24px 24px 16px' }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: T.text, marginBottom: 14 }}>
-            {precisaConfirmar ? 'Confirmar Pedido' : 'Detalhes do Pedido'} — {sol.ticket || sol.numero_pedido || '—'}
+        <div style={{ padding: '24px 24px 16px', textAlign: 'center' }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: T.text, marginBottom: 4 }}>
+            {precisaConfirmar ? 'Confirmar Pedido' : 'Detalhes do Pedido'}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: T.textMuted, marginBottom: 14 }}>
+            {sol.ticket || sol.numero_pedido || '—'}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
             <Badge bg='#1a3a2f' color='#6ee7b7'>🏪 {restaurante?.nome || 'Restaurante'}</Badge>
             <Badge bg='#1e3a5f' color='#93c5fd'>📅 {fmtData(sol.data_refeicao)}</Badge>
             {equipe?.nome && <Badge bg='#1a2e4a' color='#7dd3fc'>👥 {equipe.nome}</Badge>}
