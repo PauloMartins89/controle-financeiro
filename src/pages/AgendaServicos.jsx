@@ -47,6 +47,7 @@ const ALERTA_STATUS_CONFIG = {
 }
 
 const ANTECEDENCIAS = [
+  { label: '10 minutos', value: 10 },
   { label: '30 minutos', value: 30 },
   { label: '1 hora',     value: 60 },
   { label: '2 horas',    value: 120 },
@@ -764,13 +765,37 @@ function ModalRegras({ onClose, workspaceId }) {
     intervalo_reenvio_min: 60, max_tentativas: 3, ativo: true,
   })
 
+  // ── Parâmetros gerais ──────────────────────────────────────────────────────
+  const [showParametros, setShowParametros] = useState(false)
+  const [params, setParams] = useState({ lembrete_ativo: true, lembrete_minutos_antes: 10, lista_diaria_ativa: true })
+  const [savingP, setSavingP] = useState(false)
+  const setP = (k, v) => setParams(p => ({ ...p, [k]: v }))
+
+  const carregarParametros = useCallback(async () => {
+    if (!workspaceId) return
+    const { data } = await supabase.from('agenda_parametros').select('*').eq('workspace_id', workspaceId).maybeSingle()
+    if (data) setParams({ lembrete_ativo: data.lembrete_ativo, lembrete_minutos_antes: data.lembrete_minutos_antes, lista_diaria_ativa: data.lista_diaria_ativa })
+  }, [workspaceId])
+
+  async function salvarParametros() {
+    setSavingP(true)
+    await supabase.from('agenda_parametros').upsert(
+      { workspace_id: workspaceId, ...params, updated_at: new Date().toISOString() },
+      { onConflict: 'workspace_id' }
+    )
+    setSavingP(false)
+    toast.success('Parâmetros salvos!')
+    setShowParametros(false)
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   const carregarRegras = useCallback(async () => {
     const { data } = await supabase.from('agendamento_regras_alerta').select('*').order('created_at', { ascending: false })
     setRegras(data || [])
     setLoading(false)
   }, [])
 
-  useEffect(() => { carregarRegras() }, [carregarRegras])
+  useEffect(() => { carregarRegras(); carregarParametros() }, [carregarRegras, carregarParametros])
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -814,7 +839,13 @@ function ModalRegras({ onClose, workspaceId }) {
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Configure envios automáticos por tipo de serviço ou cliente</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setShowForm(true)} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
+            <button
+              onClick={() => { setShowParametros(p => !p); setShowForm(false) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '7px 12px', borderRadius: 8, background: showParametros ? 'rgba(99,102,241,0.15)' : 'var(--bg-card)', border: '1px solid var(--border)', color: showParametros ? '#6366f1' : 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              <AdjustmentsHorizontalIcon style={{ width: 14, height: 14 }} /> Parâmetros
+            </button>
+            <button onClick={() => { setShowForm(true); setShowParametros(false) }} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
               <PlusIcon style={{ width: 14, height: 14 }} /> Nova Regra
             </button>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -824,6 +855,52 @@ function ModalRegras({ onClose, workspaceId }) {
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          {showParametros && (
+            <div style={{ padding: 18, background: 'var(--bg-card)', borderRadius: 12, border: '1px solid rgba(99,102,241,0.25)', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, color: '#6366f1' }}>⚙ Parâmetros Gerais</h3>
+              <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 16 }}>Comportamento padrão aplicado automaticamente a todos os agendamentos.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: params.lembrete_ativo ? 12 : 0 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>🔔 Lembrete padrão</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Enviado ao gestor que gerou o link quando o formulário é preenchido</div>
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{params.lembrete_ativo ? 'Ativo' : 'Inativo'}</span>
+                      <input type="checkbox" checked={params.lembrete_ativo} onChange={e => setP('lembrete_ativo', e.target.checked)} style={{ accentColor: 'var(--accent)', width: 16, height: 16 }} />
+                    </label>
+                  </div>
+                  {params.lembrete_ativo && (
+                    <div>
+                      <label style={labelStyle}>Antecedência</label>
+                      <select style={{ ...inputStyle, maxWidth: 200 }} value={params.lembrete_minutos_antes} onChange={e => setP('lembrete_minutos_antes', parseInt(e.target.value))}>
+                        {ANTECEDENCIAS.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>📋 Lista diária às 5h</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Envia a agenda do dia para todos os gestores ativos todo dia às 5h</div>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{params.lista_diaria_ativa ? 'Ativa' : 'Inativa'}</span>
+                    <input type="checkbox" checked={params.lista_diaria_ativa} onChange={e => setP('lista_diaria_ativa', e.target.checked)} style={{ accentColor: 'var(--accent)', width: 16, height: 16 }} />
+                  </label>
+                </div>
+
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowParametros(false)} style={{ padding: '7px 16px', borderRadius: 7, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>Cancelar</button>
+                <button onClick={salvarParametros} disabled={savingP} style={{ padding: '7px 16px', borderRadius: 7, background: '#6366f1', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: savingP ? 0.7 : 1 }}>{savingP ? 'Salvando...' : 'Salvar Parâmetros'}</button>
+              </div>
+            </div>
+          )}
+
           {showForm && (
             <div style={{ padding: 18, background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)', marginBottom: 20 }}>
               <h3 style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>{editando ? 'Editar Regra' : 'Nova Regra'}</h3>

@@ -8,6 +8,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
+import { aplicarRegrasAlerta } from './_agenda-motor-alertas.js'
 
 const supabaseUrl        = process.env.SUPABASE_URL       || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
@@ -153,6 +154,46 @@ export default async function handler(req, res) {
         payload_json:   { origem: 'link_publico', token },
       })
     } catch { /* silencioso */ }
+
+    // Agenda lembrete para o gestor (timing configurável via agenda_parametros)
+    if (link.gestor_telefone && horario) {
+      try {
+        // Lê parâmetros do workspace (fallback: lembrete ativo, 10 min antes)
+        const { data: params } = await db
+          .from('agenda_parametros')
+          .select('lembrete_ativo, lembrete_minutos_antes')
+          .eq('workspace_id', link.workspace_id)
+          .maybeSingle()
+        const lembreteAtivo   = params?.lembrete_ativo          ?? true
+        const lembreteMinutos = params?.lembrete_minutos_antes  ?? 10
+
+        if (lembreteAtivo) {
+          const dataHoraServico = new Date(`${data_servico}T${horario}:00`)
+          await db.from('agendamento_alertas').insert({
+            agendamento_id:         ag.id,
+            destinatario_tipo:      'gestor',
+            destinatario_nome:      link.gestor_nome   || null,
+            destinatario_whatsapp:  link.gestor_telefone,
+            antecedencia_minutos:   lembreteMinutos,
+            horario_previsto_envio: new Date(dataHoraServico.getTime() - lembreteMinutos * 60 * 1000).toISOString(),
+            solicitar_confirmacao:  false,
+            ativo:                  true,
+            status:                 'pendente',
+            idempotency_key:        `${ag.id}:lembrete_padrao`,
+          })
+        }
+      } catch { /* não bloqueia o agendamento */ }
+    }
+
+    // Aplica regras automáticas configuradas
+    aplicarRegrasAlerta(db, {
+      id:                ag.id,
+      workspace_id:      link.workspace_id,
+      tipo_servico:      tipo_servico.trim(),
+      data_hora_servico: horario
+        ? new Date(`${data_servico}T${horario}:00`).toISOString()
+        : new Date(`${data_servico}T00:00:00`).toISOString(),
+    }).then(null, () => {}) // não bloqueia
 
     // Marca link como usado
     await db

@@ -10,6 +10,7 @@
  */
 
 import Groq, { toFile } from 'groq-sdk'
+import { aplicarRegrasAlerta } from './_agenda-motor-alertas.js'
 
 const APP_URL = process.env.APP_URL || 'https://dividiai.app.br'
 
@@ -142,6 +143,14 @@ async function criarAgendamento(supabase, dados, gestor, origem, textoOrigem) {
     usuario_nome:   gestor.nome,
     payload_json:   { origem, texto_original: (textoOrigem || '').slice(0, 500) },
   }).then(null, () => {}) // não bloqueia se histórico falhar
+
+  // Aplica regras automáticas de alerta configuradas
+  aplicarRegrasAlerta(supabase, {
+    id:               data.id,
+    workspace_id:     payload.workspace_id,
+    tipo_servico:     payload.tipo_servico,
+    data_hora_servico: payload.data_hora_servico,
+  }).then(null, () => {}) // não bloqueia
 
   return data
 }

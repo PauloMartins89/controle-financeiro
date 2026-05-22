@@ -238,6 +238,92 @@ async function handleRefeicoesValidacao(db, res) {
   return res.status(200).json({ sent, validacoes: pedidos.length })
 }
 
+// ── Cron: lista diária de agendamentos às 5h BRT ─────────────────────────────
+// Executa às 8h UTC (= 5h BRT). Busca todos os agendamentos do dia e envia
+// para cada gestor ativo do workspace correspondente.
+async function handleAgendaDiaria(db, res) {
+  // "Hoje" no horário de Brasília (UTC-3)
+  const nowBRT   = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  const todayBRT = nowBRT.toISOString().slice(0, 10)
+  const fmtData  = d => d ? String(d).split('-').reverse().join('/') : '—'
+
+  const { data: agendamentos } = await db
+    .from('agendamentos_servicos')
+    .select('id, cliente_nome, tipo_servico, atividade, horario_servico, workspace_id')
+    .eq('data_servico', todayBRT)
+    .not('status', 'in', '("cancelado","concluido")')
+    .order('horario_servico', { ascending: true, nullsFirst: false })
+
+  if (!agendamentos?.length) return res.status(200).json({ sent: 0, agendamentos: 0, data: todayBRT })
+
+  // Agrupa por workspace_id
+  const porWorkspace = {}
+  for (const ag of agendamentos) {
+    const wid = ag.workspace_id || 'sem_workspace'
+    if (!porWorkspace[wid]) porWorkspace[wid] = []
+    porWorkspace[wid].push(ag)
+  }
+
+  // Busca gestores ativos e parâmetros dos workspaces com agendamentos hoje
+  const workspaceIds = Object.keys(porWorkspace).filter(w => w !== 'sem_workspace')
+  const [{ data: gestores }, { data: todosParams }] = workspaceIds.length
+    ? await Promise.all([
+        db.from('agenda_gestores').select('workspace_id, nome, telefone').in('workspace_id', workspaceIds).eq('ativo', true),
+        db.from('agenda_parametros').select('workspace_id, lista_diaria_ativa').in('workspace_id', workspaceIds),
+      ])
+    : [{ data: [] }, { data: [] }]
+
+  let sent = 0
+
+  for (const [wid, ags] of Object.entries(porWorkspace)) {
+    const destinatarios = (gestores || []).filter(g => g.workspace_id === wid)
+    if (!destinatarios.length) continue
+
+    // Respeita configuração de lista_diaria_ativa (padrão: true se não configurado)
+    const wParams = (todosParams || []).find(p => p.workspace_id === wid)
+    if (wParams && wParams.lista_diaria_ativa === false) continue
+
+    const linhas = [
+      `📋 *Agenda do dia — ${fmtData(todayBRT)}*`,
+      `${ags.length} agendamento${ags.length > 1 ? 's' : ''}`,
+      ``,
+      ...ags.map((ag, i) => {
+        const hora = ag.horario_servico ? ag.horario_servico.slice(0, 5) : '—'
+        return [
+          `${i + 1}. ⏰ *${hora}* — ${ag.cliente_nome || '—'}`,
+          `   🔧 ${ag.tipo_servico || '—'}${ag.atividade ? ' › ' + ag.atividade : ''}`,
+        ].join('\n')
+      }),
+    ]
+
+    const message = linhas.join('\n')
+
+    for (const gestor of destinatarios) {
+      const phone = String(gestor.telefone).replace(/\D/g, '')
+      if (!phone) continue
+      try {
+        const r = await fetch(
+          `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+            },
+            body: JSON.stringify({ phone, message }),
+          }
+        )
+        if (r.ok) sent++
+        else console.error(`[cron:agenda-diaria] falhou ${r.status} para ${phone}`)
+      } catch (err) {
+        console.error(`[cron:agenda-diaria] exception para ${phone}:`, err.message)
+      }
+    }
+  }
+
+  return res.status(200).json({ sent, agendamentos: agendamentos.length, data: todayBRT })
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -249,5 +335,6 @@ export default async function handler(req, res) {
   if (type === 'relatorio')            return handleRelatorio(db, res)
   if (type === 'refeicoes-pendentes')  return handleRefeicoesPendentes(db, res)
   if (type === 'refeicoes-validacao')  return handleRefeicoesValidacao(db, res)
-  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao' })
+  if (type === 'agenda-diaria')        return handleAgendaDiaria(db, res)
+  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | agenda-diaria' })
 }

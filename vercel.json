@@ -38,6 +38,10 @@
     {
       "path": "/api/cron?type=refeicoes-validacao",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron?type=agenda-diaria",
+      "schedule": "0 8 * * *"
     }
   ],
   "rewrites": [
