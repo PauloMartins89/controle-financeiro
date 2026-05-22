@@ -203,11 +203,14 @@ export async function handleAgendaWA(body, fromPhone, phoneVariants, zapiSendTex
   // Não é um gestor cadastrado — deixa o fluxo normal prosseguir
   if (!gestor) return false
 
+  // Determina tipo pelo conteúdo do payload (Z-API usa body.type = 'ReceivedCallback')
+  const isAudioMsg = !!(body.audio || body.ptt)
+  const isTextMsg  = !isAudioMsg && !!(body.text || body.body)
   const msgType = (body.type || '').toLowerCase()
   const txtRaw  = (body.text?.message || body.text || body.body || '').trim()
 
   // ─── ÁUDIO / PTT ──────────────────────────────────────────────────────────
-  if ((msgType === 'audio' || msgType === 'ptt') && gestor.audio_habilitado) {
+  if ((isAudioMsg || msgType === 'audio' || msgType === 'ptt') && gestor.audio_habilitado) {
     const audioUrl = body.audio?.audioUrl || body.audio?.fileUrl || body.ptt?.audioUrl
     if (!audioUrl) {
       await zapiSendText(fromPhone, '❌ Não consegui acessar o áudio. Tente enviar novamente.')
@@ -242,7 +245,7 @@ export async function handleAgendaWA(body, fromPhone, phoneVariants, zapiSendTex
   }
 
   // ─── TEXTO ────────────────────────────────────────────────────────────────
-  if (msgType === 'chat' || msgType === 'text' || msgType === 'extendedtextmessage') {
+  if (isTextMsg || msgType === 'chat' || msgType === 'text' || msgType === 'extendedtextmessage') {
     if (!txtRaw) return true
 
     const txtLower = txtRaw.toLowerCase()
