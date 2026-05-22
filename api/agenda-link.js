@@ -56,32 +56,6 @@ export default async function handler(req, res) {
   const db = getDb()
   if (!db) return res.status(500).json({ error: 'Banco não configurado' })
 
-  // ─── PUT: gera um novo link público (app autenticado) ─────────────────
-  if (req.method === 'PUT') {
-    const authHeader = req.headers['authorization'] || ''
-    const jwt = authHeader.replace('Bearer ', '').trim()
-    if (!jwt) return res.status(401).json({ error: 'Não autenticado' })
-
-    const { data: { user }, error: authErr } = await db.auth.getUser(jwt)
-    if (authErr || !user) return res.status(401).json({ error: 'Token inválido' })
-
-    const { workspace_id } = req.body || {}
-    const token = crypto.randomUUID()
-    // Link válido por 7 dias quando gerado manualmente
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-
-    const { error: insErr } = await db.from('agenda_links_pendentes').insert({
-      token,
-      workspace_id: workspace_id || null,
-      gestor_nome:  user.email || 'Sistema',
-      usado:        false,
-      expires_at:   expiresAt,
-    })
-    if (insErr) return res.status(500).json({ error: insErr.message })
-
-    return res.status(200).json({ token, url: `${APP_URL}/ag/${token}`, expires_at: expiresAt })
-  }
-
   // ─── GET: retorna dados do link pendente ────────────────────────────────
   if (req.method === 'GET') {
     const { token } = req.query
