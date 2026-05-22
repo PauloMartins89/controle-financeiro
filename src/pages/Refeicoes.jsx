@@ -1179,7 +1179,7 @@ function relTime(iso) {
 }
 
 // ─── Seção: Dashboard ─────────────────────────────────────────────────────────
-function LineChart({ series, labels, height = 160, gridColor = '#E5EAF2', labelColor = '#A0AEC0' }) {
+function LineChart({ series, labels, height = 160, gridColor = '#E5EAF2', labelColor = '#A0AEC0', dotFill = 'white' }) {
   const VW = 480, VH = height
   const PAD = { t: 12, r: 16, b: 28, l: 36 }
   const cw = VW - PAD.l - PAD.r
@@ -1215,7 +1215,7 @@ function LineChart({ series, labels, height = 160, gridColor = '#E5EAF2', labelC
           <g key={si}>
             <polygon points={area} fill={`url(#lg${si})`} />
             <polyline points={pts} fill="none" stroke={s.color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-            {s.data.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3.5} fill="white" stroke={s.color} strokeWidth={2} />)}
+            {s.data.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3.5} fill={dotFill} stroke={s.color} strokeWidth={2} />)}
           </g>
         )
       })}
@@ -1252,7 +1252,7 @@ function HBarChart({ items, colorFn, labelColor = '#1A2332', trackColor = '#EEF2
 
 function DonutChart({ segments, emptyColor = '#E5EAF2', centerColor = '#1A2332', subColor = '#6B7A99' }) {
   const r = 50, cx = 62, cy = 62, sw = 14
-  const tot = segments.reduce((a, s) => a + s.value, 0) || 1
+  const tot = segments.reduce((a, s) => a + s.value, 0)
   const C = 2 * Math.PI * r
   let off = 0
   return (
@@ -1267,8 +1267,10 @@ function DonutChart({ segments, emptyColor = '#E5EAF2', centerColor = '#1A2332',
             return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw} strokeDasharray={`${dash.toFixed(2)} ${gap.toFixed(2)}`} transform={`rotate(${rot.toFixed(1)} ${cx} ${cy})`} strokeLinecap="butt" />
           })
       }
-      <text x={cx} y={cy - 5} textAnchor="middle" fontSize={22} fontWeight={800} fill={centerColor} fontFamily="sans-serif">{tot}</text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={8} fill={subColor} fontFamily="sans-serif">TOTAL</text>
+      {tot > 0 && <>
+        <text x={cx} y={cy - 5} textAnchor="middle" fontSize={22} fontWeight={800} fill={centerColor} fontFamily="sans-serif">{tot}</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fontSize={8} fill={subColor} fontFamily="sans-serif">TOTAL</text>
+      </>}
     </svg>
   )
 }
@@ -1395,7 +1397,7 @@ function SecaoDashboard({ sols, onNav }) {
       if (s.status === 'entregue') painelMap[nome].ent++
       if (['aguardando_validacao', 'finalizado_com_ocorrencia'].includes(s.status)) painelMap[nome].div++
     }
-    const painelHoje = Object.values(painelMap)
+    const painelHoje = Object.values(painelMap).sort((a, b) => (b.ref + b.caf) - (a.ref + a.caf))
 
     const alertas = []
     const pendLongos = pendentes.filter(s => s.criado_em && (Date.now() - new Date(s.criado_em)) > 7200000)
@@ -1442,11 +1444,11 @@ function SecaoDashboard({ sols, onNav }) {
             <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: 12, color: TEXT, outline: 'none', cursor: 'pointer', minWidth: 0 }} />
             {dateFilter && <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1 }}>✕</button>}
           </div>
-          <div style={{ fontSize: 11, color: TEXT3, background: '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 11, color: TEXT3, background: isDark ? '#1f2329' : '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px', whiteSpace: 'nowrap' }}>
             {dateFilter ? `Exibindo: ${fmtData(dateFilter)}` : `Hoje: ${fmtData(todayISO())}`}
           </div>
           {dash.pendentesCount > 0 && (
-            <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 10, padding: '7px 14px', cursor: 'pointer', color: '#92400E', fontSize: 12, fontWeight: 700 }}>
+            <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: isDark ? 'rgba(217,119,6,0.18)' : '#FEF3C7', border: `1px solid ${isDark ? 'rgba(217,119,6,0.45)' : '#FDE68A'}`, borderRadius: 10, padding: '7px 14px', cursor: 'pointer', color: isDark ? '#FCD34D' : '#92400E', fontSize: 12, fontWeight: 700 }}>
               ⏳ {dash.pendentesCount} pendente{dash.pendentesCount > 1 ? 's' : ''} →
             </button>
           )}
@@ -1484,7 +1486,7 @@ function SecaoDashboard({ sols, onNav }) {
                     <div style={{ fontSize: 9, fontWeight: 600, color: TEXT3, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{k.secondaryLabel}</div>
                     {k.var && (
                       <div style={{ marginTop: 5, fontSize: 9, fontWeight: 700, color: k.var.up ? '#10B981' : '#EF4444', background: k.var.up ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${k.var.up ? '#A7F3D0' : '#FECACA'}`, borderRadius: 999, padding: '2px 7px', display: 'inline-block' }}>
-                        {k.var.text}
+                        {k.var.text} {k.varLabel}
                       </div>
                     )}
                   </div>
@@ -1531,14 +1533,14 @@ function SecaoDashboard({ sols, onNav }) {
                 </span>
               </div>
             </div>
-            <LineChart series={[{ data: dash.chartRef7, color: '#4F6EF7' }, { data: dash.chartCaf7, color: '#F59E0B' }]} labels={dash.chartLabels} height={158} gridColor={BORDER} labelColor={TEXT3} />
+            <LineChart series={[{ data: dash.chartRef7, color: '#4F6EF7' }, { data: dash.chartCaf7, color: '#F59E0B' }]} labels={dash.chartLabels} height={158} gridColor={BORDER} labelColor={TEXT3} dotFill={CARD} />
           </div>
 
           {/* CDC / Equipe breakdown */}
           <div style={{ ...cardStyle, padding: '20px 22px' }}>
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{dash.cdcLabel}</div>
-              <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Itens consumidos por centro</div>
+              <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Itens consumidos {dash.cdcLabel.includes('CDC') ? 'por CDC' : 'por equipe'}</div>
             </div>
             <HBarChart items={dash.chartCDC} colorFn={i => COLORS[i % COLORS.length]} labelColor={TEXT} trackColor={BG} />
           </div>
