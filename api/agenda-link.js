@@ -144,13 +144,15 @@ export default async function handler(req, res) {
     }
 
     // Registra histórico
-    await db.from('agendamento_historico').insert({
-      agendamento_id: ag.id,
-      tipo_evento:    'criacao',
-      descricao:      `Agendamento criado via 📋 formulário público pelo gestor ${link.gestor_nome || '—'}`,
-      usuario_nome:   link.gestor_nome || 'Formulário',
-      payload_json:   { origem: 'link_publico', token },
-    }).catch(() => {})
+    try {
+      await db.from('agendamento_historico').insert({
+        agendamento_id: ag.id,
+        tipo_evento:    'criacao',
+        descricao:      `Agendamento criado via 📋 formulário público pelo gestor ${link.gestor_nome || '—'}`,
+        usuario_nome:   link.gestor_nome || 'Formulário',
+        payload_json:   { origem: 'link_publico', token },
+      })
+    } catch { /* silencioso */ }
 
     // Marca link como usado
     await db
