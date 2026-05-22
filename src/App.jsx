@@ -45,6 +45,7 @@ import RefeicaoAprovar from './pages/RefeicaoAprovar'
 import RefeicaoValidar from './pages/RefeicaoValidar'
 import RefeicaoConfirmarRestaurante from './pages/RefeicaoConfirmarRestaurante'
 import Refeicoes from './pages/Refeicoes'
+import MapaGerencialRefeicoes from './pages/MapaGerencialRefeicoes'
 import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
@@ -518,6 +519,7 @@ export default function App() {
                   <Route path="/refeicoes/relatorios/rel-restaurante" element={<Refeicoes />} />
                   <Route path="/refeicoes/relatorios/rel-cdc" element={<Refeicoes />} />
                   <Route path="/refeicoes/relatorios/rel-divergencias" element={<Refeicoes />} />
+                  <Route path="/refeicoes/mapa" element={<MapaGerencialRefeicoes />} />
                 </Routes>
               </main>
             </div>

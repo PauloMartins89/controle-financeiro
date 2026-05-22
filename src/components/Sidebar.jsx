@@ -106,6 +106,7 @@ const navGroups = [
       { to: '/refeicoes/relatorios/rel-restaurante',    icon: PresentationChartLineIcon,  label: 'Rel. Restaurante', moduleKey: 'refeicoes' },
       { to: '/refeicoes/relatorios/rel-cdc',            icon: TableCellsIcon,             label: 'Rel. CDC',         moduleKey: 'refeicoes' },
       { to: '/refeicoes/relatorios/rel-divergencias',   icon: ChartBarIcon,               label: 'Divergências',     moduleKey: 'refeicoes' },
+      { to: '/refeicoes/mapa',                          icon: TableCellsIcon,             label: 'Mapa Gerencial',   moduleKey: 'refeicoes' },
     ],
   },
   {
