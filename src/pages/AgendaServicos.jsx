@@ -11,7 +11,7 @@ import {
   DevicePhoneMobileIcon, MapPinIcon, UserIcon, WrenchScrewdriverIcon,
   DocumentTextIcon, AdjustmentsHorizontalIcon, CheckBadgeIcon,
   PhoneIcon, PlayIcon, StopIcon, UsersIcon, LinkIcon, MicrophoneIcon,
-  ChatBubbleOvalLeftEllipsisIcon,
+  ChatBubbleOvalLeftEllipsisIcon, ComputerDesktopIcon,
 } from '@heroicons/react/24/outline'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -1216,6 +1216,9 @@ export default function AgendaServicos() {
   const { workspaceId } = useStore()
   const [agendamentos, setAgendamentos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [modoMonitor, setModoMonitor] = useState(false)
+  const [relogioMonitor, setRelogioMonitor] = useState('')
+  const [contagemMonitor, setContagemMonitor] = useState(60)
   const [modalNovo, setModalNovo] = useState(false)
   const [modalEditar, setModalEditar] = useState(null)
   const [modalDetalhes, setModalDetalhes] = useState(null)
@@ -1224,6 +1227,27 @@ export default function AgendaServicos() {
   const [filtros, setFiltros] = useState({ periodo: '', cliente: '', tipo: '', status: '', responsavel: '', motorista: '', veiculo: '', alertaStatus: '' })
   const [busca, setBusca] = useState('')
   const [showFiltros, setShowFiltros] = useState(false)
+
+  // ── Monitor: relógio, countdown e auto-refresh ─────────────────────────────
+  useEffect(() => {
+    if (!modoMonitor) return
+    const tick = () => {
+      const now = new Date()
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mm = String(now.getMinutes()).padStart(2, '0')
+      const ss = String(now.getSeconds()).padStart(2, '0')
+      setRelogioMonitor(`${hh}:${mm}:${ss}`)
+      setContagemMonitor(c => {
+        if (c <= 1) { carregar(); return 60 }
+        return c - 1
+      })
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    const onKey = e => { if (e.key === 'Escape') setModoMonitor(false) }
+    window.addEventListener('keydown', onKey)
+    return () => { clearInterval(id); window.removeEventListener('keydown', onKey) }
+  }, [modoMonitor, carregar])
 
   const carregar = useCallback(async () => {
     setLoading(true)
@@ -1378,6 +1402,9 @@ export default function AgendaServicos() {
           </button>
           <button onClick={carregar} style={{ padding: '8px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
             <ArrowPathIcon style={{ width: 15, height: 15 }} />
+          </button>
+          <button onClick={() => { setContagemMonitor(60); setModoMonitor(true) }} style={{ padding: '8px 14px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <ComputerDesktopIcon style={{ width: 14, height: 14 }} /> Monitor
           </button>
         </div>
 
@@ -1559,6 +1586,105 @@ export default function AgendaServicos() {
           </div>
         </div>
       </div>
+
+      {/* ── Modo Monitor TV ─────────────────────────────────────────────────── */}
+      {modoMonitor && (() => {
+        const DIAS  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado']
+        const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+        const now   = new Date()
+        const dataExtenso = `${DIAS[now.getDay()]}, ${now.getDate()} de ${MESES[now.getMonth()]} de ${now.getFullYear()}`
+        const agHoje = agendamentos
+          .filter(a => a.data_servico === hoje && a.status !== 'cancelado')
+          .sort((a, b) => (a.horario_servico || '23:59').localeCompare(b.horario_servico || '23:59'))
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: '#0f172a', zIndex: 9999, display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}>
+            {/* Header */}
+            <div style={{ padding: '20px 32px', background: '#1e293b', borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center', gap: 24 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>Painel de Agendamentos</div>
+                <div style={{ fontSize: 18, color: '#f1f5f9', fontWeight: 700 }}>{dataExtenso}</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 52, color: '#00c896', fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{relogioMonitor}</div>
+                <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>Atualiza em {contagemMonitor}s</div>
+                <div style={{ marginTop: 5, height: 3, background: '#0f172a', borderRadius: 2, overflow: 'hidden', width: 120, margin: '5px auto 0' }}>
+                  <div style={{ height: '100%', width: `${(contagemMonitor / 60) * 100}%`, background: '#00c896', transition: 'width 1s linear' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: '#6366f1', lineHeight: 1 }}>{agHoje.length}</div>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>agendamentos hoje</div>
+                </div>
+                <button onClick={() => setModoMonitor(false)} title="Fechar (ESC)" style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <XMarkIcon style={{ width: 18, height: 18 }} />
+                </button>
+              </div>
+            </div>
+            {/* Tabela */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+              {agHoje.length === 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', color: '#475569', gap: 12 }}>
+                  <CalendarDaysIcon style={{ width: 64, height: 64, opacity: 0.2 }} />
+                  <div style={{ fontSize: 20, fontWeight: 600 }}>Nenhum agendamento para hoje</div>
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 6px' }}>
+                  <thead>
+                    <tr>
+                      {['Horário','Nº','Cliente','Tipo de Serviço','Origem → Destino','Motorista / Veículo','Status','Alerta WA'].map(col => (
+                        <th key={col} style={{ padding: '6px 14px', textAlign: 'left', fontSize: 10, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #1e293b' }}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {agHoje.map(ag => {
+                      const alerta    = alertaPrincipal(ag)
+                      const statusCfg = STATUS_CONFIG[ag.status] || {}
+                      const alertaCfg = alerta ? (ALERTA_STATUS_CONFIG[alerta.status] || {}) : null
+                      const emExec    = ag.status === 'em_execucao'
+                      return (
+                        <tr key={ag.id} style={{ background: emExec ? 'rgba(6,182,212,0.07)' : 'rgba(30,41,59,0.5)' }}>
+                          <td style={{ padding: '15px 14px', borderRadius: '10px 0 0 10px', fontSize: 24, fontWeight: 800, color: '#00c896', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{ag.horario_servico || '—'}</td>
+                          <td style={{ padding: '15px 14px', fontSize: 11, color: '#475569', whiteSpace: 'nowrap' }}>#{ag.numero_agendamento || '—'}</td>
+                          <td style={{ padding: '15px 14px', maxWidth: 200 }}>
+                            <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ag.cliente_nome || '—'}</div>
+                            {ag.atividade && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ag.atividade}</div>}
+                          </td>
+                          <td style={{ padding: '15px 14px', fontSize: 14, color: '#cbd5e1', whiteSpace: 'nowrap' }}>{ag.tipo_servico || '—'}</td>
+                          <td style={{ padding: '15px 14px', maxWidth: 220 }}>
+                            {ag.origem || ag.destino
+                              ? <div style={{ fontSize: 13, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{[ag.origem, ag.destino].filter(Boolean).join(' → ')}</div>
+                              : <span style={{ color: '#334155' }}>—</span>}
+                          </td>
+                          <td style={{ padding: '15px 14px', maxWidth: 180 }}>
+                            {ag.motorista_nome && <div style={{ fontSize: 14, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ag.motorista_nome}</div>}
+                            {ag.veiculo_nome   && <div style={{ fontSize: 12, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ag.veiculo_nome}</div>}
+                            {!ag.motorista_nome && !ag.veiculo_nome && <span style={{ color: '#334155' }}>—</span>}
+                          </td>
+                          <td style={{ padding: '15px 14px' }}>
+                            <span style={{ padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: statusCfg.bg, color: statusCfg.color, whiteSpace: 'nowrap' }}>{statusCfg.label || ag.status}</span>
+                          </td>
+                          <td style={{ padding: '15px 14px', borderRadius: '0 10px 10px 0' }}>
+                            {alertaCfg
+                              ? <span style={{ fontSize: 13, color: alertaCfg.color, fontWeight: 600 }}>{alertaCfg.icon} {alertaCfg.label}</span>
+                              : <span style={{ fontSize: 12, color: '#334155' }}>—</span>}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            {/* Footer */}
+            <div style={{ padding: '10px 32px', background: '#1e293b', borderTop: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: '#334155' }}>Pressione ESC ou clique ✕ para sair</span>
+              <span style={{ fontSize: 11, color: '#334155' }}>SmartProd · Agendamentos Operacionais</span>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Modais ── */}
       {modalNovo && (
