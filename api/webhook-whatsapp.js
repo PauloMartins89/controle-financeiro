@@ -441,6 +441,87 @@ export default async function handler(req, res) {
       return res.status(200).json({ error: 'no_image_data' })
     }
 
+    // ── Boletim de Máquinas: identifica colaborador pelo telefone ──────────
+    {
+      const supabaseBol = getSupabase()
+      let colaboradorBol = null
+      if (supabaseBol) {
+        for (const v of phoneVariants) {
+          const { data } = await supabaseBol
+            .from('maquinas_colaboradores')
+            .select('*, maquinas_frentes(id, nome, workspace_id, maquinas_boletim_tipos(id, nome, campos_json, imagem_url))')
+            .eq('telefone_wa', v)
+            .eq('ativo', true)
+            .limit(1)
+            .maybeSingle()
+          if (data) { colaboradorBol = data; break }
+        }
+      }
+
+      if (colaboradorBol) {
+        const frente      = colaboradorBol.maquinas_frentes
+        const workspaceId = frente?.workspace_id
+
+        // Confirma recebimento imediatamente
+        await zapiSendText(fromPhone, '📋 Boletim recebido! Estamos processando. Você será avisado em instantes.')
+
+        // Salva imagem no Supabase Storage (bucket: maquinas)
+        let imagemUrl = ''
+        try {
+          const imgBuffer  = Buffer.from(imageBase64, 'base64')
+          const now        = new Date()
+          const storagePath = `maquinas/boletins/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${Date.now()}_${fromNorm}.jpg`
+          const { error: upErr } = await supabaseBol.storage
+            .from('maquinas')
+            .upload(storagePath, imgBuffer, { contentType: 'image/jpeg', upsert: false })
+          if (!upErr) {
+            const { data: pub } = supabaseBol.storage.from('maquinas').getPublicUrl(storagePath)
+            imagemUrl = pub?.publicUrl || ''
+          } else {
+            console.error('[webhook/boletim] storage upload error:', upErr.message)
+          }
+        } catch (e) {
+          console.error('[webhook/boletim] storage exception:', e.message)
+        }
+
+        // Número sequencial BOL-YYYY-XXXXXX
+        const { count } = await supabaseBol
+          .from('maquinas_boletins')
+          .select('*', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId)
+        const numero = `BOL-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(6, '0')}`
+
+        // Cria registro do boletim
+        const { data: bolRecord, error: bolErr } = await supabaseBol
+          .from('maquinas_boletins')
+          .insert({
+            workspace_id:    workspaceId,
+            colaborador_id:  colaboradorBol.id,
+            boletim_tipo_id: frente?.maquinas_boletim_tipos?.id || null,
+            wa_from:         fromPhone,
+            imagem_url:      imagemUrl,
+            numero,
+            status:          'recebido',
+          })
+          .select('id')
+          .single()
+
+        if (!bolErr && bolRecord?.id) {
+          // Dispara OCR de forma assíncrona (fire-and-forget)
+          fetch(`${APP_URL}/api/ocr-boletim-maquina`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ boletimId: bolRecord.id }),
+          }).catch(e => console.error('[webhook/boletim] ocr trigger error:', e.message))
+        } else if (bolErr) {
+          console.error('[webhook/boletim] insert error:', bolErr.message)
+        }
+
+        return res.status(200).json({ ok: true, boletim: true, numero })
+      }
+    }
+    // ── fim boletim de máquinas ─────────────────────────────────────────────
+
     // Confirma recebimento imediatamente
     if (fromPhone) {
       await zapiSendText(fromPhone, '⏳ Recebi a foto! Estou analisando o formulário com IA...')
