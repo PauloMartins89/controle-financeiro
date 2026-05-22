@@ -127,7 +127,6 @@ async function sendEmail(db, {
     }).then(null, () => {})
   }
 
-  console.log('[sendEmail SIMULADO]', { to, subject, tipo_acao })
   return { ok: true, simulado: true }
 }
 
@@ -476,11 +475,6 @@ async function handleExecute(db, body) {
     .select('*')
     .eq('id', acao_id)
     .maybeSingle()
-
-  console.error('[flow-engine execute] debug', {
-    acao_id, current_step_id: instancia.current_step_id,
-    acao_step_id: acao?.step_id, found: !!acao, acaoErr: acaoErr?.message,
-  })
 
   if (!acao) {
     return { status: 403, body: { error: 'Ação não encontrada no banco de dados' } }

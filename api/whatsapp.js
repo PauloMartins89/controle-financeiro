@@ -197,8 +197,6 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body
-    // DEBUG TEMPORÁRIO — loga tipo e campos recebidos do Z-API
-    console.log('[whatsapp] body.type=', body?.type, 'fromMe=', body?.fromMe, 'keys=', Object.keys(body || {}).join(','))
     // Z-API: ignora tudo exceto mensagens recebidas de terceiros
     if (body?.fromMe) return res.status(200).end()
     // Aceita ReceivedCallback e outros tipos que Z-API Multi Device possa enviar
