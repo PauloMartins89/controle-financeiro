@@ -1178,143 +1178,213 @@ function relTime(iso) {
   return `há ${Math.floor(h / 24)}d`
 }
 
-// ─── Seção: Dashboard ────────────────────────────────────────────────────────
-function LineChart({ series, labels, height = 150 }) {
-  const VW = 420, VH = height
-  const PAD = { t: 8, r: 8, b: 26, l: 8 }
+// ─── Seção: Dashboard ─────────────────────────────────────────────────────────
+function LineChart({ series, labels, height = 160 }) {
+  const VW = 480, VH = height
+  const PAD = { t: 12, r: 16, b: 28, l: 36 }
   const cw = VW - PAD.l - PAD.r
   const ch = VH - PAD.t - PAD.b
   const allVals = series.flatMap(s => s.data)
   const mx = Math.max(...allVals, 1)
   const n = labels.length
-  const px = i => PAD.l + (i / (n - 1)) * cw
+  const px = i => PAD.l + (i / Math.max(n - 1, 1)) * cw
   const py = v => PAD.t + ch - (v / mx) * ch
   return (
     <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" style={{ width: '100%', height, display: 'block' }}>
-      {[0.25, 0.5, 0.75, 1].map(p => (
-        <line key={p} x1={PAD.l} x2={VW - PAD.r} y1={PAD.t + ch * (1 - p)} y2={PAD.t + ch * (1 - p)} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
-      ))}
+      {[0, 0.25, 0.5, 0.75, 1].map(p => {
+        const y = PAD.t + ch * (1 - p)
+        return (
+          <g key={p}>
+            <line x1={PAD.l} x2={VW - PAD.r} y1={y} y2={y} stroke="#E5EAF2" strokeWidth={1} />
+            <text x={PAD.l - 5} y={y + 4} textAnchor="end" fontSize={9} fill="#A0AEC0" fontFamily="sans-serif">{p > 0 ? Math.round(mx * p) : '0'}</text>
+          </g>
+        )
+      })}
+      <defs>
+        {series.map((s, si) => (
+          <linearGradient key={si} id={`lg${si}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={s.color} stopOpacity="0.18" />
+            <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+          </linearGradient>
+        ))}
+      </defs>
       {series.map((s, si) => {
         const pts = s.data.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ')
         const area = `${PAD.l},${(PAD.t + ch).toFixed(1)} ${pts} ${px(n - 1).toFixed(1)},${(PAD.t + ch).toFixed(1)}`
         return (
           <g key={si}>
-            <polygon points={area} fill={s.color} opacity={0.1} />
-            <polyline points={pts} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-            {s.data.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3} fill={s.color} />)}
+            <polygon points={area} fill={`url(#lg${si})`} />
+            <polyline points={pts} fill="none" stroke={s.color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+            {s.data.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3.5} fill="white" stroke={s.color} strokeWidth={2} />)}
           </g>
         )
       })}
       {labels.map((l, i) => (
-        <text key={i} x={px(i)} y={VH - 4} textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.35)" fontFamily="sans-serif">{l.slice(5)}</text>
+        <text key={i} x={px(i)} y={VH - 5} textAnchor="middle" fontSize={9} fill="#A0AEC0" fontFamily="sans-serif">{l.slice(5)}</text>
       ))}
     </svg>
   )
 }
 
-function DonutChart({ segments }) {
-  const r = 44, cx = 60, cy = 60, sw = 16
-  const total = segments.reduce((a, s) => a + s.value, 0) || 1
-  const C = 2 * Math.PI * r
-  let offset = 0
+function HBarChart({ items, colorFn }) {
+  if (!items || items.length === 0) return <div style={{ textAlign: 'center', color: '#A0AEC0', fontSize: 12, padding: '24px 0' }}>Sem dados disponíveis</div>
+  const max = Math.max(...items.map(it => it.value), 1)
   return (
-    <svg viewBox="0 0 120 120" style={{ width: '100%', maxWidth: 130, display: 'block', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {items.map((it, i) => {
+        const pct = (it.value / max) * 100
+        const color = colorFn(i)
+        return (
+          <div key={i}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#1A2332', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{it.label}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color }}>{it.value} itens</span>
+            </div>
+            <div style={{ height: 7, borderRadius: 999, background: '#EEF2F8', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function DonutChart({ segments }) {
+  const r = 50, cx = 62, cy = 62, sw = 14
+  const tot = segments.reduce((a, s) => a + s.value, 0) || 1
+  const C = 2 * Math.PI * r
+  let off = 0
+  return (
+    <svg viewBox="0 0 124 124" style={{ width: '100%', maxWidth: 136, display: 'block', margin: '0 auto' }}>
       {segments.length === 0
-        ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw} />
+        ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E5EAF2" strokeWidth={sw} />
         : segments.map((s, i) => {
-            const pct = s.value / total
+            const pct = s.value / tot
             const dash = pct * C, gap = C - dash
-            const rot = offset * 360 - 90
-            offset += pct
+            const rot = off * 360 - 90
+            off += pct
             return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw} strokeDasharray={`${dash.toFixed(2)} ${gap.toFixed(2)}`} transform={`rotate(${rot.toFixed(1)} ${cx} ${cy})`} strokeLinecap="butt" />
           })
       }
-      <text x={cx} y={cy - 4} textAnchor="middle" fontSize={20} fontWeight={800} fill="white" fontFamily="sans-serif">{total}</text>
-      <text x={cx} y={cy + 13} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.45)" fontFamily="sans-serif">TOTAL</text>
+      <text x={cx} y={cy - 5} textAnchor="middle" fontSize={22} fontWeight={800} fill="#1A2332" fontFamily="sans-serif">{tot}</text>
+      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={8} fill="#6B7A99" fontFamily="sans-serif">TOTAL</text>
     </svg>
   )
 }
 
 function SecaoDashboard({ sols, onNav }) {
-  const { currentUser } = useStore()
+  const [dateFilter, setDateFilter] = useState('')
 
   const dash = useMemo(() => {
-    const hoje  = todayISO()
-    const now   = new Date()
+    const hoje      = dateFilter || todayISO()
+    const now       = new Date()
     const y = now.getFullYear(), mo = now.getMonth()
-    const ontemD = new Date(now); ontemD.setDate(ontemD.getDate() - 1)
+    const ontemD    = new Date(now); ontemD.setDate(ontemD.getDate() - 1)
     const ontem     = ontemD.toISOString().slice(0, 10)
     const startMes  = new Date(y, mo, 1).toISOString().slice(0, 10)
     const startMAnt = new Date(y, mo - 1, 1).toISOString().slice(0, 10)
     const endMAnt   = new Date(y, mo, 0).toISOString().slice(0, 10)
-    const last7 = Array.from({ length: 7 }, (_, i) => {
+    const last7     = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(now); d.setDate(d.getDate() - (6 - i)); return d.toISOString().slice(0, 10)
     })
 
-    const ativos     = sols.filter(s => s.status !== 'rascunho')
-    const pendentes  = ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status))
-    const aprovSts   = ativos.filter(s => s.status === 'aprovado')
-    const noRest     = ativos.filter(s => s.status === 'confirmado_restaurante')
-    const entregues  = ativos.filter(s => s.status === 'entregue')
-    const reprovados = ativos.filter(s => s.status === 'reprovado')
+    const ativos      = sols.filter(s => s.status !== 'rascunho')
+    const pendentes   = ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status))
+    const aprovSts    = ativos.filter(s => s.status === 'aprovado')
+    const emPreparo   = ativos.filter(s => ['confirmado_restaurante', 'enviado_restaurante', 'em_acompanhamento'].includes(s.status))
+    const entregues   = ativos.filter(s => s.status === 'entregue')
+    const reprovados  = ativos.filter(s => s.status === 'reprovado')
+    const divergencias = ativos.filter(s => ['aguardando_validacao', 'finalizado_com_ocorrencia'].includes(s.status))
+    const aguardEnt   = ativos.filter(s => ['aprovado', 'confirmado_restaurante', 'enviado_restaurante', 'em_acompanhamento'].includes(s.status))
 
     const hojeSols  = ativos.filter(s => s.data_refeicao === hoje)
     const ontemSols = ativos.filter(s => s.data_refeicao === ontem)
-    const sum = (arr, k) => arr.reduce((a, s) => a + (Number(s[k]) || 0), 0)
+    const sum       = (arr, k) => arr.reduce((a, s) => a + (Number(s[k]) || 0), 0)
 
     const hojeRef   = sum(hojeSols,  'total_refeicoes')
     const hojeCaf   = sum(hojeSols,  'total_cafes')
     const hojeCusto = sum(hojeSols,  'valor_total')
     const ontemRef  = sum(ontemSols, 'total_refeicoes')
     const ontemCaf  = sum(ontemSols, 'total_cafes')
-    const valorMes  = sum(ativos.filter(s => s.data_refeicao >= startMes), 'valor_total')
-    const valorMAnt = sum(ativos.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt), 'valor_total')
+
+    const mesSols   = ativos.filter(s => s.data_refeicao >= startMes)
+    const mAntSols  = ativos.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt)
+    const valorMes  = sum(mesSols, 'valor_total')
+    const valorMAnt = sum(mAntSols, 'valor_total')
+    const refMes    = sum(mesSols, 'total_refeicoes')
+    const cafMes    = sum(mesSols, 'total_cafes')
+
+    const entreguesHoje = entregues.filter(s => s.data_refeicao === hoje).length
 
     const fv = (cur, prev) => {
       if (!prev) return null
       const p = (cur - prev) / prev * 100
-      return { text: `${p >= 0 ? '↑' : '↓'} ${Math.abs(p).toFixed(0)}%`, color: p >= 0 ? '#10b981' : '#ef4444' }
+      return { text: `${p >= 0 ? '+' : ''}${p.toFixed(0)}%`, up: p >= 0 }
     }
 
     const kpis = [
-      { icon: '🍽️', label: 'Refeições hoje',   val: hojeRef,              isText: false, color: '#6366f1', varLabel: 'vs ontem', var: fv(hojeRef, ontemRef) },
-      { icon: '☕',  label: 'Cafés hoje',        val: hojeCaf,              isText: false, color: '#f59e0b', varLabel: 'vs ontem', var: fv(hojeCaf, ontemCaf) },
-      { icon: '⏳',  label: 'Pendentes',         val: pendentes.length,     isText: false, color: '#ef4444', varLabel: null, var: null },
-      { icon: '✅',  label: 'Aprovados',         val: aprovSts.length,      isText: false, color: '#10b981', varLabel: null, var: null },
-      { icon: '🚚',  label: 'No Restaurante',    val: noRest.length,        isText: false, color: '#a78bfa', varLabel: null, var: null },
-      { icon: '📦',  label: 'Entregues',         val: entregues.length,     isText: false, color: '#34d399', varLabel: null, var: null },
-      { icon: '💵',  label: 'Custo do dia',      val: fmtBRL(hojeCusto),   isText: true,  color: '#00c896', varLabel: null, var: null },
-      { icon: '📊',  label: 'Custo do mês',      val: fmtBRL(valorMes),    isText: true,  color: '#818cf8', varLabel: 'vs mês ant.', var: fv(valorMes, valorMAnt) },
+      { icon: '🍽️', label: 'Refeições hoje',     val: hojeRef,           isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem',    footer: `Mês: ${refMes} refeições` },
+      { icon: '☕',  label: 'Cafés hoje',          val: hojeCaf,           isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem',    footer: `Mês: ${cafMes} cafés` },
+      { icon: '⏳',  label: 'Pend. aprovação',     val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ✓' },
+      { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues` },
+      { icon: '🚚',  label: 'Aguard. entrega',     val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje` },
+      { icon: '⚠️',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência' },
+      { icon: '💰',  label: 'Custo previsto dia',  val: fmtBRL(hojeCusto), isText: true,  color: '#14B8A6', var: null, varLabel: null, footer: `${hojeRef + hojeCaf} itens previstos` },
+      { icon: '📊',  label: 'Custo no mês',        val: fmtBRL(valorMes),  isText: true,  color: '#6366f1', var: fv(valorMes, valorMAnt), varLabel: 'vs mês ant.', footer: valorMAnt > 0 ? `Ant.: ${fmtBRL(valorMAnt)}` : 'Sem comparativo' },
     ]
 
     const chartRef7 = last7.map(d => sum(ativos.filter(s => s.data_refeicao === d), 'total_refeicoes'))
     const chartCaf7 = last7.map(d => sum(ativos.filter(s => s.data_refeicao === d), 'total_cafes'))
 
+    const hasCDC    = ativos.some(s => s.refei_equipes?.cdc)
+    const cdcMap    = {}
+    for (const s of ativos) {
+      const key = hasCDC ? (s.refei_equipes?.cdc || 'Sem CDC') : (s.refei_equipes?.nome || 'Sem equipe')
+      if (!cdcMap[key]) cdcMap[key] = 0
+      cdcMap[key] += (s.total_refeicoes || 0) + (s.total_cafes || 0)
+    }
+    const chartCDC  = Object.entries(cdcMap).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 6)
+    const cdcLabel  = hasCDC ? 'Consumo por CDC' : 'Consumo por Equipe'
+
     const donut = [
-      { label: 'Pendentes',      value: pendentes.length,  color: '#f59e0b' },
-      { label: 'Aprovados',      value: aprovSts.length,   color: '#6366f1' },
-      { label: 'No Restaurante', value: noRest.length,     color: '#a78bfa' },
-      { label: 'Entregues',      value: entregues.length,  color: '#10b981' },
-      { label: 'Reprovados',     value: reprovados.length, color: '#ef4444' },
+      { label: 'Pend. Aprovação',  value: pendentes.length,    color: '#F59E0B' },
+      { label: 'Aprovados',        value: aprovSts.length,     color: '#4F6EF7' },
+      { label: 'Preparo/Entrega',  value: emPreparo.length,    color: '#8B5CF6' },
+      { label: 'Entregues',        value: entregues.length,    color: '#10B981' },
+      { label: 'Reprovados',       value: reprovados.length,   color: '#EF4444' },
+      { label: 'Divergências',     value: divergencias.length, color: '#F97316' },
     ].filter(d => d.value > 0)
 
     const eqMap = {}
     for (const s of ativos) {
       const nome = s.refei_equipes?.nome || 'Sem equipe'
-      if (!eqMap[nome]) eqMap[nome] = { nome, total: 0 }
+      if (!eqMap[nome]) eqMap[nome] = { nome, total: 0, valor: 0 }
       eqMap[nome].total += (s.total_refeicoes || 0) + (s.total_cafes || 0)
+      eqMap[nome].valor += Number(s.valor_total) || 0
     }
     const rankingEq = Object.values(eqMap).sort((a, b) => b.total - a.total).slice(0, 5)
+
+    const restMap = {}
+    for (const s of ativos) {
+      const nome = s.refei_restaurantes?.nome || 'Sem restaurante'
+      if (!restMap[nome]) restMap[nome] = { nome, total: 0, valor: 0, ped: 0 }
+      restMap[nome].total += (s.total_refeicoes || 0) + (s.total_cafes || 0)
+      restMap[nome].valor += Number(s.valor_total) || 0
+      restMap[nome].ped++
+    }
+    const rankingRest = Object.values(restMap).sort((a, b) => b.valor - a.valor).slice(0, 5)
 
     const painelMap = {}
     for (const s of hojeSols) {
       const nome = s.refei_restaurantes?.nome || 'Sem restaurante'
-      if (!painelMap[nome]) painelMap[nome] = { nome, ref: 0, caf: 0, pend: 0, ent: 0, valor: 0 }
+      if (!painelMap[nome]) painelMap[nome] = { nome, ref: 0, caf: 0, pend: 0, ent: 0, div: 0, valor: 0 }
       painelMap[nome].ref   += s.total_refeicoes || 0
       painelMap[nome].caf   += s.total_cafes || 0
       painelMap[nome].valor += Number(s.valor_total) || 0
       if (['pendente', 'aguardando_aprovacao'].includes(s.status)) painelMap[nome].pend++
       if (s.status === 'entregue') painelMap[nome].ent++
+      if (['aguardando_validacao', 'finalizado_com_ocorrencia'].includes(s.status)) painelMap[nome].div++
     }
     const painelHoje = Object.values(painelMap)
 
@@ -1322,171 +1392,273 @@ function SecaoDashboard({ sols, onNav }) {
     const pendLongos = pendentes.filter(s => s.criado_em && (Date.now() - new Date(s.criado_em)) > 7200000)
     if (pendLongos.length) {
       const oldest = [...pendLongos].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em))[0]
-      alertas.push({ type: 'warn', icon: '🕐', title: `${pendLongos.length} pedido${pendLongos.length > 1 ? 's' : ''} pendente${pendLongos.length > 1 ? 's' : ''} há mais de 2h`, desc: `Mais antigo: ${relTime(oldest.criado_em)}` })
+      alertas.push({ type: 'warn', icon: '🕐', title: `${pendLongos.length} solicitação${pendLongos.length > 1 ? 'ões' : ''} fora do prazo`, desc: `Aguardando aprovação há mais de 2h — mais antigo: ${relTime(oldest.criado_em)}`, action: 'Ver Aprovações', nav: () => onNav('operacoes', 'aprovacoes') })
     }
     const aprovHoje = aprovSts.filter(s => s.data_refeicao === hoje)
-    if (aprovHoje.length) alertas.push({ type: 'warn', icon: '🚚', title: `${aprovHoje.length} pedido${aprovHoje.length > 1 ? 's' : ''} aguardando confirmação do restaurante`, desc: 'Aprovados mas restaurante ainda não confirmou' })
-    if (valorMAnt > 0 && (valorMes - valorMAnt) / valorMAnt > 0.2) alertas.push({ type: 'danger', icon: '📈', title: 'Custo do mês acima do anterior', desc: `+${(((valorMes - valorMAnt) / valorMAnt) * 100).toFixed(0)}% — ${fmtBRL(valorMes)} vs ${fmtBRL(valorMAnt)}` })
+    if (aprovHoje.length) alertas.push({ type: 'warn', icon: '🚚', title: `${aprovHoje.length} entrega${aprovHoje.length > 1 ? 's' : ''} com confirmação pendente`, desc: 'Aprovados mas restaurante ainda não confirmou a entrega', action: null })
+    if (valorMAnt > 0 && (valorMes - valorMAnt) / valorMAnt > 0.15) alertas.push({ type: 'danger', icon: '📈', title: 'Custo do mês acima do período anterior', desc: `${fmtBRL(valorMes)} vs ${fmtBRL(valorMAnt)} — variação de +${(((valorMes - valorMAnt) / valorMAnt) * 100).toFixed(0)}%`, action: null })
     const reprov7 = reprovados.filter(s => s.data_refeicao >= last7[0])
-    if (reprov7.length) alertas.push({ type: 'danger', icon: '❌', title: `${reprov7.length} reprovado${reprov7.length > 1 ? 's' : ''} nos últimos 7 dias`, desc: 'Verifique os motivos de reprovação' })
+    if (reprov7.length) alertas.push({ type: 'danger', icon: '❌', title: `${reprov7.length} pedido${reprov7.length > 1 ? 's' : ''} reprovado${reprov7.length > 1 ? 's' : ''} nos últimos 7 dias`, desc: 'Verifique os motivos de reprovação no histórico', action: null })
+    if (divergencias.length) alertas.push({ type: 'warn', icon: '⚠️', title: `${divergencias.length} divergência${divergencias.length > 1 ? 's' : ''} pendente${divergencias.length > 1 ? 's' : ''}`, desc: 'Pedidos com ocorrências aguardando validação', action: null })
 
-    return { kpis, chartLabels: last7, chartRef7, chartCaf7, donut, rankingEq, painelHoje, alertas, pendentesCount: pendentes.length }
-  }, [sols])
+    return { kpis, chartLabels: last7, chartRef7, chartCaf7, chartCDC, cdcLabel, donut, rankingEq, rankingRest, painelHoje, alertas, pendentesCount: pendentes.length, hoje }
+  }, [sols, dateFilter])
 
-  const AC = { warn: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)', color: '#f59e0b' }, danger: { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', color: '#ef4444' } }
-  const EQ_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#a78bfa', '#34d399']
+  const COLORS  = ['#4F6EF7', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4', '#F97316', '#14B8A6']
+  const REST_CL = ['#14B8A6', '#8B5CF6', '#4F6EF7', '#F59E0B', '#10B981']
+  const BG = '#EEF2F8', CARD = '#FFFFFF', BORDER = '#E5EAF2'
+  const SHADOW = '0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.05)'
+  const TEXT = '#1A2332', TEXT2 = '#6B7A99', TEXT3 = '#A0AEC0'
+
+  const cardStyle = { background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: SHADOW }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ margin: '-20px -24px', background: BG, minHeight: 'calc(100% + 40px)' }}>
 
-      {/* ── Zona 1: 8 KPI mini-cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
-        {dash.kpis.map((k, i) => (
-          <div key={i} className="stat-card" style={{ padding: '14px 15px', borderRadius: 13, border: `1px solid ${k.color}20`, boxShadow: '0 2px 10px rgba(0,0,0,0.14)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, opacity: 0.75 }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-              <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4, maxWidth: '78%' }}>{k.label}</span>
-              <span style={{ fontSize: 15, background: `${k.color}18`, borderRadius: 7, padding: '3px 5px', lineHeight: 1 }}>{k.icon}</span>
+      {/* ── Module Header ─────────────────────────────────────────────────────── */}
+      <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: '18px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1 }}>Dashboard</div>
+          <div style={{ fontSize: 12, color: TEXT2, marginTop: 4 }}>Torre de Controle de Alimentação Operacional</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px' }}>
+            <CalendarDaysIcon style={{ width: 14, height: 14, color: TEXT2, flexShrink: 0 }} />
+            <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: 12, color: TEXT, outline: 'none', cursor: 'pointer', minWidth: 0 }} />
+            {dateFilter && <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1 }}>✕</button>}
+          </div>
+          <div style={{ fontSize: 11, color: TEXT3, background: '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px', whiteSpace: 'nowrap' }}>
+            {dateFilter ? `Exibindo: ${fmtData(dateFilter)}` : `Hoje: ${fmtData(todayISO())}`}
+          </div>
+          {dash.pendentesCount > 0 && (
+            <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 10, padding: '7px 14px', cursor: 'pointer', color: '#92400E', fontSize: 12, fontWeight: 700 }}>
+              ⏳ {dash.pendentesCount} pendente{dash.pendentesCount > 1 ? 's' : ''} →
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+        {/* ── KPI Row ─────────────────────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 14 }}>
+          {dash.kpis.map((k, i) => (
+            <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1.5, maxWidth: '72%' }}>{k.label}</span>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{k.icon}</div>
+              </div>
+              <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em', marginBottom: 7 }}>{k.val}</div>
+              {k.var
+                ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: k.var.up ? '#059669' : '#DC2626', background: k.var.up ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${k.var.up ? '#A7F3D0' : '#FECACA'}`, borderRadius: 999, padding: '2px 8px', marginBottom: 9 }}>
+                    {k.var.text} {k.varLabel}
+                  </div>
+                : <div style={{ height: 22, marginBottom: 1 }} />
+              }
+              <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
             </div>
-            <div style={{ fontSize: k.isText ? 15 : 26, fontWeight: 800, color: k.color, lineHeight: 1, letterSpacing: '-0.02em', marginBottom: 5 }}>{k.val}</div>
-            {k.var
-              ? <span style={{ fontSize: 10, fontWeight: 700, color: k.var.color, background: `${k.var.color}15`, borderRadius: 999, padding: '1px 7px' }}>{k.var.text} {k.varLabel}</span>
-              : <span style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: 0.5 }}>—</span>
+          ))}
+        </div>
+
+        {/* ── Charts Row ──────────────────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.3fr 1fr', gap: 14 }}>
+
+          {/* Evolução diária */}
+          <div style={{ ...cardStyle, padding: '20px 22px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Evolução diária</div>
+                <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Refeições e cafés — últimos 7 dias</div>
+              </div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <span style={{ fontSize: 11, color: '#4F6EF7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 20, height: 3, background: '#4F6EF7', borderRadius: 2, display: 'inline-block' }} />Refeições
+                </span>
+                <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ width: 20, height: 3, background: '#F59E0B', borderRadius: 2, display: 'inline-block' }} />Cafés
+                </span>
+              </div>
+            </div>
+            <LineChart series={[{ data: dash.chartRef7, color: '#4F6EF7' }, { data: dash.chartCaf7, color: '#F59E0B' }]} labels={dash.chartLabels} height={158} />
+          </div>
+
+          {/* CDC / Equipe breakdown */}
+          <div style={{ ...cardStyle, padding: '20px 22px' }}>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{dash.cdcLabel}</div>
+              <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Itens consumidos por centro</div>
+            </div>
+            <HBarChart items={dash.chartCDC} colorFn={i => COLORS[i % COLORS.length]} />
+          </div>
+
+          {/* Status donut */}
+          <div style={{ ...cardStyle, padding: '20px 22px' }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Por status</div>
+              <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Distribuição atual</div>
+            </div>
+            <DonutChart segments={dash.donut} />
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {dash.donut.map((d, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.color, display: 'inline-block', flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, color: TEXT2 }}>{d.label}</span>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: d.color }}>{d.value}</span>
+                </div>
+              ))}
+              {dash.donut.length === 0 && <div style={{ fontSize: 11, color: TEXT3, textAlign: 'center', padding: '8px 0' }}>Sem dados</div>}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Operations Row ──────────────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: 14 }}>
+
+          {/* Ranking equipes */}
+          <div style={{ ...cardStyle, padding: '20px 22px' }}>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>🏆 Top Equipes</div>
+              <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Por volume de consumo (itens)</div>
+            </div>
+            {dash.rankingEq.length === 0
+              ? <div style={{ fontSize: 12, color: TEXT3, textAlign: 'center', padding: '24px 0' }}>Sem dados suficientes</div>
+              : dash.rankingEq.map((eq, i) => {
+                  const pct   = (eq.total / (dash.rankingEq[0].total || 1)) * 100
+                  const color = COLORS[i % COLORS.length]
+                  return (
+                    <div key={i} style={{ marginBottom: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <span style={{ width: 20, height: 20, borderRadius: '50%', background: `${color}18`, color, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>{eq.nome}</span>
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 800, color }}>{eq.total}</span>
+                      </div>
+                      <div style={{ height: 5, borderRadius: 999, background: '#EEF2F8' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
+                      </div>
+                      <div style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>{fmtBRL(eq.valor)}</div>
+                    </div>
+                  )
+                })
             }
           </div>
-        ))}
-      </div>
 
-      {/* ── Zona 2: Gráfico linha + Donut ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 14 }}>
-        <div className="card" style={{ padding: '16px 18px', borderRadius: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Evolução diária — últimos 7 dias</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Refeições e cafés por data</div>
+          {/* Ranking restaurantes */}
+          <div style={{ ...cardStyle, padding: '20px 22px' }}>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>🍽️ Top Restaurantes</div>
+              <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Por valor total faturado</div>
             </div>
-            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: '#6366f1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 3, background: '#6366f1', borderRadius: 2, display: 'inline-block' }} />Refeições</span>
-              <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 3, background: '#f59e0b', borderRadius: 2, display: 'inline-block' }} />Cafés</span>
-            </div>
+            {dash.rankingRest.length === 0
+              ? <div style={{ fontSize: 12, color: TEXT3, textAlign: 'center', padding: '24px 0' }}>Sem dados suficientes</div>
+              : dash.rankingRest.map((r, i) => {
+                  const pct   = (r.valor / (dash.rankingRest[0].valor || 1)) * 100
+                  const color = REST_CL[i] || COLORS[i % COLORS.length]
+                  return (
+                    <div key={i} style={{ marginBottom: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <span style={{ width: 20, height: 20, borderRadius: '50%', background: `${color}18`, color, fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 110 }}>{r.nome}</span>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 800, color }}>{fmtBRL(r.valor)}</span>
+                      </div>
+                      <div style={{ height: 5, borderRadius: 999, background: '#EEF2F8' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
+                      </div>
+                      <div style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>{r.total} itens · {r.ped} pedido{r.ped > 1 ? 's' : ''}</div>
+                    </div>
+                  )
+                })
+            }
           </div>
-          <LineChart series={[{ data: dash.chartRef7, color: '#6366f1' }, { data: dash.chartCaf7, color: '#f59e0b' }]} labels={dash.chartLabels} height={140} />
-        </div>
 
-        <div className="card" style={{ padding: '16px', borderRadius: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Distribuição por status</div>
-          <DonutChart segments={dash.donut} />
-          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
-            {dash.donut.map((d, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.color, display: 'inline-block', flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{d.label}</span>
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: d.color }}>{d.value}</span>
+          {/* Painel operacional */}
+          <div style={{ ...cardStyle, padding: '20px 22px' }}>
+            <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>📋 Painel Operacional</div>
+                <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>{dash.hoje === todayISO() ? 'Situação de hoje' : fmtData(dash.hoje)}</div>
               </div>
-            ))}
-            {dash.donut.length === 0 && <div style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center' }}>Sem dados</div>}
+            </div>
+            {dash.painelHoje.length === 0
+              ? <div style={{ fontSize: 12, color: TEXT3, textAlign: 'center', padding: '28px 0' }}>Sem pedidos para {dash.hoje === todayISO() ? 'hoje' : fmtData(dash.hoje)}</div>
+              : <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${BORDER}` }}>
+                        {['Restaurante', '🍽️', '☕', '⏳', '📦', '⚠️', 'Valor'].map((h, i) => (
+                          <th key={i} style={{ padding: '6px 8px', textAlign: i === 0 ? 'left' : 'center', fontSize: 9, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dash.painelHoje.map((r, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${BORDER}` }}>
+                          <td style={{ padding: '9px 8px', fontWeight: 600, color: TEXT, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11 }}>{r.nome}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'center', color: '#4F6EF7', fontWeight: 700 }}>{r.ref}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'center', color: '#F59E0B', fontWeight: 700 }}>{r.caf}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.pend > 0 ? <span style={{ color: '#EF4444', fontWeight: 700 }}>{r.pend}</span> : <span style={{ color: TEXT3 }}>—</span>}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.ent > 0 ? <span style={{ color: '#10B981', fontWeight: 700 }}>{r.ent}</span> : <span style={{ color: TEXT3 }}>—</span>}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.div > 0 ? <span style={{ color: '#F97316', fontWeight: 700 }}>{r.div}</span> : <span style={{ color: TEXT3 }}>—</span>}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'right', fontWeight: 700, color: '#14B8A6', whiteSpace: 'nowrap', fontSize: 11 }}>{fmtBRL(r.valor)}</td>
+                        </tr>
+                      ))}
+                      <tr style={{ borderTop: `2px solid ${BORDER}`, background: '#F8FAFC' }}>
+                        <td style={{ padding: '9px 8px', fontWeight: 800, color: TEXT, fontSize: 11 }}>TOTAL GERAL</td>
+                        <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#4F6EF7' }}>{dash.painelHoje.reduce((a, r) => a + r.ref, 0)}</td>
+                        <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#F59E0B' }}>{dash.painelHoje.reduce((a, r) => a + r.caf, 0)}</td>
+                        <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#EF4444' }}>{dash.painelHoje.reduce((a, r) => a + r.pend, 0)}</td>
+                        <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#10B981' }}>{dash.painelHoje.reduce((a, r) => a + r.ent, 0)}</td>
+                        <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#F97316' }}>{dash.painelHoje.reduce((a, r) => a + r.div, 0)}</td>
+                        <td style={{ padding: '9px 8px', textAlign: 'right', fontWeight: 800, color: '#14B8A6', fontSize: 11 }}>{fmtBRL(dash.painelHoje.reduce((a, r) => a + r.valor, 0))}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+            }
           </div>
         </div>
-      </div>
 
-      {/* ── Zona 3: Ranking equipes + Painel do dia ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <div className="card" style={{ padding: '16px 18px', borderRadius: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>🏆 Ranking de equipes — itens consumidos</div>
-          {dash.rankingEq.length === 0
-            ? <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: '16px 0' }}>Sem dados suficientes</div>
-            : dash.rankingEq.map((eq, i) => {
-                const pct = (eq.total / (dash.rankingEq[0].total || 1)) * 100
+        {/* ── Alerts ──────────────────────────────────────────────────────────── */}
+        {dash.alertas.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+              Alertas e Exceções
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+              {dash.alertas.map((a, i) => {
+                const isWarn     = a.type === 'warn'
+                const alertColor = isWarn ? '#D97706' : '#DC2626'
+                const alertBg    = isWarn ? '#FFFBEB' : '#FFF5F5'
+                const alertBrd   = isWarn ? '#FDE68A' : '#FEE2E2'
                 return (
-                  <div key={i} style={{ marginBottom: 11 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
-                        <span style={{ color: EQ_COLORS[i], fontWeight: 800, marginRight: 6 }}>#{i + 1}</span>{eq.nome}
-                      </span>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: EQ_COLORS[i] }}>{eq.total}</span>
+                  <div key={i} style={{ background: alertBg, border: `1px solid ${alertBrd}`, borderLeft: `4px solid ${isWarn ? '#F59E0B' : '#EF4444'}`, borderRadius: 12, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                    <span style={{ fontSize: 20, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{a.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 3 }}>{a.title}</div>
+                      <div style={{ fontSize: 11, color: TEXT2, lineHeight: 1.5 }}>{a.desc}</div>
+                      {a.action && (
+                        <button onClick={a.nav} style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: alertColor, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>{a.action} →</button>
+                      )}
                     </div>
-                    <div style={{ height: 5, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: EQ_COLORS[i], borderRadius: 999 }} />
-                    </div>
+                    <span style={{ fontSize: 18, color: TEXT3, flexShrink: 0, lineHeight: 1 }}>›</span>
                   </div>
                 )
-              })
-          }
-        </div>
-
-        <div className="card" style={{ padding: '16px 18px', borderRadius: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>📅 Painel operacional — {fmtData(todayISO())}</div>
-          {dash.painelHoje.length === 0
-            ? <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: '16px 0' }}>Sem pedidos para hoje</div>
-            : <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      {['Restaurante', '🍽️', '☕', '⏳', '📦', 'Valor'].map((h, i) => (
-                        <th key={i} style={{ padding: '4px 8px', textAlign: i === 0 ? 'left' : 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dash.painelHoje.map((r, i) => (
-                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '7px 8px', fontWeight: 600, color: 'var(--text-primary)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nome}</td>
-                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#6366f1', fontWeight: 700 }}>{r.ref}</td>
-                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#f59e0b', fontWeight: 700 }}>{r.caf}</td>
-                        <td style={{ padding: '7px 8px', textAlign: 'center' }}>{r.pend > 0 ? <span style={{ color: '#ef4444', fontWeight: 700 }}>{r.pend}</span> : <span style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>—</span>}</td>
-                        <td style={{ padding: '7px 8px', textAlign: 'center' }}>{r.ent > 0 ? <span style={{ color: '#10b981', fontWeight: 700 }}>{r.ent}</span> : <span style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>—</span>}</td>
-                        <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 700, color: '#00c896', whiteSpace: 'nowrap' }}>{fmtBRL(r.valor)}</td>
-                      </tr>
-                    ))}
-                    <tr style={{ borderTop: '1px solid var(--border)' }}>
-                      <td style={{ padding: '7px 8px', fontWeight: 800, color: 'var(--text-primary)', fontSize: 11 }}>Total geral</td>
-                      <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: '#6366f1' }}>{dash.painelHoje.reduce((a, r) => a + r.ref, 0)}</td>
-                      <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: '#f59e0b' }}>{dash.painelHoje.reduce((a, r) => a + r.caf, 0)}</td>
-                      <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: '#ef4444' }}>{dash.painelHoje.reduce((a, r) => a + r.pend, 0)}</td>
-                      <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: '#10b981' }}>{dash.painelHoje.reduce((a, r) => a + r.ent, 0)}</td>
-                      <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 800, color: '#00c896' }}>{fmtBRL(dash.painelHoje.reduce((a, r) => a + r.valor, 0))}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-          }
-        </div>
-      </div>
-
-      {/* ── Alertas ── */}
-      {dash.alertas.length > 0 && (
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>⚠️ Alertas e Exceções</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
-            {dash.alertas.map((a, i) => {
-              const ac = AC[a.type] || AC.warn
-              return (
-                <div key={i} style={{ background: ac.bg, border: `1px solid ${ac.border}`, borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>{a.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: ac.color, marginBottom: 2 }}>{a.title}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{a.desc}</div>
-                  </div>
-                </div>
-              )
-            })}
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Banner pendentes ── */}
-      {dash.pendentesCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, padding: '12px 20px' }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b' }}>⏳ {dash.pendentesCount} pedido{dash.pendentesCount > 1 ? 's' : ''} aguardando aprovação</span>
-          <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ background: '#f59e0b', color: '#000', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Ver Aprovações →</button>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
-
 
 // ─── Seção: Solicitações ──────────────────────────────────────────────────────
 function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useFlowEngine }) {
