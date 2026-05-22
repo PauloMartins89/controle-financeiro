@@ -118,6 +118,12 @@ const navGroups = [
     ],
   },
   {
+    title: 'Máquinas',
+    items: [
+      { to: '/mapa-maquina', icon: TableCellsIcon, label: 'Mapa de Apontamento', moduleKey: 'lancamentos' },
+    ],
+  },
+  {
     title: 'Sistema',
     items: [
       { to: '/acessos', icon: LockClosedIcon, label: 'Acessos', moduleKey: null, empresaAdminOnly: true },
