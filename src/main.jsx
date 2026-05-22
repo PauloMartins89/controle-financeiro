@@ -21,22 +21,37 @@ if ('serviceWorker' in navigator) {
 }
 
 // Detecta novo deploy via version.json — recarrega se versão mudou
-;(function checkVersion() {
+;(function startVersionCheck() {
   const key = '__app_version__'
-  fetch('/version.json?t=' + Date.now())
-    .then(r => r.json())
-    .then(({ v }) => {
-      const saved = localStorage.getItem(key)
-      if (saved && saved !== String(v)) {
-        localStorage.setItem(key, String(v))
-        window.location.reload()
-      } else {
-        localStorage.setItem(key, String(v))
-      }
+  let timer = null
+
+  function checkVersion() {
+    // Só consulta se a aba estiver visível
+    if (document.visibilityState !== 'visible') return
+    fetch('/version.json?t=' + Date.now())
+      .then(r => r.json())
+      .then(({ v }) => {
+        const saved = localStorage.getItem(key)
+        if (saved && saved !== String(v)) {
+          localStorage.setItem(key, String(v))
+          window.location.reload()
+        } else {
+          localStorage.setItem(key, String(v))
+        }
+      })
+      .catch(() => {})
+  }
+
+  // Garante um único intervalo (15 min) mesmo após recargas do SW
+  if (!window.__versionCheckStarted) {
+    window.__versionCheckStarted = true
+    checkVersion()
+    timer = setInterval(checkVersion, 15 * 60 * 1000)
+    // Verifica imediatamente ao retornar para a aba
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkVersion()
     })
-    .catch(() => {})
-  // Verifica a cada 5 minutos
-  setInterval(checkVersion, 5 * 60 * 1000)
+  }
 })()
 
 createRoot(document.getElementById('root')).render(
