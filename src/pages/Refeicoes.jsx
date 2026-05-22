@@ -1179,7 +1179,7 @@ function relTime(iso) {
 }
 
 // ─── Seção: Dashboard ─────────────────────────────────────────────────────────
-function LineChart({ series, labels, height = 160 }) {
+function LineChart({ series, labels, height = 160, gridColor = '#E5EAF2', labelColor = '#A0AEC0' }) {
   const VW = 480, VH = height
   const PAD = { t: 12, r: 16, b: 28, l: 36 }
   const cw = VW - PAD.l - PAD.r
@@ -1195,8 +1195,8 @@ function LineChart({ series, labels, height = 160 }) {
         const y = PAD.t + ch * (1 - p)
         return (
           <g key={p}>
-            <line x1={PAD.l} x2={VW - PAD.r} y1={y} y2={y} stroke="#E5EAF2" strokeWidth={1} />
-            <text x={PAD.l - 5} y={y + 4} textAnchor="end" fontSize={9} fill="#A0AEC0" fontFamily="sans-serif">{p > 0 ? Math.round(mx * p) : '0'}</text>
+            <line x1={PAD.l} x2={VW - PAD.r} y1={y} y2={y} stroke={gridColor} strokeWidth={1} />
+            <text x={PAD.l - 5} y={y + 4} textAnchor="end" fontSize={9} fill={labelColor} fontFamily="sans-serif">{p > 0 ? Math.round(mx * p) : '0'}</text>
           </g>
         )
       })}
@@ -1220,14 +1220,14 @@ function LineChart({ series, labels, height = 160 }) {
         )
       })}
       {labels.map((l, i) => (
-        <text key={i} x={px(i)} y={VH - 5} textAnchor="middle" fontSize={9} fill="#A0AEC0" fontFamily="sans-serif">{l.slice(5)}</text>
+        <text key={i} x={px(i)} y={VH - 5} textAnchor="middle" fontSize={9} fill={labelColor} fontFamily="sans-serif">{l.slice(5)}</text>
       ))}
     </svg>
   )
 }
 
-function HBarChart({ items, colorFn }) {
-  if (!items || items.length === 0) return <div style={{ textAlign: 'center', color: '#A0AEC0', fontSize: 12, padding: '24px 0' }}>Sem dados disponíveis</div>
+function HBarChart({ items, colorFn, labelColor = '#1A2332', trackColor = '#EEF2F8' }) {
+  if (!items || items.length === 0) return <div style={{ textAlign: 'center', color: labelColor, fontSize: 12, padding: '24px 0' }}>Sem dados disponíveis</div>
   const max = Math.max(...items.map(it => it.value), 1)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1237,10 +1237,10 @@ function HBarChart({ items, colorFn }) {
         return (
           <div key={i}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#1A2332', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{it.label}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: labelColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{it.label}</span>
               <span style={{ fontSize: 12, fontWeight: 800, color }}>{it.value} itens</span>
             </div>
-            <div style={{ height: 7, borderRadius: 999, background: '#EEF2F8', overflow: 'hidden' }}>
+            <div style={{ height: 7, borderRadius: 999, background: trackColor, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
             </div>
           </div>
@@ -1250,7 +1250,7 @@ function HBarChart({ items, colorFn }) {
   )
 }
 
-function DonutChart({ segments }) {
+function DonutChart({ segments, emptyColor = '#E5EAF2', centerColor = '#1A2332', subColor = '#6B7A99' }) {
   const r = 50, cx = 62, cy = 62, sw = 14
   const tot = segments.reduce((a, s) => a + s.value, 0) || 1
   const C = 2 * Math.PI * r
@@ -1258,7 +1258,7 @@ function DonutChart({ segments }) {
   return (
     <svg viewBox="0 0 124 124" style={{ width: '100%', maxWidth: 136, display: 'block', margin: '0 auto' }}>
       {segments.length === 0
-        ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E5EAF2" strokeWidth={sw} />
+        ? <circle cx={cx} cy={cy} r={r} fill="none" stroke={emptyColor} strokeWidth={sw} />
         : segments.map((s, i) => {
             const pct = s.value / tot
             const dash = pct * C, gap = C - dash
@@ -1267,14 +1267,20 @@ function DonutChart({ segments }) {
             return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw} strokeDasharray={`${dash.toFixed(2)} ${gap.toFixed(2)}`} transform={`rotate(${rot.toFixed(1)} ${cx} ${cy})`} strokeLinecap="butt" />
           })
       }
-      <text x={cx} y={cy - 5} textAnchor="middle" fontSize={22} fontWeight={800} fill="#1A2332" fontFamily="sans-serif">{tot}</text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={8} fill="#6B7A99" fontFamily="sans-serif">TOTAL</text>
+      <text x={cx} y={cy - 5} textAnchor="middle" fontSize={22} fontWeight={800} fill={centerColor} fontFamily="sans-serif">{tot}</text>
+      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={8} fill={subColor} fontFamily="sans-serif">TOTAL</text>
     </svg>
   )
 }
 
 function SecaoDashboard({ sols, onNav }) {
   const [dateFilter, setDateFilter] = useState('')
+  const [isDark, setIsDark] = useState(() => document.documentElement.getAttribute('data-theme') !== 'light')
+  useEffect(() => {
+    const obs = new MutationObserver(() => setIsDark(document.documentElement.getAttribute('data-theme') !== 'light'))
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => obs.disconnect()
+  }, [])
 
   const dash = useMemo(() => {
     const hoje      = dateFilter || todayISO()
@@ -1409,9 +1415,15 @@ function SecaoDashboard({ sols, onNav }) {
 
   const COLORS  = ['#4F6EF7', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4', '#F97316', '#14B8A6']
   const REST_CL = ['#14B8A6', '#8B5CF6', '#4F6EF7', '#F59E0B', '#10B981']
-  const BG = '#EEF2F8', CARD = '#FFFFFF', BORDER = '#E5EAF2'
-  const SHADOW = '0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.05)'
-  const TEXT = '#1A2332', TEXT2 = '#6B7A99', TEXT3 = '#A0AEC0'
+  const BG     = isDark ? '#0d0f12'                : '#EEF2F8'
+  const CARD   = isDark ? '#1a1d22'                : '#FFFFFF'
+  const BORDER = isDark ? 'rgba(255,255,255,0.08)' : '#E5EAF2'
+  const SHADOW = isDark
+    ? '0 1px 4px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.25)'
+    : '0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.05)'
+  const TEXT   = isDark ? '#e8eaed'                : '#1A2332'
+  const TEXT2  = isDark ? '#8a9099'                : '#6B7A99'
+  const TEXT3  = isDark ? '#555d6e'                : '#A0AEC0'
 
   const cardStyle = { background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: SHADOW }
 
@@ -1425,7 +1437,7 @@ function SecaoDashboard({ sols, onNav }) {
           <div style={{ fontSize: 12, color: TEXT2, marginTop: 4 }}>Torre de Controle de Alimentação Operacional</div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: isDark ? '#1f2329' : '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px' }}>
             <CalendarDaysIcon style={{ width: 14, height: 14, color: TEXT2, flexShrink: 0 }} />
             <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: 12, color: TEXT, outline: 'none', cursor: 'pointer', minWidth: 0 }} />
             {dateFilter && <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1 }}>✕</button>}
@@ -1519,7 +1531,7 @@ function SecaoDashboard({ sols, onNav }) {
                 </span>
               </div>
             </div>
-            <LineChart series={[{ data: dash.chartRef7, color: '#4F6EF7' }, { data: dash.chartCaf7, color: '#F59E0B' }]} labels={dash.chartLabels} height={158} />
+            <LineChart series={[{ data: dash.chartRef7, color: '#4F6EF7' }, { data: dash.chartCaf7, color: '#F59E0B' }]} labels={dash.chartLabels} height={158} gridColor={BORDER} labelColor={TEXT3} />
           </div>
 
           {/* CDC / Equipe breakdown */}
@@ -1528,7 +1540,7 @@ function SecaoDashboard({ sols, onNav }) {
               <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{dash.cdcLabel}</div>
               <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Itens consumidos por centro</div>
             </div>
-            <HBarChart items={dash.chartCDC} colorFn={i => COLORS[i % COLORS.length]} />
+            <HBarChart items={dash.chartCDC} colorFn={i => COLORS[i % COLORS.length]} labelColor={TEXT} trackColor={BG} />
           </div>
 
           {/* Status donut */}
@@ -1537,7 +1549,7 @@ function SecaoDashboard({ sols, onNav }) {
               <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Por status</div>
               <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Distribuição atual</div>
             </div>
-            <DonutChart segments={dash.donut} />
+            <DonutChart segments={dash.donut} emptyColor={BORDER} centerColor={TEXT} subColor={TEXT2} />
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
               {dash.donut.map((d, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1576,7 +1588,7 @@ function SecaoDashboard({ sols, onNav }) {
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 800, color }}>{eq.total}</span>
                       </div>
-                      <div style={{ height: 5, borderRadius: 999, background: '#EEF2F8' }}>
+                      <div style={{ height: 5, borderRadius: 999, background: BG }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
                       </div>
                       <div style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>{fmtBRL(eq.valor)}</div>
@@ -1606,7 +1618,7 @@ function SecaoDashboard({ sols, onNav }) {
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 800, color }}>{fmtBRL(r.valor)}</span>
                       </div>
-                      <div style={{ height: 5, borderRadius: 999, background: '#EEF2F8' }}>
+                      <div style={{ height: 5, borderRadius: 999, background: BG }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
                       </div>
                       <div style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>{r.total} itens · {r.ped} pedido{r.ped > 1 ? 's' : ''}</div>
@@ -1647,7 +1659,7 @@ function SecaoDashboard({ sols, onNav }) {
                           <td style={{ padding: '9px 8px', textAlign: 'right', fontWeight: 700, color: '#14B8A6', whiteSpace: 'nowrap', fontSize: 11 }}>{fmtBRL(r.valor)}</td>
                         </tr>
                       ))}
-                      <tr style={{ borderTop: `2px solid ${BORDER}`, background: '#F8FAFC' }}>
+                      <tr style={{ borderTop: `2px solid ${BORDER}`, background: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC' }}>
                         <td style={{ padding: '9px 8px', fontWeight: 800, color: TEXT, fontSize: 11 }}>TOTAL GERAL</td>
                         <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#4F6EF7' }}>{dash.painelHoje.reduce((a, r) => a + r.ref, 0)}</td>
                         <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#F59E0B' }}>{dash.painelHoje.reduce((a, r) => a + r.caf, 0)}</td>
@@ -1674,8 +1686,8 @@ function SecaoDashboard({ sols, onNav }) {
               {dash.alertas.map((a, i) => {
                 const isWarn     = a.type === 'warn'
                 const alertColor = isWarn ? '#D97706' : '#DC2626'
-                const alertBg    = isWarn ? '#FFFBEB' : '#FFF5F5'
-                const alertBrd   = isWarn ? '#FDE68A' : '#FEE2E2'
+                const alertBg    = isWarn ? (isDark ? 'rgba(217,119,6,0.12)'  : '#FFFBEB') : (isDark ? 'rgba(220,38,38,0.12)'  : '#FFF5F5')
+                const alertBrd   = isWarn ? (isDark ? 'rgba(217,119,6,0.4)'   : '#FDE68A') : (isDark ? 'rgba(220,38,38,0.4)'   : '#FEE2E2')
                 return (
                   <div key={i} style={{ background: alertBg, border: `1px solid ${alertBrd}`, borderLeft: `4px solid ${isWarn ? '#F59E0B' : '#EF4444'}`, borderRadius: 12, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                     <span style={{ fontSize: 20, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{a.icon}</span>
