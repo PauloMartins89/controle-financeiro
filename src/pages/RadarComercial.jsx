@@ -505,6 +505,11 @@ function RadarPanel({ empresa, onFechar }) {
   const [contatoSelecionado, setContatoSelecionado] = useState(null)
   const [expandirIA, setExpandirIA] = useState(true)
   const [expandirTimeline, setExpandirTimeline] = useState(false)
+  const [expandirApollo, setExpandirApollo] = useState(false)
+  const [apolloContatos, setApolloContatos] = useState([])
+  const [apolloTotal, setApolloTotal] = useState(0)
+  const [buscandoApollo, setBuscandoApollo] = useState(false)
+  const [apolloErro, setApolloErro] = useState('')
 
   // Re-carregar dados locais quando CNPJ fica disponível após o mount
   const cnpjAnterior = useRef('')
@@ -586,6 +591,48 @@ function RadarPanel({ empresa, onFechar }) {
   function adicionarContato(contato) { persistir({ ...dados, contatos: [...dados.contatos, contato] }); toast.success('Contato adicionado!') }
   function adicionarAcao(acao) { persistir({ ...dados, timeline: [...dados.timeline, acao] }); toast.success('Ação registrada!') }
   function removerAcao(aid) { persistir({ ...dados, timeline: dados.timeline.filter(e => e.id !== aid) }) }
+
+  async function buscarApollo() {
+    const nomeEmpresa = cnpjData?.nome_fantasia || cnpjData?.razao_social || empresa.nome || ''
+    if (!nomeEmpresa) { toast.error('Empresa sem nome definido'); return }
+    setBuscandoApollo(true)
+    setApolloErro('')
+    setApolloContatos([])
+    const dominio = empresa.website || ''
+    try {
+      const r = await fetch('/api/apollo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresa: nomeEmpresa, dominio }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error || `Erro ${r.status}`)
+      setApolloContatos(data.contatos || [])
+      setApolloTotal(data.total || 0)
+      if (!data.contatos?.length) setApolloErro('Nenhum contato encontrado no Apollo para esta empresa.')
+    } catch (err) {
+      setApolloErro(err.message || 'Erro ao buscar no Apollo')
+    } finally {
+      setBuscandoApollo(false)
+    }
+  }
+
+  function adicionarDoApollo(ac) {
+    const jaExiste = dados.contatos.some(c => c.nome === ac.nome && c.cargo === ac.cargo)
+    if (jaExiste) { toast('Contato já adicionado', { icon: 'ℹ️' }); return }
+    adicionarContato({
+      id: uid(),
+      nome: ac.nome,
+      cargo: ac.cargo,
+      area: 'Apollo',
+      telefone: ac.telefone,
+      email: ac.email,
+      linkedin: ac.linkedin,
+      fonte: 'Apollo',
+      status: 'novo',
+      criado_em: new Date().toISOString(),
+    })
+  }
 
   const kpis = {
     decisores: dados.contatos.filter(c => scoreCargo(c.cargo || '').nivel === 'Alta').length,
@@ -719,7 +766,7 @@ function RadarPanel({ empresa, onFechar }) {
             <CheckCircleIcon style={{ width: 11, height: 11 }} /> Camada 1: CNPJ/QSA
           </div>
           <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(148,163,184,0.1)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <ClockIcon style={{ width: 11, height: 11 }} /> Camada 2: LinkedIn/Apollo (em breve)
+            <ClockIcon style={{ width: 11, height: 11 }} /> Camada 2: LinkedIn/Apollo
           </div>
           <div style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(167,139,250,0.1)', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 4 }}>
             <SparklesIcon style={{ width: 11, height: 11 }} /> Camada 3: Classificação IA
@@ -747,6 +794,125 @@ function RadarPanel({ empresa, onFechar }) {
             onSelecionar={setContatoSelecionado}
             contatoSelecionado={contatoSelecionado}
           />
+        </div>
+
+        {/* ── Camada 2: Apollo.io ── */}
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          <button onClick={() => setExpandirApollo(v => !v)}
+            style={{ width: '100%', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', borderBottom: expandirApollo ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <div style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: '#fff' }}>A</div>
+              <span style={{ fontWeight: 700, fontSize: 13 }}>Camada 2 — Apollo.io</span>
+              <span style={{ padding: '1px 7px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.12)', color: '#6366f1' }}>Enriquecimento</span>
+              {apolloContatos.length > 0 && <span style={{ fontSize: 11, color: '#a78bfa', fontWeight: 700 }}>{apolloContatos.length} encontrados</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {!buscandoApollo && !apolloContatos.length && (
+                <button onClick={e => { e.stopPropagation(); setExpandirApollo(true); buscarApollo() }}
+                  style={{ padding: '5px 12px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <MagnifyingGlassIcon style={{ width: 12, height: 12 }} /> Buscar Contatos
+                </button>
+              )}
+              {buscandoApollo && <ArrowPathIcon style={{ width: 14, height: 14, color: '#6366f1', animation: 'spin 1s linear infinite' }} />}
+              {apolloContatos.length > 0 && (
+                <button onClick={e => { e.stopPropagation(); buscarApollo() }}
+                  style={{ padding: '5px 10px', borderRadius: 7, fontSize: 10, fontWeight: 700, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <ArrowPathIcon style={{ width: 11, height: 11 }} />
+                </button>
+              )}
+              {expandirApollo ? <ChevronUpIcon style={{ width: 14, height: 14, color: 'var(--text-secondary)' }} /> : <ChevronDownIcon style={{ width: 14, height: 14, color: 'var(--text-secondary)' }} />}
+            </div>
+          </button>
+
+          {expandirApollo && (
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {/* Status / error */}
+              {apolloErro && (
+                <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)', color: '#ef4444', fontSize: 12 }}>
+                  {apolloErro}
+                  {apolloErro.includes('APOLLO_API_KEY') && (
+                    <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      Configure a variável <code style={{ background: 'rgba(99,102,241,0.1)', padding: '1px 5px', borderRadius: 4 }}>APOLLO_API_KEY</code> no Vercel. Crie sua chave gratuita em <a href="https://app.apollo.io/#/settings/integrations/api" target="_blank" rel="noreferrer" style={{ color: '#6366f1' }}>apollo.io → API key</a>.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Buscar button (quando ainda não buscou) */}
+              {!buscandoApollo && !apolloContatos.length && !apolloErro && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>Encontre decisores com nome, cargo, e-mail e LinkedIn da empresa selecionada.</div>
+                  <button onClick={buscarApollo}
+                    style={{ padding: '9px 20px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: 'linear-gradient(135deg,rgba(99,102,241,0.2),rgba(139,92,246,0.15))', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+                    <MagnifyingGlassIcon style={{ width: 14, height: 14 }} /> Buscar via Apollo
+                  </button>
+                </div>
+              )}
+
+              {/* Loading */}
+              {buscandoApollo && (
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                  <ArrowPathIcon style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} /> Consultando Apollo.io...
+                </div>
+              )}
+
+              {/* Results */}
+              {apolloContatos.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {apolloTotal > apolloContatos.length && (
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'right' }}>
+                      Exibindo {apolloContatos.length} de {apolloTotal} contatos encontrados
+                    </div>
+                  )}
+                  {apolloContatos.map((ac, i) => {
+                    const score = scoreCargo(ac.cargo || '')
+                    const jaAdicionado = dados.contatos.some(c => c.nome === ac.nome && c.cargo === ac.cargo)
+                    return (
+                      <div key={i} style={{ padding: '10px 12px', borderRadius: 9, border: `1px solid ${jaAdicionado ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`, background: jaAdicionado ? 'rgba(16,185,129,0.04)' : 'var(--bg-primary)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        {ac.foto ? (
+                          <img src={ac.foto} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border)' }} onError={e => { e.target.style.display = 'none' }} />
+                        ) : (
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                            {(ac.nome || '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{ac.nome || '—'}</span>
+                            {score.nivel !== 'Baixa' && (
+                              <span style={{ padding: '1px 6px', borderRadius: 20, fontSize: 9, fontWeight: 700, background: score.nivel === 'Alta' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)', color: score.nivel === 'Alta' ? '#10b981' : '#f59e0b' }}>
+                                {score.nivel === 'Alta' ? '🔥' : '⚡'} {score.nivel}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#6366f1', fontWeight: 600, marginTop: 2 }}>{ac.cargo}</div>
+                          <div style={{ display: 'flex', gap: 10, marginTop: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+                            {ac.email && <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}><EnvelopeIcon style={{ width: 10, height: 10 }} />{ac.email.includes('*') ? <em style={{ fontStyle: 'italic', opacity: 0.7 }}>{ac.email}</em> : ac.email}</span>}
+                            {ac.telefone && <span style={{ fontSize: 11, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 3 }}><PhoneIcon style={{ width: 10, height: 10 }} />{ac.telefone}</span>}
+                            {ac.linkedin && <a href={ac.linkedin} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: 3, textDecoration: 'none', fontWeight: 700 }}><ArrowTopRightOnSquareIcon style={{ width: 10, height: 10 }} />LinkedIn</a>}
+                            {ac.cidade && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{ac.cidade}</span>}
+                          </div>
+                        </div>
+                        <button onClick={() => adicionarDoApollo(ac)}
+                          disabled={jaAdicionado}
+                          title={jaAdicionado ? 'Já adicionado' : 'Adicionar à Camada 1'}
+                          style={{ padding: '5px 9px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: jaAdicionado ? 'rgba(16,185,129,0.12)' : 'rgba(99,102,241,0.1)', border: `1px solid ${jaAdicionado ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.25)'}`, color: jaAdicionado ? '#10b981' : '#6366f1', cursor: jaAdicionado ? 'default' : 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {jaAdicionado ? <CheckIcon style={{ width: 12, height: 12 }} /> : <PlusIcon style={{ width: 12, height: 12 }} />}
+                          {jaAdicionado ? 'Salvo' : 'Adicionar'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Legal note */}
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', gap: 5, alignItems: 'flex-start', marginTop: 2 }}>
+                <InformationCircleIcon style={{ width: 11, height: 11, flexShrink: 0, marginTop: 1 }} />
+                Dados via Apollo.io. E-mails com *** requerem crédito Apollo para revelar. Use em conformidade com a LGPD.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Painel IA */}
@@ -784,7 +950,7 @@ function RadarPanel({ empresa, onFechar }) {
         <div style={{ padding: '10px 14px', background: 'rgba(148,163,184,0.05)', border: '1px solid rgba(148,163,184,0.15)', borderRadius: 8, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           <InformationCircleIcon style={{ width: 14, height: 14, color: 'var(--text-secondary)', marginTop: 1, flexShrink: 0 }} />
           <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            Dados obtidos de fontes públicas (Receita Federal / BrasilAPI). Uso em conformidade com a LGPD. Somente dados societários públicos disponíveis na Camada 1.
+            Dados obtidos de fontes públicas (Receita Federal / BrasilAPI / Apollo.io). Uso em conformidade com a LGPD.
           </div>
         </div>
       </div>
