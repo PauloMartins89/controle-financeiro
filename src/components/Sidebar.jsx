@@ -39,6 +39,7 @@ const navGroups = [
       { to: '/prospectar/dashboard',  icon: ChartBarIcon,              label: 'Dashboard',         moduleKey: 'negocios' },
       { to: '/prospectar/buscar',     icon: MagnifyingGlassIcon,       label: 'Buscar Prospectos', moduleKey: 'negocios' },
       { to: '/prospectar/radar',      icon: SignalIcon,                label: 'Radar Comercial',   moduleKey: 'negocios' },
+      { to: '/prospectar/relacoes',    icon: UserGroupIcon,             label: 'Relações Comerciais', moduleKey: 'negocios' },
       { to: '/prospectar/contratos',  icon: DocumentTextIcon,          label: 'Contratos',         moduleKey: 'negocios' },
       { to: '/prospectar/relatorios', icon: PresentationChartLineIcon, label: 'Relatórios',        moduleKey: 'negocios' },
     ],

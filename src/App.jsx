@@ -21,6 +21,7 @@ import ProspectarDashboard from './pages/ProspectarDashboard'
 import ProspectarContratos from './pages/ProspectarContratos'
 import ProspectarRelatorios from './pages/ProspectarRelatorios'
 import RadarComercial from './pages/RadarComercial'
+import RelacoesComercias from './pages/RelacoesComercias'
 import Proventos from './pages/Proventos'
 import Importar from './pages/Importar'
 import Compras from './pages/Compras'
@@ -469,6 +470,7 @@ export default function App() {
                   <Route path="/prospectar/contratos" element={<ProspectarContratos />} />
                   <Route path="/prospectar/relatorios" element={<ProspectarRelatorios />} />
                   <Route path="/prospectar/radar" element={<RadarComercial />} />
+                  <Route path="/prospectar/relacoes" element={<RelacoesComercias />} />
                   <Route path="/proventos" element={<Proventos />} />
                   <Route path="/importar" element={<Importar />} />
                   <Route path="/escanear" element={<EscanearRecibo />} />
