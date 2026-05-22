@@ -238,6 +238,8 @@ export default function App() {
     }
 
     const load = async () => {
+      // Carrega usuário antes do batch para filtrar workspace_members corretamente
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       const [
         { data: pessoas },
         { data: grupos },
@@ -261,7 +263,9 @@ export default function App() {
         supabase.from('negocios').select('*'),
         supabase.from('proventos').select('*').order('data', { ascending: false }),
         supabase.from('closures').select('*').order('mes', { ascending: true }),
-        supabase.from('workspace_members').select('workspace_id, perfil_id, ativo, user_id').limit(10),
+        authUser?.id
+          ? supabase.from('workspace_members').select('workspace_id, perfil_id, ativo, user_id').eq('user_id', authUser.id).limit(10)
+          : Promise.resolve({ data: [] }),
       ])
       // Usa o workspace com mais módulos configurados (usuário pode ter múltiplos)
       const allWorkspaceIds = (wsMembers || []).map(m => m.workspace_id).filter(Boolean)
@@ -323,7 +327,6 @@ export default function App() {
       const cfgSaldo = configs?.find(c => c.chave === 'saldoCaixa')
       if (cfgSaldo) update.saldoCaixa = parseFloat(cfgSaldo.valor) || 0
       // Verifica se o usuário é platform admin (substitui check hardcoded de e-mail)
-      const { data: { user: authUser } } = await supabase.auth.getUser()
       if (authUser?.id) {
         const { data: adminRow } = await supabase
           .from('platform_admins')
