@@ -1228,27 +1228,6 @@ export default function AgendaServicos() {
   const [busca, setBusca] = useState('')
   const [showFiltros, setShowFiltros] = useState(false)
 
-  // ── Monitor: relógio, countdown e auto-refresh ─────────────────────────────
-  useEffect(() => {
-    if (!modoMonitor) return
-    const tick = () => {
-      const now = new Date()
-      const hh = String(now.getHours()).padStart(2, '0')
-      const mm = String(now.getMinutes()).padStart(2, '0')
-      const ss = String(now.getSeconds()).padStart(2, '0')
-      setRelogioMonitor(`${hh}:${mm}:${ss}`)
-      setContagemMonitor(c => {
-        if (c <= 1) { carregar(); return 60 }
-        return c - 1
-      })
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    const onKey = e => { if (e.key === 'Escape') setModoMonitor(false) }
-    window.addEventListener('keydown', onKey)
-    return () => { clearInterval(id); window.removeEventListener('keydown', onKey) }
-  }, [modoMonitor, carregar])
-
   const carregar = useCallback(async () => {
     setLoading(true)
     try {
@@ -1271,6 +1250,27 @@ export default function AgendaServicos() {
   }, [])
 
   useEffect(() => { carregar() }, [carregar])
+
+  // ── Monitor: relógio, countdown e auto-refresh ─────────────────────────────
+  useEffect(() => {
+    if (!modoMonitor) return
+    const tick = () => {
+      const now = new Date()
+      const hh = String(now.getHours()).padStart(2, '0')
+      const mm = String(now.getMinutes()).padStart(2, '0')
+      const ss = String(now.getSeconds()).padStart(2, '0')
+      setRelogioMonitor(`${hh}:${mm}:${ss}`)
+      setContagemMonitor(c => {
+        if (c <= 1) { carregar(); return 60 }
+        return c - 1
+      })
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    const onKey = e => { if (e.key === 'Escape') setModoMonitor(false) }
+    window.addEventListener('keydown', onKey)
+    return () => { clearInterval(id); window.removeEventListener('keydown', onKey) }
+  }, [modoMonitor, carregar])
 
   // ── Estatísticas ────────────────────────────────────────────────────────────
   const hoje = new Date().toISOString().slice(0, 10)
