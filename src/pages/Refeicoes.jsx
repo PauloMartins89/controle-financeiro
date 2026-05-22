@@ -1217,6 +1217,9 @@ function SecaoDashboard({ sols, onNav }) {
     const oldestPend  = pendentes.length ? [...pendentes].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em))[0] : null
     const totalValor  = ativos.reduce((a, s) => a + (Number(s.valor_total) || 0), 0)
 
+    const totalRefeicoes = ativos.reduce((a, s) => a + (s.total_refeicoes || 0), 0)
+    const totalCafes     = ativos.reduce((a, s) => a + (s.total_cafes     || 0), 0)
+
     const fmtVar = v => v !== null && !isNaN(v) ? { text: `${v >= 0 ? '↑' : '↓'} ${v >= 0 ? '+' : ''}${v.toFixed(1)}%`, color: v >= 0 ? '#10b981' : '#ef4444' } : null
     const compact = v => v >= 1e6 ? `R$${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `R$${(v/1e3).toFixed(1)}k` : fmtBRL(v)
     const fmtMin  = m => { if (!m) return '—'; const h = Math.floor(m / 60), r = Math.round(m % 60); return h > 0 ? `${h}h${r > 0 ? r + 'm' : ''}` : `${r}m` }
@@ -1231,7 +1234,7 @@ function SecaoDashboard({ sols, onNav }) {
         {
           label: 'Total Pedidos', main: ativos.length, sub: `${ativos.filter(s => s.data_refeicao === hoje).length} hoje`,
           color: '#6366f1', bg: 'rgba(99,102,241,0.12)', grad: 'linear-gradient(90deg,#6366f1,#818cf8)', emoji: '📋',
-          mini: [{ icon: '📅', lbl: 'esta semana', val: ativos.filter(s => s.data_refeicao >= startSem).length }, { icon: '📊', lbl: 'este mês', val: mesAtualCnt }, { icon: '📋', lbl: 'total geral', val: ativos.length }],
+          mini: [{ icon: '📋', lbl: 'pedidos', val: ativos.length }, { icon: '🍽️', lbl: 'refeições', val: totalRefeicoes }, { icon: '☕', lbl: 'cafés', val: totalCafes }],
           var: fmtVar(mesAntCnt > 0 ? (mesAtualCnt - mesAntCnt) / mesAntCnt * 100 : null),
           footer: lastPed ? [`Último: #${pedNum(lastPed)}`, relTime(lastPed.criado_em)] : null,
         },
