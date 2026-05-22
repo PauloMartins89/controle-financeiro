@@ -141,7 +141,7 @@ async function criarAgendamento(supabase, dados, gestor, origem, textoOrigem) {
     descricao: `Criado via ${origem === 'audio' ? '🎤 áudio WhatsApp' : origem === 'texto' ? '💬 mensagem de texto' : '📋 formulário público'} pelo gestor ${gestor.nome}`,
     usuario_nome:   gestor.nome,
     payload_json:   { origem, texto_original: (textoOrigem || '').slice(0, 500) },
-  }).catch(() => {}) // não bloqueia se histórico falhar
+  }).then(null, () => {}) // não bloqueia se histórico falhar
 
   return data
 }

@@ -124,7 +124,7 @@ async function sendEmail(db, {
         _simulado:  true,
         _provider:  'nenhum (Fase 1 — integre Resend para envio real)',
       },
-    }).catch(() => {})
+    }).then(null, () => {})
   }
 
   console.log('[sendEmail SIMULADO]', { to, subject, tipo_acao })
@@ -836,7 +836,7 @@ async function dispararNotificacoes(db, instancia, proximaStep, acao, dados, exe
           acao_nome:    'webhook_executado',
           origem:       'webhook',
           dados:        { url: notif.webhook_url, method: notif.webhook_method },
-        }).catch(() => {}))
+        }).then(null, () => {}))
         .catch(err => console.error('[webhook]', err?.message))
     } // fim canal webhook
 

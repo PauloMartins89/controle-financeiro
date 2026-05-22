@@ -134,7 +134,7 @@ export default async function handler(req, res) {
       motivo:           motivo || null,
       exec_status:      execResult?.status,
     },
-  }).catch(() => {}) // histórico não pode bloquear a resposta
+  }).then(null, () => {}) // histórico não pode bloquear a resposta
 
   // ── Resposta ao usuário ───────────────────────────────────────────
   if (execResult?.status < 300) {
