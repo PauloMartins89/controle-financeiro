@@ -396,18 +396,26 @@ function CadastroTab({ tipo, config, ownerId }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MAQ_SUBTABS = [
-  { key: 'classes',      label: 'Classes',      color: '#8b5cf6' },
-  { key: 'modelos',      label: 'Modelos',      color: '#3b82f6' },
-  { key: 'equipamentos', label: 'Equipamentos', color: '#10b981' },
-  { key: 'frentes',      label: 'Frentes',      color: '#f59e0b' },
+  { key: 'classes',       label: 'Classes',          color: '#8b5cf6' },
+  { key: 'modelos',       label: 'Modelos',          color: '#3b82f6' },
+  { key: 'equipamentos',  label: 'Equipamentos',     color: '#10b981' },
+  { key: 'frentes',       label: 'Frentes',          color: '#f59e0b' },
+  { key: 'colaboradores', label: 'Colaboradores',    color: '#ec4899' },
+  { key: 'boletim_tipos', label: 'Tipos de Boletim', color: '#6366f1' },
 ]
 
-function MaqModal({ subtab, item, workspaceId, classes, modelos, onClose, onSave }) {
-  const [nome,      setNome]      = useState(item?.nome      || '')
-  const [codigo,    setCodigo]    = useState(item?.codigo    || '')
-  const [classeId,  setClasseId]  = useState(item?.classe_id || '')
-  const [modeloId,  setModeloId]  = useState(item?.modelo_id || '')
-  const [saving,    setSaving]    = useState(false)
+function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boletimTipos, onClose, onSave }) {
+  const [nome,          setNome]          = useState(item?.nome           || '')
+  const [codigo,        setCodigo]        = useState(item?.codigo         || '')
+  const [classeId,      setClasseId]      = useState(item?.classe_id      || '')
+  const [modeloId,      setModeloId]      = useState(item?.modelo_id      || '')
+  const [matricula,     setMatricula]     = useState(item?.matricula      || '')
+  const [telefoneWa,    setTelefoneWa]    = useState(item?.telefone_wa    || '')
+  const [frenteId,      setFrenteId]      = useState(item?.frente_id      || '')
+  const [descricao,     setDescricao]     = useState(item?.descricao      || '')
+  const [boletimTipoId, setBoletimTipoId] = useState(item?.boletim_tipo_id || '')
+  const [imagemFile,    setImagemFile]    = useState(null)
+  const [saving,        setSaving]        = useState(false)
 
   const modelosFiltrados = classeId
     ? modelos.filter(m => m.classe_id === classeId)
@@ -433,7 +441,25 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, onClose, onSave
     } else if (subtab === 'frentes') {
       if (!nome.trim()) { toast.error('Informe o nome da frente'); return }
       table   = 'maquinas_frentes'
-      payload = { workspace_id: workspaceId, nome: nome.trim() }
+      payload = { workspace_id: workspaceId, nome: nome.trim(), boletim_tipo_id: boletimTipoId || null }
+    } else if (subtab === 'colaboradores') {
+      if (!nome.trim()) { toast.error('Informe o nome do colaborador'); return }
+      table   = 'maquinas_colaboradores'
+      payload = { workspace_id: workspaceId, nome: nome.trim(), matricula: matricula.trim() || null, telefone_wa: telefoneWa.replace(/\D/g, '') || null, frente_id: frenteId || null }
+    } else if (subtab === 'boletim_tipos') {
+      if (!nome.trim()) { toast.error('Informe o nome do tipo de boletim'); return }
+      let imagemUrl = item?.imagem_url || null
+      if (imagemFile) {
+        setSaving(true)
+        const ext  = imagemFile.name.split('.').pop()
+        const path = `templates/${workspaceId}/${Date.now()}.${ext}`
+        const { error: upErr } = await supabase.storage.from('maquinas').upload(path, imagemFile, { upsert: true })
+        if (upErr) { toast.error('Erro ao enviar imagem: ' + upErr.message); setSaving(false); return }
+        const { data: { publicUrl } } = supabase.storage.from('maquinas').getPublicUrl(path)
+        imagemUrl = publicUrl
+      }
+      table   = 'maquinas_boletim_tipos'
+      payload = { workspace_id: workspaceId, nome: nome.trim(), descricao: descricao.trim() || null, imagem_url: imagemUrl }
     }
 
     setSaving(true)
@@ -503,23 +529,124 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, onClose, onSave
             </div>
           )}
 
-          {/* Nome — para todos */}
-          <div>
-            <label style={labelStyle}>
-              {subtab === 'equipamentos' ? 'Nome / Apelido (opcional)' : 'Nome *'}
-            </label>
-            <input
-              style={{ ...inputStyle, marginTop: 4 }}
-              placeholder={
-                subtab === 'classes'      ? 'Escavadeira Hidráulica' :
-                subtab === 'modelos'      ? 'CAT 320D' :
-                subtab === 'equipamentos' ? 'Nome adicional...' :
-                'Frente A'
-              }
-              value={nome}
-              onChange={e => setNome(e.target.value)}
-            />
-          </div>
+          {/* Nome — para todos exceto boletim_tipos */}
+          {subtab !== 'boletim_tipos' && (
+            <div>
+              <label style={labelStyle}>
+                {subtab === 'equipamentos' ? 'Nome / Apelido (opcional)' : 'Nome *'}
+              </label>
+              <input
+                style={{ ...inputStyle, marginTop: 4 }}
+                placeholder={
+                  subtab === 'classes'       ? 'Escavadeira Hidráulica' :
+                  subtab === 'modelos'       ? 'CAT 320D' :
+                  subtab === 'equipamentos'  ? 'Nome adicional...' :
+                  subtab === 'frentes'       ? 'Frente Norte' :
+                  subtab === 'colaboradores' ? 'João Ferreira' :
+                  ''
+                }
+                value={nome}
+                onChange={e => setNome(e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* ── FRENTES: tipo de boletim vinculado ── */}
+          {subtab === 'frentes' && (
+            <div>
+              <label style={labelStyle}>Tipo de Boletim</label>
+              <select value={boletimTipoId} onChange={e => setBoletimTipoId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                <option value="">— Nenhum vinculado —</option>
+                {boletimTipos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+              </select>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                Define qual template de boletim esta frente utiliza
+              </div>
+            </div>
+          )}
+
+          {/* ── COLABORADORES: matrícula, telefone WA, frente ── */}
+          {subtab === 'colaboradores' && (
+            <>
+              <div>
+                <label style={labelStyle}>Matrícula</label>
+                <input style={{ ...inputStyle, marginTop: 4 }} placeholder="0042" value={matricula} onChange={e => setMatricula(e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>Telefone WhatsApp</label>
+                <input
+                  style={{ ...inputStyle, marginTop: 4 }}
+                  placeholder="5511992345678 (somente números)"
+                  value={telefoneWa}
+                  onChange={e => setTelefoneWa(e.target.value)}
+                />
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Usado para identificar o colaborador quando enviar a foto do boletim
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Frente padrão</label>
+                <select value={frenteId} onChange={e => setFrenteId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                  <option value="">— Sem frente definida —</option>
+                  {frentes.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* ── BOLETIM TIPOS: nome, descrição, imagem template ── */}
+          {subtab === 'boletim_tipos' && (
+            <>
+              <div>
+                <label style={labelStyle}>Nome do Tipo *</label>
+                <input
+                  style={{ ...inputStyle, marginTop: 4 }}
+                  placeholder="Boletim Padrão v1"
+                  value={nome}
+                  onChange={e => setNome(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Descrição</label>
+                <input
+                  style={{ ...inputStyle, marginTop: 4 }}
+                  placeholder="Formulário usado nas frentes Norte e Sul"
+                  value={descricao}
+                  onChange={e => setDescricao(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Imagem do boletim em branco (template)</label>
+                <div style={{ marginTop: 6 }}>
+                  {item?.imagem_url && !imagemFile && (
+                    <div style={{ marginBottom: 8 }}>
+                      <img src={item.imagem_url} alt="Template atual" style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 8, border: '1px solid var(--border)', objectFit: 'contain' }} />
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Template atual — envie uma nova imagem para substituir</div>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={e => setImagemFile(e.target.files[0] || null)}
+                    style={{ fontSize: 13, color: 'var(--text-primary)' }}
+                  />
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>
+                  📋 Após salvar, use "Analisar Template" para o sistema identificar os campos automaticamente
+                </div>
+              </div>
+              {item?.campos_json && (
+                <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6, color: '#6366f1' }}>✅ Template analisado — {Object.keys(item.campos_json).length} campos mapeados</div>
+                  {Object.entries(item.campos_json).map(([k, v]) => (
+                    <div key={k} style={{ color: 'var(--text-secondary)', marginBottom: 2 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{k}</span>: {v.label} ({v.tipo})
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <div style={{ padding: '12px 22px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -536,44 +663,50 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, onClose, onSave
 }
 
 function MaquinasTab({ workspaceId }) {
-  const [subAba,       setSubAba]       = useState('classes')
-  const [classes,      setClasses]      = useState([])
-  const [modelos,      setModelos]      = useState([])
-  const [equipamentos, setEquipamentos] = useState([])
-  const [frentes,      setFrentes]      = useState([])
-  const [loading,      setLoading]      = useState(true)
-  const [busca,        setBusca]        = useState('')
-  const [modal,        setModal]        = useState(null)  // null | { subtab, item? }
+  const [subAba,        setSubAba]        = useState('classes')
+  const [classes,       setClasses]       = useState([])
+  const [modelos,       setModelos]       = useState([])
+  const [equipamentos,  setEquipamentos]  = useState([])
+  const [frentes,       setFrentes]       = useState([])
+  const [colaboradores, setColaboradores] = useState([])
+  const [boletimTipos,  setBoletimTipos]  = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [busca,         setBusca]         = useState('')
+  const [modal,         setModal]         = useState(null)  // null | { subtab, item? }
 
   const load = async () => {
     if (!workspaceId) return
     setLoading(true)
-    const [cl, mo, eq, fr] = await Promise.all([
+    const [cl, mo, eq, fr, co, bt] = await Promise.all([
       supabase.from('maquinas_classes').select('*').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('maquinas_modelos').select('*').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('maquinas_equipamentos').select('*').eq('workspace_id', workspaceId).order('codigo'),
-      supabase.from('maquinas_frentes').select('*').eq('workspace_id', workspaceId).order('nome'),
+      supabase.from('maquinas_frentes').select('*, maquinas_boletim_tipos(nome)').eq('workspace_id', workspaceId).order('nome'),
+      supabase.from('maquinas_colaboradores').select('*, maquinas_frentes(nome)').eq('workspace_id', workspaceId).order('nome'),
+      supabase.from('maquinas_boletim_tipos').select('*').eq('workspace_id', workspaceId).order('nome'),
     ])
     setClasses(cl.data || [])
     setModelos(mo.data || [])
     setEquipamentos(eq.data || [])
     setFrentes(fr.data || [])
+    setColaboradores(co.data || [])
+    setBoletimTipos(bt.data || [])
     setLoading(false)
   }
 
   useEffect(() => { load() }, [workspaceId])
 
   async function toggleAtivo(subtab, item) {
-    const table = { classes: 'maquinas_classes', modelos: 'maquinas_modelos', equipamentos: 'maquinas_equipamentos', frentes: 'maquinas_frentes' }[subtab]
+    const table = { classes: 'maquinas_classes', modelos: 'maquinas_modelos', equipamentos: 'maquinas_equipamentos', frentes: 'maquinas_frentes', colaboradores: 'maquinas_colaboradores', boletim_tipos: 'maquinas_boletim_tipos' }[subtab]
     const { error } = await supabase.from(table).update({ ativo: !item.ativo }).eq('id', item.id)
     if (error) { toast.error(error.message); return }
     load()
   }
 
-  const activeList = { classes: classes, modelos: modelos, equipamentos: equipamentos, frentes: frentes }[subAba] || []
+  const activeList = { classes, modelos, equipamentos, frentes, colaboradores, boletim_tipos: boletimTipos }[subAba] || []
   const q = busca.toLowerCase()
   const filtered = activeList.filter(item => {
-    const fields = [item.nome, item.codigo].filter(Boolean).join(' ').toLowerCase()
+    const fields = [item.nome, item.codigo, item.matricula, item.telefone_wa, item.descricao].filter(Boolean).join(' ').toLowerCase()
     return fields.includes(q)
   })
   const cfg = MAQ_SUBTABS.find(s => s.key === subAba)
@@ -619,7 +752,10 @@ function MaquinasTab({ workspaceId }) {
         <span style={{ color: '#10b981', fontWeight: 700 }}>Equipamentos</span>
         <span style={{ marginLeft: 16, opacity: 0.5 }}>|</span>
         <span style={{ color: '#f59e0b', fontWeight: 700 }}>Frentes</span>
-        <span style={{ opacity: 0.7 }}>— locais de trabalho (independente)</span>
+        <span style={{ opacity: 0.5, marginLeft: 2 }}>→ template</span>
+        <span style={{ marginLeft: 16, opacity: 0.5 }}>|</span>
+        <span style={{ color: '#ec4899', fontWeight: 700 }}>Colaboradores</span>
+        <span style={{ opacity: 0.5, marginLeft: 2 }}>→ frente → template</span>
       </div>
 
       {/* Toolbar */}
@@ -672,10 +808,31 @@ function MaquinasTab({ workspaceId }) {
                 {subAba === 'equipamentos' && item.nome && (
                   <span style={{ fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 8 }}>{item.nome}</span>
                 )}
+                {subAba === 'colaboradores' && item.matricula && (
+                  <span style={{ fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 8, fontSize: 12 }}>#{item.matricula}</span>
+                )}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>
-                {subAba === 'modelos'      && classNome(item.classe_id)}
-                {subAba === 'equipamentos' && modeloNome(item.modelo_id)}
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {subAba === 'modelos'       && classNome(item.classe_id)}
+                {subAba === 'equipamentos'  && modeloNome(item.modelo_id)}
+                {subAba === 'frentes'       && item.maquinas_boletim_tipos?.nome && (
+                  <span>📋 {item.maquinas_boletim_tipos.nome}</span>
+                )}
+                {subAba === 'colaboradores' && (
+                  <>
+                    {item.telefone_wa && <span>📱 {item.telefone_wa}</span>}
+                    {item.maquinas_frentes?.nome && <span>📍 {item.maquinas_frentes.nome}</span>}
+                  </>
+                )}
+                {subAba === 'boletim_tipos' && (
+                  <>
+                    {item.descricao && <span>{item.descricao}</span>}
+                    {item.campos_json
+                      ? <span style={{ color: '#10b981' }}>✅ {Object.keys(item.campos_json).length} campos mapeados</span>
+                      : <span style={{ color: '#f59e0b' }}>⚠️ Template não analisado</span>
+                    }
+                  </>
+                )}
               </div>
             </div>
 
@@ -711,6 +868,8 @@ function MaquinasTab({ workspaceId }) {
           workspaceId={workspaceId}
           classes={classes}
           modelos={modelos}
+          frentes={frentes}
+          boletimTipos={boletimTipos}
           onClose={() => setModal(null)}
           onSave={() => { setModal(null); load() }}
         />
