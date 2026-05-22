@@ -494,7 +494,10 @@ function TimelinePanel({ eventos, onAdd, onRemove }) {
 
 // ─── Componente: Radar Panel (empresa selecionada) ────────────────────────────
 function RadarPanel({ empresa, onFechar }) {
-  const cnpj = (empresa.cnpj || '').replace(/\D/g, '')
+  const [cnpjOverride, setCnpjOverride] = useState('')
+  const [cnpjInput, setCnpjInput] = useState('')
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false)
+  const cnpj = ((empresa.cnpj || cnpjOverride || '').replace(/\D/g, ''))
   const [dados, setDados] = useState(() => getEmpresaData(cnpj))
   const [cnpjData, setCnpjData] = useState(null)
   const [carregando, setCarregando] = useState(false)
@@ -502,6 +505,31 @@ function RadarPanel({ empresa, onFechar }) {
   const [contatoSelecionado, setContatoSelecionado] = useState(null)
   const [expandirIA, setExpandirIA] = useState(true)
   const [expandirTimeline, setExpandirTimeline] = useState(false)
+
+  // Re-carregar dados locais quando CNPJ fica disponível após o mount
+  const cnpjAnterior = useRef('')
+  useEffect(() => {
+    if (cnpj && cnpj !== cnpjAnterior.current) {
+      cnpjAnterior.current = cnpj
+      setDados(getEmpresaData(cnpj))
+    }
+  }, [cnpj])
+
+  // Auto-buscar CNPJ via Serper quando empresa vem do Google Maps (sem CNPJ)
+  useEffect(() => {
+    if (empresa.cnpj || cnpjOverride) return
+    if (!empresa.nome) return
+    setBuscandoCnpj(true)
+    supabase.functions.invoke('busca-fornecedores', {
+      body: { mode: 'cnpj_search', nome: empresa.nome, cidade: empresa.cidade || '' },
+    }).then(({ data }) => {
+      const cnpjs = data?.cnpjs || []
+      if (cnpjs.length > 0) {
+        setCnpjOverride(cnpjs[0].replace(/\D/g, ''))
+        toast.success('CNPJ identificado automaticamente')
+      }
+    }).catch(() => {}).finally(() => setBuscandoCnpj(false))
+  }, [empresa])
 
   const produtos = cnpjData ? detectProdutos(cnpjData.cnae_fiscal_descricao || '') : detectProdutos(empresa.cnae || '')
 
@@ -573,7 +601,7 @@ function RadarPanel({ empresa, onFechar }) {
   const cidade = cnpjData?.municipio || empresa.cidade || ''
   const uf = cnpjData?.uf || empresa.uf || ''
   const telefone = cnpjData?.ddd_telefone_1 || empresa.telefone || ''
-  const cnaeDesc = cnpjData?.cnae_fiscal_descricao || empresa.cnae || ''
+  const cnaeDesc = cnpjData?.cnae_fiscal_descricao || empresa.cnae || empresa.categoria || ''
   const capSocial = cnpjData?.capital_social || 0
   const porte = cnpjData?.porte || ''
   const situacao = cnpjData?.descricao_situacao_cadastral || ''
@@ -623,7 +651,13 @@ function RadarPanel({ empresa, onFechar }) {
 
         {/* Info row */}
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>CNPJ: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{formatCnpj(cnpj)}</strong></div>
+          {cnpj ? (
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>CNPJ: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{formatCnpj(cnpj)}</strong></div>
+          ) : (
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+              {buscandoCnpj ? <><ArrowPathIcon style={{ width: 12, height: 12, animation: 'spin 1s linear infinite' }} /> <span>Buscando CNPJ...</span></> : <span style={{ color: '#f59e0b' }}>CNPJ não encontrado</span>}
+            </div>
+          )}
           {telefone && <a href={waLink(telefone) || '#'} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#22c55e', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}><PhoneIcon style={{ width: 12, height: 12 }} />{formatTel(telefone)}</a>}
           {capSocial > 0 && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Capital: <strong style={{ color: 'var(--text-primary)' }}>R$ {capSocial.toLocaleString('pt-BR')}</strong></div>}
           {porte && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Porte: <strong style={{ color: 'var(--text-primary)' }}>{porte}</strong></div>}
@@ -633,6 +667,27 @@ function RadarPanel({ empresa, onFechar }) {
           </div>
         </div>
       </div>
+
+      {/* CNPJ manual input banner — shown when CNPJ not yet found */}
+      {!cnpj && !buscandoCnpj && (
+        <div style={{ padding: '10px 20px', background: 'rgba(245,158,11,0.07)', borderBottom: '1px solid rgba(245,158,11,0.2)', display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+          <ExclamationCircleIcon style={{ width: 14, height: 14, color: '#f59e0b', flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1, minWidth: 160 }}>Informe o CNPJ para ativar o Radar de Decisores:</span>
+          <input
+            value={cnpjInput}
+            onChange={e => setCnpjInput(e.target.value.replace(/\D/g, '').slice(0, 14))}
+            onKeyDown={e => e.key === 'Enter' && cnpjInput.length === 14 && setCnpjOverride(cnpjInput)}
+            placeholder="CNPJ (só números)"
+            style={{ padding: '5px 9px', borderRadius: 7, border: '1px solid rgba(245,158,11,0.4)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 12, width: 150, fontFamily: 'monospace', outline: 'none' }}
+          />
+          <button
+            onClick={() => cnpjInput.length === 14 && setCnpjOverride(cnpjInput)}
+            disabled={cnpjInput.length !== 14}
+            style={{ padding: '5px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700, background: cnpjInput.length === 14 ? 'rgba(245,158,11,0.18)' : 'transparent', border: '1px solid rgba(245,158,11,0.35)', color: cnpjInput.length === 14 ? '#f59e0b' : 'var(--text-secondary)', cursor: cnpjInput.length === 14 ? 'pointer' : 'default' }}>
+            Ativar
+          </button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div style={{ display: 'flex', gap: 10, padding: '14px 20px', flexShrink: 0, overflowX: 'auto', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
@@ -747,25 +802,21 @@ function PainelBusca({ onSelecionar, empresaSelecionada }) {
   const [resultados, setResultados] = useState([])
   const [buscando, setBuscando] = useState(false)
   const [erroBusca, setErroBusca] = useState('')
-  const [pagina, setPagina] = useState(1)
 
-  async function buscar(pg = 1) {
-    if (!termo.trim() && !uf) { toast.error('Informe o termo de busca ou estado'); return }
+  async function buscar() {
+    if (!termo.trim()) { toast.error('Informe o segmento ou nome da empresa'); return }
+    if (!cidade.trim() && !uf) { toast.error('Informe cidade ou estado'); return }
     setBuscando(true)
     setErroBusca('')
-    if (pg === 1) setResultados([])
+    setResultados([])
     try {
-      const res = await fetch('/api/cnpj', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'cnpj_search', nome: termo.trim(), uf: uf || undefined, cidade: cidade.trim() || undefined }),
+      const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
+        body: { query: termo.trim(), cidade: cidade.trim() || undefined, uf: uf || undefined, prospectMode: true },
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro na busca')
-      const empresas = data.empresas || []
-      if (!empresas.length) { setErroBusca('Nenhuma empresa encontrada para os filtros informados.'); return }
-      setResultados(pg === 1 ? empresas : prev => [...prev, ...empresas])
-      setPagina(pg)
+      if (error) throw new Error(error.message || 'Erro ao buscar')
+      const lista = data?.fornecedores || []
+      if (!lista.length) { setErroBusca('Nenhuma empresa encontrada. Tente outro segmento ou cidade.'); return }
+      setResultados(lista)
     } catch (err) {
       setErroBusca(err.message || 'Erro ao buscar empresas.')
     } finally {
@@ -825,32 +876,28 @@ function PainelBusca({ onSelecionar, empresaSelecionada }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
           {resultados.map(emp => {
             if (!emp) return null
-            const selecionada = empresaSelecionada?.cnpj === emp.cnpj
-            const radar = getEmpresaData((emp.cnpj || '').replace(/\D/g, ''))
-            const temDados = radar.contatos.length > 0 || radar.timeline.length > 0
-            const pipe = PIPELINE_STATUS.find(p => p.id === radar.pipeline)
-
+            const selecionada = empresaSelecionada?.nome === emp.nome
             return (
-              <div key={emp.cnpj}
+              <div key={emp.id || emp.nome}
                 onClick={() => onSelecionar(selecionada ? null : emp)}
                 style={{ padding: '11px 12px', borderRadius: 10, border: `1.5px solid ${selecionada ? '#6366f1' : 'var(--border)'}`, background: selecionada ? 'rgba(99,102,241,0.06)' : 'var(--bg-primary)', cursor: 'pointer', position: 'relative', transition: 'border-color 0.15s, background 0.15s' }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                   <div style={{ width: 36, height: 36, borderRadius: 9, background: selecionada ? 'rgba(99,102,241,0.15)' : 'var(--bg-secondary)', border: `1px solid ${selecionada ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900, color: selecionada ? '#6366f1' : 'var(--text-secondary)', flexShrink: 0 }}>
-                    {(emp.nome_fantasia || emp.razao_social || '?').charAt(0).toUpperCase()}
+                    {(emp.nome || '?').charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {emp.nome_fantasia || emp.razao_social}
+                      {emp.nome}
                     </div>
-                    {emp.cnae_fiscal_descricao && (
+                    {emp.categoria && (
                       <div style={{ fontSize: 10, color: '#6366f1', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
-                        {emp.cnae_fiscal_descricao.length > 40 ? emp.cnae_fiscal_descricao.slice(0, 40) + '…' : emp.cnae_fiscal_descricao}
+                        {emp.categoria.length > 40 ? emp.categoria.slice(0, 40) + '…' : emp.categoria}
                       </div>
                     )}
                     <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                      {(emp.municipio || emp.uf) && <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 2 }}><MapPinIcon style={{ width: 9, height: 9 }} />{emp.municipio}{emp.uf ? `/${emp.uf}` : ''}</span>}
-                      {pipe && pipe.id !== 'novo' && <span style={{ padding: '1px 6px', borderRadius: 20, fontSize: 9, fontWeight: 700, background: pipe.bg, color: pipe.cor }}>{pipe.label}</span>}
-                      {temDados && <span style={{ fontSize: 9, color: '#10b981', fontWeight: 700 }}>✓ Radar</span>}
+                      {emp.endereco && <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 2 }}><MapPinIcon style={{ width: 9, height: 9 }} />{emp.endereco.split(',').slice(-3, -1).join(',').trim() || emp.endereco}</span>}
+                      {emp.rating && <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700 }}>★ {emp.rating.toFixed(1)}</span>}
+                      {emp.telefone && <span style={{ fontSize: 10, color: '#22c55e', fontWeight: 600 }}>{emp.telefone}</span>}
                     </div>
                   </div>
                   <ChevronRightIcon style={{ width: 14, height: 14, color: selecionada ? '#6366f1' : 'var(--text-secondary)', flexShrink: 0, marginTop: 2 }} />
@@ -860,10 +907,10 @@ function PainelBusca({ onSelecionar, empresaSelecionada }) {
           })}
         </div>
 
-        {resultados.length > 0 && resultados.length >= 8 && (
-          <button onClick={() => buscar(pagina + 1)} disabled={buscando}
+        {resultados.length > 0 && resultados.length >= 15 && (
+          <button onClick={() => buscar()} disabled={buscando}
             style={{ width: '100%', marginTop: 10, padding: '9px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: 'transparent', border: '1px dashed var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-            Ver mais
+            Refinar busca para mais resultados
           </button>
         )}
       </div>
