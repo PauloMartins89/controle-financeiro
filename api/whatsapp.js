@@ -1,6 +1,7 @@
 ﻿import Groq from 'groq-sdk'
 import { createClient } from '@supabase/supabase-js'
 import { runOCR } from './_ocr.js'
+import { handleAgendaWA } from './_agenda-wa.js'
 import ws from 'ws'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
@@ -229,6 +230,27 @@ export default async function handler(req, res) {
     }
 
     const from = message.from
+
+    // ── Gestores de Agenda: verificar antes de qualquer processamento financeiro ──
+    if (from) {
+      const dbAg = getDb()
+      if (dbAg) {
+        const fromNorm = from.replace(/\D/g, '')
+        const sem55    = fromNorm.replace(/^55/, '')
+        const com9     = sem55.length === 10 ? sem55.slice(0,2) + '9' + sem55.slice(2) : sem55
+        const sem9     = sem55.length === 11 && sem55[2] === '9' ? sem55.slice(0,2) + sem55.slice(3) : sem55
+        const variants  = [...new Set([fromNorm, sem55, '55'+sem55, '55'+com9, com9, '55'+sem9, sem9].filter(Boolean))]
+        const consumed = await handleAgendaWA(
+          body,
+          from,
+          variants,
+          sendWA,
+          dbAg
+        ).catch(e => { console.error('[whatsapp] agenda handler error:', e.message); return false })
+        if (consumed) return res.status(200).json({ ok: true, agenda: true })
+      }
+    }
+
     const today = new Date().toISOString().slice(0, 10)
     let text = ''
     let textoOriginal = ''
