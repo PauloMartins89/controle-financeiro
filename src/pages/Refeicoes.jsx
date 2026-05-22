@@ -1714,6 +1714,115 @@ function SecaoDashboard({ sols, onNav }) {
 }
 
 // ─── Seção: Solicitações ──────────────────────────────────────────────────────
+function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
+  const [form,    setForm]    = useState({ equipe_id: '', restaurante_id: '', data_refeicao: todayISO(), total_refeicoes: '', total_cafes: '', observacoes: '' })
+  const [equipes, setEquipes] = useState([])
+  const [rests,   setRests]   = useState([])
+  const [saving,  setSaving]  = useState(false)
+
+  useEffect(() => {
+    if (!workspaceId) return
+    supabase.from('refei_equipes').select('id,nome,cdc,lider_nome,supervisor_nome,supervisor_telefone').eq('workspace_id', workspaceId).eq('ativo', true).order('nome')
+      .then(({ data }) => setEquipes(data || []))
+    supabase.from('refei_restaurantes').select('id,nome,valor_refeicao,valor_cafe').eq('workspace_id', workspaceId).eq('ativo', true).order('nome')
+      .then(({ data }) => setRests(data || []))
+  }, [workspaceId])
+
+  const eq  = equipes.find(e => e.id === form.equipe_id)
+  const rst = rests.find(r => r.id === form.restaurante_id)
+  const nRef = Number(form.total_refeicoes) || 0
+  const nCaf = Number(form.total_cafes)     || 0
+  const valorTotal = (rst ? (nRef * (rst.valor_refeicao || 0)) + (nCaf * (rst.valor_cafe || 0)) : 0)
+
+  function f(k, v) { setForm(p => ({ ...p, [k]: v })) }
+
+  async function salvar() {
+    if (!form.equipe_id)       { toast.error('Selecione a equipe'); return }
+    if (!form.restaurante_id)  { toast.error('Selecione o restaurante'); return }
+    if (!form.data_refeicao)   { toast.error('Informe a data'); return }
+    if (nRef + nCaf === 0)     { toast.error('Informe ao menos 1 refeição ou café'); return }
+    setSaving(true)
+    try {
+      const payload = {
+        workspace_id:      workspaceId,
+        owner_id:          ownerId,
+        equipe_id:         form.equipe_id,
+        restaurante_id:    form.restaurante_id,
+        data_refeicao:     form.data_refeicao,
+        total_refeicoes:   nRef,
+        total_cafes:       nCaf,
+        valor_total:       valorTotal,
+        observacoes:       form.observacoes || null,
+        status:            'pendente',
+        lider_nome:        eq?.lider_nome          || null,
+        supervisor_nome:   eq?.supervisor_nome      || null,
+        supervisor_telefone: eq?.supervisor_telefone || null,
+        origem:            'manual',
+      }
+      const { error } = await supabase.from('refei_solicitacoes').insert(payload)
+      if (error) throw new Error(error.message)
+      toast.success('Solicitação criada!')
+      onSaved()
+      onClose()
+    } catch (err) { toast.error(err.message || 'Erro ao salvar') }
+    setSaving(false)
+  }
+
+  return (
+    <Modal title="Nova Solicitação de Refeição" onClose={onClose} maxWidth={560}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={lbl}>Equipe *</label>
+            <select className="input" style={{ fontSize: 13 }} value={form.equipe_id} onChange={e => f('equipe_id', e.target.value)}>
+              <option value="">Selecione a equipe...</option>
+              {equipes.map(e => <option key={e.id} value={e.id}>{e.nome}{e.cdc ? ` (CDC ${e.cdc})` : ''}</option>)}
+            </select>
+            {eq && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Líder: {eq.lider_nome || '—'} · Supervisor: {eq.supervisor_nome || '—'}</div>}
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={lbl}>Restaurante *</label>
+            <select className="input" style={{ fontSize: 13 }} value={form.restaurante_id} onChange={e => f('restaurante_id', e.target.value)}>
+              <option value="">Selecione o restaurante...</option>
+              {rests.map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
+            </select>
+            {rst && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Refeição: {fmtBRL(rst.valor_refeicao)} · Café: {fmtBRL(rst.valor_cafe)}</div>}
+          </div>
+          <div>
+            <label style={lbl}>Data da Refeição *</label>
+            <input type="date" className="input" style={{ fontSize: 13 }} value={form.data_refeicao} onChange={e => f('data_refeicao', e.target.value)} />
+          </div>
+          <div />
+          <div>
+            <label style={lbl}>🍽️ Qtd. Refeições</label>
+            <input type="number" min="0" className="input" style={{ fontSize: 13 }} placeholder="0" value={form.total_refeicoes} onChange={e => f('total_refeicoes', e.target.value)} />
+          </div>
+          <div>
+            <label style={lbl}>☕ Qtd. Cafés</label>
+            <input type="number" min="0" className="input" style={{ fontSize: 13 }} placeholder="0" value={form.total_cafes} onChange={e => f('total_cafes', e.target.value)} />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={lbl}>Observações</label>
+            <textarea className="input" rows={2} style={{ resize: 'vertical', fontSize: 13 }} placeholder="Opcional..." value={form.observacoes} onChange={e => f('observacoes', e.target.value)} />
+          </div>
+        </div>
+        {(nRef + nCaf > 0 && rst) && (
+          <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{nRef} refeição(ões) + {nCaf} café(s)</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#10b981' }}>{fmtBRL(valorTotal)}</span>
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 4 }}>
+          <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Cancelar</button>
+          <button onClick={salvar} disabled={saving} className="btn-primary" style={{ padding: '9px 20px', fontSize: 13 }}>
+            {saving ? 'Salvando...' : '✅ Criar Solicitação'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useFlowEngine }) {
   const [busca,        setBusca]        = useState('')
   const [filtroStatus, setFiltroStatus] = useState('todos')
@@ -1721,6 +1830,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
   const [collapsed,    setCollapsed]    = useState({})
   const [detailSol,    setDetailSol]    = useState(null)
   const [sendingLembrete, setSendingLembrete] = useState(null)
+  const [showNova,     setShowNova]     = useState(false)
 
   const filtered = useMemo(() => {
     let list = sols.filter(s => s.status !== 'rascunho')
@@ -1771,6 +1881,9 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
             )
           })}
         </div>
+        <button onClick={() => setShowNova(true)} className="btn-primary" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, whiteSpace: 'nowrap' }}>
+          <PlusIcon style={{ width: 15, height: 15 }} /> Nova Solicitação
+        </button>
       </div>
 
       {loading && <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 48 }}>Carregando...</div>}
@@ -1834,6 +1947,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
         )
       })}
       {detailSol && <DetailModal sol={detailSol} onClose={() => setDetailSol(null)} onUpdated={onReload} useFlowEngine={useFlowEngine} userId={ownerId} workspaceId={workspaceId} />}
+      {showNova  && <ModalNovaSolicitacao workspaceId={workspaceId} ownerId={ownerId} onClose={() => setShowNova(false)} onSaved={onReload} />}
     </div>
   )
 }
