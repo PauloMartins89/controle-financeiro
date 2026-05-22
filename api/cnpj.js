@@ -142,13 +142,23 @@ export default async function handler(req, res) {
       if (!r.ok) throw new Error(`Casa dos Dados retornou ${r.status}`)
 
       const data = await r.json()
-      const cnpjs = (data.data?.cnpj || []).map(item => {
+      const empresas = (data.data?.cnpj || []).map(item => {
         const c = (item.cnpj || '').replace(/\D/g, '')
         if (c.length !== 14) return null
-        return `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`
+        const cnpjFmt = `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`
+        return {
+          cnpj:                   cnpjFmt,
+          razao_social:           item.razao_social || '',
+          nome_fantasia:          item.nome_fantasia || '',
+          municipio:              item.municipio    || '',
+          uf:                     item.uf           || '',
+          cnae_fiscal_descricao:  item.cnae_fiscal_descricao || '',
+          ddd_telefone_1:         item.ddd_telefone_1 || item.telefone || '',
+          situacao_cadastral:     item.situacao_cadastral || 'ATIVA',
+        }
       }).filter(Boolean)
 
-      return res.status(200).json({ cnpjs })
+      return res.status(200).json({ empresas })
     } catch (err) {
       return res.status(500).json({ error: err.message })
     }

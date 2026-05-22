@@ -762,15 +762,8 @@ function PainelBusca({ onSelecionar, empresaSelecionada }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro na busca')
-      const cnpjs = data.cnpjs || []
-      if (!cnpjs.length) { setErroBusca('Nenhuma empresa encontrada para os filtros informados.'); return }
-
-      // Buscar detalhes de até 8 CNPJs em paralelo (limitado)
-      const lote = cnpjs.slice(0, 8)
-      const detalhes = await Promise.allSettled(
-        lote.map(c => fetch(`/api/cnpj?cnpj=${c.replace(/\D/g, '')}`).then(r => r.ok ? r.json() : null))
-      )
-      const empresas = detalhes.map(r => r.status === 'fulfilled' ? r.value : null).filter(Boolean)
+      const empresas = data.empresas || []
+      if (!empresas.length) { setErroBusca('Nenhuma empresa encontrada para os filtros informados.'); return }
       setResultados(pg === 1 ? empresas : prev => [...prev, ...empresas])
       setPagina(pg)
     } catch (err) {
