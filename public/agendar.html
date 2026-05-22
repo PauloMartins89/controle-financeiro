@@ -239,9 +239,9 @@ function showToast(msg, type = 'error') {
   el._t = setTimeout(() => { el.className = 'toast' }, 3200)
 }
 
-// Token vem via /ag/:token → agendar.html?token=:token
-const params = new URLSearchParams(location.search)
-const token  = params.get('token')
+// Suporta tanto /ag/<token> (rewrite Vercel) quanto ?token=<token>
+const _pathParts = location.pathname.split('/')
+const token = _pathParts[_pathParts.length - 1] || new URLSearchParams(location.search).get('token') || null
 
 const TIPOS = [
   'Caminhão Prancha','Caminhão Munck','Guindaste','Caminhão Basculante',
