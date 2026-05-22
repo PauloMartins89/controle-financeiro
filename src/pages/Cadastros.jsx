@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import Header from '../components/Header'
@@ -882,7 +883,8 @@ function MaquinasTab({ workspaceId }) {
 // Página principal
 // ─────────────────────────────────────────────────────────────────────────────
 export default function Cadastros() {
-  const [aba, setAba] = useState('clientes')
+  const [searchParams] = useSearchParams()
+  const [aba, setAba] = useState(() => searchParams.get('aba') || 'clientes')
   const { currentUser, workspaceId } = useStore()
   const ownerId = currentUser?.owner_id || currentUser?.id
 
