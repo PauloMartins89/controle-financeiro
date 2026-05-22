@@ -115,8 +115,13 @@ function buildMessage(status, dados, motivo, gestorNome) {
 }
 
 export default async function handler(req, res) {
-  // GET ?lancamentoId=xxx&status=faturado  → diagnóstico sem envio
+  // GET ?lancamentoId=xxx&status=faturado  → diagnóstico sem envio (requer service key)
   if (req.method === 'GET') {
+    const authHeader = req.headers.authorization || ''
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    if (!token || token !== process.env.SUPABASE_SERVICE_KEY) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
     const { lancamentoId, status } = req.query || {}
     if (!lancamentoId || !status) {
       return res.status(400).json({ error: 'lancamentoId e status são obrigatórios' })
