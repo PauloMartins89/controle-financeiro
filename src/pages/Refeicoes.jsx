@@ -1150,48 +1150,189 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
   )
 }
 
+// ─── Sparkline ────────────────────────────────────────────────────────────────
+function Sparkline({ data, color = '#6366f1', width = 80, height = 28 }) {
+  if (!data || data.length < 2) return null
+  const max = Math.max(...data, 1)
+  const min = Math.min(...data, 0)
+  const range = max - min || 1
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width
+    const y = height - ((v - min) / range) * (height - 4) - 2
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  return (
+    <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" opacity={0.8} />
+    </svg>
+  )
+}
+
+function relTime(iso) {
+  if (!iso) return '—'
+  const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (mins < 1) return 'agora'
+  if (mins < 60) return `há ${mins}min`
+  const h = Math.floor(mins / 60), m = mins % 60
+  if (h < 24) return m > 0 ? `há ${h}h${m}m` : `há ${h}h`
+  return `há ${Math.floor(h / 24)}d`
+}
+
 // ─── Seção: Dashboard ────────────────────────────────────────────────────────
 function SecaoDashboard({ sols, onNav }) {
+  const { currentUser } = useStore()
+
   const stats = useMemo(() => {
-    const ativos = sols.filter(s => s.status !== 'rascunho')
-    const hoje   = ativos.filter(s => s.data_refeicao === todayISO())
+    const hoje      = todayISO()
+    const now       = new Date()
+    const y         = now.getFullYear(), mo = now.getMonth()
+    const startMes  = new Date(y, mo, 1).toISOString().slice(0, 10)
+    const startMAnt = new Date(y, mo - 1, 1).toISOString().slice(0, 10)
+    const endMAnt   = new Date(y, mo, 0).toISOString().slice(0, 10)
+    const startTrim = new Date(y, Math.floor(mo / 3) * 3, 1).toISOString().slice(0, 10)
+    const startAno  = `${y}-01-01`
+    const dow       = now.getDay() === 0 ? 6 : now.getDay() - 1
+    const startSem  = new Date(y, mo, now.getDate() - dow).toISOString().slice(0, 10)
+    const last7     = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now); d.setDate(d.getDate() - (6 - i)); return d.toISOString().slice(0, 10)
+    })
+
+    const ativos    = sols.filter(s => s.status !== 'rascunho')
+    const pendentes = ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status))
+    const aprovados = ativos.filter(s => !['pendente', 'aguardando_aprovacao', 'reprovado', 'rascunho'].includes(s.status))
+
+    const mesAtualCnt = ativos.filter(s => s.data_refeicao >= startMes).length
+    const mesAntCnt   = ativos.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt).length
+    const mesAprov    = aprovados.filter(s => s.data_refeicao >= startMes).length
+    const mesAntAprov = aprovados.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt).length
+    const valorMes    = ativos.filter(s => s.data_refeicao >= startMes).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)
+    const valorMAnt   = ativos.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)
+
+    const comAprov    = ativos.filter(s => s.aprovado_em && s.criado_em)
+    const avgMin      = comAprov.length ? comAprov.reduce((a, s) => a + (new Date(s.aprovado_em) - new Date(s.criado_em)) / 60000, 0) / comAprov.length : null
+
+    const minhasSols  = pendentes.filter(s => currentUser?.nome && (s.lider_nome || '').toLowerCase().includes(currentUser.nome.toLowerCase())).length
+    const lastPed     = ativos.length ? [...ativos].sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em))[0] : null
+    const lastAprov   = aprovados.filter(s => s.aprovado_em).sort((a, b) => new Date(b.aprovado_em) - new Date(a.aprovado_em))[0] || null
+    const oldestPend  = pendentes.length ? [...pendentes].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em))[0] : null
+    const totalValor  = ativos.reduce((a, s) => a + (Number(s.valor_total) || 0), 0)
+
+    const fmtVar = v => v !== null && !isNaN(v) ? { text: `${v >= 0 ? '↑' : '↓'} ${v >= 0 ? '+' : ''}${v.toFixed(1)}%`, color: v >= 0 ? '#10b981' : '#ef4444' } : null
+    const compact = v => v >= 1e6 ? `R$${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `R$${(v/1e3).toFixed(1)}k` : fmtBRL(v)
+    const fmtMin  = m => { if (!m) return '—'; const h = Math.floor(m / 60), r = Math.round(m % 60); return h > 0 ? `${h}h${r > 0 ? r + 'm' : ''}` : `${r}m` }
+    const pedNum  = s => s?.numero_pedido?.split('-').pop() || '—'
+
     return {
-      total:     ativos.length,
-      hoje:      hoje.length,
-      pendentes: ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status)).length,
-      aprovados: ativos.filter(s => s.status === 'aprovado').length,
-      valor:     ativos.reduce((acc, s) => acc + (Number(s.valor_total) || 0), 0),
+      spark1: last7.map(d => ativos.filter(s => s.data_refeicao === d).length),
+      spark2: last7.map(d => pendentes.filter(s => (s.criado_em || '').slice(0, 10) === d).length),
+      spark3: last7.map(d => aprovados.filter(s => s.data_refeicao === d).length),
+      spark4: last7.map(d => ativos.filter(s => s.data_refeicao === d).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)),
+      cards: [
+        {
+          label: 'Total Pedidos', main: ativos.length, sub: `${ativos.filter(s => s.data_refeicao === hoje).length} hoje`,
+          color: '#6366f1', bg: 'rgba(99,102,241,0.12)', grad: 'linear-gradient(90deg,#6366f1,#818cf8)', emoji: '📋',
+          mini: [{ icon: '📅', lbl: 'esta semana', val: ativos.filter(s => s.data_refeicao >= startSem).length }, { icon: '📊', lbl: 'este mês', val: mesAtualCnt }, { icon: '📋', lbl: 'total geral', val: ativos.length }],
+          var: fmtVar(mesAntCnt > 0 ? (mesAtualCnt - mesAntCnt) / mesAntCnt * 100 : null),
+          footer: lastPed ? [`Último: #${pedNum(lastPed)}`, relTime(lastPed.criado_em)] : null,
+        },
+        {
+          label: 'Pendentes', main: pendentes.length, sub: 'aguardando aprovação',
+          color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', grad: 'linear-gradient(90deg,#f59e0b,#fbbf24)', emoji: '⏳',
+          mini: [{ icon: '⏰', lbl: 'aguard. liberação', val: pendentes.length }, { icon: '👤', lbl: 'minhas sol.', val: minhasSols }, { icon: '👥', lbl: 'de terceiros', val: pendentes.length - minhasSols }],
+          tempoMedio: avgMin ? fmtMin(avgMin) : null,
+          footer: oldestPend ? [`Mais antigo: #${pedNum(oldestPend)}`, relTime(oldestPend.criado_em)] : null,
+        },
+        {
+          label: 'Aprovados', main: aprovados.length, sub: 'confirmados',
+          color: '#10b981', bg: 'rgba(16,185,129,0.12)', grad: 'linear-gradient(90deg,#10b981,#34d399)', emoji: '✅',
+          mini: [{ icon: '📅', lbl: 'neste mês', val: mesAprov }, { icon: '📊', lbl: 'este trimestre', val: aprovados.filter(s => s.data_refeicao >= startTrim).length }, { icon: '📈', lbl: 'este ano', val: aprovados.filter(s => s.data_refeicao >= startAno).length }],
+          var: fmtVar(mesAntAprov > 0 ? (mesAprov - mesAntAprov) / mesAntAprov * 100 : null),
+          footer: lastAprov ? [`Último aprov.: #${pedNum(lastAprov)}`, relTime(lastAprov.aprovado_em)] : null,
+        },
+        {
+          label: 'Valor Total', main: fmtBRL(totalValor), sub: 'todos os pedidos', isText: true,
+          color: '#00c896', bg: 'rgba(0,200,150,0.12)', grad: 'linear-gradient(90deg,#00c896,#00a87a)', emoji: '💰',
+          mini: [{ icon: '💵', lbl: 'este mês', val: compact(valorMes) }, { icon: '📊', lbl: 'este trimestre', val: compact(ativos.filter(s => s.data_refeicao >= startTrim).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)) }, { icon: '📈', lbl: 'este ano', val: compact(ativos.filter(s => s.data_refeicao >= startAno).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)) }],
+          var: fmtVar(valorMAnt > 0 ? (valorMes - valorMAnt) / valorMAnt * 100 : null),
+          footer: ativos.length ? [`Média por pedido`, fmtBRL(totalValor / ativos.length)] : null,
+        },
+      ],
+      pendentesCount: pendentes.length,
     }
-  }, [sols])
+  }, [sols, currentUser])
 
   const recentes = useMemo(() => sols.filter(s => s.status !== 'rascunho').slice(0, 8), [sols])
+  const sparks   = [stats.spark1, stats.spark2, stats.spark3, stats.spark4]
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 16, marginBottom: 24 }}>
-        {[
-          { label: 'Total Pedidos', value: stats.total,     sub: `${stats.hoje} hoje`,          color: '#6366f1', bg: 'rgba(99,102,241,0.12)',  emoji: '📋', grad: 'linear-gradient(90deg,#6366f1,#818cf8)' },
-          { label: 'Pendentes',     value: stats.pendentes, sub: 'aguardando aprovação',         color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  emoji: '⏳', grad: 'linear-gradient(90deg,#f59e0b,#fbbf24)' },
-          { label: 'Aprovados',     value: stats.aprovados, sub: 'confirmados',                  color: '#10b981', bg: 'rgba(16,185,129,0.12)',  emoji: '✅', grad: 'linear-gradient(90deg,#10b981,#34d399)' },
-          { label: 'Valor Total',   value: fmtBRL(stats.valor), sub: 'todos os pedidos',        color: '#00c896', bg: 'rgba(0,200,150,0.12)',   emoji: '💰', grad: 'linear-gradient(90deg,#00c896,#00a87a)', isText: true },
-        ].map((c, i) => (
-          <div key={i} className="stat-card">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 24 }}>
+        {stats.cards.map((c, i) => (
+          <div key={i} className="stat-card" style={{ position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: c.grad, borderRadius: '16px 16px 0 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>{c.label}</div>
-                <div style={{ fontSize: c.isText ? 20 : 28, fontWeight: 800, color: c.color, lineHeight: 1 }}>{c.value}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 5 }}>{c.sub}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{c.label}</div>
+                <div style={{ fontSize: c.isText ? 19 : 28, fontWeight: 800, color: c.color, lineHeight: 1 }}>{c.main}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{c.sub}</div>
               </div>
-              <div style={{ width: 42, height: 42, borderRadius: 12, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{c.emoji}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{c.emoji}</div>
+                <Sparkline data={sparks[i]} color={c.color} width={70} height={26} />
+              </div>
             </div>
+
+            <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
+
+            {/* Mini stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 10 }}>
+              {c.mini.map((m, j) => (
+                <div key={j} style={{ textAlign: 'center', padding: '4px 2px' }}>
+                  <div style={{ fontSize: 11, marginBottom: 2 }}>{m.icon}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{m.val}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.3 }}>{m.lbl}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Tempo médio (card pendentes) */}
+            {c.tempoMedio && (
+              <>
+                <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+                <div style={{ background: c.bg, borderRadius: 8, padding: '6px 10px', marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>Tempo médio aprovação</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: c.color }}>{c.tempoMedio}</div>
+                </div>
+              </>
+            )}
+
+            {/* Variação */}
+            {c.var && (
+              <>
+                <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Variação (mês anterior)</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: c.var.color }}>{c.var.text}</span>
+                </div>
+              </>
+            )}
+
+            {/* Footer */}
+            {c.footer && (
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{c.footer[0]}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: c.color }}>{c.footer[1]}</span>
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {stats.pendentes > 0 && (
+      {stats.pendentesCount > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, padding: '12px 20px', marginBottom: 20 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b' }}>⏳ {stats.pendentes} pedido{stats.pendentes > 1 ? 's' : ''} aguardando aprovação</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b' }}>⏳ {stats.pendentesCount} pedido{stats.pendentesCount > 1 ? 's' : ''} aguardando aprovação</span>
           <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ background: '#f59e0b', color: '#000', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Ver Aprovações →</button>
         </div>
       )}
