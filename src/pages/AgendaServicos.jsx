@@ -1144,6 +1144,8 @@ export default function AgendaServicos() {
   const [modalDetalhes, setModalDetalhes] = useState(null)
   const [modalRegras, setModalRegras] = useState(false)
   const [modalGestores, setModalGestores] = useState(false)
+  const [linkGerado, setLinkGerado] = useState(null)
+  const [gerandoLink, setGerandoLink] = useState(false)
   const [filtros, setFiltros] = useState({ periodo: '', cliente: '', tipo: '', status: '', responsavel: '', motorista: '', veiculo: '', alertaStatus: '' })
   const [busca, setBusca] = useState('')
   const [showFiltros, setShowFiltros] = useState(false)
@@ -1238,6 +1240,26 @@ export default function AgendaServicos() {
     if (link) window.open(link, '_blank')
   }
 
+  async function gerarLinkExterno() {
+    setGerandoLink(true)
+    setLinkGerado(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/agenda-link', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ workspace_id: workspaceId }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      setLinkGerado(json.url)
+    } catch (e) {
+      toast.error('Erro ao gerar link: ' + e.message)
+    } finally {
+      setGerandoLink(false)
+    }
+  }
+
   async function excluirAgendamento(id) {
     if (!window.confirm('Excluir este agendamento? Esta ação não pode ser desfeita.')) return
     await supabase.from('agendamentos_servicos').delete().eq('id', id)
@@ -1299,10 +1321,28 @@ export default function AgendaServicos() {
           <button onClick={() => setModalGestores(true)} style={{ padding: '8px 14px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
             <UsersIcon style={{ width: 14, height: 14 }} /> Gestores WA
           </button>
+          <button onClick={gerarLinkExterno} disabled={gerandoLink} style={{ padding: '8px 14px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <LinkIcon style={{ width: 14, height: 14 }} /> {gerandoLink ? 'Gerando...' : 'Link Externo'}
+          </button>
           <button onClick={carregar} style={{ padding: '8px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
             <ArrowPathIcon style={{ width: 15, height: 15 }} />
           </button>
         </div>
+
+        {/* ── Link externo gerado ── */}
+        {linkGerado && (
+          <div style={{ background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.25)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>🔗 Link público (válido 7 dias):</span>
+            <code style={{ fontSize: 11, color: '#38bdf8', wordBreak: 'break-all', flex: 1 }}>{linkGerado}</code>
+            <button onClick={() => { navigator.clipboard.writeText(linkGerado); toast.success('Link copiado!') }} style={{ padding: '4px 12px', borderRadius: 6, background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', color: '#38bdf8', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              Copiar
+            </button>
+            <a href={`https://wa.me/?text=${encodeURIComponent('📋 Formulário de Agendamento:\n' + linkGerado)}`} target="_blank" rel="noreferrer" style={{ padding: '4px 12px', borderRadius: 6, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', color: '#25d366', fontSize: 11, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              Enviar WA
+            </a>
+            <button onClick={() => setLinkGerado(null)} style={{ padding: '4px 8px', borderRadius: 6, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>✕</button>
+          </div>
+        )}
 
         {/* ── Painel de filtros ── */}
         {showFiltros && (
