@@ -352,7 +352,7 @@ function PainelIA({ empresa, contato, produtos, onUseTemplate }) {
 }
 
 // ─── Componente: Tabela de Contatos ────────────────────────────────────────────
-function TabelaContatos({ contatos, onStatusChange, onEditar, onDeletar, onSelecionar, contatoSelecionado }) {
+function TabelaContatos({ contatos, onStatusChange, onEditar, onDeletar, onSelecionar, contatoSelecionado, onEnriquecer, enrichendo }) {
   if (contatos.length === 0) return (
     <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-secondary)' }}>
       <UserGroupIcon style={{ width: 40, height: 40, margin: '0 auto 10px', opacity: 0.2 }} />
@@ -363,6 +363,7 @@ function TabelaContatos({ contatos, onStatusChange, onEditar, onDeletar, onSelec
 
   return (
     <div style={{ overflowX: 'auto' }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -405,13 +406,13 @@ function TabelaContatos({ contatos, onStatusChange, onEditar, onDeletar, onSelec
                 <td style={{ padding: '10px 10px' }}>
                   {c.email
                     ? <a href={`mailto:${c.email}`} onClick={e => e.stopPropagation()} style={{ color: '#6366f1', textDecoration: 'none', fontSize: 11 }}>{c.email}</a>
-                    : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                    : <span style={{ color: 'rgba(148,163,184,0.5)', fontSize: 11, fontStyle: 'italic' }}>—</span>}
                 </td>
                 <td style={{ padding: '10px 10px' }}>
                   <span style={{ padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 700,
-                    background: c.fonte === 'QSA' ? 'rgba(14,165,233,0.1)' : c.fonte === 'manual' ? 'rgba(245,158,11,0.1)' : 'rgba(139,92,246,0.1)',
-                    color: c.fonte === 'QSA' ? '#0ea5e9' : c.fonte === 'manual' ? '#f59e0b' : '#8b5cf6' }}>
-                    {c.fonte === 'QSA' ? '🔎 CNPJ' : c.fonte === 'manual' ? '✏️ Manual' : '✨ IA'}
+                    background: c.fonte === 'QSA' ? 'rgba(14,165,233,0.1)' : c.fonte === 'manual' ? 'rgba(245,158,11,0.1)' : c.fonte === 'LinkedIn' ? 'rgba(14,165,233,0.1)' : 'rgba(139,92,246,0.1)',
+                    color: c.fonte === 'QSA' ? '#0ea5e9' : c.fonte === 'manual' ? '#f59e0b' : c.fonte === 'LinkedIn' ? '#0ea5e9' : '#8b5cf6' }}>
+                    {c.fonte === 'QSA' ? '🔎 CNPJ' : c.fonte === 'manual' ? '✏️ Manual' : c.fonte === 'LinkedIn' ? '🔗 LinkedIn' : '✨ IA'}
                   </span>
                 </td>
                 <td style={{ padding: '10px 10px' }} onClick={e => e.stopPropagation()}>
@@ -419,6 +420,17 @@ function TabelaContatos({ contatos, onStatusChange, onEditar, onDeletar, onSelec
                 </td>
                 <td style={{ padding: '10px 10px' }} onClick={e => e.stopPropagation()}>
                   <div style={{ display: 'flex', gap: 5 }}>
+                    {onEnriquecer && (
+                      <button
+                        onClick={() => onEnriquecer(c)}
+                        disabled={enrichendo?.has(c.id)}
+                        title={c.email && c.telefone ? 'Reenriquecer contato' : 'Buscar e-mail/telefone (Hunter.io + Lusha)'}
+                        style={{ padding: '4px 6px', borderRadius: 6, background: c.email ? 'rgba(16,185,129,0.07)' : 'rgba(99,102,241,0.1)', border: `1px solid ${c.email ? 'rgba(16,185,129,0.2)' : 'rgba(99,102,241,0.25)'}`, color: c.email ? '#10b981' : '#6366f1', cursor: enrichendo?.has(c.id) ? 'default' : 'pointer', opacity: enrichendo?.has(c.id) ? 0.6 : 1 }}>
+                        {enrichendo?.has(c.id)
+                          ? <ArrowPathIcon style={{ width: 12, height: 12, animation: 'spin 1s linear infinite' }} />
+                          : <EnvelopeIcon style={{ width: 12, height: 12 }} />}
+                      </button>
+                    )}
                     <button onClick={() => onSelecionar(selecionado ? null : c)} title="Abordagem IA"
                       style={{ padding: '4px 6px', borderRadius: 6, background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.2)', color: '#a78bfa', cursor: 'pointer' }}>
                       <SparklesIcon style={{ width: 12, height: 12 }} />
@@ -621,14 +633,53 @@ function RadarPanel({ empresa, onFechar }) {
       id: uid(),
       nome: ac.nome,
       cargo: ac.cargo,
-      area: 'Apollo',
+      area: 'LinkedIn',
       telefone: ac.telefone,
       email: ac.email,
       linkedin: ac.linkedin,
-      fonte: 'Apollo',
+      fonte: 'LinkedIn',
       status: 'novo',
       criado_em: new Date().toISOString(),
     })
+  }
+
+  // ── Enriquecimento Hunter.io / Lusha ──────────────────────────────────────
+  const [enrichendo, setEnrichendo] = useState(new Set())
+  const dominioEnriquecimento = (() => {
+    const site = empresa.website || ''
+    if (site) return site.replace(/^https?:\/\//, '').split('/')[0]
+    const emailEmpresa = cnpjData?.email || ''
+    if (emailEmpresa.includes('@')) return emailEmpresa.split('@')[1]
+    return ''
+  })()
+
+  async function enrichirContato(contato) {
+    if (enrichendo.has(contato.id)) return
+    setEnrichendo(prev => new Set([...prev, contato.id]))
+    try {
+      const r = await fetch('/api/enriquecer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: contato.nome,
+          dominio: dominioEnriquecimento,
+          linkedin: contato.linkedin || '',
+        }),
+      })
+      const data = await r.json()
+      if (!r.ok) { toast.error(data.error || 'Sem resultado'); return }
+      const atualizado = {
+        ...contato,
+        email: data.email || contato.email,
+        telefone: data.telefone || contato.telefone,
+      }
+      persistir({ ...dados, contatos: dados.contatos.map(c => c.id === contato.id ? atualizado : c) })
+      toast.success(`Enriquecido via ${data.fonte}!`)
+    } catch (err) {
+      toast.error(err.message || 'Erro ao enriquecer')
+    } finally {
+      setEnrichendo(prev => { const s = new Set(prev); s.delete(contato.id); return s })
+    }
   }
 
   const kpis = {
@@ -790,6 +841,8 @@ function RadarPanel({ empresa, onFechar }) {
             onDeletar={deletarContato}
             onSelecionar={setContatoSelecionado}
             contatoSelecionado={contatoSelecionado}
+            onEnriquecer={enrichirContato}
+            enrichendo={enrichendo}
           />
         </div>
 
