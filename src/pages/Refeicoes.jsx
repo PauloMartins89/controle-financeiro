@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
@@ -1179,203 +1179,314 @@ function relTime(iso) {
 }
 
 // ─── Seção: Dashboard ────────────────────────────────────────────────────────
+function LineChart({ series, labels, height = 150 }) {
+  const VW = 420, VH = height
+  const PAD = { t: 8, r: 8, b: 26, l: 8 }
+  const cw = VW - PAD.l - PAD.r
+  const ch = VH - PAD.t - PAD.b
+  const allVals = series.flatMap(s => s.data)
+  const mx = Math.max(...allVals, 1)
+  const n = labels.length
+  const px = i => PAD.l + (i / (n - 1)) * cw
+  const py = v => PAD.t + ch - (v / mx) * ch
+  return (
+    <svg viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="none" style={{ width: '100%', height, display: 'block' }}>
+      {[0.25, 0.5, 0.75, 1].map(p => (
+        <line key={p} x1={PAD.l} x2={VW - PAD.r} y1={PAD.t + ch * (1 - p)} y2={PAD.t + ch * (1 - p)} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+      ))}
+      {series.map((s, si) => {
+        const pts = s.data.map((v, i) => `${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(' ')
+        const area = `${PAD.l},${(PAD.t + ch).toFixed(1)} ${pts} ${px(n - 1).toFixed(1)},${(PAD.t + ch).toFixed(1)}`
+        return (
+          <g key={si}>
+            <polygon points={area} fill={s.color} opacity={0.1} />
+            <polyline points={pts} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            {s.data.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3} fill={s.color} />)}
+          </g>
+        )
+      })}
+      {labels.map((l, i) => (
+        <text key={i} x={px(i)} y={VH - 4} textAnchor="middle" fontSize={9} fill="rgba(255,255,255,0.35)" fontFamily="sans-serif">{l.slice(5)}</text>
+      ))}
+    </svg>
+  )
+}
+
+function DonutChart({ segments }) {
+  const r = 44, cx = 60, cy = 60, sw = 16
+  const total = segments.reduce((a, s) => a + s.value, 0) || 1
+  const C = 2 * Math.PI * r
+  let offset = 0
+  return (
+    <svg viewBox="0 0 120 120" style={{ width: '100%', maxWidth: 130, display: 'block', margin: '0 auto' }}>
+      {segments.length === 0
+        ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={sw} />
+        : segments.map((s, i) => {
+            const pct = s.value / total
+            const dash = pct * C, gap = C - dash
+            const rot = offset * 360 - 90
+            offset += pct
+            return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw} strokeDasharray={`${dash.toFixed(2)} ${gap.toFixed(2)}`} transform={`rotate(${rot.toFixed(1)} ${cx} ${cy})`} strokeLinecap="butt" />
+          })
+      }
+      <text x={cx} y={cy - 4} textAnchor="middle" fontSize={20} fontWeight={800} fill="white" fontFamily="sans-serif">{total}</text>
+      <text x={cx} y={cy + 13} textAnchor="middle" fontSize={8} fill="rgba(255,255,255,0.45)" fontFamily="sans-serif">TOTAL</text>
+    </svg>
+  )
+}
+
 function SecaoDashboard({ sols, onNav }) {
   const { currentUser } = useStore()
 
-  const stats = useMemo(() => {
-    const hoje      = todayISO()
-    const now       = new Date()
-    const y         = now.getFullYear(), mo = now.getMonth()
+  const dash = useMemo(() => {
+    const hoje  = todayISO()
+    const now   = new Date()
+    const y = now.getFullYear(), mo = now.getMonth()
+    const ontemD = new Date(now); ontemD.setDate(ontemD.getDate() - 1)
+    const ontem     = ontemD.toISOString().slice(0, 10)
     const startMes  = new Date(y, mo, 1).toISOString().slice(0, 10)
     const startMAnt = new Date(y, mo - 1, 1).toISOString().slice(0, 10)
     const endMAnt   = new Date(y, mo, 0).toISOString().slice(0, 10)
-    const startTrim = new Date(y, Math.floor(mo / 3) * 3, 1).toISOString().slice(0, 10)
-    const startAno  = `${y}-01-01`
-    const dow       = now.getDay() === 0 ? 6 : now.getDay() - 1
-    const startSem  = new Date(y, mo, now.getDate() - dow).toISOString().slice(0, 10)
-    const last7     = Array.from({ length: 7 }, (_, i) => {
+    const last7 = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(now); d.setDate(d.getDate() - (6 - i)); return d.toISOString().slice(0, 10)
     })
 
-    const ativos    = sols.filter(s => s.status !== 'rascunho')
-    const pendentes = ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status))
-    const aprovados = ativos.filter(s => !['pendente', 'aguardando_aprovacao', 'reprovado', 'rascunho'].includes(s.status))
+    const ativos     = sols.filter(s => s.status !== 'rascunho')
+    const pendentes  = ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status))
+    const aprovSts   = ativos.filter(s => s.status === 'aprovado')
+    const noRest     = ativos.filter(s => s.status === 'confirmado_restaurante')
+    const entregues  = ativos.filter(s => s.status === 'entregue')
+    const reprovados = ativos.filter(s => s.status === 'reprovado')
 
-    const mesAtualCnt = ativos.filter(s => s.data_refeicao >= startMes).length
-    const mesAntCnt   = ativos.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt).length
-    const mesAprov    = aprovados.filter(s => s.data_refeicao >= startMes).length
-    const mesAntAprov = aprovados.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt).length
-    const valorMes    = ativos.filter(s => s.data_refeicao >= startMes).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)
-    const valorMAnt   = ativos.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)
+    const hojeSols  = ativos.filter(s => s.data_refeicao === hoje)
+    const ontemSols = ativos.filter(s => s.data_refeicao === ontem)
+    const sum = (arr, k) => arr.reduce((a, s) => a + (Number(s[k]) || 0), 0)
 
-    const comAprov    = ativos.filter(s => s.aprovado_em && s.criado_em)
-    const avgMin      = comAprov.length ? comAprov.reduce((a, s) => a + (new Date(s.aprovado_em) - new Date(s.criado_em)) / 60000, 0) / comAprov.length : null
+    const hojeRef   = sum(hojeSols,  'total_refeicoes')
+    const hojeCaf   = sum(hojeSols,  'total_cafes')
+    const hojeCusto = sum(hojeSols,  'valor_total')
+    const ontemRef  = sum(ontemSols, 'total_refeicoes')
+    const ontemCaf  = sum(ontemSols, 'total_cafes')
+    const valorMes  = sum(ativos.filter(s => s.data_refeicao >= startMes), 'valor_total')
+    const valorMAnt = sum(ativos.filter(s => s.data_refeicao >= startMAnt && s.data_refeicao <= endMAnt), 'valor_total')
 
-    const minhasSols  = pendentes.filter(s => currentUser?.nome && (s.lider_nome || '').toLowerCase().includes(currentUser.nome.toLowerCase())).length
-    const lastPed     = ativos.length ? [...ativos].sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em))[0] : null
-    const lastAprov   = aprovados.filter(s => s.aprovado_em).sort((a, b) => new Date(b.aprovado_em) - new Date(a.aprovado_em))[0] || null
-    const oldestPend  = pendentes.length ? [...pendentes].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em))[0] : null
-    const totalValor  = ativos.reduce((a, s) => a + (Number(s.valor_total) || 0), 0)
-
-    const totalRefeicoes = ativos.reduce((a, s) => a + (s.total_refeicoes || 0), 0)
-    const totalCafes     = ativos.reduce((a, s) => a + (s.total_cafes     || 0), 0)
-
-    const fmtVar = v => v !== null && !isNaN(v) ? { text: `${v >= 0 ? '↑' : '↓'} ${v >= 0 ? '+' : ''}${v.toFixed(1)}%`, color: v >= 0 ? '#10b981' : '#ef4444' } : null
-    const compact = v => v >= 1e6 ? `R$${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `R$${(v/1e3).toFixed(1)}k` : fmtBRL(v)
-    const fmtMin  = m => { if (!m) return '—'; const h = Math.floor(m / 60), r = Math.round(m % 60); return h > 0 ? `${h}h${r > 0 ? r + 'm' : ''}` : `${r}m` }
-    const pedNum  = s => s?.numero_pedido?.split('-').pop() || '—'
-
-    return {
-      spark1: last7.map(d => ativos.filter(s => s.data_refeicao === d).length),
-      spark2: last7.map(d => pendentes.filter(s => (s.criado_em || '').slice(0, 10) === d).length),
-      spark3: last7.map(d => aprovados.filter(s => s.data_refeicao === d).length),
-      spark4: last7.map(d => ativos.filter(s => s.data_refeicao === d).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)),
-      cards: [
-        {
-          label: 'Total Pedidos', main: ativos.length, sub: `${ativos.filter(s => s.data_refeicao === hoje).length} hoje`,
-          color: '#6366f1', bg: 'rgba(99,102,241,0.12)', grad: 'linear-gradient(90deg,#6366f1,#818cf8)', emoji: '📋',
-          mini: [{ icon: '📋', lbl: 'pedidos', val: ativos.length }, { icon: '🍽️', lbl: 'refeições', val: totalRefeicoes }, { icon: '☕', lbl: 'cafés', val: totalCafes }],
-          var: fmtVar(mesAntCnt > 0 ? (mesAtualCnt - mesAntCnt) / mesAntCnt * 100 : null),
-          footer: lastPed ? [`Último: #${pedNum(lastPed)}`, relTime(lastPed.criado_em)] : null,
-        },
-        {
-          label: 'Pendentes', main: pendentes.length, sub: 'aguardando aprovação',
-          color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', grad: 'linear-gradient(90deg,#f59e0b,#fbbf24)', emoji: '⏳',
-          mini: [{ icon: '⏰', lbl: 'aguard. liberação', val: pendentes.length }, { icon: '👤', lbl: 'minhas sol.', val: minhasSols }, { icon: '👥', lbl: 'de terceiros', val: pendentes.length - minhasSols }],
-          tempoMedio: avgMin ? fmtMin(avgMin) : null,
-          footer: oldestPend ? [`Mais antigo: #${pedNum(oldestPend)}`, relTime(oldestPend.criado_em)] : null,
-        },
-        {
-          label: 'Aprovados', main: aprovados.length, sub: 'confirmados',
-          color: '#10b981', bg: 'rgba(16,185,129,0.12)', grad: 'linear-gradient(90deg,#10b981,#34d399)', emoji: '✅',
-          mini: [{ icon: '📅', lbl: 'neste mês', val: mesAprov }, { icon: '📊', lbl: 'este trimestre', val: aprovados.filter(s => s.data_refeicao >= startTrim).length }, { icon: '📈', lbl: 'este ano', val: aprovados.filter(s => s.data_refeicao >= startAno).length }],
-          var: fmtVar(mesAntAprov > 0 ? (mesAprov - mesAntAprov) / mesAntAprov * 100 : null),
-          footer: lastAprov ? [`Último aprov.: #${pedNum(lastAprov)}`, relTime(lastAprov.aprovado_em)] : null,
-        },
-        {
-          label: 'Valor Total', main: fmtBRL(totalValor), sub: 'todos os pedidos', isText: true,
-          color: '#00c896', bg: 'rgba(0,200,150,0.12)', grad: 'linear-gradient(90deg,#00c896,#00a87a)', emoji: '💰',
-          mini: [{ icon: '💵', lbl: 'este mês', val: compact(valorMes) }, { icon: '📊', lbl: 'este trimestre', val: compact(ativos.filter(s => s.data_refeicao >= startTrim).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)) }, { icon: '📈', lbl: 'este ano', val: compact(ativos.filter(s => s.data_refeicao >= startAno).reduce((a, s) => a + (Number(s.valor_total) || 0), 0)) }],
-          var: fmtVar(valorMAnt > 0 ? (valorMes - valorMAnt) / valorMAnt * 100 : null),
-          footer: ativos.length ? [`Média por pedido`, fmtBRL(totalValor / ativos.length)] : null,
-        },
-      ],
-      pendentesCount: pendentes.length,
+    const fv = (cur, prev) => {
+      if (!prev) return null
+      const p = (cur - prev) / prev * 100
+      return { text: `${p >= 0 ? '↑' : '↓'} ${Math.abs(p).toFixed(0)}%`, color: p >= 0 ? '#10b981' : '#ef4444' }
     }
-  }, [sols, currentUser])
 
-  const recentes = useMemo(() => sols.filter(s => s.status !== 'rascunho').slice(0, 8), [sols])
-  const sparks   = [stats.spark1, stats.spark2, stats.spark3, stats.spark4]
+    const kpis = [
+      { icon: '🍽️', label: 'Refeições hoje',   val: hojeRef,              isText: false, color: '#6366f1', varLabel: 'vs ontem', var: fv(hojeRef, ontemRef) },
+      { icon: '☕',  label: 'Cafés hoje',        val: hojeCaf,              isText: false, color: '#f59e0b', varLabel: 'vs ontem', var: fv(hojeCaf, ontemCaf) },
+      { icon: '⏳',  label: 'Pendentes',         val: pendentes.length,     isText: false, color: '#ef4444', varLabel: null, var: null },
+      { icon: '✅',  label: 'Aprovados',         val: aprovSts.length,      isText: false, color: '#10b981', varLabel: null, var: null },
+      { icon: '🚚',  label: 'No Restaurante',    val: noRest.length,        isText: false, color: '#a78bfa', varLabel: null, var: null },
+      { icon: '📦',  label: 'Entregues',         val: entregues.length,     isText: false, color: '#34d399', varLabel: null, var: null },
+      { icon: '💵',  label: 'Custo do dia',      val: fmtBRL(hojeCusto),   isText: true,  color: '#00c896', varLabel: null, var: null },
+      { icon: '📊',  label: 'Custo do mês',      val: fmtBRL(valorMes),    isText: true,  color: '#818cf8', varLabel: 'vs mês ant.', var: fv(valorMes, valorMAnt) },
+    ]
+
+    const chartRef7 = last7.map(d => sum(ativos.filter(s => s.data_refeicao === d), 'total_refeicoes'))
+    const chartCaf7 = last7.map(d => sum(ativos.filter(s => s.data_refeicao === d), 'total_cafes'))
+
+    const donut = [
+      { label: 'Pendentes',      value: pendentes.length,  color: '#f59e0b' },
+      { label: 'Aprovados',      value: aprovSts.length,   color: '#6366f1' },
+      { label: 'No Restaurante', value: noRest.length,     color: '#a78bfa' },
+      { label: 'Entregues',      value: entregues.length,  color: '#10b981' },
+      { label: 'Reprovados',     value: reprovados.length, color: '#ef4444' },
+    ].filter(d => d.value > 0)
+
+    const eqMap = {}
+    for (const s of ativos) {
+      const nome = s.refei_equipes?.nome || 'Sem equipe'
+      if (!eqMap[nome]) eqMap[nome] = { nome, total: 0 }
+      eqMap[nome].total += (s.total_refeicoes || 0) + (s.total_cafes || 0)
+    }
+    const rankingEq = Object.values(eqMap).sort((a, b) => b.total - a.total).slice(0, 5)
+
+    const painelMap = {}
+    for (const s of hojeSols) {
+      const nome = s.refei_restaurantes?.nome || 'Sem restaurante'
+      if (!painelMap[nome]) painelMap[nome] = { nome, ref: 0, caf: 0, pend: 0, ent: 0, valor: 0 }
+      painelMap[nome].ref   += s.total_refeicoes || 0
+      painelMap[nome].caf   += s.total_cafes || 0
+      painelMap[nome].valor += Number(s.valor_total) || 0
+      if (['pendente', 'aguardando_aprovacao'].includes(s.status)) painelMap[nome].pend++
+      if (s.status === 'entregue') painelMap[nome].ent++
+    }
+    const painelHoje = Object.values(painelMap)
+
+    const alertas = []
+    const pendLongos = pendentes.filter(s => s.criado_em && (Date.now() - new Date(s.criado_em)) > 7200000)
+    if (pendLongos.length) {
+      const oldest = [...pendLongos].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em))[0]
+      alertas.push({ type: 'warn', icon: '🕐', title: `${pendLongos.length} pedido${pendLongos.length > 1 ? 's' : ''} pendente${pendLongos.length > 1 ? 's' : ''} há mais de 2h`, desc: `Mais antigo: ${relTime(oldest.criado_em)}` })
+    }
+    const aprovHoje = aprovSts.filter(s => s.data_refeicao === hoje)
+    if (aprovHoje.length) alertas.push({ type: 'warn', icon: '🚚', title: `${aprovHoje.length} pedido${aprovHoje.length > 1 ? 's' : ''} aguardando confirmação do restaurante`, desc: 'Aprovados mas restaurante ainda não confirmou' })
+    if (valorMAnt > 0 && (valorMes - valorMAnt) / valorMAnt > 0.2) alertas.push({ type: 'danger', icon: '📈', title: 'Custo do mês acima do anterior', desc: `+${(((valorMes - valorMAnt) / valorMAnt) * 100).toFixed(0)}% — ${fmtBRL(valorMes)} vs ${fmtBRL(valorMAnt)}` })
+    const reprov7 = reprovados.filter(s => s.data_refeicao >= last7[0])
+    if (reprov7.length) alertas.push({ type: 'danger', icon: '❌', title: `${reprov7.length} reprovado${reprov7.length > 1 ? 's' : ''} nos últimos 7 dias`, desc: 'Verifique os motivos de reprovação' })
+
+    return { kpis, chartLabels: last7, chartRef7, chartCaf7, donut, rankingEq, painelHoje, alertas, pendentesCount: pendentes.length }
+  }, [sols])
+
+  const AC = { warn: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)', color: '#f59e0b' }, danger: { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.25)', color: '#ef4444' } }
+  const EQ_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#a78bfa', '#34d399']
 
   return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18, marginBottom: 28 }}>
-        {stats.cards.map((c, i) => (
-          <div key={i} className="stat-card" style={{
-            position: 'relative', overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.12)',
-            borderRadius: 16,
-          }}>
-            {/* Barra superior */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: c.grad, borderRadius: '16px 16px 0 0' }} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, paddingTop: 6 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{c.label}</div>
-                <div style={{ fontSize: c.isText ? 20 : 32, fontWeight: 800, color: c.color, lineHeight: 1, letterSpacing: '-0.02em' }}>{c.main}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 5, opacity: 0.75 }}>{c.sub}</div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginLeft: 10 }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: '50%',
-                  background: c.bg, border: `1.5px solid ${c.color}33`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
-                  boxShadow: `0 0 12px ${c.color}22`,
-                }}>{c.emoji}</div>
-                <Sparkline data={sparks[i]} color={c.color} width={72} height={28} />
-              </div>
+      {/* ── Zona 1: 8 KPI mini-cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10 }}>
+        {dash.kpis.map((k, i) => (
+          <div key={i} className="stat-card" style={{ padding: '14px 15px', borderRadius: 13, border: `1px solid ${k.color}20`, boxShadow: '0 2px 10px rgba(0,0,0,0.14)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, opacity: 0.75 }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.4, maxWidth: '78%' }}>{k.label}</span>
+              <span style={{ fontSize: 15, background: `${k.color}18`, borderRadius: 7, padding: '3px 5px', lineHeight: 1 }}>{k.icon}</span>
             </div>
-
-            <div style={{ height: 1, background: 'var(--border)', opacity: 0.5, margin: '0 0 12px' }} />
-
-            {/* Mini stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
-              {c.mini.map((m, j) => (
-                <div key={j} style={{
-                  textAlign: 'center', padding: '7px 4px', borderRadius: 10,
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}>
-                  <div style={{ fontSize: 10, marginBottom: 4, opacity: 0.7 }}>{m.icon}</div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{m.val}</div>
-                  <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 3, lineHeight: 1.3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{m.lbl}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Tempo médio (card pendentes) */}
-            {c.tempoMedio && (
-              <div style={{ background: c.bg, border: `1px solid ${c.color}33`, borderRadius: 10, padding: '7px 12px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tempo médio aprovação</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: c.color }}>{c.tempoMedio}</span>
-              </div>
-            )}
-
-            {/* Variação */}
-            {c.var && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)', opacity: 0.8 }}>vs. mês anterior</span>
-                <span style={{
-                  fontSize: 11, fontWeight: 700, color: c.var.color,
-                  background: `${c.var.color}18`,
-                  border: `1px solid ${c.var.color}33`,
-                  borderRadius: 999, padding: '2px 9px',
-                }}>{c.var.text}</span>
-              </div>
-            )}
-
-            {/* Footer */}
-            {c.footer && (
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.85 }}>
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{c.footer[0]}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: c.color }}>{c.footer[1]}</span>
-              </div>
-            )}
+            <div style={{ fontSize: k.isText ? 15 : 26, fontWeight: 800, color: k.color, lineHeight: 1, letterSpacing: '-0.02em', marginBottom: 5 }}>{k.val}</div>
+            {k.var
+              ? <span style={{ fontSize: 10, fontWeight: 700, color: k.var.color, background: `${k.var.color}15`, borderRadius: 999, padding: '1px 7px' }}>{k.var.text} {k.varLabel}</span>
+              : <span style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: 0.5 }}>—</span>
+            }
           </div>
         ))}
       </div>
 
-      {stats.pendentesCount > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, padding: '12px 20px', marginBottom: 20 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b' }}>⏳ {stats.pendentesCount} pedido{stats.pendentesCount > 1 ? 's' : ''} aguardando aprovação</span>
-          <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ background: '#f59e0b', color: '#000', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Ver Aprovações →</button>
+      {/* ── Zona 2: Gráfico linha + Donut ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 14 }}>
+        <div className="card" style={{ padding: '16px 18px', borderRadius: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Evolução diária — últimos 7 dias</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Refeições e cafés por data</div>
+            </div>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              <span style={{ fontSize: 11, color: '#6366f1', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 3, background: '#6366f1', borderRadius: 2, display: 'inline-block' }} />Refeições</span>
+              <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 3, background: '#f59e0b', borderRadius: 2, display: 'inline-block' }} />Cafés</span>
+            </div>
+          </div>
+          <LineChart series={[{ data: dash.chartRef7, color: '#6366f1' }, { data: dash.chartCaf7, color: '#f59e0b' }]} labels={dash.chartLabels} height={140} />
+        </div>
+
+        <div className="card" style={{ padding: '16px', borderRadius: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Distribuição por status</div>
+          <DonutChart segments={dash.donut} />
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {dash.donut.map((d, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: d.color, display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{d.label}</span>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: d.color }}>{d.value}</span>
+              </div>
+            ))}
+            {dash.donut.length === 0 && <div style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center' }}>Sem dados</div>}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Zona 3: Ranking equipes + Painel do dia ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="card" style={{ padding: '16px 18px', borderRadius: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14 }}>🏆 Ranking de equipes — itens consumidos</div>
+          {dash.rankingEq.length === 0
+            ? <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: '16px 0' }}>Sem dados suficientes</div>
+            : dash.rankingEq.map((eq, i) => {
+                const pct = (eq.total / (dash.rankingEq[0].total || 1)) * 100
+                return (
+                  <div key={i} style={{ marginBottom: 11 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
+                        <span style={{ color: EQ_COLORS[i], fontWeight: 800, marginRight: 6 }}>#{i + 1}</span>{eq.nome}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: EQ_COLORS[i] }}>{eq.total}</span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: EQ_COLORS[i], borderRadius: 999 }} />
+                    </div>
+                  </div>
+                )
+              })
+          }
+        </div>
+
+        <div className="card" style={{ padding: '16px 18px', borderRadius: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>📅 Painel operacional — {fmtData(todayISO())}</div>
+          {dash.painelHoje.length === 0
+            ? <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: '16px 0' }}>Sem pedidos para hoje</div>
+            : <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      {['Restaurante', '🍽️', '☕', '⏳', '📦', 'Valor'].map((h, i) => (
+                        <th key={i} style={{ padding: '4px 8px', textAlign: i === 0 ? 'left' : 'center', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dash.painelHoje.map((r, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '7px 8px', fontWeight: 600, color: 'var(--text-primary)', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nome}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#6366f1', fontWeight: 700 }}>{r.ref}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center', color: '#f59e0b', fontWeight: 700 }}>{r.caf}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center' }}>{r.pend > 0 ? <span style={{ color: '#ef4444', fontWeight: 700 }}>{r.pend}</span> : <span style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>—</span>}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'center' }}>{r.ent > 0 ? <span style={{ color: '#10b981', fontWeight: 700 }}>{r.ent}</span> : <span style={{ color: 'var(--text-secondary)', opacity: 0.4 }}>—</span>}</td>
+                        <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 700, color: '#00c896', whiteSpace: 'nowrap' }}>{fmtBRL(r.valor)}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ borderTop: '1px solid var(--border)' }}>
+                      <td style={{ padding: '7px 8px', fontWeight: 800, color: 'var(--text-primary)', fontSize: 11 }}>Total geral</td>
+                      <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: '#6366f1' }}>{dash.painelHoje.reduce((a, r) => a + r.ref, 0)}</td>
+                      <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: '#f59e0b' }}>{dash.painelHoje.reduce((a, r) => a + r.caf, 0)}</td>
+                      <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: '#ef4444' }}>{dash.painelHoje.reduce((a, r) => a + r.pend, 0)}</td>
+                      <td style={{ padding: '7px 8px', textAlign: 'center', fontWeight: 800, color: '#10b981' }}>{dash.painelHoje.reduce((a, r) => a + r.ent, 0)}</td>
+                      <td style={{ padding: '7px 8px', textAlign: 'right', fontWeight: 800, color: '#00c896' }}>{fmtBRL(dash.painelHoje.reduce((a, r) => a + r.valor, 0))}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+          }
+        </div>
+      </div>
+
+      {/* ── Alertas ── */}
+      {dash.alertas.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>⚠️ Alertas e Exceções</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
+            {dash.alertas.map((a, i) => {
+              const ac = AC[a.type] || AC.warn
+              return (
+                <div key={i} style={{ background: ac.bg, border: `1px solid ${ac.border}`, borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 18, lineHeight: 1, marginTop: 1 }}>{a.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: ac.color, marginBottom: 2 }}>{a.title}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{a.desc}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12 }}>Atividade Recente</div>
-        {recentes.length === 0 && <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Nenhuma solicitação ainda.</p>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {recentes.map(s => (
-            <div key={s.id} className="card" style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                <StatusBadge status={s.status} />
-                <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{s.numero_pedido || '—'}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.refei_equipes?.nome || '—'}</span>
-              </div>
-              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtData(s.data_refeicao)}</span>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#10b981', whiteSpace: 'nowrap' }}>{fmtBRL(s.valor_total)}</span>
-              </div>
-            </div>
-          ))}
+      {/* ── Banner pendentes ── */}
+      {dash.pendentesCount > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, padding: '12px 20px' }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#f59e0b' }}>⏳ {dash.pendentesCount} pedido{dash.pendentesCount > 1 ? 's' : ''} aguardando aprovação</span>
+          <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ background: '#f59e0b', color: '#000', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Ver Aprovações →</button>
         </div>
-      </div>
+      )}
     </div>
   )
 }
+
 
 // ─── Seção: Solicitações ──────────────────────────────────────────────────────
 function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useFlowEngine }) {
