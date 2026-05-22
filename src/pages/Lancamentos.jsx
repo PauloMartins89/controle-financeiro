@@ -1200,7 +1200,7 @@ function WhatsAppPanel({ workspaceId }) {
     toast.success('Removido')
   }
 
-  const webhookUrl = `https://dividiai.app.br/api/webhook-whatsapp`
+  const webhookUrl = `${window.location.origin}/api/webhook-whatsapp`
   const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
 
   return (

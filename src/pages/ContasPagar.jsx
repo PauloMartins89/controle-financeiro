@@ -915,7 +915,7 @@ async function exportContaPDF(item, { returnBase64 = false } = {}) {
   doc.setFont('helvetica', 'normal')
   const now = new Date()
   doc.text(`Gerado em: ${now.toLocaleDateString('pt-BR')} às ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 14, 290.5)
-  doc.text('dividiai.app.br', W - 14, 290.5, { align: 'right' })
+  doc.text('smartosapp.app.br', W - 14, 290.5, { align: 'right' })
 
   const slug = (item.descricao || 'conta').replace(/[^a-z0-9]/gi, '_').slice(0, 30)
   const fileName = `requisicao_${slug}.pdf`
