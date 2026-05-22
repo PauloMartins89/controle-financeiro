@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novo Agendamento — SmartProd</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #111827;
+      min-height: 100dvh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding-bottom: 48px;
+      color: #e5e7eb;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 480px;
+      margin: 20px 12px;
+      background: #1f2937;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 32px 64px rgba(0,0,0,0.6);
+    }
+    .header {
+      background: linear-gradient(135deg, #0f3460 0%, #1e293b 100%);
+      padding: 28px 24px 22px;
+    }
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #7dd3fc;
+      background: rgba(14,165,233,0.15);
+      border: 1px solid rgba(14,165,233,0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f9fafb;
+      margin-bottom: 6px;
+    }
+    .header p {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    /* Formulário */
+    .form-body {
+      padding: 20px 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .field label .req { color: #f87171; margin-left: 2px; }
+    .field input,
+    .field select,
+    .field textarea {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #f9fafb;
+      font-size: 14px;
+      padding: 11px 14px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s, background 0.2s;
+      width: 100%;
+    }
+    .field select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+    .field select option { background: #1f2937; color: #f9fafb; }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: rgba(14,165,233,0.5);
+      background: rgba(255,255,255,0.07);
+    }
+    .field textarea { resize: vertical; min-height: 72px; }
+    .field input::placeholder,
+    .field textarea::placeholder { color: #4b5563; }
+
+    /* Linha dupla */
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* Seção */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* Botão de submit */
+    .btn-submit {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: #fff;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      margin-top: 8px;
+    }
+    .btn-submit:hover:not(:disabled) { opacity: 0.9; }
+    .btn-submit:active { transform: scale(0.98); }
+    .btn-submit:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ef4444;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { background: #10b981; }
+
+    /* Tela de sucesso */
+    .done-wrap {
+      padding: 52px 24px;
+      text-align: center;
+    }
+    .done-icon { font-size: 60px; margin-bottom: 16px; }
+    .done-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #f9fafb; }
+    .done-msg   { font-size: 14px; color: #9ca3af; margin-bottom: 28px; }
+    .done-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 16px 20px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .done-row { display: flex; justify-content: space-between; font-size: 14px; }
+    .done-row span:first-child { color: #6b7280; }
+    .done-row span:last-child  { color: #e5e7eb; font-weight: 600; }
+    .done-num {
+      font-size: 28px;
+      font-weight: 900;
+      color: #34d399;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    /* Tela de erro */
+    .error-wrap {
+      padding: 52px 24px;
+      text-align: center;
+    }
+    .error-icon  { font-size: 52px; margin-bottom: 14px; }
+    .error-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; color: #f87171; }
+    .error-msg   { font-size: 14px; color: #9ca3af; }
+
+    /* Loader */
+    .loader-wrap {
+      padding: 60px 24px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top-color: #0ea5e9;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app">
+    <div class="loader-wrap">
+      <div class="spinner"></div>
+      Carregando...
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+// ─── helpers ─────────────────────────────────────────────────────────────────
+const qs  = p => document.querySelector(p)
+const app = document.getElementById('app')
+
+function showToast(msg, type = 'error') {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.className = 'toast show' + (type === 'success' ? ' success' : '')
+  clearTimeout(el._t)
+  el._t = setTimeout(() => { el.className = 'toast' }, 3200)
+}
+
+// Token vem via /ag/:token → agendar.html?token=:token
+const params = new URLSearchParams(location.search)
+const token  = params.get('token')
+
+const TIPOS = [
+  'Caminhão Prancha','Caminhão Munck','Guindaste','Caminhão Basculante',
+  'Betoneira','Retroescavadeira','Motoniveladora','Pá Carregadeira',
+  'Trator','Escavadeira Hidráulica','Caminhão Pipa','Locação de Equipamento',
+  'Transporte de Pessoal','Outro',
+]
+
+// ─── Carrega dados do link ────────────────────────────────────────────────────
+async function init() {
+  if (!token) {
+    renderError('Link inválido', 'Nenhum token de agendamento foi fornecido.')
+    return
+  }
+
+  let linkData = null
+  try {
+    const res = await fetch(`/api/agenda-link?token=${token}`)
+    const json = await res.json()
+    if (!res.ok) {
+      if (json.usado)   return renderError('Link já utilizado', 'Este formulário já foi preenchido.')
+      if (json.expirado) return renderError('Link expirado', 'Este link de agendamento expirou. Solicite um novo via WhatsApp.')
+      return renderError('Link inválido', json.error || 'Não foi possível carregar o formulário.')
+    }
+    linkData = json
+  } catch (e) {
+    return renderError('Erro de conexão', 'Verifique sua internet e tente novamente.')
+  }
+
+  renderForm(linkData)
+}
+
+// ─── Renderiza tela de erro ───────────────────────────────────────────────────
+function renderError(title, msg) {
+  app.innerHTML = `
+    <div class="header">
+      <div class="header-badge">📅 Agendamento de Serviço</div>
+      <h1>SmartProd</h1>
+    </div>
+    <div class="error-wrap">
+      <div class="error-icon">⛔</div>
+      <div class="error-title">${title}</div>
+      <div class="error-msg">${msg}</div>
+    </div>
+  `
+}
+
+// ─── Renderiza formulário ─────────────────────────────────────────────────────
+function renderForm(linkData) {
+  const d = linkData.dados_parciais || {}
+  const tiposOptions = TIPOS.map(t =>
+    `<option value="${t}" ${d.tipo_servico === t ? 'selected' : ''}>${t}</option>`
+  ).join('')
+
+  // Data mínima: hoje
+  const minData = new Date().toISOString().slice(0, 10)
+
+  app.innerHTML = `
+    <div class="header">
+      <div class="header-badge">📅 Agendamento de Serviço</div>
+      <h1>Novo Agendamento</h1>
+      <p>Preencha os dados abaixo para registrar o serviço.</p>
+    </div>
+
+    <form class="form-body" id="form-ag" novalidate>
+
+      <div class="section-title">Dados do Serviço</div>
+
+      <div class="field">
+        <label>Tipo de Serviço <span class="req">*</span></label>
+        <select id="tipo_servico" required>
+          <option value="">Selecione...</option>
+          ${tiposOptions}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Cliente / Empresa <span class="req">*</span></label>
+        <input id="cliente_nome" type="text" placeholder="Nome do cliente" value="${esc(d.cliente_nome)}" required />
+      </div>
+
+      <div class="field">
+        <label>Atividade / Descrição</label>
+        <input id="atividade" type="text" placeholder="Ex: Transporte de máquinas, içamento..." value="${esc(d.atividade)}" />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Data <span class="req">*</span></label>
+          <input id="data_servico" type="date" min="${minData}" value="${esc(d.data_servico)}" required />
+        </div>
+        <div class="field">
+          <label>Horário</label>
+          <input id="horario_servico" type="time" value="${esc(d.horario_servico)}" />
+        </div>
+      </div>
+
+      <div class="section-title">Localização</div>
+
+      <div class="field">
+        <label>Origem / Local de saída</label>
+        <input id="origem" type="text" placeholder="Cidade, endereço ou ponto de referência" value="${esc(d.origem)}" />
+      </div>
+
+      <div class="field">
+        <label>Destino / Local de entrega</label>
+        <input id="destino" type="text" placeholder="Cidade, endereço ou ponto de referência" value="${esc(d.destino)}" />
+      </div>
+
+      <div class="section-title">Equipe e Veículo</div>
+
+      <div class="field">
+        <label>Responsável pelo serviço</label>
+        <input id="responsavel_nome" type="text" placeholder="Nome do responsável" />
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Motorista / Operador</label>
+          <input id="motorista_nome" type="text" placeholder="Nome" />
+        </div>
+        <div class="field">
+          <label>Placa do veículo</label>
+          <input id="veiculo_placa" type="text" placeholder="AAA-0000" style="text-transform:uppercase" />
+        </div>
+      </div>
+
+      <div class="section-title">Observações</div>
+
+      <div class="field">
+        <label>Observações adicionais</label>
+        <textarea id="observacao" placeholder="Informações relevantes para o agendamento...">${esc(d.observacao)}</textarea>
+      </div>
+
+      <button type="submit" class="btn-submit" id="btn-submit">
+        ✅ Confirmar Agendamento
+      </button>
+
+    </form>
+  `
+
+  document.getElementById('form-ag').addEventListener('submit', handleSubmit)
+}
+
+function esc(v) { return v ? String(v).replace(/"/g, '&quot;').replace(/</g, '&lt;') : '' }
+
+// ─── Envia formulário ─────────────────────────────────────────────────────────
+async function handleSubmit(e) {
+  e.preventDefault()
+  const btn  = document.getElementById('btn-submit')
+  const tipo = document.getElementById('tipo_servico').value.trim()
+  const cliente = document.getElementById('cliente_nome').value.trim()
+  const data = document.getElementById('data_servico').value
+
+  if (!tipo)    { showToast('Selecione o tipo de serviço.'); return }
+  if (!cliente) { showToast('Informe o nome do cliente.'); return }
+  if (!data)    { showToast('Informe a data do serviço.'); return }
+
+  btn.disabled = true
+  btn.textContent = '⏳ Salvando...'
+
+  const payload = {
+    token,
+    tipo_servico:     tipo,
+    cliente_nome:     cliente,
+    atividade:        document.getElementById('atividade').value.trim()          || null,
+    data_servico:     data,
+    horario_servico:  document.getElementById('horario_servico').value           || null,
+    origem:           document.getElementById('origem').value.trim()             || null,
+    destino:          document.getElementById('destino').value.trim()            || null,
+    responsavel_nome: document.getElementById('responsavel_nome').value.trim()   || null,
+    motorista_nome:   document.getElementById('motorista_nome').value.trim()     || null,
+    veiculo_placa:    document.getElementById('veiculo_placa').value.trim().toUpperCase() || null,
+    observacao:       document.getElementById('observacao').value.trim()         || null,
+  }
+
+  try {
+    const res  = await fetch('/api/agenda-link', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    })
+    const json = await res.json()
+
+    if (!res.ok) {
+      btn.disabled = false
+      btn.textContent = '✅ Confirmar Agendamento'
+      if (json.usado)   return renderError('Link já utilizado', 'Este formulário já foi preenchido.')
+      if (json.expirado) return renderError('Link expirado', 'Solicite um novo link via WhatsApp.')
+      showToast(json.error || 'Erro ao salvar. Tente novamente.')
+      return
+    }
+
+    renderSuccess(payload, json.numero_agendamento)
+  } catch (err) {
+    btn.disabled = false
+    btn.textContent = '✅ Confirmar Agendamento'
+    showToast('Erro de conexão. Verifique sua internet.')
+  }
+}
+
+// ─── Tela de sucesso ──────────────────────────────────────────────────────────
+function renderSuccess(payload, numAg) {
+  const fmt = d => d ? String(d).split('-').reverse().join('/') : '—'
+  app.innerHTML = `
+    <div class="header">
+      <div class="header-badge">📅 Agendamento de Serviço</div>
+      <h1>Agendamento Criado!</h1>
+    </div>
+    <div class="done-wrap">
+      <div class="done-icon">🎉</div>
+      ${numAg ? `<div class="done-num">${numAg}</div>` : ''}
+      <div class="done-title">Tudo certo!</div>
+      <div class="done-msg">Seu agendamento foi registrado com sucesso. O gestor foi notificado via WhatsApp.</div>
+      <div class="done-card">
+        <div class="done-row"><span>Serviço</span><span>${payload.tipo_servico}</span></div>
+        <div class="done-row"><span>Cliente</span><span>${payload.cliente_nome}</span></div>
+        ${payload.atividade ? `<div class="done-row"><span>Atividade</span><span>${payload.atividade}</span></div>` : ''}
+        <div class="done-row"><span>Data</span><span>${fmt(payload.data_servico)}</span></div>
+        ${payload.horario_servico ? `<div class="done-row"><span>Horário</span><span>${payload.horario_servico}</span></div>` : ''}
+        ${payload.origem ? `<div class="done-row"><span>Origem</span><span>${payload.origem}</span></div>` : ''}
+        ${payload.destino ? `<div class="done-row"><span>Destino</span><span>${payload.destino}</span></div>` : ''}
+      </div>
+    </div>
+  `
+}
+
+// ─── Inicializa ───────────────────────────────────────────────────────────────
+init()
+</script>
+</body>
+</html>

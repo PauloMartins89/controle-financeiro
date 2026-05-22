@@ -2,6 +2,12 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
+    "api/agenda-alertas.js": {
+      "maxDuration": 30
+    },
+    "api/agenda-link.js": {
+      "maxDuration": 15
+    },
     "api/whatsapp.js": {
       "maxDuration": 60
     },
@@ -13,6 +19,10 @@
     }
   },
   "crons": [
+    {
+      "path": "/api/agenda-alertas",
+      "schedule": "*/5 * * * *"
+    },
     {
       "path": "/api/cron?type=lembretes",
       "schedule": "0 12 * * 1"
@@ -35,6 +45,7 @@
     { "source": "/ar/:token", "destination": "/aprovar.html?token=:token" },
     { "source": "/rc/:token", "destination": "/confirmar-restaurante.html?token=:token" },
     { "source": "/vr/:token", "destination": "/validar-entrega.html?token=:token" },
+    { "source": "/ag/:token", "destination": "/agendar.html?token=:token" },
     { "source": "/limpar", "destination": "/limpar.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

@@ -1,6 +1,7 @@
 ﻿import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
 import { runOCR } from './_ocr.js'
+import { handleAgendaWA } from './_agenda-wa.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Webhook Z-API — recebe mensagem do WhatsApp
@@ -404,6 +405,21 @@ export default async function handler(req, res) {
           }
           return res.status(200).json({ ok: true, leader: true })
         }
+      }
+    }
+
+    // ── Gestores de Agenda: áudio / texto / link ────────────────────────────
+    {
+      const supabaseAg = getSupabase()
+      if (supabaseAg && fromPhone) {
+        const consumed = await handleAgendaWA(
+          body,
+          fromPhone,
+          phoneVariants,
+          zapiSendText,
+          supabaseAg
+        ).catch(e => { console.error('[webhook] agenda handler error:', e.message); return false })
+        if (consumed) return res.status(200).json({ ok: true, agenda: true })
       }
     }
 

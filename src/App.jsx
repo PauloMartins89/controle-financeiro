@@ -70,6 +70,7 @@ import PlataformaModulos from './pages/PlataformaModulos'
 import PlataformaAuditoria from './pages/PlataformaAuditoria'
 import ChatIA from './components/ChatIA'
 import GlobalSearch from './components/GlobalSearch'
+import AgendaServicos from './pages/AgendaServicos'
 
 // Verifica se assinatura está ativa (trial válido, ativo, ou isento)
 function isSubscriptionActive(sub) {
@@ -526,6 +527,7 @@ export default function App() {
                   <Route path="/refeicoes/relatorios/rel-divergencias" element={<Refeicoes />} />
                   <Route path="/refeicoes/mapa" element={<MapaGerencialRefeicoes />} />
                   <Route path="/mapa-maquina" element={<MapaApontamentoMaquina />} />
+                  <Route path="/agenda-servicos" element={<AgendaServicos />} />
                 </Routes>
               </main>
             </div>

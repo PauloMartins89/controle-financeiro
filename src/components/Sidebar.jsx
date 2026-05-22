@@ -126,6 +126,12 @@ const navGroups = [
     ],
   },
   {
+    title: 'Agendamentos',
+    items: [
+      { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agendamentos', moduleKey: null },
+    ],
+  },
+  {
     title: 'Sistema',
     items: [
       { to: '/acessos', icon: LockClosedIcon, label: 'Acessos', moduleKey: null, empresaAdminOnly: true },
