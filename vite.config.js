@@ -15,7 +15,7 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/version\.json/, /^\/limpar/],
+        navigateFallbackDenylist: [/^\/version\.json/, /^\/limpar/, /^\/ag\//, /^\/ar\//, /^\/rc\//, /^\/vr\//],
         runtimeCaching: [
           {
             urlPattern: /\/version\.json/,
