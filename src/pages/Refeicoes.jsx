@@ -1240,7 +1240,7 @@ function HBarChart({ items, colorFn }) {
               <span style={{ fontSize: 12, fontWeight: 600, color: '#1A2332', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{it.label}</span>
               <span style={{ fontSize: 12, fontWeight: 800, color }}>{it.value} itens</span>
             </div>
-            <div style={{ height: 7, borderRadius: 999, background: '#EEF2F8', overflow: 'hidden' }}>
+            <div style={{ height: 7, borderRadius: 999, background: 'var(--bg-secondary)', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
             </div>
           </div>
@@ -1267,8 +1267,8 @@ function DonutChart({ segments }) {
             return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color} strokeWidth={sw} strokeDasharray={`${dash.toFixed(2)} ${gap.toFixed(2)}`} transform={`rotate(${rot.toFixed(1)} ${cx} ${cy})`} strokeLinecap="butt" />
           })
       }
-      <text x={cx} y={cy - 5} textAnchor="middle" fontSize={22} fontWeight={800} fill="#1A2332" fontFamily="sans-serif">{tot}</text>
-      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={8} fill="#6B7A99" fontFamily="sans-serif">TOTAL</text>
+      <text x={cx} y={cy - 5} textAnchor="middle" fontSize={22} fontWeight={800} style={{ fill: 'var(--text-primary)' }} fontFamily="sans-serif">{tot}</text>
+      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={8} style={{ fill: 'var(--text-secondary)' }} fontFamily="sans-serif">TOTAL</text>
     </svg>
   )
 }
@@ -1315,6 +1315,8 @@ function SecaoDashboard({ sols, onNav }) {
     const refMes    = sum(mesSols, 'total_refeicoes')
     const cafMes    = sum(mesSols, 'total_cafes')
 
+    const hojePed       = hojeSols.length
+    const mesPed        = mesSols.length
     const entreguesHoje = entregues.filter(s => s.data_refeicao === hoje).length
 
     const fv = (cur, prev) => {
@@ -1324,8 +1326,7 @@ function SecaoDashboard({ sols, onNav }) {
     }
 
     const kpis = [
-      { icon: '🍽️', label: 'Refeições hoje',     val: hojeRef,           isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem',    footer: `Mês: ${refMes} refeições` },
-      { icon: '☕',  label: 'Cafés hoje',          val: hojeCaf,           isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem',    footer: `Mês: ${cafMes} cafés` },
+      { combined: true, icon: '📋', label: 'Total Pedidos', val: hojePed, isText: false, color: '#4F6EF7', var: null, varLabel: null, footer: `Mês: ${refMes} ref. · ${cafMes} cafés`, mesLabel: `${mesPed} no mês`, secondary: { ref: hojeRef, caf: hojeCaf, varRef: fv(hojeRef, ontemRef), varCaf: fv(hojeCaf, ontemCaf) } },
       { icon: '⏳',  label: 'Pend. aprovação',     val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ✓' },
       { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues` },
       { icon: '🚚',  label: 'Aguard. entrega',     val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje` },
@@ -1406,9 +1407,9 @@ function SecaoDashboard({ sols, onNav }) {
 
   const COLORS  = ['#4F6EF7', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4', '#F97316', '#14B8A6']
   const REST_CL = ['#14B8A6', '#8B5CF6', '#4F6EF7', '#F59E0B', '#10B981']
-  const BG = '#EEF2F8', CARD = '#FFFFFF', BORDER = '#E5EAF2'
-  const SHADOW = '0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.05)'
-  const TEXT = '#1A2332', TEXT2 = '#6B7A99', TEXT3 = '#A0AEC0'
+  const BG = 'var(--bg-primary)', CARD = 'var(--bg-card)', BORDER = 'var(--border)'
+  const SHADOW = '0 1px 3px rgba(0,0,0,0.1), 0 4px 16px rgba(0,0,0,0.08)'
+  const TEXT = 'var(--text-primary)', TEXT2 = 'var(--text-secondary)', TEXT3 = 'var(--text-secondary)'
 
   const cardStyle = { background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, boxShadow: SHADOW }
 
@@ -1422,16 +1423,16 @@ function SecaoDashboard({ sols, onNav }) {
           <div style={{ fontSize: 12, color: TEXT2, marginTop: 4 }}>Torre de Controle de Alimentação Operacional</div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: 'var(--bg-secondary)', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px' }}>
             <CalendarDaysIcon style={{ width: 14, height: 14, color: TEXT2, flexShrink: 0 }} />
             <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: 12, color: TEXT, outline: 'none', cursor: 'pointer', minWidth: 0 }} />
             {dateFilter && <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1 }}>✕</button>}
           </div>
-          <div style={{ fontSize: 11, color: TEXT3, background: '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 11, color: TEXT3, background: 'var(--bg-secondary)', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px', whiteSpace: 'nowrap' }}>
             {dateFilter ? `Exibindo: ${fmtData(dateFilter)}` : `Hoje: ${fmtData(todayISO())}`}
           </div>
           {dash.pendentesCount > 0 && (
-            <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: 10, padding: '7px 14px', cursor: 'pointer', color: '#92400E', fontSize: 12, fontWeight: 700 }}>
+            <button onClick={() => onNav('operacoes', 'aprovacoes')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '7px 14px', cursor: 'pointer', color: '#F59E0B', fontSize: 12, fontWeight: 700 }}>
               ⏳ {dash.pendentesCount} pendente{dash.pendentesCount > 1 ? 's' : ''} →
             </button>
           )}
@@ -1442,23 +1443,55 @@ function SecaoDashboard({ sols, onNav }) {
 
         {/* ── KPI Row ─────────────────────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 14 }}>
-          {dash.kpis.map((k, i) => (
-            <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1.5, maxWidth: '72%' }}>{k.label}</span>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{k.icon}</div>
-              </div>
-              <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em', marginBottom: 7 }}>{k.val}</div>
-              {k.var
-                ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: k.var.up ? '#059669' : '#DC2626', background: k.var.up ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${k.var.up ? '#A7F3D0' : '#FECACA'}`, borderRadius: 999, padding: '2px 8px', marginBottom: 9 }}>
-                    {k.var.text} {k.varLabel}
+          {dash.kpis.map((k, i) => {
+            if (k.combined) return (
+              <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #4F6EF7 50%, #F59E0B 100%)', borderRadius: '16px 16px 0 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{k.label}</span>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(79,110,247,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>{k.icon}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+                  <div style={{ flexShrink: 0 }}>
+                    <div style={{ fontSize: 36, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.03em' }}>{k.val}</div>
+                    <div style={{ fontSize: 10, color: TEXT2, marginTop: 4 }}>{k.mesLabel}</div>
                   </div>
-                : <div style={{ height: 22, marginBottom: 1 }} />
-              }
-              <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
-            </div>
-          ))}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, paddingBottom: 2, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12 }}>🍽️</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: '#4F6EF7', lineHeight: 1 }}>{k.secondary.ref}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Refeição</span>
+                      {k.secondary.varRef && <span style={{ fontSize: 9, fontWeight: 700, color: k.secondary.varRef.up ? '#10B981' : '#EF4444', background: k.secondary.varRef.up ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 999, padding: '1px 5px', flexShrink: 0 }}>{k.secondary.varRef.text}</span>}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12 }}>☕</span>
+                      <span style={{ fontSize: 18, fontWeight: 800, color: '#F59E0B', lineHeight: 1 }}>{k.secondary.caf}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Café da Manhã</span>
+                      {k.secondary.varCaf && <span style={{ fontSize: 9, fontWeight: 700, color: k.secondary.varCaf.up ? '#10B981' : '#EF4444', background: k.secondary.varCaf.up ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 999, padding: '1px 5px', flexShrink: 0 }}>{k.secondary.varCaf.text}</span>}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ paddingTop: 10, marginTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
+              </div>
+            )
+            return (
+              <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1.5, maxWidth: '72%' }}>{k.label}</span>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{k.icon}</div>
+                </div>
+                <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em', marginBottom: 7 }}>{k.val}</div>
+                {k.var
+                  ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: k.var.up ? '#10B981' : '#EF4444', background: k.var.up ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', border: `1px solid ${k.var.up ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`, borderRadius: 999, padding: '2px 8px', marginBottom: 9 }}>
+                      {k.var.text} {k.varLabel}
+                    </div>
+                  : <div style={{ height: 22, marginBottom: 1 }} />
+                }
+                <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
+              </div>
+            )
+          })}
         </div>
 
         {/* ── Charts Row ──────────────────────────────────────────────────────── */}
@@ -1537,7 +1570,7 @@ function SecaoDashboard({ sols, onNav }) {
                         </div>
                         <span style={{ fontSize: 13, fontWeight: 800, color }}>{eq.total}</span>
                       </div>
-                      <div style={{ height: 5, borderRadius: 999, background: '#EEF2F8' }}>
+                      <div style={{ height: 5, borderRadius: 999, background: 'var(--bg-secondary)' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
                       </div>
                       <div style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>{fmtBRL(eq.valor)}</div>
@@ -1567,7 +1600,7 @@ function SecaoDashboard({ sols, onNav }) {
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 800, color }}>{fmtBRL(r.valor)}</span>
                       </div>
-                      <div style={{ height: 5, borderRadius: 999, background: '#EEF2F8' }}>
+                      <div style={{ height: 5, borderRadius: 999, background: 'var(--bg-secondary)' }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
                       </div>
                       <div style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>{r.total} itens · {r.ped} pedido{r.ped > 1 ? 's' : ''}</div>
@@ -1608,7 +1641,7 @@ function SecaoDashboard({ sols, onNav }) {
                           <td style={{ padding: '9px 8px', textAlign: 'right', fontWeight: 700, color: '#14B8A6', whiteSpace: 'nowrap', fontSize: 11 }}>{fmtBRL(r.valor)}</td>
                         </tr>
                       ))}
-                      <tr style={{ borderTop: `2px solid ${BORDER}`, background: '#F8FAFC' }}>
+                      <tr style={{ borderTop: `2px solid ${BORDER}`, background: 'var(--bg-secondary)' }}>
                         <td style={{ padding: '9px 8px', fontWeight: 800, color: TEXT, fontSize: 11 }}>TOTAL GERAL</td>
                         <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#4F6EF7' }}>{dash.painelHoje.reduce((a, r) => a + r.ref, 0)}</td>
                         <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#F59E0B' }}>{dash.painelHoje.reduce((a, r) => a + r.caf, 0)}</td>
@@ -1635,8 +1668,8 @@ function SecaoDashboard({ sols, onNav }) {
               {dash.alertas.map((a, i) => {
                 const isWarn     = a.type === 'warn'
                 const alertColor = isWarn ? '#D97706' : '#DC2626'
-                const alertBg    = isWarn ? '#FFFBEB' : '#FFF5F5'
-                const alertBrd   = isWarn ? '#FDE68A' : '#FEE2E2'
+                const alertBg    = isWarn ? 'rgba(245,158,11,0.08)' : 'rgba(239,68,68,0.08)'
+                const alertBrd   = isWarn ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)'
                 return (
                   <div key={i} style={{ background: alertBg, border: `1px solid ${alertBrd}`, borderLeft: `4px solid ${isWarn ? '#F59E0B' : '#EF4444'}`, borderRadius: 12, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                     <span style={{ fontSize: 20, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>{a.icon}</span>
