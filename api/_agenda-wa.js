@@ -144,34 +144,32 @@ async function criarAgendamento(supabase, dados, gestor, origem, textoOrigem) {
     payload_json:   { origem, texto_original: (textoOrigem || '').slice(0, 500) },
   }).then(null, () => {}) // não bloqueia se histórico falhar
 
-  // Lembrete padrão para o gestor (mesmo comportamento do formulário público)
+  // Lembrete padrão para o gestor (awaited — serverless pode encerrar antes de IIFE completar)
   if (gestor.telefone && horario) {
-    ;(async () => {
-      try {
-        const { data: params } = await supabase
-          .from('agenda_parametros')
-          .select('lembrete_ativo, lembrete_minutos_antes')
-          .eq('workspace_id', gestor.workspace_id)
-          .maybeSingle()
-        const lembreteAtivo   = params?.lembrete_ativo         ?? true
-        const lembreteMinutos = params?.lembrete_minutos_antes ?? 10
-        if (lembreteAtivo) {
-          const dataHora = new Date(payload.data_hora_servico)
-          await supabase.from('agendamento_alertas').insert({
-            agendamento_id:         data.id,
-            destinatario_tipo:      'gestor',
-            destinatario_nome:      gestor.nome  || null,
-            destinatario_whatsapp:  gestor.telefone,
-            antecedencia_minutos:   lembreteMinutos,
-            horario_previsto_envio: new Date(dataHora.getTime() - lembreteMinutos * 60 * 1000).toISOString(),
-            solicitar_confirmacao:  false,
-            ativo:                  true,
-            status:                 'pendente',
-            idempotency_key:        `${data.id}:lembrete_padrao`,
-          })
-        }
-      } catch { /* não bloqueia */ }
-    })()
+    try {
+      const { data: params } = await supabase
+        .from('agenda_parametros')
+        .select('lembrete_ativo, lembrete_minutos_antes')
+        .eq('workspace_id', gestor.workspace_id)
+        .maybeSingle()
+      const lembreteAtivo   = params?.lembrete_ativo         ?? true
+      const lembreteMinutos = params?.lembrete_minutos_antes ?? 10
+      if (lembreteAtivo) {
+        const dataHora = new Date(payload.data_hora_servico)
+        await supabase.from('agendamento_alertas').insert({
+          agendamento_id:         data.id,
+          destinatario_tipo:      'gestor',
+          destinatario_nome:      gestor.nome  || null,
+          destinatario_whatsapp:  gestor.telefone,
+          antecedencia_minutos:   lembreteMinutos,
+          horario_previsto_envio: new Date(dataHora.getTime() - lembreteMinutos * 60 * 1000).toISOString(),
+          solicitar_confirmacao:  false,
+          ativo:                  true,
+          status:                 'pendente',
+          idempotency_key:        `${data.id}:lembrete_padrao`,
+        })
+      }
+    } catch { /* não bloqueia criação do agendamento */ }
   }
 
   // Aplica regras automáticas de alerta configuradas
