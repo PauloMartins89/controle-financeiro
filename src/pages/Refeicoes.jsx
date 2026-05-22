@@ -1269,62 +1269,76 @@ function SecaoDashboard({ sols, onNav }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18, marginBottom: 28 }}>
         {stats.cards.map((c, i) => (
-          <div key={i} className="stat-card" style={{ position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: c.grad, borderRadius: '16px 16px 0 0' }} />
+          <div key={i} className="stat-card" style={{
+            position: 'relative', overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.06)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.12)',
+            borderRadius: 16,
+          }}>
+            {/* Barra superior */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 5, background: c.grad, borderRadius: '16px 16px 0 0' }} />
 
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{c.label}</div>
-                <div style={{ fontSize: c.isText ? 19 : 28, fontWeight: 800, color: c.color, lineHeight: 1 }}>{c.main}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{c.sub}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, paddingTop: 6 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>{c.label}</div>
+                <div style={{ fontSize: c.isText ? 20 : 32, fontWeight: 800, color: c.color, lineHeight: 1, letterSpacing: '-0.02em' }}>{c.main}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 5, opacity: 0.75 }}>{c.sub}</div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{c.emoji}</div>
-                <Sparkline data={sparks[i]} color={c.color} width={70} height={26} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, marginLeft: 10 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: '50%',
+                  background: c.bg, border: `1.5px solid ${c.color}33`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                  boxShadow: `0 0 12px ${c.color}22`,
+                }}>{c.emoji}</div>
+                <Sparkline data={sparks[i]} color={c.color} width={72} height={28} />
               </div>
             </div>
 
-            <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
+            <div style={{ height: 1, background: 'var(--border)', opacity: 0.5, margin: '0 0 12px' }} />
 
             {/* Mini stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
               {c.mini.map((m, j) => (
-                <div key={j} style={{ textAlign: 'center', padding: '4px 2px' }}>
-                  <div style={{ fontSize: 11, marginBottom: 2 }}>{m.icon}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{m.val}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.3 }}>{m.lbl}</div>
+                <div key={j} style={{
+                  textAlign: 'center', padding: '7px 4px', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}>
+                  <div style={{ fontSize: 10, marginBottom: 4, opacity: 0.7 }}>{m.icon}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1 }}>{m.val}</div>
+                  <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 3, lineHeight: 1.3, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{m.lbl}</div>
                 </div>
               ))}
             </div>
 
             {/* Tempo médio (card pendentes) */}
             {c.tempoMedio && (
-              <>
-                <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
-                <div style={{ background: c.bg, borderRadius: 8, padding: '6px 10px', marginBottom: 8 }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>Tempo médio aprovação</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: c.color }}>{c.tempoMedio}</div>
-                </div>
-              </>
+              <div style={{ background: c.bg, border: `1px solid ${c.color}33`, borderRadius: 10, padding: '7px 12px', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tempo médio aprovação</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: c.color }}>{c.tempoMedio}</span>
+              </div>
             )}
 
             {/* Variação */}
             {c.var && (
-              <>
-                <div style={{ height: 1, background: 'var(--border)', marginBottom: 8 }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Variação (mês anterior)</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: c.var.color }}>{c.var.text}</span>
-                </div>
-              </>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)', opacity: 0.8 }}>vs. mês anterior</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, color: c.var.color,
+                  background: `${c.var.color}18`,
+                  border: `1px solid ${c.var.color}33`,
+                  borderRadius: 999, padding: '2px 9px',
+                }}>{c.var.text}</span>
+              </div>
             )}
 
             {/* Footer */}
             {c.footer && (
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: 0.85 }}>
                 <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{c.footer[0]}</span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: c.color }}>{c.footer[1]}</span>
               </div>
