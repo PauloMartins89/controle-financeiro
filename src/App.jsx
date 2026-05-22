@@ -331,7 +331,8 @@ export default function App() {
           .eq('user_id', authUser.id)
           .maybeSingle()
         update.isPlatformAdmin = !!adminRow
-        if (adminRow) update.enabledModules = null // admin sempre vê todos os módulos
+        // Platform admin respeita workspace_modules (preferência de visibilidade do usuário).
+        // O acesso às rotas /plataforma/* e /admin/* é controlado por adminOnly, não por enabledModules.
 
         // Carrega permissões: ['*'] = acesso total, array específico quando tem perfil restrito
         let permissoes = ['*'] // default: admin total da empresa (sem perfil_id)
