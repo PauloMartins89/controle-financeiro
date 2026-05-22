@@ -9,6 +9,7 @@ import {
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
   TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon, BeakerIcon, DevicePhoneMobileIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -122,7 +123,8 @@ const navGroups = [
   {
     title: 'Máquinas',
     items: [
-      { to: '/mapa-maquina', icon: TableCellsIcon, label: 'Mapa de Apontamento', moduleKey: 'lancamentos' },
+      { to: '/mapa-maquina',        icon: TableCellsIcon,          label: 'Mapa de Apontamento', moduleKey: 'lancamentos' },
+      { to: '/maquinas/pendencias', icon: ExclamationTriangleIcon,  label: 'Pendências',          moduleKey: 'lancamentos' },
     ],
   },
   {

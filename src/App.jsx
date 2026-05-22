@@ -49,6 +49,7 @@ import RefeicaoConfirmarRestaurante from './pages/RefeicaoConfirmarRestaurante'
 import Refeicoes from './pages/Refeicoes'
 import MapaGerencialRefeicoes from './pages/MapaGerencialRefeicoes'
 import MapaApontamentoMaquina from './pages/MapaApontamentoMaquina'
+import BoletinsPendencias from './pages/BoletinsPendencias'
 import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
@@ -530,6 +531,7 @@ export default function App() {
                   <Route path="/refeicoes/relatorios/rel-divergencias" element={<Refeicoes />} />
                   <Route path="/refeicoes/mapa" element={<MapaGerencialRefeicoes />} />
                   <Route path="/mapa-maquina" element={<MapaApontamentoMaquina />} />
+                  <Route path="/maquinas/pendencias" element={<BoletinsPendencias />} />
                   <Route path="/agenda-servicos" element={<AgendaServicos />} />
                 </Routes>
               </main>
