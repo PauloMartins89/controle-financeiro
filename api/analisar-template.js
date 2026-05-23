@@ -1,6 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
-import OpenAI from 'openai'
+
+async function callOpenAI(apiKey, body) {
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify(body),
+  })
+  if (!resp.ok) {
+    const err = await resp.text()
+    throw new Error(`OpenAI API error ${resp.status}: ${err.slice(0, 300)}`)
+  }
+  return resp.json()
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/analisar-template
@@ -31,7 +43,6 @@ export default async function handler(req, res) {
     realtime: { params: { log_level: 'disabled' }, transport: ws },
     global: {},
   })
-  const openai = new OpenAI({ apiKey: openaiApiKey })
 
   // Carrega o tipo de boletim
   const { data: tipo, error: tipoErr } = await supabase
@@ -71,7 +82,7 @@ Exemplo:
 
   let campos = {}
   try {
-    const response = await openai.chat.completions.create({
+    const response = await callOpenAI(openaiApiKey, {
       model: 'gpt-4o',
       max_tokens: 2048,
       messages: [

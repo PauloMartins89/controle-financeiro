@@ -1,6 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
-import OpenAI from 'openai'
+
+async function callOpenAI(apiKey, body) {
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify(body),
+  })
+  if (!resp.ok) {
+    const err = await resp.text()
+    throw new Error(`OpenAI API error ${resp.status}: ${err.slice(0, 300)}`)
+  }
+  return resp.json()
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ocr-boletim-maquina.js
@@ -32,11 +44,6 @@ function getSupabase() {
     realtime: { params: { log_level: 'disabled' }, transport: ws },
     global: {},
   })
-}
-
-function getOpenAI() {
-  if (!openaiApiKey) return null
-  return new OpenAI({ apiKey: openaiApiKey })
 }
 
 async function zapiSendText(phone, message) {
@@ -179,8 +186,8 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
 // ─────────────────────────────────────────────────────────────────────────────
 async function processarBoletim(boletimId) {
   const supabase = getSupabase()
-  const openai   = getOpenAI()
-  if (!supabase || !openai) throw new Error('supabase ou openai não configurados')
+  if (!supabase) throw new Error('supabase não configurado')
+  if (!openaiApiKey) throw new Error('OPENAI_API_KEY não configurada no servidor')
 
   // Carrega boletim + relacionamentos
   const { data: bol, error: bolErr } = await supabase
@@ -235,7 +242,7 @@ async function processarBoletim(boletimId) {
 
   let ocrRaw = {}
   try {
-    const response = await openai.chat.completions.create({
+    const response = await callOpenAI(openaiApiKey, {
       model: 'gpt-4o',
       max_tokens: 1024,
       messages: [
