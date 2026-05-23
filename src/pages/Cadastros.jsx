@@ -687,7 +687,11 @@ function MaquinasTab({ workspaceId }) {
       })
       const json = await res.json()
       if (!res.ok) {
-        toast.error(json.detail || json.error || 'Erro ao analisar template')
+        if (json.error === 'openai_not_configured') {
+          toast.error('OPENAI_API_KEY não configurada no Vercel. Configure a variável de ambiente.')
+        } else {
+          toast.error(json.detail || json.error || 'Erro ao analisar template')
+        }
       } else {
         toast.success(`✅ ${json.total} campos mapeados!`)
         load()

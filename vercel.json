@@ -16,6 +16,12 @@
     },
     "api/cnpj.js": {
       "maxDuration": 15
+    },
+    "api/analisar-template.js": {
+      "maxDuration": 60
+    },
+    "api/ocr-boletim-maquina.js": {
+      "maxDuration": 60
     }
   },
   "crons": [
