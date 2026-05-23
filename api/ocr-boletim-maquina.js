@@ -1,12 +1,28 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 
-async function imageUrlToInlineData(url) {
+async function imageUrlToBase64(url) {
   const resp = await fetch(url)
   const buffer = await resp.arrayBuffer()
   const mimeType = (resp.headers.get('content-type') || 'image/jpeg').split(';')[0]
   return { inlineData: { mimeType, data: Buffer.from(buffer).toString('base64') } }
+}
+
+async function callGemini(apiKey, parts) {
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts }] }),
+    }
+  )
+  if (!resp.ok) {
+    const err = await resp.text()
+    throw new Error(`Gemini API error ${resp.status}: ${err.slice(0, 400)}`)
+  }
+  const json = await resp.json()
+  return json.candidates?.[0]?.content?.parts?.[0]?.text || ''
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -224,13 +240,10 @@ async function processarBoletim(boletimId) {
 
   let ocrRaw = {}
   try {
-    const genAI = new GoogleGenerativeAI(geminiApiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    const parts = [systemPrompt, userPrompt]
-    if (boletimTipo?.imagem_url) parts.push(await imageUrlToInlineData(boletimTipo.imagem_url))
-    parts.push(await imageUrlToInlineData(bol.imagem_url))
-    const result = await model.generateContent(parts)
-    const rawText = result.response.text()
+    const parts = [{ text: systemPrompt }, { text: userPrompt }]
+    if (boletimTipo?.imagem_url) parts.push(await imageUrlToBase64(boletimTipo.imagem_url))
+    parts.push(await imageUrlToBase64(bol.imagem_url))
+    const rawText = await callGemini(geminiApiKey, parts)
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     ocrRaw = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
   } catch (e) {

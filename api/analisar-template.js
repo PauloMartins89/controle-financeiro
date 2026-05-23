@@ -1,12 +1,28 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 
-async function imageUrlToInlineData(url) {
+async function imageUrlToBase64(url) {
   const resp = await fetch(url)
   const buffer = await resp.arrayBuffer()
   const mimeType = (resp.headers.get('content-type') || 'image/jpeg').split(';')[0]
   return { inlineData: { mimeType, data: Buffer.from(buffer).toString('base64') } }
+}
+
+async function callGemini(apiKey, parts) {
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts }] }),
+    }
+  )
+  if (!resp.ok) {
+    const err = await resp.text()
+    throw new Error(`Gemini API error ${resp.status}: ${err.slice(0, 400)}`)
+  }
+  const json = await resp.json()
+  return json.candidates?.[0]?.content?.parts?.[0]?.text || ''
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,15 +93,13 @@ Exemplo:
 
   let campos = {}
   try {
-    const genAI = new GoogleGenerativeAI(geminiApiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    const imagePart = await imageUrlToInlineData(tipo.imagem_url)
-    const result = await model.generateContent([
-      systemPrompt,
-      `Analise este formulário de boletim "${tipo.nome}" e mapeie todos os campos preenchíveis.`,
+    const imagePart = await imageUrlToBase64(tipo.imagem_url)
+    const parts = [
+      { text: systemPrompt },
+      { text: `Analise este formulário de boletim "${tipo.nome}" e mapeie todos os campos preenchíveis.` },
       imagePart,
-    ])
-    const rawText = result.response.text()
+    ]
+    const rawText = await callGemini(geminiApiKey, parts)
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     campos = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
   } catch (e) {
