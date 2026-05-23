@@ -446,14 +446,16 @@ export default async function handler(req, res) {
       const supabaseBol = getSupabase()
       let colaboradorBol = null
       if (supabaseBol) {
+        console.log('[webhook/boletim] phoneVariants tentados:', phoneVariants)
         for (const v of phoneVariants) {
-          const { data } = await supabaseBol
+          const { data, error } = await supabaseBol
             .from('maquinas_colaboradores')
             .select('*, maquinas_frentes(id, nome, workspace_id, maquinas_boletim_tipos(id, nome, campos_json, imagem_url))')
             .eq('telefone_wa', v)
             .eq('ativo', true)
             .limit(1)
             .maybeSingle()
+          console.log(`[webhook/boletim] variante "${v}":`, data ? `ENCONTRADO id=${data.id}` : `não encontrado`, error ? `erro: ${error.message}` : '')
           if (data) { colaboradorBol = data; break }
         }
       }
