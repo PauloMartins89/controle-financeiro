@@ -470,7 +470,7 @@ function BoletimPanel({ records, equipKey, date, onClose, onEdit, onNew }) {
 }
 
 // ─── Card modal central (clique célula verde) ────────────────────────────────
-function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdit }) {
+function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdit, onReprocess }) {
   const [boletimData, setBoletimData] = useState(null)
   const [boletimImgs, setBoletimImgs] = useState({}) // boletim_id → imagem_url
   const [reprocessando, setReprocessando] = useState({})
@@ -488,13 +488,9 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
       })
       if (r.ok) {
         setReprocessMsg(p => ({ ...p, [boletimId]: 'ok' }))
-        // Atualiza status do boletim no header
-        const { data } = await supabase
-          .from('maquinas_boletins')
-          .select('id, numero, status, imagem_url, maquinas_colaboradores(nome)')
-          .eq('id', boletimId)
-          .single()
-        if (data) setBoletimData(data)
+        // Recarrega o mapa e fecha o card
+        if (onReprocess) onReprocess()
+        setTimeout(() => onClose(), 1200)
       } else {
         setReprocessMsg(p => ({ ...p, [boletimId]: 'erro' }))
       }
@@ -853,25 +849,38 @@ export default function MapaApontamentoMaquina() {
     // Converte boletins OCR pendentes em pseudo-lancamentos para o mapa
     const bolAsLanc = (bolResult.data || []).map(bol => {
       const ocr   = bol.ocr_raw || {}
-      const hDisp = parseFloat(ocr.horas_disponiveis || ocr.horas_totais || 0) || null
       const hTrab = parseFloat(ocr.horas_trabalhadas || ocr.horas_produtivas || 0) || null
+      const hIni  = parseFloat(ocr.horimetro_inicial || 0) || null
+      const hFin  = parseFloat(ocr.horimetro_final   || 0) || null
+      const hDisp = parseFloat(ocr.horas_disponiveis || ocr.horas_totais || 0) ||
+                    (hIni != null && hFin != null ? parseFloat((hFin - hIni).toFixed(2)) : null)
       const pct   = hDisp && hTrab ? parseFloat((hTrab / hDisp * 100).toFixed(2)) : null
       return {
         id:   `bol_${bol.id}`,
         data: bol.data_boletim || bol.recebido_em?.slice(0, 10),
         dados_extras: {
-          _from_boletim:      true,
-          boletim_id:         bol.id,
-          boletim_status:     bol.status,
-          boletim_numero:     bol.numero,
-          equipamento:        (ocr.equipamento || '').toUpperCase(),
-          modelo:             ocr.modelo || '',
-          classe_operacional: ocr.classe || ocr.classe_operacional || '',
-          frente:             ocr.frente || ocr.frente_de_trabalho || '',
-          horas_disponiveis:  hDisp,
-          horas_trabalhadas:  hTrab,
-          horas_espera:       parseFloat(ocr.horas_espera || ocr.horas_ociosas || 0) || null,
-          porcentagem:        pct,
+          _from_boletim:       true,
+          boletim_id:          bol.id,
+          boletim_status:      bol.status,
+          boletim_numero:      bol.numero,
+          equipamento:         (ocr.equipamento || '').toUpperCase(),
+          modelo:              ocr.modelo || '',
+          classe_operacional:  ocr.classe || ocr.classe_operacional || '',
+          frente:              ocr.frente || ocr.frente_de_trabalho || '',
+          cdc:                 ocr.cdc || ocr.centro_de_custo || '',
+          turno:               ocr.turno || '',
+          horimetro_inicial:   hIni,
+          horimetro_final:     hFin,
+          horas_disponiveis:   hDisp,
+          horas_trabalhadas:   hTrab,
+          horas_espera:        parseFloat(ocr.horas_espera || ocr.horas_ociosas || 0) || null,
+          porcentagem:         pct,
+          atividade_realizada: ocr.atividade_realizada || ocr.atividade || '',
+          descritivo_trabalho: ocr.descritivo_trabalho || ocr.descritivo || '',
+          observacoes:         ocr.observacoes || ocr.observacao || '',
+          produtividade_qtd:   parseFloat(ocr.produtividade_quantidade || ocr.produtividade || 0) || null,
+          produtividade_un:    ocr.produtividade_unidade || ocr.unidade_medida || '',
+          produtividade_hora:  parseFloat(ocr.produtividade_por_hora || 0) || null,
         },
       }
     })
@@ -1288,6 +1297,7 @@ export default function MapaApontamentoMaquina() {
           workspaceId={workspaceId}
           onClose={() => setCardModal(null)}
           onEdit={handleEdit}
+          onReprocess={() => { load(); setCardModal(null) }}
         />
       )}
 
