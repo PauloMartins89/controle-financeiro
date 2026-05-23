@@ -380,11 +380,15 @@ export default async function handler(req, res) {
               .single()
 
             if (!bolErr && bolRecord?.id) {
-              fetch(`${APP_URL}/api/ocr-boletim-maquina`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ boletimId: bolRecord.id }),
-              }).catch(e => console.error('[whatsapp/boletim] ocr trigger:', e.message))
+              try {
+                await fetch(`${APP_URL}/api/ocr-boletim-maquina`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ boletimId: bolRecord.id }),
+                })
+              } catch (e) {
+                console.error('[whatsapp/boletim] ocr trigger:', e.message)
+              }
             } else if (bolErr) {
               console.error('[whatsapp/boletim] insert error:', bolErr.message)
             }
