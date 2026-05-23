@@ -674,6 +674,30 @@ function MaquinasTab({ workspaceId }) {
   const [loading,       setLoading]       = useState(true)
   const [busca,         setBusca]         = useState('')
   const [modal,         setModal]         = useState(null)  // null | { subtab, item? }
+  const [analisando,    setAnalisando]    = useState(null)  // id do tipo sendo analisado
+
+  async function analisarTemplate(tipo) {
+    if (analisando) return
+    setAnalisando(tipo.id)
+    try {
+      const res = await fetch('/api/analisar-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boletimTipoId: tipo.id }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        toast.error(json.detail || json.error || 'Erro ao analisar template')
+      } else {
+        toast.success(`✅ ${json.total} campos mapeados!`)
+        load()
+      }
+    } catch (e) {
+      toast.error('Erro ao analisar template: ' + e.message)
+    } finally {
+      setAnalisando(null)
+    }
+  }
 
   const load = async () => {
     if (!workspaceId) return
@@ -842,6 +866,16 @@ function MaquinasTab({ workspaceId }) {
 
             {/* Ações */}
             <div style={{ display: 'flex', gap: 4 }}>
+              {subAba === 'boletim_tipos' && item.imagem_url && (
+                <button
+                  onClick={() => analisarTemplate(item)}
+                  disabled={analisando === item.id}
+                  title="Analisar Template com IA"
+                  style={{ background: analisando === item.id ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', cursor: analisando === item.id ? 'default' : 'pointer', padding: '4px 10px', borderRadius: 6, color: '#6366f1', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}
+                >
+                  {analisando === item.id ? '⏳ Analisando...' : '🔍 Analisar'}
+                </button>
+              )}
               <button
                 onClick={() => setModal({ subtab: subAba, item })}
                 title="Editar"
