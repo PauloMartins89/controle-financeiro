@@ -1,17 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-async function callOpenAI(apiKey, body) {
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify(body),
-  })
-  if (!resp.ok) {
-    const err = await resp.text()
-    throw new Error(`OpenAI API error ${resp.status}: ${err.slice(0, 300)}`)
-  }
-  return resp.json()
+async function imageUrlToInlineData(url) {
+  const resp = await fetch(url)
+  const buffer = await resp.arrayBuffer()
+  const mimeType = (resp.headers.get('content-type') || 'image/jpeg').split(';')[0]
+  return { inlineData: { mimeType, data: Buffer.from(buffer).toString('base64') } }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,7 +25,7 @@ async function callOpenAI(apiKey, body) {
 
 const supabaseUrl        = process.env.SUPABASE_URL        || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
-const openaiApiKey       = process.env.OPENAI_API_KEY
+const geminiApiKey       = process.env.GEMINI_API_KEY
 const zapiInstanceId     = process.env.ZAPI_INSTANCE_ID
 const zapiToken          = process.env.ZAPI_TOKEN
 const APP_URL            = process.env.APP_URL || 'https://smartpro.app.br'
@@ -187,7 +182,7 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
 async function processarBoletim(boletimId) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('supabase não configurado')
-  if (!openaiApiKey) throw new Error('OPENAI_API_KEY não configurada no servidor')
+  if (!geminiApiKey) throw new Error('GEMINI_API_KEY não configurada no servidor')
 
   // Carrega boletim + relacionamentos
   const { data: bol, error: bolErr } = await supabase
@@ -227,42 +222,19 @@ async function processarBoletim(boletimId) {
     ? `Analise este boletim de apontamento. O formulário tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}.`
     : `Extraia os dados deste formulário de apontamento de máquinas. Tente identificar: data, operador/colaborador, equipamento, frente de trabalho, horas produtivas, horas de manutenção, horas ociosas, observações. Retorne um JSON com essas chaves.`
 
-  // Monta array de imagens para a chamada
-  const imageContents = []
-  if (boletimTipo?.imagem_url) {
-    imageContents.push({
-      type: 'image_url',
-      image_url: { url: boletimTipo.imagem_url, detail: 'low' },
-    })
-  }
-  imageContents.push({
-    type: 'image_url',
-    image_url: { url: bol.imagem_url, detail: 'high' },
-  })
-
   let ocrRaw = {}
   try {
-    const response = await callOpenAI(openaiApiKey, {
-      model: 'gpt-4o',
-      max_tokens: 1024,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: userPrompt },
-            ...imageContents,
-          ],
-        },
-      ],
-    })
-
-    const rawText = response.choices[0]?.message?.content || '{}'
-    // Extrai JSON mesmo que venha com ```json ... ```
+    const genAI = new GoogleGenerativeAI(geminiApiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const parts = [systemPrompt, userPrompt]
+    if (boletimTipo?.imagem_url) parts.push(await imageUrlToInlineData(boletimTipo.imagem_url))
+    parts.push(await imageUrlToInlineData(bol.imagem_url))
+    const result = await model.generateContent(parts)
+    const rawText = result.response.text()
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     ocrRaw = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
   } catch (e) {
-    console.error('[ocr-boletim] openai error:', e.message)
+    console.error('[ocr-boletim] gemini error:', e.message)
     await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
     if (waPhone) await zapiSendText(waPhone, `❌ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
     return

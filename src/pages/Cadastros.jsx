@@ -687,8 +687,8 @@ function MaquinasTab({ workspaceId }) {
       })
       const json = await res.json()
       if (!res.ok) {
-        if (json.error === 'openai_not_configured') {
-          toast.error('OPENAI_API_KEY não configurada no Vercel. Configure a variável de ambiente.')
+        if (json.error === 'gemini_not_configured') {
+          toast.error('GEMINI_API_KEY não configurada no Vercel. Configure a variável de ambiente.')
         } else {
           toast.error(json.detail || json.error || 'Erro ao analisar template')
         }

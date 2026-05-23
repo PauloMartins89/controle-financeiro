@@ -1,17 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-async function callOpenAI(apiKey, body) {
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify(body),
-  })
-  if (!resp.ok) {
-    const err = await resp.text()
-    throw new Error(`OpenAI API error ${resp.status}: ${err.slice(0, 300)}`)
-  }
-  return resp.json()
+async function imageUrlToInlineData(url) {
+  const resp = await fetch(url)
+  const buffer = await resp.arrayBuffer()
+  const mimeType = (resp.headers.get('content-type') || 'image/jpeg').split(';')[0]
+  return { inlineData: { mimeType, data: Buffer.from(buffer).toString('base64') } }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,7 +19,7 @@ async function callOpenAI(apiKey, body) {
 
 const supabaseUrl        = process.env.SUPABASE_URL        || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
-const openaiApiKey       = process.env.OPENAI_API_KEY
+const geminiApiKey       = process.env.GEMINI_API_KEY
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
@@ -32,8 +27,8 @@ export default async function handler(req, res) {
   if (!supabaseUrl || !supabaseServiceKey) {
     return res.status(500).json({ error: 'supabase_not_configured' })
   }
-  if (!openaiApiKey) {
-    return res.status(500).json({ error: 'openai_not_configured', detail: 'OPENAI_API_KEY não configurada no servidor' })
+  if (!geminiApiKey) {
+    return res.status(500).json({ error: 'gemini_not_configured', detail: 'GEMINI_API_KEY não configurada no servidor' })
   }
 
   const { boletimTipoId } = req.body || {}
@@ -82,27 +77,20 @@ Exemplo:
 
   let campos = {}
   try {
-    const response = await callOpenAI(openaiApiKey, {
-      model: 'gpt-4o',
-      max_tokens: 2048,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: `Analise este formulário de boletim "${tipo.nome}" e mapeie todos os campos preenchíveis.` },
-            { type: 'image_url', image_url: { url: tipo.imagem_url, detail: 'high' } },
-          ],
-        },
-      ],
-    })
-
-    const rawText = response.choices[0]?.message?.content || '{}'
+    const genAI = new GoogleGenerativeAI(geminiApiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const imagePart = await imageUrlToInlineData(tipo.imagem_url)
+    const result = await model.generateContent([
+      systemPrompt,
+      `Analise este formulário de boletim "${tipo.nome}" e mapeie todos os campos preenchíveis.`,
+      imagePart,
+    ])
+    const rawText = result.response.text()
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     campos = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
   } catch (e) {
-    console.error('[analisar-template] openai error:', e.message)
-    return res.status(500).json({ error: 'openai_error', detail: e.message })
+    console.error('[analisar-template] gemini error:', e.message)
+    return res.status(500).json({ error: 'gemini_error', detail: e.message })
   }
 
   if (!Object.keys(campos).length) {
