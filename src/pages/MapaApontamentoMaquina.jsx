@@ -216,7 +216,7 @@ function BoletimModal({ boletim, workspaceId, ownerId, onClose, onSaved }) {
       }
       const payload = {
         workspace_id:    workspaceId,
-        owner_id:        ownerId,
+        user_id:         ownerId,
         tipo:            'despesa',
         tipo_formulario: 'maquina',
         descricao:       `Boletim ${extras.equipamento} — ${fmtD(form.data)}`,
