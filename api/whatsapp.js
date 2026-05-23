@@ -335,6 +335,11 @@ export default async function handler(req, res) {
             if (data) { colaboradorBol = data; break }
           }
 
+          if (!colaboradorBol) {
+            // DEBUG TEMPORÁRIO: informa o número que chegou para comparar com o cadastro
+            await sendWA(from, `🔧 DEBUG boletim: número recebido = "${from}"\nVariantes: ${bolVariants.join(', ')}\nCadastre exatamente um desses no campo Telefone WA.`)
+          }
+
           if (colaboradorBol) {
             const frente      = colaboradorBol.maquinas_frentes
             const workspaceId = frente?.workspace_id || colaboradorBol.workspace_id
