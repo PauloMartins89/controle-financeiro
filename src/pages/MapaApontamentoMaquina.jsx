@@ -786,6 +786,33 @@ export default function MapaApontamentoMaquina() {
     })
   }, [rows, fClasseOp, fModelo, fEquipamento, fFrente, exibir])
 
+  // ── Stats de resumo ───────────────────────────────────────────────────────────
+  const summaryStats = useMemo(() => {
+    let total = 0, withData = 0, sumPct = 0, countPct = 0
+    filteredRows.forEach(row => {
+      days.forEach(day => {
+        total++
+        const recs = row.cells[day.iso] || []
+        if (recs.length > 0) {
+          withData++
+          const ex  = recs[0].dados_extras || {}
+          const ocr = ex.ocr || {}
+          const hT  = ex.horas_trabalhadas ?? ocr.horas_trabalhadas ?? ocr.horas_produtivas
+          const hD  = ex.horas_disponiveis ?? ocr.horas_disponiveis ?? ocr.horas_totais
+          const p   = ex.porcentagem ?? calcPct(hT, hD)
+          if (p != null) { sumPct += p; countPct++ }
+        }
+      })
+    })
+    const util = countPct > 0 ? sumPct / countPct : null
+    return {
+      equips:     filteredRows.length,
+      cobertura:  total > 0 ? withData / total * 100 : 0,
+      utilizacao: util,
+      utilColor:  util != null ? (getCellColor(util)?.bg || '#6366f1') : '#6b7280',
+    }
+  }, [filteredRows, days])
+
   // ── Navegar período ──────────────────────────────────────────────────────────
   function shiftPeriod(dir) {
     const n = { '-7': 7, '-15': 15, '-30': 30 }[periodo] ?? 15
@@ -926,19 +953,42 @@ export default function MapaApontamentoMaquina() {
           </div>
         </div>
 
-        {/* Navegação de período */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-          <button onClick={() => shiftPeriod(-1)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-            <ChevronLeftIcon style={{ width: 16, height: 16 }} />
+        {/* ── KPI Summary ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 14 }}>
+          {[
+            { label: 'Equipamentos', value: summaryStats.equips, unit: '', suffix: '', icon: '⚙️', color: '#6366f1' },
+            { label: 'Cobertura do Período', value: summaryStats.cobertura.toFixed(1), unit: '%', icon: '📊', color: '#10b981' },
+            { label: 'Utilização Média', value: summaryStats.utilizacao != null ? summaryStats.utilizacao.toFixed(1) : '—', unit: summaryStats.utilizacao != null ? '%' : '', icon: '📈', color: summaryStats.utilColor },
+          ].map(k => (
+            <div key={k.label} className="card" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, background: `linear-gradient(135deg, var(--bg-card) 0%, ${k.color}0d 100%)`, borderLeft: `3px solid ${k.color}`, borderRadius: 12 }}>
+              <div style={{ fontSize: 28, flexShrink: 0 }}>{k.icon}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 26, fontWeight: 900, color: k.color, lineHeight: 1, letterSpacing: -0.5 }}>
+                  {k.value}<span style={{ fontSize: 15, fontWeight: 700, marginLeft: 2, opacity: 0.85 }}>{k.unit}</span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 500 }}>{k.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Navegação de período ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: '8px 14px' }}>
+          <button onClick={() => shiftPeriod(-1)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600 }}>
+            <ChevronLeftIcon style={{ width: 14, height: 14 }} /> Anterior
           </button>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
-            {fmtD(days[0]?.iso)} — {fmtD(days[days.length - 1]?.iso)}
-          </span>
-          <button onClick={() => shiftPeriod(1)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-            <ChevronRightIcon style={{ width: 16, height: 16 }} />
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: -0.2 }}>
+              {fmtD(days[0]?.iso)} — {fmtD(days[days.length - 1]?.iso)}
+            </div>
+            {loading
+              ? <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 2 }}>⏳ Carregando...</div>
+              : <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{filteredRows.length} equipamento(s) · {days.length} dias</div>
+            }
+          </div>
+          <button onClick={() => shiftPeriod(1)} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600 }}>
+            Próximo <ChevronRightIcon style={{ width: 14, height: 14 }} />
           </button>
-          {loading && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Carregando...</span>}
-          {!loading && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Foram encontrado(s) <strong style={{ color: 'var(--text-primary)' }}>{filteredRows.length}</strong> registro(s)</span>}
         </div>
 
         {/* ── Matriz ── */}
@@ -954,12 +1004,15 @@ export default function MapaApontamentoMaquina() {
                 {/* sticky col 3: Equipamento */}
                 <th style={{ width: STICKY_COL2_W, padding: '10px 12px', position: 'sticky', left: 36 + STICKY_LEFT_W, zIndex: 20, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)', borderRight: '2px solid var(--border)', textAlign: 'left', fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, whiteSpace: 'nowrap' }}>Equip.</th>
                 {/* Date cols */}
-                {days.map(day => (
-                  <th key={day.iso} style={{ width: 90, padding: '6px 4px', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', textAlign: 'center', fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-                    <div style={{ color: ['SAB', 'DOM'].includes(day.dow) ? '#f59e0b' : 'var(--text-secondary)' }}>{day.dow}</div>
-                    <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-secondary)', opacity: 0.7 }}>({fmtD(day.iso)})</div>
-                  </th>
-                ))}
+                {days.map(day => {
+                  const isWknd = ['SAB', 'DOM'].includes(day.dow)
+                  return (
+                    <th key={day.iso} style={{ width: 90, padding: '6px 4px', borderBottom: '2px solid var(--border)', borderRight: `1px solid ${isWknd ? 'rgba(245,158,11,0.25)' : 'var(--border)'}`, textAlign: 'center', fontSize: 10, fontWeight: 800, whiteSpace: 'nowrap', textTransform: 'uppercase', background: isWknd ? 'rgba(245,158,11,0.06)' : 'transparent' }}>
+                      <div style={{ color: isWknd ? '#f59e0b' : 'var(--text-secondary)', fontWeight: isWknd ? 900 : 800 }}>{day.dow}</div>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-secondary)', opacity: 0.7 }}>({fmtD(day.iso)})</div>
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
 
@@ -1004,28 +1057,48 @@ export default function MapaApontamentoMaquina() {
 
                     {/* Date cells */}
                     {days.map(day => {
-                      const records = row.cells[day.iso] || []
-                      const val     = getCellValue(records)
+                      const records  = row.cells[day.iso] || []
+                      const val      = getCellValue(records)
                       const isEmpty  = records.length === 0
-                      // Verde = recebeu boletim | Vermelho = sem dados
-                      const cellBg   = isEmpty ? '#ef4444' : '#22c55e'
-                      const cellTxt  = '#fff'
+                      const isWknd   = ['SAB', 'DOM'].includes(day.dow)
+                      const hasPending = records.some(r => r.dados_extras?._from_boletim)
+                      const pctBar   = (!isEmpty && val != null && tipoRel === 'porcentagem')
+                        ? Math.min(100, Math.max(0, val)) : null
 
                       return (
                         <td key={day.iso}
                           onClick={() => openCell(row, day)}
-                          style={{ width: 90, padding: '6px 4px', borderRight: '1px solid var(--border)', textAlign: 'center', cursor: 'pointer', background: cellBg, color: cellTxt, fontWeight: 700, fontSize: 11, transition: 'filter 0.12s', whiteSpace: 'nowrap' }}
+                          style={{
+                            width: 90, padding: '6px 4px',
+                            borderRight: `1px solid ${isWknd ? 'rgba(245,158,11,0.25)' : 'var(--border)'}`,
+                            textAlign: 'center', cursor: 'pointer',
+                            background: isEmpty
+                              ? (isWknd ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.18)')
+                              : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                            color: isEmpty ? 'rgba(239,68,68,0.55)' : '#fff',
+                            fontWeight: 700, fontSize: 11,
+                            transition: 'filter 0.12s, transform 0.1s',
+                            whiteSpace: 'nowrap',
+                            borderBottom: isEmpty
+                              ? '2px solid rgba(239,68,68,0.3)'
+                              : '2px solid #15803d',
+                          }}
                           title={isEmpty ? `Sem boletim — ${row.equipamento} em ${fmtD(day.iso)}` : `${row.equipamento} em ${fmtD(day.iso)}: ${fmtCellValue(val)}`}
-                          onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.12)'}
-                          onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
+                          onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.15)'; e.currentTarget.style.transform = 'scaleY(1.03)' }}
+                          onMouseLeave={e => { e.currentTarget.style.filter = 'none'; e.currentTarget.style.transform = 'none' }}>
                           {isEmpty
-                            ? <span style={{ fontSize: 11, fontWeight: 700 }}>✕</span>
-                            : <>
-                                {fmtCellValue(val)}
-                                {records.some(r => r.dados_extras?._from_boletim) && (
-                                  <span title="Boletim OCR pendente de revisão" style={{ marginLeft: 2, fontSize: 9 }}>⏳</span>
+                            ? <span style={{ fontSize: 15, fontWeight: 300, lineHeight: 1 }}>—</span>
+                            : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                <span style={{ fontSize: 12, fontWeight: 900, letterSpacing: -0.3, lineHeight: 1 }}>
+                                  {fmtCellValue(val)}
+                                </span>
+                                {pctBar != null && (
+                                  <div style={{ width: '72%', height: 3, background: 'rgba(255,255,255,0.25)', borderRadius: 2, overflow: 'hidden' }}>
+                                    <div style={{ width: `${pctBar}%`, height: '100%', background: 'rgba(255,255,255,0.75)', borderRadius: 2 }} />
+                                  </div>
                                 )}
-                              </>
+                                {hasPending && <span title="OCR pendente" style={{ fontSize: 8, opacity: 0.85, lineHeight: 1 }}>⏳</span>}
+                              </div>
                           }
                         </td>
                       )
