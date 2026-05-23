@@ -173,7 +173,7 @@ export default function MaquinasDashboard() {
   const workspaceId = useStore(s => s.workspaceId)
 
   // ── Filtros ──────────────────────────────────────────────────────────────
-  const [dtIni, setDtIni] = useState(isoMinus(30))
+  const [dtIni, setDtIni] = useState(isoMinus(90))
   const [dtFim, setDtFim] = useState(isoToday())
   const [tab, setTab]     = useState('dashboard')
   const [loading, setLoading] = useState(true)
@@ -181,6 +181,7 @@ export default function MaquinasDashboard() {
   // ── Dados brutos ─────────────────────────────────────────────────────────
   const [lancamentos, setLancamentos] = useState([])
   const [boletins,    setBoletins]    = useState([])
+  const [totalFetched, setTotalFetched] = useState(null)
 
   // ── Filtros adicionais ───────────────────────────────────────────────────
   const [fEquip,  setFEquip]  = useState('')
@@ -192,26 +193,85 @@ export default function MaquinasDashboard() {
   const load = useCallback(async () => {
     if (!workspaceId) return
     setLoading(true)
-    const [lancRes, bolRes] = await Promise.all([
-      supabase
-        .from('lancamentos')
-        .select('id, data, descricao, dados_extras, status')
-        .eq('workspace_id', workspaceId)
-        .eq('tipo_formulario', 'maquina')
-        .gte('data', dtIni)
-        .lte('data', dtFim)
-        .order('data'),
-      supabase
-        .from('maquinas_boletins')
-        .select('id, numero, status, data_boletim, recebido_em, ocr_raw, maquinas_colaboradores(nome)')
-        .eq('workspace_id', workspaceId)
-        .gte('data_boletim', dtIni)
-        .lte('data_boletim', dtFim)
-        .order('data_boletim', { ascending: false }),
-    ])
-    setLancamentos(lancRes.data || [])
-    setBoletins(bolRes.data || [])
-    setLoading(false)
+    try {
+      const [lancRes, bolRes] = await Promise.all([
+        supabase
+          .from('lancamentos')
+          .select('id, data, descricao, dados_extras, status')
+          .eq('workspace_id', workspaceId)
+          .eq('tipo_formulario', 'maquina')
+          .gte('data', dtIni)
+          .lte('data', dtFim)
+          .order('data'),
+        supabase
+          .from('maquinas_boletins')
+          .select('id, numero, status, data_boletim, recebido_em, ocr_raw')
+          .eq('workspace_id', workspaceId)
+          .gte('data_boletim', dtIni)
+          .lte('data_boletim', dtFim)
+          .order('data_boletim', { ascending: false })
+          .limit(500),
+      ])
+
+      if (lancRes.error) toast.error(`Erro ao buscar lançamentos: ${lancRes.error.message}`)
+      if (bolRes.error)  toast.error(`Erro ao buscar boletins: ${bolRes.error.message}`)
+
+      const boletinsAll = bolRes.data || []
+      setBoletins(boletinsAll)
+
+      // IDs de boletins que já viraram lancamento (para evitar duplicata)
+      const lancIds = new Set((lancRes.data || []).map(l => l.dados_extras?.boletim_id).filter(Boolean))
+
+      // Boletins pendentes (sem lancamento correspondente) → pseudo-registros
+      const pendentes = boletinsAll.filter(b => b.status !== 'processado' && !lancIds.has(b.id))
+      const bolAsLanc = pendentes.map(bol => {
+        const ocr   = bol.ocr_raw || {}
+        const hTrab = parseFloat(ocr.horas_trabalhadas || ocr.horas_produtivas || 0) || null
+        const hIni  = parseFloat(ocr.horimetro_inicial || 0) || null
+        const hFin  = parseFloat(ocr.horimetro_final   || 0) || null
+        const hDisp = parseFloat(ocr.horas_disponiveis || ocr.horas_totais || 0) ||
+                      (hIni != null && hFin != null ? parseFloat((hFin - hIni).toFixed(2)) : null)
+        const pct   = hDisp && hTrab ? parseFloat((hTrab / hDisp * 100).toFixed(2)) : null
+        return {
+          id:   `bol_${bol.id}`,
+          data: bol.data_boletim || bol.recebido_em?.slice(0, 10),
+          descricao: '',
+          status: bol.status,
+          dados_extras: {
+            boletim_id:          bol.id,
+            boletim_numero:      bol.numero,
+            boletim_status:      bol.status,
+            equipamento:         (ocr.equipamento || '').toUpperCase(),
+            modelo:              ocr.modelo || '',
+            classe_operacional:  ocr.classe || ocr.classe_operacional || '',
+            frente:              ocr.frente || ocr.frente_de_trabalho || '',
+            cdc:                 ocr.cdc || ocr.centro_de_custo || '',
+            turno:               ocr.turno || '',
+            colaborador:         ocr.colaborador || ocr.operador || '',
+            horimetro_inicial:   hIni,
+            horimetro_final:     hFin,
+            horas_disponiveis:   hDisp,
+            horas_trabalhadas:   hTrab,
+            horas_espera:        parseFloat(ocr.horas_espera || ocr.horas_ociosas || 0) || null,
+            porcentagem:         pct,
+            atividade_realizada: ocr.atividade_realizada || ocr.atividade || '',
+            descritivo_trabalho: ocr.descritivo_trabalho || ocr.descritivo || '',
+            observacoes:         ocr.observacoes || '',
+            produtividade_qtd:   parseFloat(ocr.produtividade_quantidade || ocr.produtividade || 0) || null,
+            produtividade_un:    ocr.produtividade_unidade || ocr.unidade_medida || '',
+            produtividade_hora:  parseFloat(ocr.produtividade_por_hora || 0) || null,
+          },
+        }
+      })
+
+      const merged = [...(lancRes.data || []), ...bolAsLanc]
+      setLancamentos(merged)
+      setTotalFetched(merged.length)
+    } catch (err) {
+      toast.error(`Erro inesperado: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
   }, [workspaceId, dtIni, dtFim])
 
   useEffect(() => { load() }, [load])
@@ -356,7 +416,7 @@ export default function MaquinasDashboard() {
     numero:       b.numero,
     data:         b.data_boletim,
     equipamento:  (b.ocr_raw?.equipamento || '').toUpperCase(),
-    colaborador:  b.maquinas_colaboradores?.nome || b.ocr_raw?.colaborador || b.ocr_raw?.operador || '—',
+    colaborador:  b.ocr_raw?.colaborador || b.ocr_raw?.operador || '—',
     status:       b.status,
     hTrab:        parseFloat(b.ocr_raw?.horas_trabalhadas || 0) || null,
     pct:          (() => {
@@ -505,6 +565,15 @@ export default function MaquinasDashboard() {
             </div>
           </div>
         </div>
+
+        {/* ── Info bar ── */}
+        {totalFetched !== null && (
+          <div style={{ marginBottom: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 12px' }}>
+              📊 <strong style={{ color: 'var(--text-primary)' }}>{lancamentos.length}</strong> registros carregados · <strong style={{ color: 'var(--text-primary)' }}>{filtrados.length}</strong> após filtros · <strong style={{ color: 'var(--text-primary)' }}>{boletins.length}</strong> boletins no período
+            </span>
+          </div>
+        )}
 
         {/* ── Tabs ── */}
         <div style={{ marginBottom: 16 }}>
