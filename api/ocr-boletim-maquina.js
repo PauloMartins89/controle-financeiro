@@ -407,11 +407,9 @@ export default async function handler(req, res) {
   const { boletimId } = req.body || {}
   if (!boletimId) return res.status(400).json({ error: 'boletimId obrigatório' })
 
-  // Responde 200 imediatamente (chamada fire-and-forget do webhook)
-  res.status(200).json({ ok: true, boletimId })
-
-  // Processa em background (não bloqueia a resposta)
-  processarBoletim(boletimId).catch(e =>
+  // Processa primeiro (maxDuration: 60s) e só depois responde
+  await processarBoletim(boletimId).catch(e =>
     console.error('[ocr-boletim-maquina] processarBoletim error:', e.message)
   )
+  res.status(200).json({ ok: true, boletimId })
 }
