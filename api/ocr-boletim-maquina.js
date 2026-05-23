@@ -1,28 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
 
-async function imageUrlToBase64(url) {
-  const resp = await fetch(url)
-  const buffer = await resp.arrayBuffer()
-  const mimeType = (resp.headers.get('content-type') || 'image/jpeg').split(';')[0]
-  return { inlineData: { mimeType, data: Buffer.from(buffer).toString('base64') } }
-}
-
-async function callGemini(apiKey, parts) {
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts }] }),
-    }
-  )
+async function callGroq(apiKey, messages) {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      max_tokens: 1024,
+      messages,
+    }),
+  })
   if (!resp.ok) {
     const err = await resp.text()
-    throw new Error(`Gemini API error ${resp.status}: ${err.slice(0, 400)}`)
+    throw new Error(`Groq API error ${resp.status}: ${err.slice(0, 400)}`)
   }
   const json = await resp.json()
-  return json.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  return json.choices?.[0]?.message?.content || ''
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,7 +35,7 @@ async function callGemini(apiKey, parts) {
 
 const supabaseUrl        = process.env.SUPABASE_URL        || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
-const geminiApiKey       = process.env.GEMINI_API_KEY
+const groqApiKey         = process.env.GROQ_API_KEY
 const zapiInstanceId     = process.env.ZAPI_INSTANCE_ID
 const zapiToken          = process.env.ZAPI_TOKEN
 const APP_URL            = process.env.APP_URL || 'https://smartpro.app.br'
@@ -198,7 +192,7 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
 async function processarBoletim(boletimId) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('supabase não configurado')
-  if (!geminiApiKey) throw new Error('GEMINI_API_KEY não configurada no servidor')
+  if (!groqApiKey) throw new Error('GROQ_API_KEY não configurada no servidor')
 
   // Carrega boletim + relacionamentos
   const { data: bol, error: bolErr } = await supabase
@@ -240,14 +234,22 @@ async function processarBoletim(boletimId) {
 
   let ocrRaw = {}
   try {
-    const parts = [{ text: systemPrompt }, { text: userPrompt }]
-    if (boletimTipo?.imagem_url) parts.push(await imageUrlToBase64(boletimTipo.imagem_url))
-    parts.push(await imageUrlToBase64(bol.imagem_url))
-    const rawText = await callGemini(geminiApiKey, parts)
+    const imageMessages = [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: userPrompt },
+          ...(boletimTipo?.imagem_url ? [{ type: 'image_url', image_url: { url: boletimTipo.imagem_url } }] : []),
+          { type: 'image_url', image_url: { url: bol.imagem_url } },
+        ],
+      },
+    ]
+    const rawText = await callGroq(groqApiKey, imageMessages)
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     ocrRaw = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
   } catch (e) {
-    console.error('[ocr-boletim] gemini error:', e.message)
+    console.error('[ocr-boletim] groq error:', e.message)
     await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
     if (waPhone) await zapiSendText(waPhone, `❌ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
     return

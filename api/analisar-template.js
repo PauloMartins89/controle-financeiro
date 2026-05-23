@@ -1,28 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
 
-async function imageUrlToBase64(url) {
-  const resp = await fetch(url)
-  const buffer = await resp.arrayBuffer()
-  const mimeType = (resp.headers.get('content-type') || 'image/jpeg').split(';')[0]
-  return { inlineData: { mimeType, data: Buffer.from(buffer).toString('base64') } }
-}
-
-async function callGemini(apiKey, parts) {
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts }] }),
-    }
-  )
+async function callGroq(apiKey, messages) {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      max_tokens: 2048,
+      messages,
+    }),
+  })
   if (!resp.ok) {
     const err = await resp.text()
-    throw new Error(`Gemini API error ${resp.status}: ${err.slice(0, 400)}`)
+    throw new Error(`Groq API error ${resp.status}: ${err.slice(0, 400)}`)
   }
   const json = await resp.json()
-  return json.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  return json.choices?.[0]?.message?.content || ''
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,7 +29,7 @@ async function callGemini(apiKey, parts) {
 
 const supabaseUrl        = process.env.SUPABASE_URL        || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
-const geminiApiKey       = process.env.GEMINI_API_KEY
+const groqApiKey         = process.env.GROQ_API_KEY
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' })
@@ -43,8 +37,8 @@ export default async function handler(req, res) {
   if (!supabaseUrl || !supabaseServiceKey) {
     return res.status(500).json({ error: 'supabase_not_configured' })
   }
-  if (!geminiApiKey) {
-    return res.status(500).json({ error: 'gemini_not_configured', detail: 'GEMINI_API_KEY não configurada no servidor' })
+  if (!groqApiKey) {
+    return res.status(500).json({ error: 'groq_not_configured', detail: 'GROQ_API_KEY não configurada no servidor' })
   }
 
   const { boletimTipoId } = req.body || {}
@@ -93,18 +87,21 @@ Exemplo:
 
   let campos = {}
   try {
-    const imagePart = await imageUrlToBase64(tipo.imagem_url)
-    const parts = [
-      { text: systemPrompt },
-      { text: `Analise este formulário de boletim "${tipo.nome}" e mapeie todos os campos preenchíveis.` },
-      imagePart,
-    ]
-    const rawText = await callGemini(geminiApiKey, parts)
+    const rawText = await callGroq(groqApiKey, [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: `Analise este formulário de boletim "${tipo.nome}" e mapeie todos os campos preenchíveis.` },
+          { type: 'image_url', image_url: { url: tipo.imagem_url } },
+        ],
+      },
+    ])
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)
     campos = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
   } catch (e) {
-    console.error('[analisar-template] gemini error:', e.message)
-    return res.status(500).json({ error: 'gemini_error', detail: e.message })
+    console.error('[analisar-template] groq error:', e.message)
+    return res.status(500).json({ error: 'groq_error', detail: e.message })
   }
 
   if (!Object.keys(campos).length) {
