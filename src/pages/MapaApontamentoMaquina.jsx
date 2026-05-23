@@ -739,10 +739,8 @@ export default function MapaApontamentoMaquina() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', gap: 10 }}>
                 <span>Indicadores:</span>
                 {[
-                  { bg: '#ef4444', label: '0%' },
-                  { bg: '#f97316', label: '>0%' },
-                  { bg: '#eab308', label: '>=50%', text: '#1a1a1a' },
-                  { bg: '#22c55e', label: '>=90%' },
+                  { bg: '#22c55e', label: 'Recebeu boletim' },
+                  { bg: '#ef4444', label: 'Sem boletim' },
                 ].map(c => (
                   <span key={c.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                     <span style={{ width: 14, height: 14, borderRadius: 3, background: c.bg, display: 'inline-block' }} />
@@ -836,19 +834,21 @@ export default function MapaApontamentoMaquina() {
                     {/* Date cells */}
                     {days.map(day => {
                       const records = row.cells[day.iso] || []
-                      const val = getCellValue(records)
-                      const col = val != null ? getCellColor(val) : null
-                      const isEmpty = records.length === 0
+                      const val     = getCellValue(records)
+                      const isEmpty  = records.length === 0
+                      // Verde = recebeu boletim | Vermelho = sem dados
+                      const cellBg   = isEmpty ? '#ef4444' : '#22c55e'
+                      const cellTxt  = '#fff'
 
                       return (
                         <td key={day.iso}
                           onClick={() => openCell(row, day)}
-                          style={{ width: 90, padding: '6px 4px', borderRight: '1px solid var(--border)', textAlign: 'center', cursor: 'pointer', background: col ? col.bg : 'transparent', color: col ? col.text : 'var(--text-secondary)', fontWeight: col ? 700 : 400, fontSize: 11, transition: 'filter 0.12s', whiteSpace: 'nowrap' }}
+                          style={{ width: 90, padding: '6px 4px', borderRight: '1px solid var(--border)', textAlign: 'center', cursor: 'pointer', background: cellBg, color: cellTxt, fontWeight: 700, fontSize: 11, transition: 'filter 0.12s', whiteSpace: 'nowrap' }}
                           title={isEmpty ? `Sem boletim — ${row.equipamento} em ${fmtD(day.iso)}` : `${row.equipamento} em ${fmtD(day.iso)}: ${fmtCellValue(val)}`}
                           onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.12)'}
                           onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
                           {isEmpty
-                            ? <span style={{ fontSize: 10, opacity: 0.3 }}>—</span>
+                            ? <span style={{ fontSize: 11, fontWeight: 700 }}>✕</span>
                             : <>
                                 {fmtCellValue(val)}
                                 {records.some(r => r.dados_extras?._from_boletim) && (
