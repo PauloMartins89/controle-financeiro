@@ -472,10 +472,12 @@ function BoletimPanel({ records, equipKey, date, onClose, onEdit, onNew }) {
 // ─── Card modal central (clique célula verde) ────────────────────────────────
 function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdit }) {
   const [boletimData, setBoletimData] = useState(null)
+  const [boletimImgs, setBoletimImgs] = useState({}) // boletim_id → imagem_url
 
   const ex  = records[0]?.dados_extras || {}
   const ocr = ex.ocr || {}
 
+  // Fetch header info (numero, status, colaborador) from first record's boletim
   useEffect(() => {
     const boletimId = ex.boletim_id || null
     if (!boletimId) return
@@ -487,6 +489,22 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
       .then(({ data }) => { if (data) setBoletimData(data) })
   }, [])
 
+  // Fetch images for ALL records that have a boletim_id
+  useEffect(() => {
+    const ids = [...new Set(records.map(r => r.dados_extras?.boletim_id).filter(Boolean))]
+    if (ids.length === 0) return
+    supabase
+      .from('maquinas_boletins')
+      .select('id, imagem_url')
+      .in('id', ids)
+      .then(({ data }) => {
+        if (!data) return
+        const map = {}
+        data.forEach(b => { if (b.imagem_url) map[b.id] = b.imagem_url })
+        setBoletimImgs(map)
+      })
+  }, [])
+
   const STATUS_CFG = {
     processado:       { label: 'Processado',       color: '#22c55e' },
     pendente_revisao: { label: 'Pendente Revisão', color: '#fbbf24' },
@@ -496,17 +514,16 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
   }
   const bolStatus = boletimData?.status || ex.boletim_status
   const sCfg      = STATUS_CFG[bolStatus]
-  const imgUrl    = boletimData?.imagem_url
 
   return (
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div style={{ width: '100%', maxWidth: 680, maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-secondary)', borderRadius: 18, border: '1px solid var(--border)', boxShadow: '0 24px 80px rgba(0,0,0,0.55)', animation: 'fadeInScale 0.18s ease' }}>
+      <div style={{ width: '100%', maxWidth: 620, maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-secondary)', borderRadius: 18, border: '1px solid var(--border)', boxShadow: '0 24px 80px rgba(0,0,0,0.55)', animation: 'fadeInScale 0.18s ease' }}>
 
         {/* Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ padding: '18px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--accent)' }}>{ex.equipamento || ocr.equipamento || equipKey}</span>
@@ -517,7 +534,7 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
                 </span>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 12, marginTop: 5, flexWrap: 'wrap', alignItems: 'center' }}>
               <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>📅 {fmtD(date)}</span>
               {(ex.frente || ocr.frente)             && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>🚧 {ex.frente || ocr.frente}</span>}
               {(ex.classe_operacional || ocr.classe) && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>📂 {ex.classe_operacional || ocr.classe}</span>}
@@ -526,7 +543,7 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
               )}
             </div>
             {sCfg && (
-              <span style={{ display: 'inline-block', marginTop: 8, fontSize: 11, fontWeight: 700, color: sCfg.color, background: `${sCfg.color}20`, border: `1px solid ${sCfg.color}50`, borderRadius: 20, padding: '3px 10px' }}>
+              <span style={{ display: 'inline-block', marginTop: 7, fontSize: 11, fontWeight: 700, color: sCfg.color, background: `${sCfg.color}20`, border: `1px solid ${sCfg.color}50`, borderRadius: 20, padding: '3px 10px' }}>
                 {sCfg.label}
               </span>
             )}
@@ -537,95 +554,125 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
         </div>
 
         {/* Body */}
-        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {records.map((rec, idx) => {
             const rx  = rec.dados_extras || {}
             const rcr = rx.ocr || {}
-            const hDisp = rx.horas_disponiveis ?? rcr.horas_disponiveis ?? rcr.horas_totais
-            const hTrab = rx.horas_trabalhadas ?? rcr.horas_trabalhadas ?? rcr.horas_produtivas
-            const hEsp  = rx.horas_espera      ?? rcr.horas_espera      ?? rcr.horas_ociosas
-            const pct   = rx.porcentagem ?? calcPct(hTrab, hDisp)
-            const col   = pct != null ? getCellColor(pct) : null
+            const hDisp   = rx.horas_disponiveis ?? rcr.horas_disponiveis ?? rcr.horas_totais
+            const hTrab   = rx.horas_trabalhadas ?? rcr.horas_trabalhadas ?? rcr.horas_produtivas
+            const hEsp    = rx.horas_espera      ?? rcr.horas_espera      ?? rcr.horas_ociosas
+            const pct     = rx.porcentagem ?? calcPct(hTrab, hDisp)
+            const col     = pct != null ? getCellColor(pct) : null
+            const hasData = hDisp != null || hTrab != null || pct != null
+            const recImg  = rx.boletim_id ? boletimImgs[rx.boletim_id] : (idx === 0 ? boletimData?.imagem_url : null)
 
             return (
-              <div key={rec.id}>
-                {records.length > 1 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 10 }}>Boletim {idx + 1}</div>}
+              <div key={rec.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
 
-                {/* KPI utilização */}
-                {pct != null && (
-                  <div style={{ borderRadius: 14, padding: '16px 20px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 20, background: col ? `${col.bg}22` : 'rgba(255,255,255,0.04)', border: `2px solid ${col ? col.bg + '55' : 'var(--border)'}` }}>
-                    <div style={{ textAlign: 'center', minWidth: 100 }}>
-                      <div style={{ fontSize: 44, fontWeight: 900, color: col?.bg || '#fff', lineHeight: 1 }}>{Number(pct).toFixed(1)}%</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Utilização</div>
-                    </div>
-                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                      {[
-                        { label: 'Disponíveis', value: hDisp, color: '#6366f1' },
-                        { label: 'Trabalhadas', value: hTrab, color: '#10b981' },
-                        { label: 'Em Espera',   value: hEsp,  color: '#f59e0b' },
-                      ].map(k => (
-                        <div key={k.label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
-                          <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value != null ? `${Number(k.value).toFixed(1)}h` : '—'}</div>
-                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{k.label}</div>
+                {/* Mini-header por boletim (quando múltiplos) */}
+                {records.length > 1 && (
+                  <div style={{ padding: '7px 16px', borderBottom: '1px solid var(--border)', background: 'rgba(99,102,241,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Boletim {idx + 1}
+                    </span>
+                    {recImg && (
+                      <a href={recImg} target="_blank" rel="noreferrer" title="Ver foto do boletim"
+                        style={{ fontSize: 12, fontWeight: 600, color: '#818cf8', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)' }}>
+                        🖼️ Foto
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                  {/* ── KPI Operacional ── */}
+                  {hasData ? (
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+                      {/* Gauge % */}
+                      {pct != null && (
+                        <div style={{ borderRadius: 12, padding: '12px 14px', background: col ? `${col.bg}20` : 'rgba(255,255,255,0.04)', border: `2px solid ${col ? col.bg + '55' : 'var(--border)'}`, textAlign: 'center', minWidth: 82, display: 'flex', flexDirection: 'column', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ fontSize: 30, fontWeight: 900, color: col?.bg || '#fff', lineHeight: 1, letterSpacing: -0.5 }}>
+                            {Number(pct).toFixed(1)}<span style={{ fontSize: 14, fontWeight: 700 }}>%</span>
+                          </div>
+                          <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.4 }}>Utilização</div>
+                          <div style={{ marginTop: 7, height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: '100%', background: col?.bg || '#6366f1', borderRadius: 2 }} />
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Detalhes */}
-                {[
-                  { label: 'Modelo',             value: rx.modelo || rcr.modelo },
-                  { label: 'Equipamento',        value: rx.equipamento || rcr.equipamento },
-                  { label: 'Classe Operacional', value: rx.classe_operacional || rcr.classe || rcr.classe_operacional },
-                  { label: 'Frente',             value: rx.frente || rcr.frente },
-                  { label: 'Observações',        value: rx.observacoes || rcr.observacoes || rcr.observacao },
-                ].filter(r => r.value) .length > 0 && (
-                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-                    {[
-                      { label: 'Modelo',             value: rx.modelo || rcr.modelo },
-                      { label: 'Equipamento',        value: rx.equipamento || rcr.equipamento },
-                      { label: 'Classe Operacional', value: rx.classe_operacional || rcr.classe || rcr.classe_operacional },
-                      { label: 'Frente',             value: rx.frente || rcr.frente },
-                      { label: 'Observações',        value: rx.observacoes || rcr.observacoes || rcr.observacao },
-                    ].filter(r => r.value).map((row, i, arr) => (
-                      <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 16px', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{row.label}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', maxWidth: '60%', textAlign: 'right' }}>{row.value}</span>
+                      )}
+                      {/* Horas */}
+                      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 7 }}>
+                        {[
+                          { label: 'Disponíveis', value: hDisp, color: '#6366f1', icon: '🕐' },
+                          { label: 'Trabalhadas', value: hTrab, color: '#10b981', icon: '⚙️' },
+                          { label: 'Em Espera',   value: hEsp,  color: '#f59e0b', icon: '⏸️' },
+                        ].map(k => (
+                          <div key={k.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 6px', textAlign: 'center' }}>
+                            <div style={{ fontSize: 11, marginBottom: 3 }}>{k.icon}</div>
+                            <div style={{ fontSize: 17, fontWeight: 800, color: k.color, lineHeight: 1 }}>
+                              {k.value != null ? `${Number(k.value).toFixed(1)}h` : '—'}
+                            </div>
+                            <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 3 }}>{k.label}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-secondary)' }}>
+                      <div style={{ fontSize: 26, marginBottom: 6 }}>⏳</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Aguardando processamento OCR</div>
+                      <div style={{ fontSize: 11, marginTop: 3, opacity: 0.65 }}>Os dados operacionais serão exibidos após o processamento</div>
+                    </div>
+                  )}
 
-                {/* Ações */}
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  {!rx._from_boletim && (
-                    <button onClick={() => { onEdit(rec); onClose() }}
-                      style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <PencilIcon style={{ width: 14, height: 14 }} /> Editar
-                    </button>
+                  {/* ── Info chips ── */}
+                  {([rx.modelo||rcr.modelo, rx.classe_operacional||rcr.classe||rcr.classe_operacional, rx.frente||rcr.frente, rx.observacoes||rcr.observacoes||rcr.observacao].some(Boolean)) && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {(rx.modelo || rcr.modelo) && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#a5b4fc', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 20, padding: '4px 10px' }}>
+                          ⚙️ {rx.modelo || rcr.modelo}
+                        </span>
+                      )}
+                      {(rx.classe_operacional || rcr.classe || rcr.classe_operacional) && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px' }}>
+                          📂 {rx.classe_operacional || rcr.classe || rcr.classe_operacional}
+                        </span>
+                      )}
+                      {(rx.frente || rcr.frente) && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px' }}>
+                          🚧 {rx.frente || rcr.frente}
+                        </span>
+                      )}
+                      {(rx.observacoes || rcr.observacoes || rcr.observacao) && (
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px' }}>
+                          📝 {rx.observacoes || rcr.observacoes || rcr.observacao}
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {imgUrl && (
-                    <a href={imgUrl} target="_blank" rel="noreferrer"
-                      style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', color: '#818cf8', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none' }}>
-                      🖼️ Ver Imagem
-                    </a>
-                  )}
+
+                  {/* ── Ações ── */}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {!rx._from_boletim && (
+                      <button onClick={() => { onEdit(rec); onClose() }}
+                        style={{ flex: 1, padding: '9px 14px', borderRadius: 9, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <PencilIcon style={{ width: 14, height: 14 }} /> Editar Boletim
+                      </button>
+                    )}
+                    {(recImg || (idx === 0 && boletimData?.imagem_url)) && records.length === 1 && (
+                      <a href={recImg || boletimData?.imagem_url} target="_blank" rel="noreferrer" title="Ver foto do boletim"
+                        style={{ padding: '9px 16px', borderRadius: 9, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', color: '#818cf8', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                        title="Ver foto do boletim">
+                        🖼️
+                      </a>
+                    )}
+                  </div>
+
                 </div>
-                {idx < records.length - 1 && <hr style={{ margin: '16px 0', borderColor: 'var(--border)' }} />}
               </div>
             )
           })}
-
-          {/* Imagem em thumbnail */}
-          {imgUrl && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Foto do Boletim</div>
-              <a href={imgUrl} target="_blank" rel="noreferrer">
-                <img src={imgUrl} alt="Boletim" style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', cursor: 'zoom-in', maxHeight: 340, objectFit: 'contain', background: '#0a0a0a' }} />
-              </a>
-            </div>
-          )}
         </div>
       </div>
     </div>
