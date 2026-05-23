@@ -502,16 +502,54 @@ export default function MapaApontamentoMaquina() {
     setLoading(true)
     const startDate = days[0].iso
     const endDate   = days[days.length - 1].iso
-    const { data, error } = await supabase
-      .from('lancamentos')
-      .select('id, data, descricao, status, dados_extras')
-      .eq('workspace_id', workspaceId)
-      .eq('tipo_formulario', 'maquina')
-      .gte('data', startDate)
-      .lte('data', endDate)
-      .order('data')
-    if (error) toast.error('Erro ao carregar boletins')
-    setLancamentos(data || [])
+
+    const [lancResult, bolResult] = await Promise.all([
+      supabase
+        .from('lancamentos')
+        .select('id, data, descricao, status, dados_extras')
+        .eq('workspace_id', workspaceId)
+        .eq('tipo_formulario', 'maquina')
+        .gte('data', startDate)
+        .lte('data', endDate)
+        .order('data'),
+      supabase
+        .from('maquinas_boletins')
+        .select('id, numero, status, data_boletim, recebido_em, ocr_raw')
+        .eq('workspace_id', workspaceId)
+        .in('status', ['pendente_revisao', 'recebido', 'processando'])
+        .order('recebido_em', { ascending: false })
+        .limit(100),
+    ])
+
+    if (lancResult.error) toast.error('Erro ao carregar boletins')
+
+    // Converte boletins OCR pendentes em pseudo-lancamentos para o mapa
+    const bolAsLanc = (bolResult.data || []).map(bol => {
+      const ocr   = bol.ocr_raw || {}
+      const hDisp = parseFloat(ocr.horas_disponiveis || ocr.horas_totais || 0) || null
+      const hTrab = parseFloat(ocr.horas_trabalhadas || ocr.horas_produtivas || 0) || null
+      const pct   = hDisp && hTrab ? parseFloat((hTrab / hDisp * 100).toFixed(2)) : null
+      return {
+        id:   `bol_${bol.id}`,
+        data: bol.data_boletim || bol.recebido_em?.slice(0, 10),
+        dados_extras: {
+          _from_boletim:      true,
+          boletim_id:         bol.id,
+          boletim_status:     bol.status,
+          boletim_numero:     bol.numero,
+          equipamento:        (ocr.equipamento || '').toUpperCase(),
+          modelo:             ocr.modelo || '',
+          classe_operacional: ocr.classe || ocr.classe_operacional || '',
+          frente:             ocr.frente || ocr.frente_de_trabalho || '',
+          horas_disponiveis:  hDisp,
+          horas_trabalhadas:  hTrab,
+          horas_espera:       parseFloat(ocr.horas_espera || ocr.horas_ociosas || 0) || null,
+          porcentagem:        pct,
+        },
+      }
+    })
+
+    setLancamentos([...(lancResult.data || []), ...bolAsLanc])
     setLoading(false)
   }, [workspaceId, days])
 
@@ -523,17 +561,20 @@ export default function MapaApontamentoMaquina() {
     const opts = { classeOp: new Set(), modelo: new Set(), equipamento: new Set(), frente: new Set() }
 
     for (const lanc of lancamentos) {
-      const ex = lanc.dados_extras || {}
-      const equip = (ex.equipamento || '').trim().toUpperCase() || '__'
-      const model = (ex.modelo || '').trim() || '—'
-      const key   = `${model}::${equip}`
+      const ex     = lanc.dados_extras || {}
+      const ocr    = ex.ocr || {}
+      const equip  = (ex.equipamento || ocr.equipamento || '').trim().toUpperCase() || '__'
+      const model  = (ex.modelo || ocr.modelo || '').trim() || '—'
+      const classe = ex.classe_operacional || ocr.classe || ocr.classe_operacional || ''
+      const frente = ex.frente || ocr.frente || ocr.frente_de_trabalho || ''
+      const key    = `${model}::${equip}`
 
-      if (ex.classe_operacional) opts.classeOp.add(ex.classe_operacional)
-      if (model !== '—')         opts.modelo.add(model)
-      if (equip !== '__')        opts.equipamento.add(equip)
-      if (ex.frente)             opts.frente.add(ex.frente)
+      if (classe)        opts.classeOp.add(classe)
+      if (model !== '—') opts.modelo.add(model)
+      if (equip !== '__') opts.equipamento.add(equip)
+      if (frente)        opts.frente.add(frente)
 
-      if (!rowMap[key]) rowMap[key] = { key, modelo: model, equipamento: equip, classeOp: ex.classe_operacional || '', frente: ex.frente || '', cells: {} }
+      if (!rowMap[key]) rowMap[key] = { key, modelo: model, equipamento: equip, classeOp: classe, frente, cells: {} }
 
       const dateKey = lanc.data || ex.data
       if (dateKey) {
@@ -565,8 +606,12 @@ export default function MapaApontamentoMaquina() {
 
       if (exibir !== 'todos') {
         const pcts = Object.values(r.cells).flat().map(l => {
-          const ex = l.dados_extras || {}
-          return ex.porcentagem ?? calcPct(ex.horas_trabalhadas, ex.horas_disponiveis)
+          const ex  = l.dados_extras || {}
+          const ocr = ex.ocr || {}
+          return ex.porcentagem ?? calcPct(
+            ex.horas_trabalhadas ?? ocr.horas_trabalhadas ?? ocr.horas_produtivas,
+            ex.horas_disponiveis ?? ocr.horas_disponiveis ?? ocr.horas_totais,
+          )
         }).filter(v => v != null)
         if (pcts.length === 0) return false
         const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length
@@ -613,9 +658,12 @@ export default function MapaApontamentoMaquina() {
   function getCellValue(records) {
     if (!records || records.length === 0) return null
     const vals = records.map(r => {
-      const ex = r.dados_extras || {}
-      if (tipoRel === 'horas') return Number(ex.horas_trabalhadas) || 0
-      return ex.porcentagem ?? calcPct(ex.horas_trabalhadas, ex.horas_disponiveis)
+      const ex  = r.dados_extras || {}
+      const ocr = ex.ocr || {}
+      const hTrab = ex.horas_trabalhadas ?? ocr.horas_trabalhadas ?? ocr.horas_produtivas
+      const hDisp = ex.horas_disponiveis ?? ocr.horas_disponiveis ?? ocr.horas_totais
+      if (tipoRel === 'horas') return Number(hTrab) || 0
+      return ex.porcentagem ?? calcPct(hTrab, hDisp)
     }).filter(v => v != null)
     if (vals.length === 0) return null
     return vals.reduce((a, b) => a + b, 0) / vals.length
@@ -799,7 +847,15 @@ export default function MapaApontamentoMaquina() {
                           title={isEmpty ? `Sem boletim — ${row.equipamento} em ${fmtD(day.iso)}` : `${row.equipamento} em ${fmtD(day.iso)}: ${fmtCellValue(val)}`}
                           onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.12)'}
                           onMouseLeave={e => e.currentTarget.style.filter = 'none'}>
-                          {isEmpty ? <span style={{ fontSize: 10, opacity: 0.3 }}>—</span> : fmtCellValue(val)}
+                          {isEmpty
+                            ? <span style={{ fontSize: 10, opacity: 0.3 }}>—</span>
+                            : <>
+                                {fmtCellValue(val)}
+                                {records.some(r => r.dados_extras?._from_boletim) && (
+                                  <span title="Boletim OCR pendente de revisão" style={{ marginLeft: 2, fontSize: 9 }}>⏳</span>
+                                )}
+                              </>
+                          }
                         </td>
                       )
                     })}

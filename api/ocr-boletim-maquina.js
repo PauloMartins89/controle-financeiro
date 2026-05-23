@@ -189,6 +189,25 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Processa um boletim completo
 // ─────────────────────────────────────────────────────────────────────────────
+// Mapeia campos OCR brutos para estrutura padrão do MapaApontamentoMaquina
+function mapOcrToExtras(ocr, data) {
+  const r     = ocr || {}
+  const hDisp = parseFloat(r.horas_disponiveis || r.horas_totais    || 0) || null
+  const hTrab = parseFloat(r.horas_trabalhadas || r.horas_produtivas || 0) || null
+  const pct   = hDisp && hTrab ? parseFloat((hTrab / hDisp * 100).toFixed(2)) : null
+  return {
+    equipamento:        (r.equipamento || '').toUpperCase(),
+    modelo:             r.modelo || '',
+    classe_operacional: r.classe || r.classe_operacional || '',
+    frente:             r.frente || r.frente_de_trabalho || '',
+    horas_disponiveis:  hDisp,
+    horas_trabalhadas:  hTrab,
+    horas_espera:       parseFloat(r.horas_espera || r.horas_ociosas || 0) || null,
+    porcentagem:        pct,
+    data:               data || new Date().toISOString().slice(0, 10),
+  }
+}
+
 async function processarBoletim(boletimId) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('supabase não configurado')
@@ -353,7 +372,7 @@ async function processarBoletim(boletimId) {
         status:          'pendente',
         observacoes:     ocrRaw.observacao || ocrRaw.observacoes || '',
         tipo_formulario: 'maquina',
-        dados_extras:    { boletim_id: boletimId, ocr: ocrRaw },
+        dados_extras:    { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) },
         comprovante_url: bol.imagem_url || '',
       })
       .select('id')

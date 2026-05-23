@@ -110,6 +110,10 @@ export default function BoletinsPendencias() {
 
     const dataBoletim = bol?.data_boletim || new Date().toISOString().slice(0, 10)
     const colabNome   = bol?.maquinas_colaboradores?.nome || 'Colaborador'
+    const ocr         = bol?.ocr_raw || {}
+    const hDisp  = parseFloat(ocr.horas_disponiveis || ocr.horas_totais    || 0) || null
+    const hTrab  = parseFloat(ocr.horas_trabalhadas || ocr.horas_produtivas || 0) || null
+    const pct    = hDisp && hTrab ? parseFloat((hTrab / hDisp * 100).toFixed(2)) : null
 
     const { data: lanc } = await supabase
       .from('lancamentos')
@@ -122,9 +126,21 @@ export default function BoletinsPendencias() {
         categoria:       'Máquinas',
         centro_custo:    '',
         status:          'pendente',
-        observacoes:     bol.ocr_raw?.observacao || bol.ocr_raw?.observacoes || '',
+        observacoes:     ocr.observacao || ocr.observacoes || '',
         tipo_formulario: 'maquina',
-        dados_extras:    { boletim_id: boletimId, ocr: bol.ocr_raw },
+        dados_extras:    {
+          boletim_id:         boletimId,
+          ocr:                ocr,
+          equipamento:        (ocr.equipamento || '').toUpperCase(),
+          modelo:             ocr.modelo || '',
+          classe_operacional: ocr.classe || ocr.classe_operacional || '',
+          frente:             ocr.frente || ocr.frente_de_trabalho || '',
+          horas_disponiveis:  hDisp,
+          horas_trabalhadas:  hTrab,
+          horas_espera:       parseFloat(ocr.horas_espera || ocr.horas_ociosas || 0) || null,
+          porcentagem:        pct,
+          data:               dataBoletim,
+        },
         comprovante_url: bol.imagem_url || '',
       })
       .select('id')
