@@ -473,6 +473,37 @@ function BoletimPanel({ records, equipKey, date, onClose, onEdit, onNew }) {
 function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdit }) {
   const [boletimData, setBoletimData] = useState(null)
   const [boletimImgs, setBoletimImgs] = useState({}) // boletim_id → imagem_url
+  const [reprocessando, setReprocessando] = useState({})
+  const [reprocessMsg, setReprocessMsg]   = useState({})
+
+  async function reprocessarOCR(boletimId) {
+    if (!boletimId) return
+    setReprocessando(p => ({ ...p, [boletimId]: true }))
+    setReprocessMsg(p => ({ ...p, [boletimId]: null }))
+    try {
+      const r = await fetch('/api/ocr-boletim-maquina', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boletimId }),
+      })
+      if (r.ok) {
+        setReprocessMsg(p => ({ ...p, [boletimId]: 'ok' }))
+        // Atualiza status do boletim no header
+        const { data } = await supabase
+          .from('maquinas_boletins')
+          .select('id, numero, status, imagem_url, maquinas_colaboradores(nome)')
+          .eq('id', boletimId)
+          .single()
+        if (data) setBoletimData(data)
+      } else {
+        setReprocessMsg(p => ({ ...p, [boletimId]: 'erro' }))
+      }
+    } catch {
+      setReprocessMsg(p => ({ ...p, [boletimId]: 'erro' }))
+    } finally {
+      setReprocessando(p => ({ ...p, [boletimId]: false }))
+    }
+  }
 
   const ex  = records[0]?.dados_extras || {}
   const ocr = ex.ocr || {}
@@ -627,6 +658,22 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
                       <div style={{ fontSize: 26, marginBottom: 6 }}>⏳</div>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Aguardando processamento OCR</div>
                       <div style={{ fontSize: 11, marginTop: 3, opacity: 0.65 }}>Os dados operacionais serão exibidos após o processamento</div>
+                      {rx.boletim_id && (
+                        <div style={{ marginTop: 12 }}>
+                          {reprocessMsg[rx.boletim_id] === 'ok' && (
+                            <div style={{ fontSize: 11, color: '#22c55e', marginBottom: 8 }}>✅ Re-processamento iniciado! Feche e reabra o card em instantes.</div>
+                          )}
+                          {reprocessMsg[rx.boletim_id] === 'erro' && (
+                            <div style={{ fontSize: 11, color: '#f87171', marginBottom: 8 }}>❌ Erro ao re-processar. Tente novamente.</div>
+                          )}
+                          <button
+                            onClick={() => reprocessarOCR(rx.boletim_id)}
+                            disabled={reprocessando[rx.boletim_id]}
+                            style={{ padding: '8px 18px', borderRadius: 9, border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', cursor: reprocessando[rx.boletim_id] ? 'wait' : 'pointer', fontWeight: 700, fontSize: 12, opacity: reprocessando[rx.boletim_id] ? 0.6 : 1 }}>
+                            {reprocessando[rx.boletim_id] ? '⏳ Processando...' : '🔄 Re-processar OCR'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
