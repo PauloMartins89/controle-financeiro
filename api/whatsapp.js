@@ -9,7 +9,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions'
 const GH_MODEL = 'gpt-4o-mini'
-const APP_URL = process.env.APP_URL || 'https://dividiai.app.br'
+const APP_URL = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://smartpro.app.br')
 
 function getDb() {
   return createClient(
