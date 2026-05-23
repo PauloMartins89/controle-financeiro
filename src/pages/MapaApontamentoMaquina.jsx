@@ -903,7 +903,10 @@ export default function MapaApontamentoMaquina() {
       const model  = (ex.modelo || ocr.modelo || '').trim() || '—'
       const classe = ex.classe_operacional || ocr.classe || ocr.classe_operacional || ''
       const frente = ex.frente || ocr.frente || ocr.frente_de_trabalho || ''
-      const key    = `${model}::${equip}`
+      // Normaliza chave: remove conteúdo entre parênteses e espaços extras
+      // 'CAD 320 (ESCAVADEIRA HIDRÁULICA)' e 'CAD 320' → mesma linha
+      const equipNorm = equip.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim() || equip
+      const key = equipNorm
 
       if (classe)        opts.classeOp.add(classe)
       if (model !== '—') opts.modelo.add(model)
