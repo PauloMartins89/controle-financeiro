@@ -558,7 +558,11 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
           {records.map((rec, idx) => {
             const rx  = rec.dados_extras || {}
             const rcr = rx.ocr || {}
-            const hDisp   = rx.horas_disponiveis ?? rcr.horas_disponiveis ?? rcr.horas_totais
+            // horas_disponiveis: usa campo explícito, ou calcula pelo horímetro
+            const hIniCard = rx.horimetro_inicial ?? rcr.horimetro_inicial
+            const hFinCard = rx.horimetro_final   ?? rcr.horimetro_final
+            const hDisp = rx.horas_disponiveis ?? rcr.horas_disponiveis ?? rcr.horas_totais ??
+              (hIniCard != null && hFinCard != null ? parseFloat((hFinCard - hIniCard).toFixed(2)) : null)
             const hTrab   = rx.horas_trabalhadas ?? rcr.horas_trabalhadas ?? rcr.horas_produtivas
             const hEsp    = rx.horas_espera      ?? rcr.horas_espera      ?? rcr.horas_ociosas
             const pct     = rx.porcentagem ?? calcPct(hTrab, hDisp)
@@ -626,9 +630,49 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
                     </div>
                   )}
 
+                  {/* ── Horímetro ── */}
+                  {(rx.horimetro_inicial != null || rx.horimetro_final != null || rcr.horimetro_inicial != null || rcr.horimetro_final != null) && (() => {
+                    const hIni = rx.horimetro_inicial ?? rcr.horimetro_inicial
+                    const hFin = rx.horimetro_final   ?? rcr.horimetro_final
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        {[
+                          { label: 'Horímetro Inicial', value: hIni, color: '#94a3b8' },
+                          { label: 'Horímetro Final',   value: hFin, color: '#94a3b8' },
+                        ].map(k => (
+                          <div key={k.label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 9, padding: '9px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{k.label}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: k.color }}>{k.value != null ? `${Number(k.value).toFixed(1)}h` : '—'}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+
+                  {/* ── Produtividade ── */}
+                  {(rx.produtividade_qtd != null || rx.produtividade_hora != null || rcr.produtividade_quantidade != null || rcr.produtividade_por_hora != null) && (() => {
+                    const qtd  = rx.produtividade_qtd  ?? rcr.produtividade_quantidade
+                    const un   = rx.produtividade_un   || rcr.produtividade_unidade || rcr.unidade_medida || ''
+                    const hora = rx.produtividade_hora ?? rcr.produtividade_por_hora
+                    return (
+                      <div style={{ background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>📦 Produtividade</div>
+                        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                          {qtd != null && <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{Number(qtd).toLocaleString('pt-BR')} <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 400 }}>{un}</span></span>}
+                          {hora != null && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>· {Number(hora).toLocaleString('pt-BR')} {un}/h</span>}
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   {/* ── Info chips ── */}
-                  {([rx.modelo||rcr.modelo, rx.classe_operacional||rcr.classe||rcr.classe_operacional, rx.frente||rcr.frente, rx.observacoes||rcr.observacoes||rcr.observacao].some(Boolean)) && (
+                  {([rx.modelo||rcr.modelo, rx.classe_operacional||rcr.classe||rcr.classe_operacional, rx.frente||rcr.frente, rx.cdc||rcr.cdc, rx.turno||rcr.turno].some(Boolean)) && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {(rx.turno || rcr.turno) && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#fbbf24', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 20, padding: '4px 10px', textTransform: 'uppercase' }}>
+                          🌞 {(rx.turno || rcr.turno)}
+                        </span>
+                      )}
                       {(rx.modelo || rcr.modelo) && (
                         <span style={{ fontSize: 11, fontWeight: 600, color: '#a5b4fc', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 20, padding: '4px 10px' }}>
                           ⚙️ {rx.modelo || rcr.modelo}
@@ -644,11 +688,37 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
                           🚧 {rx.frente || rcr.frente}
                         </span>
                       )}
-                      {(rx.observacoes || rcr.observacoes || rcr.observacao) && (
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px' }}>
-                          📝 {rx.observacoes || rcr.observacoes || rcr.observacao}
+                      {(rx.cdc || rcr.cdc) && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px' }}>
+                          🏭 {rx.cdc || rcr.cdc}
                         </span>
                       )}
+                    </div>
+                  )}
+
+                  {/* ── Atividade + Descritivo ── */}
+                  {(rx.atividade_realizada || rcr.atividade_realizada || rcr.atividade || rx.descritivo_trabalho || rcr.descritivo_trabalho || rcr.descritivo) && (
+                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                      {(rx.atividade_realizada || rcr.atividade_realizada || rcr.atividade) && (
+                        <div style={{ padding: '9px 14px', borderBottom: (rx.descritivo_trabalho || rcr.descritivo_trabalho || rcr.descritivo) ? '1px solid var(--border)' : 'none' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Atividade Realizada</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{rx.atividade_realizada || rcr.atividade_realizada || rcr.atividade}</div>
+                        </div>
+                      )}
+                      {(rx.descritivo_trabalho || rcr.descritivo_trabalho || rcr.descritivo) && (
+                        <div style={{ padding: '9px 14px' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Descritivo do Trabalho</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>{rx.descritivo_trabalho || rcr.descritivo_trabalho || rcr.descritivo}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── Observações ── */}
+                  {(rx.observacoes || rcr.observacoes || rcr.observacao || rcr.observacoes_ocorrencias) && (
+                    <div style={{ background: 'rgba(251,191,36,0.04)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 10, padding: '10px 14px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 5 }}>⚠️ Observações / Ocorrências</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>{rx.observacoes || rcr.observacoes || rcr.observacao || rcr.observacoes_ocorrencias}</div>
                     </div>
                   )}
 
@@ -662,8 +732,7 @@ function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdi
                     )}
                     {(recImg || (idx === 0 && boletimData?.imagem_url)) && records.length === 1 && (
                       <a href={recImg || boletimData?.imagem_url} target="_blank" rel="noreferrer" title="Ver foto do boletim"
-                        style={{ padding: '9px 16px', borderRadius: 9, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', color: '#818cf8', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-                        title="Ver foto do boletim">
+                        style={{ padding: '9px 16px', borderRadius: 9, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', color: '#818cf8', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                         🖼️
                       </a>
                     )}

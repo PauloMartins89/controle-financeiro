@@ -192,19 +192,37 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
 // Mapeia campos OCR brutos para estrutura padrão do MapaApontamentoMaquina
 function mapOcrToExtras(ocr, data) {
   const r     = ocr || {}
-  const hDisp = parseFloat(r.horas_disponiveis || r.horas_totais    || 0) || null
   const hTrab = parseFloat(r.horas_trabalhadas || r.horas_produtivas || 0) || null
+  // horas_disponiveis: usa campo explícito, ou calcula de horímetro, ou horas_totais
+  const hIni  = parseFloat(r.horimetro_inicial || 0) || null
+  const hFin  = parseFloat(r.horimetro_final   || 0) || null
+  const hDisp = parseFloat(r.horas_disponiveis || r.horas_totais || 0) ||
+                (hIni != null && hFin != null ? parseFloat((hFin - hIni).toFixed(2)) : null)
   const pct   = hDisp && hTrab ? parseFloat((hTrab / hDisp * 100).toFixed(2)) : null
   return {
-    equipamento:        (r.equipamento || '').toUpperCase(),
-    modelo:             r.modelo || '',
-    classe_operacional: r.classe || r.classe_operacional || '',
-    frente:             r.frente || r.frente_de_trabalho || '',
-    horas_disponiveis:  hDisp,
-    horas_trabalhadas:  hTrab,
-    horas_espera:       parseFloat(r.horas_espera || r.horas_ociosas || 0) || null,
-    porcentagem:        pct,
-    data:               data || new Date().toISOString().slice(0, 10),
+    // Identificação
+    equipamento:           (r.equipamento || '').toUpperCase(),
+    modelo:                r.modelo || '',
+    classe_operacional:    r.classe || r.classe_operacional || '',
+    frente:                r.frente || r.frente_de_trabalho || '',
+    cdc:                   r.cdc || r.centro_de_custo || '',
+    turno:                 r.turno || '',
+    data:                  data || new Date().toISOString().slice(0, 10),
+    // Horas
+    horimetro_inicial:     hIni,
+    horimetro_final:       hFin,
+    horas_disponiveis:     hDisp,
+    horas_trabalhadas:     hTrab,
+    horas_espera:          parseFloat(r.horas_espera || r.horas_ociosas || 0) || null,
+    porcentagem:           pct,
+    // Descritivo
+    atividade_realizada:   r.atividade_realizada || r.atividade || '',
+    descritivo_trabalho:   r.descritivo_trabalho || r.descritivo || '',
+    observacoes:           r.observacoes || r.observacao || r.observacoes_ocorrencias || '',
+    // Produtividade
+    produtividade_qtd:     parseFloat(r.produtividade_quantidade || r.produtividade || 0) || null,
+    produtividade_un:      r.produtividade_unidade || r.unidade_medida || '',
+    produtividade_hora:    parseFloat(r.produtividade_por_hora || 0) || null,
   }
 }
 
@@ -249,7 +267,26 @@ async function processarBoletim(boletimId) {
 
   const userPrompt = boletimTipo?.imagem_url
     ? `Analise este boletim de apontamento. O formulário tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}.`
-    : `Extraia os dados deste formulário de apontamento de máquinas. Tente identificar: data, operador/colaborador, equipamento, frente de trabalho, horas produtivas, horas de manutenção, horas ociosas, observações. Retorne um JSON com essas chaves.`
+    : `Extraia TODOS os dados deste formulário de apontamento de máquinas. Retorne um JSON com as seguintes chaves (use null se o campo não existir ou estiver ilegível):
+- data: data do boletim (DD/MM/YYYY)
+- turno: "dia", "noite" ou "integral" conforme marcado
+- colaborador: nome do operador/colaborador
+- equipamento: código ou nome do equipamento (ex: EH-22, CAD 320)
+- classe_operacional: classe/tipo do equipamento
+- frente: local ou frente de trabalho
+- cdc: centro de custo
+- atividade_realizada: atividade ou serviço realizado (resumo curto)
+- descritivo_trabalho: descrição detalhada do trabalho executado
+- observacoes: observações, ocorrências ou anomalias registradas
+- horimetro_inicial: leitura inicial do horímetro (número)
+- horimetro_final: leitura final do horímetro (número)
+- horas_trabalhadas: total de horas trabalhadas (número)
+- horas_disponiveis: horas disponíveis ou horas totais do turno (número, se informado)
+- horas_espera: horas em espera, ociosas ou de manutenção (número)
+- produtividade_quantidade: quantidade produzida (número)
+- produtividade_unidade: unidade de medida da produção (ex: m3, ton)
+- produtividade_por_hora: produtividade por hora (número)
+Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}
   try {
