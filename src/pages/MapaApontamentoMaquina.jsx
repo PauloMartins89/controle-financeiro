@@ -469,6 +469,169 @@ function BoletimPanel({ records, equipKey, date, onClose, onEdit, onNew }) {
   )
 }
 
+// ─── Card modal central (clique célula verde) ────────────────────────────────
+function BoletimCardModal({ records, equipKey, date, workspaceId, onClose, onEdit }) {
+  const [boletimData, setBoletimData] = useState(null)
+
+  const ex  = records[0]?.dados_extras || {}
+  const ocr = ex.ocr || {}
+
+  useEffect(() => {
+    const boletimId = ex.boletim_id || null
+    if (!boletimId) return
+    supabase
+      .from('maquinas_boletins')
+      .select('id, numero, status, imagem_url, maquinas_colaboradores(nome)')
+      .eq('id', boletimId)
+      .single()
+      .then(({ data }) => { if (data) setBoletimData(data) })
+  }, [])
+
+  const STATUS_CFG = {
+    processado:       { label: 'Processado',       color: '#22c55e' },
+    pendente_revisao: { label: 'Pendente Revisão', color: '#fbbf24' },
+    processando:      { label: 'Processando...',   color: '#60a5fa' },
+    recebido:         { label: 'Recebido',          color: '#a78bfa' },
+    erro:             { label: 'Erro',              color: '#f87171' },
+  }
+  const bolStatus = boletimData?.status || ex.boletim_status
+  const sCfg      = STATUS_CFG[bolStatus]
+  const imgUrl    = boletimData?.imagem_url
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', padding: 16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ width: '100%', maxWidth: 680, maxHeight: '90vh', overflowY: 'auto', background: 'var(--bg-secondary)', borderRadius: 18, border: '1px solid var(--border)', boxShadow: '0 24px 80px rgba(0,0,0,0.55)', animation: 'fadeInScale 0.18s ease' }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--accent)' }}>{ex.equipamento || ocr.equipamento || equipKey}</span>
+              {(ex.modelo || ocr.modelo) && <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{ex.modelo || ocr.modelo}</span>}
+              {(boletimData?.numero || ex.boletim_numero) && (
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 20, padding: '3px 10px' }}>
+                  {boletimData?.numero || ex.boletim_numero}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>📅 {fmtD(date)}</span>
+              {(ex.frente || ocr.frente)             && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>🚧 {ex.frente || ocr.frente}</span>}
+              {(ex.classe_operacional || ocr.classe) && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>📂 {ex.classe_operacional || ocr.classe}</span>}
+              {(boletimData?.maquinas_colaboradores?.nome || ocr.operador || ocr.colaborador) && (
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>👤 {boletimData?.maquinas_colaboradores?.nome || ocr.operador || ocr.colaborador}</span>
+              )}
+            </div>
+            {sCfg && (
+              <span style={{ display: 'inline-block', marginTop: 8, fontSize: 11, fontWeight: 700, color: sCfg.color, background: `${sCfg.color}20`, border: `1px solid ${sCfg.color}50`, borderRadius: 20, padding: '3px 10px' }}>
+                {sCfg.label}
+              </span>
+            )}
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, flexShrink: 0 }}>
+            <XMarkIcon style={{ width: 22, height: 22 }} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {records.map((rec, idx) => {
+            const rx  = rec.dados_extras || {}
+            const rcr = rx.ocr || {}
+            const hDisp = rx.horas_disponiveis ?? rcr.horas_disponiveis ?? rcr.horas_totais
+            const hTrab = rx.horas_trabalhadas ?? rcr.horas_trabalhadas ?? rcr.horas_produtivas
+            const hEsp  = rx.horas_espera      ?? rcr.horas_espera      ?? rcr.horas_ociosas
+            const pct   = rx.porcentagem ?? calcPct(hTrab, hDisp)
+            const col   = pct != null ? getCellColor(pct) : null
+
+            return (
+              <div key={rec.id}>
+                {records.length > 1 && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 10 }}>Boletim {idx + 1}</div>}
+
+                {/* KPI utilização */}
+                {pct != null && (
+                  <div style={{ borderRadius: 14, padding: '16px 20px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 20, background: col ? `${col.bg}22` : 'rgba(255,255,255,0.04)', border: `2px solid ${col ? col.bg + '55' : 'var(--border)'}` }}>
+                    <div style={{ textAlign: 'center', minWidth: 100 }}>
+                      <div style={{ fontSize: 44, fontWeight: 900, color: col?.bg || '#fff', lineHeight: 1 }}>{Number(pct).toFixed(1)}%</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Utilização</div>
+                    </div>
+                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                      {[
+                        { label: 'Disponíveis', value: hDisp, color: '#6366f1' },
+                        { label: 'Trabalhadas', value: hTrab, color: '#10b981' },
+                        { label: 'Em Espera',   value: hEsp,  color: '#f59e0b' },
+                      ].map(k => (
+                        <div key={k.label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.value != null ? `${Number(k.value).toFixed(1)}h` : '—'}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{k.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Detalhes */}
+                {[
+                  { label: 'Modelo',             value: rx.modelo || rcr.modelo },
+                  { label: 'Equipamento',        value: rx.equipamento || rcr.equipamento },
+                  { label: 'Classe Operacional', value: rx.classe_operacional || rcr.classe || rcr.classe_operacional },
+                  { label: 'Frente',             value: rx.frente || rcr.frente },
+                  { label: 'Observações',        value: rx.observacoes || rcr.observacoes || rcr.observacao },
+                ].filter(r => r.value) .length > 0 && (
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+                    {[
+                      { label: 'Modelo',             value: rx.modelo || rcr.modelo },
+                      { label: 'Equipamento',        value: rx.equipamento || rcr.equipamento },
+                      { label: 'Classe Operacional', value: rx.classe_operacional || rcr.classe || rcr.classe_operacional },
+                      { label: 'Frente',             value: rx.frente || rcr.frente },
+                      { label: 'Observações',        value: rx.observacoes || rcr.observacoes || rcr.observacao },
+                    ].filter(r => r.value).map((row, i, arr) => (
+                      <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 16px', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{row.label}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', maxWidth: '60%', textAlign: 'right' }}>{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Ações */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  {!rx._from_boletim && (
+                    <button onClick={() => { onEdit(rec); onClose() }}
+                      style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <PencilIcon style={{ width: 14, height: 14 }} /> Editar
+                    </button>
+                  )}
+                  {imgUrl && (
+                    <a href={imgUrl} target="_blank" rel="noreferrer"
+                      style={{ flex: 1, padding: '10px', borderRadius: 9, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.08)', color: '#818cf8', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none' }}>
+                      🖼️ Ver Imagem
+                    </a>
+                  )}
+                </div>
+                {idx < records.length - 1 && <hr style={{ margin: '16px 0', borderColor: 'var(--border)' }} />}
+              </div>
+            )
+          })}
+
+          {/* Imagem em thumbnail */}
+          {imgUrl && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Foto do Boletim</div>
+              <a href={imgUrl} target="_blank" rel="noreferrer">
+                <img src={imgUrl} alt="Boletim" style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', cursor: 'zoom-in', maxHeight: 340, objectFit: 'contain', background: '#0a0a0a' }} />
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function MapaApontamentoMaquina() {
   const workspaceId = useStore(s => s.workspaceId)
@@ -490,8 +653,9 @@ export default function MapaApontamentoMaquina() {
   const [expanded,    setExpanded]    = useState({})
 
   // ── Estado painel/modal ──────────────────────────────────────────────────────
-  const [panel,    setPanel]    = useState(null)   // { equipKey, date, records[] }
-  const [editRec,  setEditRec]  = useState(null)   // rec a editar ou {} para novo
+  const [panel,     setPanel]     = useState(null)   // painel lateral (célula vazia)
+  const [cardModal, setCardModal] = useState(null)   // card central (célula verde)
+  const [editRec,   setEditRec]   = useState(null)   // rec a editar ou {} para novo
 
   // ── Dias do período ──────────────────────────────────────────────────────────
   const days = useMemo(() => buildDays(refDate, periodo), [refDate, periodo])
@@ -633,12 +797,19 @@ export default function MapaApontamentoMaquina() {
   // ── Clique na célula ─────────────────────────────────────────────────────────
   function openCell(row, day) {
     const records = row.cells[day.iso] || []
-    setPanel({ equipKey: row.equipamento, date: day.iso, records, row })
+    if (records.length > 0) {
+      // Verde → card central
+      setCardModal({ equipKey: row.equipamento, date: day.iso, records, row })
+    } else {
+      // Vermelho → abre modal de novo boletim diretamente
+      handleNew(row, day.iso)
+    }
   }
 
   function handleEdit(rec) {
     setEditRec(rec)
     setPanel(null)
+    setCardModal(null)
   }
 
   function handleNew(row, date) {
@@ -872,6 +1043,18 @@ export default function MapaApontamentoMaquina() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 799, background: 'rgba(0,0,0,0.3)' }} onClick={() => setPanel(null)} />
       )}
 
+      {/* ── Card modal central (célula verde) ── */}
+      {cardModal && (
+        <BoletimCardModal
+          records={cardModal.records}
+          equipKey={cardModal.equipKey}
+          date={cardModal.date}
+          workspaceId={workspaceId}
+          onClose={() => setCardModal(null)}
+          onEdit={handleEdit}
+        />
+      )}
+
       {/* ── Painel lateral ── */}
       {panel && (
         <BoletimPanel
@@ -899,6 +1082,10 @@ export default function MapaApontamentoMaquina() {
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
           to   { transform: translateX(0);   opacity: 1; }
+        }
+        @keyframes fadeInScale {
+          from { transform: scale(0.93); opacity: 0; }
+          to   { transform: scale(1);    opacity: 1; }
         }
       `}</style>
     </div>
