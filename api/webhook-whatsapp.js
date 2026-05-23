@@ -460,7 +460,7 @@ export default async function handler(req, res) {
 
       if (colaboradorBol) {
         const frente      = colaboradorBol.maquinas_frentes
-        const workspaceId = frente?.workspace_id
+        const workspaceId = frente?.workspace_id || colaboradorBol.workspace_id
 
         // Confirma recebimento imediatamente
         await zapiSendText(fromPhone, '📋 Boletim recebido! Estamos processando. Você será avisado em instantes.')
@@ -499,7 +499,7 @@ export default async function handler(req, res) {
             colaborador_id:  colaboradorBol.id,
             boletim_tipo_id: frente?.maquinas_boletim_tipos?.id || null,
             wa_from:         fromPhone,
-            imagem_url:      imagemUrl,
+            imagem_url:      imagemUrl || 'pending',
             numero,
             status:          'recebido',
           })
