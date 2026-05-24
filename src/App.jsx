@@ -433,6 +433,8 @@ export default function App() {
     }
   }, [])
 
+  if (window.location.pathname === '/download') return <DownloadApp />
+
   if (!ready) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)', color: '#6366f1', flexDirection: 'column', gap: 16 }}>
       <div style={{ width: 48, height: 48, border: '4px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
