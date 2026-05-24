@@ -369,6 +369,93 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true, numeroPedido, valorTotal })
   }
+
+  // ── POST: notificar supervisor/líder após criação pelo app móvel ────────────
+  if (req.method === 'POST' && action === 'notify-mobile') {
+    const { id } = req.body || {}
+    if (!id) return res.status(400).json({ error: 'ID obrigatório' })
+
+    const { data: sol } = await db
+      .from('refei_solicitacoes')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+
+    const [{ data: equipeRefei }, { data: liderEquipe }, { data: rest }, { data: itens }] = await Promise.all([
+      db.from('refei_equipes').select('nome, supervisor_telefone, supervisor_nome').eq('id', sol.equipe_id).maybeSingle(),
+      db.from('lider_equipes').select('nome, codigo').eq('id', sol.equipe_id).maybeSingle(),
+      db.from('refei_restaurantes').select('nome').eq('id', sol.restaurante_id).maybeSingle(),
+      db.from('refei_itens').select('*').eq('solicitacao_id', sol.id),
+    ])
+    // Consolida info da equipe: prefere refei_equipes (web), cai back para lider_equipes (mobile)
+    const equipe = equipeRefei || (liderEquipe ? { nome: liderEquipe.nome, supervisor_telefone: null, supervisor_nome: null } : null)
+
+    // Salva supervisor_telefone atualizado (para uso futuro)
+    if (equipeRefei?.supervisor_telefone) {
+      await db.from('refei_solicitacoes')
+        .update({ supervisor_telefone: equipeRefei.supervisor_telefone, supervisor_nome: equipeRefei.supervisor_nome })
+        .eq('id', sol.id)
+    }
+
+    // Registra eventos na timeline
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'pedido_criado',      descricao: `Pedido ${sol.numero_pedido} criado pelo app SmartLíder`, ator: sol.lider_nome, atorTipo: 'lider' })
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_aprovacao',  descricao: 'Enviado para aprovação do supervisor',                    ator: sol.lider_nome, atorTipo: 'lider' })
+
+    const supervisorTel = equipe?.supervisor_telefone || sol.supervisor_telefone
+    if (supervisorTel) {
+      const itensNormais = (itens || []).filter(i => !i.extra)
+      const itensExtras  = (itens || []).filter(i =>  i.extra)
+      const qtdRef  = (itens || []).filter(i => i.refeicao).length
+      const qtdCafe = (itens || []).filter(i => i.cafe).length
+
+      const linhasColab  = itensNormais.map(i => {
+        const ic = [i.refeicao ? '🍽️' : '', i.cafe ? '☕' : ''].filter(Boolean).join(' ')
+        return `• ${i.colaborador_nome} — ${ic}`
+      })
+      const linhasExtras = itensExtras.map(i => {
+        const ic = [i.refeicao ? '🍽️' : '', i.cafe ? '☕' : ''].filter(Boolean).join(' ')
+        return `⚠️ ${i.colaborador_nome} — ${ic} — "${i.justificativa}"`
+      })
+
+      const msgSup = [
+        `🍽️ *Solicitação de Refeição — ${sol.numero_pedido}*`,
+        `Equipe: ${equipe?.nome || '—'}`,
+        `Solicitante: ${sol.lider_nome || '—'}`,
+        `📅 Data: ${fmtData(sol.data_refeicao)}`,
+        `🏪 Restaurante: ${rest?.nome || '—'}`,
+        ``,
+        `👥 *Colaboradores (${linhasColab.length}):*`,
+        ...linhasColab,
+        ...(linhasExtras.length > 0 ? [``, `⚠️ *Extras (${linhasExtras.length}):*`, ...linhasExtras] : []),
+        ``,
+        `🍽️ ${qtdRef} refeição(ões)  ·  ☕ ${qtdCafe} café(s)  ·  *${fmtBRL(sol.valor_total)}*`,
+        ``,
+        `👇 Aprovar ou reprovar (sem login):`,
+        `${APP_URL}/ar/${sol.token_aprovacao}`,
+        ``,
+        `Responda *SIM* para aprovar ou *NÃO* para reprovar.`,
+      ].join('\n')
+      await sendWA(supervisorTel, msgSup)
+    }
+
+    // Confirma ao líder (se tiver telefone)
+    if (sol.lider_telefone) {
+      const msgLider = [
+        `✅ *Pedido ${sol.numero_pedido} enviado!*`,
+        `📅 Data: ${fmtData(sol.data_refeicao)}`,
+        `🏪 Restaurante: ${rest?.nome || '—'}`,
+        `🍽️ ${(itens || []).filter(i => i.refeicao).length} refeição(ões)  ·  ☕ ${(itens || []).filter(i => i.cafe).length} café(s)`,
+        `💰 Total: ${fmtBRL(sol.valor_total)}`,
+        ``,
+        `Aguardando aprovação do supervisor.`,
+      ].join('\n')
+      await sendWA(sol.lider_telefone, msgLider)
+    }
+
+    return res.status(200).json({ ok: true })
+  }
+
   if (req.method === 'POST' && action === 'aprovar') {
     const { solicitacaoId, acao, motivo } = req.body || {}
     if (!solicitacaoId || !acao) return res.status(400).json({ error: 'Dados incompletos' })
