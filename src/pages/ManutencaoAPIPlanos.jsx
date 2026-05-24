@@ -355,8 +355,6 @@ export default function ManutencaoAPIPlanos() {
       }
 
       const m = modelos[0]
-      setResultModelo(m)
-
       // 2. Busca planos de manutenção + itens
       const { data: planos } = await supabase
         .from('cat_planos')
@@ -364,14 +362,54 @@ export default function ManutencaoAPIPlanos() {
         .eq('modelo_id', m.id)
         .order('intervalo_h')
 
+      const hasPlan = planos && planos.length > 0
+
+      // 3. Se modelo encontrado mas sem planos → gera via IA usando specs reais do catálogo
+      if (!hasPlan) {
+        setLoadingMsg('Gerando plano via IA...')
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          const aiRes = await fetch('/api/busca-modelo-ia', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({
+              fabricante:   m.fabricante,
+              modelo:       m.modelo,
+              tipo:         m.tipo,
+              ano:          m.ano_inicio,
+              configuracao: m.configuracao,
+            }),
+          })
+          if (aiRes.ok) {
+            const aiData = await aiRes.json()
+            if (aiData.planos?.length > 0) {
+              setResultModelo({ ...m, _ia_planos: true })
+              setResultPlanos(aiData.planos)
+              setLastSync(new Date().toLocaleString('pt-BR'))
+              setSearched(true)
+              setTab('resumo')
+              setLoadingMsg('')
+              toast.success(`${m.fabricante} ${m.modelo} — plano gerado por IA`, { icon: '🤖', duration: 5000 })
+              return
+            }
+          }
+        } catch (aiErr) {
+          console.error('[busca-modelo-ia] plano error:', aiErr)
+        }
+        setLoadingMsg('')
+      }
+
+      setResultModelo(m)
       setResultPlanos(planos || [])
       setLastSync(new Date().toLocaleString('pt-BR'))
       setSearched(true)
       setTab('resumo')
-      const hasPlan = planos && planos.length > 0
       toast.success(
         `${m.fabricante} ${m.modelo} — ${
-          hasPlan ? planos.length + ' intervalos encontrados' : 'modelo localizado (planos em breve)'
+          hasPlan ? planos.length + ' intervalos encontrados' : 'modelo localizado'
         }`
       )
     } catch (err) {
@@ -654,8 +692,11 @@ export default function ManutencaoAPIPlanos() {
       confianca:       resultModelo._ia ? 'ia' : 'alto',
       fonte_principal: resultModelo._ia
         ? `IA — verificar com manual do fabricante`
-        : `Catálogo SmartPro — ${resultModelo.mercado || 'Brasil'}`,
+        : resultModelo._ia_planos
+          ? `Catálogo SmartPro + Plano por IA`
+          : `Catálogo SmartPro — ${resultModelo.mercado || 'Brasil'}`,
       _ia:             resultModelo._ia || false,
+      _ia_planos:      resultModelo._ia_planos || false,
       ultima_validacao: new Date().toISOString().slice(0, 10),
       imagem_url:      resultModelo.imagem_url || null,
       potencia:        resultModelo.potencia_cv_max ? `${resultModelo.potencia_cv_max} cv` : '—',
@@ -738,14 +779,18 @@ export default function ManutencaoAPIPlanos() {
           </div>
 
           {/* Banner IA */}
-          {eq._ia && (
+          {(eq._ia || eq._ia_planos) && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 14, padding: '10px 14px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 10 }}>
               <span style={{ fontSize: 18, lineHeight: 1 }}>🤖</span>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e' }}>Dados gerados por Inteligência Artificial</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e' }}>
+                  {eq._ia ? 'Dados gerados por Inteligência Artificial' : 'Plano de manutenção estimado por IA'}
+                </div>
                 <div style={{ fontSize: 11, color: '#b45309', marginTop: 2 }}>
-                  Este modelo não foi encontrado no catálogo. Os intervalos e especificações foram estimados pela IA com base no conhecimento técnico do fabricante.
-                  Confirme os dados no manual oficial antes de executar o plano de manutenção.
+                  {eq._ia
+                    ? 'Este modelo não foi encontrado no catálogo. Os intervalos e especificações foram estimados pela IA com base no conhecimento técnico do fabricante.'
+                    : 'Ficha técnica do catálogo SmartPro. Os intervalos de manutenção foram gerados pela IA pois ainda não temos o plano oficial cadastrado.'}
+                  {' '}Confirme os dados no manual oficial antes de executar o plano.
                 </div>
               </div>
             </div>
@@ -947,13 +992,13 @@ export default function ManutencaoAPIPlanos() {
 
     return (
       <div>
-        {isReal && !resultModelo?._ia && (
+        {isReal && !resultModelo?._ia && !resultModelo?._ia_planos && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '5px 12px', marginBottom: 12, fontSize: 11, color: '#16a34a', fontWeight: 600 }}>
             <CheckCircleIcon style={{ width: 13, height: 13 }} />
             {intervalos.length} intervalos carregados do banco de dados
           </div>
         )}
-        {isReal && resultModelo?._ia && (
+        {isReal && (resultModelo?._ia || resultModelo?._ia_planos) && (
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, padding: '5px 12px', marginBottom: 12, fontSize: 11, color: '#b45309', fontWeight: 600 }}>
             <span style={{ fontSize: 13 }}>🤖</span>
             {intervalos.length} intervalos estimados por IA — confirmar com manual oficial
