@@ -9,7 +9,7 @@ import {
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
   TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon, BeakerIcon, DevicePhoneMobileIcon,
-  ExclamationTriangleIcon, WrenchScrewdriverIcon,
+  ExclamationTriangleIcon, WrenchScrewdriverIcon, CpuChipIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -136,6 +136,17 @@ const navGroups = [
     ],
   },
   {
+    title: 'Manutenção',
+    items: [
+      { to: '/manutencao',                          icon: WrenchScrewdriverIcon,      label: 'Dashboard',          moduleKey: 'manutencao' },
+      { to: '/manutencao/operacoes/os',             icon: ClipboardDocumentListIcon,  label: 'Ordens de Serviço',  moduleKey: 'manutencao' },
+      { to: '/manutencao/operacoes/preventiva',     icon: CalendarDaysIcon,           label: 'Preventiva',         moduleKey: 'manutencao' },
+      { to: '/manutencao/api-planos',              icon: CpuChipIcon,                label: 'API Planos',         moduleKey: 'manutencao' },
+      { to: '/manutencao/cadastros/equipamentos',   icon: WrenchScrewdriverIcon,      label: 'Equipamentos',       moduleKey: 'manutencao' },
+      { to: '/manutencao/cadastros/tecnicos',       icon: UsersIcon,                  label: 'Técnicos',           moduleKey: 'manutencao' },
+    ],
+  },
+  {
     title: 'Sistema',
     items: [
       { to: '/acessos', icon: LockClosedIcon, label: 'Acessos', moduleKey: null, empresaAdminOnly: true },
@@ -159,6 +170,7 @@ const navGroups = [
       { to: '/admin/mensagens',    icon: ChatBubbleLeftRightIcon,   label: 'Log de Mensagens',   moduleKey: null, adminOnly: true },
       { to: '/admin/usuarios',     icon: UsersIcon,                 label: 'Usuários',           moduleKey: null, adminOnly: true },
       { to: '/admin/assinaturas',  icon: CreditCardIcon,            label: 'Assinaturas',        moduleKey: null, adminOnly: true },
+      { to: '/admin/catalogo',     icon: CpuChipIcon,               label: 'Catálogo Modelos',   moduleKey: null, adminOnly: true },
     ],
   },
 ]

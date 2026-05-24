@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import SaudeTab from './SaudeTab'
+import CatalogoCRUD from './CatalogoCRUD'
 
 const ALL_MODULES = [
   { key: 'inicio',       label: 'Início' },
@@ -1201,6 +1202,17 @@ export default function AdminPanel() {
                     </tbody>
                   </table>
                 </div>
+              </div>
+            )}
+
+            {/* ── TAB: CATÁLOGO DE MODELOS ──────────────────────────────── */}
+            {tab === 'catalogo' && (
+              <div>
+                <div style={{ marginBottom: 16 }}>
+                  <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700 }}>Catálogo de Modelos</h2>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>Gerenciar modelos de equipamentos da API de Planos de Manutenção</p>
+                </div>
+                <CatalogoCRUD />
               </div>
             )}
 

@@ -22,6 +22,9 @@
     },
     "api/ocr-boletim-maquina.js": {
       "maxDuration": 60
+    },
+    "api/busca-modelo-ia.js": {
+      "maxDuration": 30
     }
   },
   "crons": [

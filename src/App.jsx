@@ -74,6 +74,11 @@ import PlataformaAuditoria from './pages/PlataformaAuditoria'
 import ChatIA from './components/ChatIA'
 import GlobalSearch from './components/GlobalSearch'
 import AgendaServicos from './pages/AgendaServicos'
+import ManutencaoDashboard from './pages/ManutencaoDashboard'
+import ManutencaoOS from './pages/ManutencaoOS'
+import ManutencaoPreventiva from './pages/ManutencaoPreventiva'
+import ManutencaoEquipamentos from './pages/ManutencaoEquipamentos'
+import ManutencaoAPIPlanos from './pages/ManutencaoAPIPlanos'
 
 // Verifica se assinatura está ativa (trial válido, ativo, ou isento)
 function isSubscriptionActive(sub) {
@@ -539,6 +544,12 @@ export default function App() {
                   <Route path="/maquinas/dashboard" element={<MaquinasDashboard />} />
                   <Route path="/maquinas/pendencias" element={<BoletinsPendencias />} />
                   <Route path="/agenda-servicos" element={<AgendaServicos />} />
+                  <Route path="/manutencao" element={<ManutencaoDashboard />} />
+                  <Route path="/manutencao/operacoes/os" element={<ManutencaoOS />} />
+                  <Route path="/manutencao/operacoes/preventiva" element={<ManutencaoPreventiva />} />
+                  <Route path="/manutencao/api-planos" element={<ManutencaoAPIPlanos />} />
+                  <Route path="/manutencao/cadastros/equipamentos" element={<ManutencaoEquipamentos />} />
+                  <Route path="/manutencao/cadastros/tecnicos" element={<ManutencaoEquipamentos />} />
                 </Routes>
               </main>
             </div>
