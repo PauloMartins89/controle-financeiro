@@ -47,6 +47,7 @@ import RefeicaoAprovar from './pages/RefeicaoAprovar'
 import RefeicaoValidar from './pages/RefeicaoValidar'
 import RefeicaoConfirmarRestaurante from './pages/RefeicaoConfirmarRestaurante'
 import Refeicoes from './pages/Refeicoes'
+import DownloadApp from './pages/DownloadApp'
 import MapaGerencialRefeicoes from './pages/MapaGerencialRefeicoes'
 import MapaApontamentoMaquina from './pages/MapaApontamentoMaquina'
 import MaquinasDashboard from './pages/MaquinasDashboard'
@@ -451,6 +452,7 @@ export default function App() {
         <Route path="/ar/:token" element={<RefeicaoAprovar />} />
         <Route path="/vr/:token" element={<RefeicaoValidar />} />
         <Route path="/rc/:token" element={<RefeicaoConfirmarRestaurante />} />
+        <Route path="/download" element={<DownloadApp />} />
         <Route path="/*" element={
           <RequireAuth>
             <RequireSubscription>
