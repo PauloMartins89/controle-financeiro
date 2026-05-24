@@ -681,7 +681,7 @@ export default function ManutencaoAPIPlanos() {
     const eq = resultModelo ? {
       fabricante:      resultModelo.fabricante,
       familia:         resultModelo.familia,
-      modelo:          resultModelo.modelo,
+      modelo:          (() => { const m = (resultModelo.modelo || '').trim(); const fp = (resultModelo.fabricante || '').trim() + ' '; return m.toLowerCase().startsWith(fp.toLowerCase()) ? m.slice(fp.length) : m })(),
       versao:          resultModelo.configuracao || '—',
       classe:          resultModelo.classe ? resultModelo.classe.charAt(0).toUpperCase() + resultModelo.classe.slice(1) : '—',
       tipo:            resultModelo.tipo    ? resultModelo.tipo.charAt(0).toUpperCase()  + resultModelo.tipo.slice(1)    : '—',
@@ -850,7 +850,7 @@ export default function ManutencaoAPIPlanos() {
     const eq = resultModelo ? {
       fabricante:      resultModelo.fabricante,
       familia:         resultModelo.familia,
-      modelo:          resultModelo.modelo,
+      modelo:          (() => { const m = (resultModelo.modelo || '').trim(); const fp = (resultModelo.fabricante || '').trim() + ' '; return m.toLowerCase().startsWith(fp.toLowerCase()) ? m.slice(fp.length) : m })(),
       versao:          resultModelo.configuracao || '—',
       classe:          resultModelo.classe ? resultModelo.classe.charAt(0).toUpperCase() + resultModelo.classe.slice(1) : '—',
       tipo:            resultModelo.tipo    ? resultModelo.tipo.charAt(0).toUpperCase()  + resultModelo.tipo.slice(1)    : '—',
@@ -877,7 +877,7 @@ export default function ManutencaoAPIPlanos() {
       : Object.values(DEMO_PECAS).flat().length
 
     const miniKpis = [
-      { label: 'Intervalos', value: totalIntervalos || DEMO_INTERVALOS.length, color: '#16a34a', icon: ClockIcon, note: totalIntervalos > 0 ? 'do banco de dados' : 'dados demo' },
+      { label: 'Intervalos', value: totalIntervalos || DEMO_INTERVALOS.length, color: '#16a34a', icon: ClockIcon, note: totalIntervalos > 0 ? (resultModelo?._ia || resultModelo?._ia_planos ? 'gerados por IA' : 'do banco de dados') : 'sem planos — demo' },
       { label: 'Itens de Plano', value: totalItens  || DEMO_FILTROS.length + Object.values(DEMO_PECAS).flat().length, color: '#0ea5e9', icon: FunnelIcon, note: 'filtros e peças' },
       { label: 'Potência', value: eq.potencia, color: '#8b5cf6', icon: BoltIcon, note: 'potência máxima' },
       { label: 'Tração', value: eq.tracao, color: '#f59e0b', icon: Cog6ToothIcon, note: eq.transmissao },
