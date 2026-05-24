@@ -899,7 +899,7 @@ export default function ManutencaoAPIPlanos() {
       { label: 'Potência', value: eq.potencia, color: '#8b5cf6', icon: BoltIcon, note: 'potência máxima' },
       { label: 'Tração', value: eq.tracao, color: '#f59e0b', icon: Cog6ToothIcon, note: eq.transmissao },
       { label: 'Conflitos', value: DEMO_CONFLITOS.length, color: '#16a34a', icon: ExclamationTriangleIcon, note: 'nenhum conflito' },
-      { label: 'Frota Vinculada', value: frota.length, color: '#64748b', icon: TruckIcon, note: 'equipamentos' },
+      { label: 'Frota Vinculada', value: resultModelo?.id ? frota.filter(e => e.cat_modelo_id === resultModelo.id).length : frota.length, color: '#64748b', icon: TruckIcon, note: 'usam este modelo' },
     ]
 
     return (
@@ -1509,23 +1509,44 @@ export default function ManutencaoAPIPlanos() {
   // TAB: FROTA
   // ─────────────────────────────────────────────────────────────────────────────
   function renderTabFrota() {
-    const frotaJD = frota.filter(e => {
-      const fab = (e.fabricante || '').toLowerCase()
-      const mod = (e.modelo || '').toLowerCase()
-      return fab.includes('john') || fab.includes('deere') || mod.includes('8400') || mod.includes('8r')
-    })
-    const allEquip = frotaJD.length > 0 ? frotaJD : frota
+    // Filtro preciso: usa cat_modelo_id quando o modelo foi encontrado no catálogo
+    const modeloId = resultModelo?.id
+    const frotaVinculada = modeloId
+      ? frota.filter(e => e.cat_modelo_id === modeloId)
+      : frota.filter(e => {
+          const fab = (e.fabricante || '').toLowerCase()
+          const mod = (e.modelo || '').toLowerCase()
+          const rfab = (resultModelo?.fabricante || '').toLowerCase()
+          const rmod = (resultModelo?.modelo || '').toLowerCase()
+          return (rfab && fab.includes(rfab)) || (rmod && mod.includes(rmod))
+        })
+
+    const semVinculo = frota.filter(e => !e.cat_modelo_id)
 
     return (
       <div>
         {/* Mini KPIs */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-          <MiniKpi label="Equipamentos vinculados" value={allEquip.length} color="#16a34a" icon={TruckIcon} />
-          <MiniKpi label="Em dia" value={allEquip.filter(e => e.ativo).length} color="#16a34a" icon={CheckCircleIcon} />
-          <MiniKpi label="Sem plano vinculado" value={allEquip.length} color="#f59e0b" icon={ExclamationTriangleIcon} note="todos aguardando vinculação" />
+          <MiniKpi label="Usam este modelo" value={frotaVinculada.length} color="#16a34a" icon={TruckIcon} />
+          <MiniKpi label="Ativos" value={frotaVinculada.filter(e => e.ativo).length} color="#0ea5e9" icon={CheckCircleIcon} />
+          <MiniKpi label="Sem vínculo ao catálogo" value={semVinculo.length} color="#f59e0b" icon={ExclamationTriangleIcon}
+            note={semVinculo.length > 0 ? 'vincule em Equipamentos' : 'todos vinculados'} />
         </div>
 
-        {allEquip.length === 0 ? (
+        {/* Dica quando há equipamentos sem vínculo */}
+        {semVinculo.length > 0 && modeloId && frotaVinculada.length === 0 && (
+          <div style={{ padding: '12px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, marginBottom: 16, fontSize: 12, color: '#92400e' }}>
+            <strong>Nenhum equipamento vinculado a este modelo.</strong>{' '}
+            Para ver equipamentos aqui, abra{' '}
+            <button onClick={() => navigate('/manutencao/cadastros/equipamentos')}
+              style={{ background: 'none', border: 'none', color: '#b45309', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', fontSize: 12, padding: 0 }}>
+              Cadastros → Equipamentos
+            </button>
+            {' '}e vincule cada máquina a um modelo do catálogo.
+          </div>
+        )}
+
+        {frota.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 24px', background: '#f8fafc', borderRadius: 12, border: '1px dashed #e2e8f0' }}>
             <TruckIcon style={{ width: 40, height: 40, color: '#cbd5e1', margin: '0 auto 10px' }} />
             <h4 style={{ fontSize: 14, fontWeight: 700, color: '#64748b', margin: '0 0 6px' }}>Nenhum equipamento cadastrado na frota</h4>
@@ -1535,32 +1556,53 @@ export default function ManutencaoAPIPlanos() {
               Cadastrar Equipamento
             </button>
           </div>
+        ) : frotaVinculada.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 24px', background: '#f8fafc', borderRadius: 12, border: '1px dashed #e2e8f0' }}>
+            <TruckIcon style={{ width: 40, height: 40, color: '#cbd5e1', margin: '0 auto 10px' }} />
+            <h4 style={{ fontSize: 14, fontWeight: 700, color: '#64748b', margin: '0 0 6px' }}>
+              {modeloId ? 'Nenhuma máquina da frota usa este modelo' : 'Nenhuma máquina corresponde a este modelo'}
+            </h4>
+            <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 14px' }}>
+              {modeloId
+                ? `${frota.length} equipamento${frota.length > 1 ? 's' : ''} cadastrado${frota.length > 1 ? 's' : ''}, mas nenhum vinculado a este modelo do catálogo.`
+                : 'Nenhum equipamento corresponde ao texto de fabricante/modelo.'}
+            </p>
+            <button onClick={() => navigate('/manutencao/cadastros/equipamentos')}
+              style={{ background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              Vincular Equipamentos
+            </button>
+          </div>
         ) : (
           <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: '#f1f5f9' }}>
-                  {['Código', 'Nome', 'Tipo', 'Fabricante', 'Modelo', 'Ano', 'Horímetro', 'Plano', 'Status', 'Ações'].map(h => (
+                  {['Código', 'Nome', 'Tipo', 'Fabricante / Modelo', 'Ano', 'Horímetro', 'Catálogo', 'Status', 'Ações'].map(h => (
                     <th key={h} style={{ padding: '9px 12px', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {allEquip.map(eq => (
+                {frotaVinculada.map(eq => (
                   <tr key={eq.id}
                     onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: 11, color: '#64748b' }}>{eq.codigo || '—'}</td>
                     <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1e293b', fontSize: 13 }}>{eq.nome}</td>
                     <td style={{ padding: '10px 12px', fontSize: 12, color: '#475569' }}>{eq.tipo || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 12, color: '#475569' }}>{eq.fabricante || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 12, color: '#475569' }}>{eq.modelo || '—'}</td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div style={{ fontSize: 12, color: '#1e293b', fontWeight: 500 }}>{eq.fabricante || '—'}</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{eq.modelo || ''}</div>
+                    </td>
                     <td style={{ padding: '10px 12px', fontSize: 12, color: '#475569' }}>{eq.ano || '—'}</td>
-                    <td style={{ padding: '10px 12px', fontSize: 12, fontWeight: 600, color: '#1e293b' }}>
-                      {eq.horimetro_atual ? `${eq.horimetro_atual}h` : '—'}
+                    <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#0ea5e9' }}>
+                      {eq.horimetro_atual != null ? `${Number(eq.horimetro_atual).toLocaleString('pt-BR')}h` : '—'}
                     </td>
                     <td style={{ padding: '10px 12px' }}>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: '#fef3c7', color: '#ca8a04', fontWeight: 600 }}>Sem plano</span>
+                      {eq.cat_modelo_id
+                        ? <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', fontWeight: 700 }}>✓ vinculado</span>
+                        : <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: '#fef3c7', color: '#ca8a04', fontWeight: 600 }}>sem vínculo</span>
+                      }
                     </td>
                     <td style={{ padding: '10px 12px' }}>
                       <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: eq.ativo ? '#f0fdf4' : '#f8fafc', color: eq.ativo ? '#16a34a' : '#94a3b8', fontWeight: 600 }}>
@@ -1569,11 +1611,7 @@ export default function ManutencaoAPIPlanos() {
                     </td>
                     <td style={{ padding: '10px 8px' }}>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button onClick={() => { toast.success(`Plano vinculado a ${eq.nome}!`) }} title="Vincular plano"
-                          style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#16a34a', color: 'white', border: 'none', borderRadius: 6, padding: '4px 8px', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
-                          <LinkIcon style={{ width: 11, height: 11 }} /> Vincular
-                        </button>
-                        <button onClick={() => { navigate('/manutencao/operacoes/os') }} title="Gerar pré-OS"
+                        <button onClick={() => navigate('/manutencao/operacoes/os')} title="Gerar OS"
                           style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 6, padding: '4px 8px', fontSize: 10, cursor: 'pointer' }}>
                           <ClipboardDocumentListIcon style={{ width: 11, height: 11 }} /> OS
                         </button>
@@ -1583,11 +1621,15 @@ export default function ManutencaoAPIPlanos() {
                 ))}
               </tbody>
             </table>
+            <div style={{ padding: '8px 14px', borderTop: '1px solid #e2e8f0', fontSize: 11, color: '#64748b', background: '#f8fafc' }}>
+              {frotaVinculada.filter(e => e.ativo).length} ativo{frotaVinculada.filter(e => e.ativo).length !== 1 ? 's' : ''} usando este modelo
+            </div>
           </div>
         )}
       </div>
     )
   }
+
 
   // ─────────────────────────────────────────────────────────────────────────────
   // SIDE PANEL

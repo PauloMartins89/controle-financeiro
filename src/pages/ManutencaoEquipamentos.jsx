@@ -20,6 +20,7 @@ const TIPOS_EQUIP = [
 const EMPTY_EQUIP = {
   nome: '', codigo: '', tipo: 'maquina', modelo: '', fabricante: '',
   numero_serie: '', ano: '', horimetro_atual: '', observacoes: '', ativo: true,
+  cat_modelo_id: '',
 }
 
 const EMPTY_TEC = {
@@ -44,6 +45,7 @@ export default function ManutencaoEquipamentos() {
   const [aba, setAba] = useState('equipamentos')
   const [equipamentos, setEquipamentos] = useState([])
   const [tecnicos, setTecnicos] = useState([])
+  const [catalogoModelos, setCatalogoModelos] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [busca, setBusca] = useState('')
@@ -54,10 +56,16 @@ export default function ManutencaoEquipamentos() {
 
   useEffect(() => { if (workspaceId) init(workspaceId) }, [workspaceId]) // eslint-disable-line
 
+  // Carrega catálogo de modelos uma vez (para o vínculo)
+  useEffect(() => {
+    supabase.from('cat_modelos').select('id,fabricante,familia,modelo').order('fabricante').order('modelo').limit(600)
+      .then(({ data }) => setCatalogoModelos(data || []))
+  }, [])
+
   async function init(wid) {
     setLoading(true)
     const [rEq, rTec] = await Promise.all([
-      supabase.from('manut_equipamentos').select('*').eq('workspace_id', wid).order('nome'),
+      supabase.from('manut_equipamentos').select('*, cat_modelos(fabricante, modelo, familia)').eq('workspace_id', wid).order('nome'),
       supabase.from('manut_tecnicos').select('*').eq('workspace_id', wid).order('nome'),
     ])
     setEquipamentos(rEq.data || [])
@@ -80,6 +88,7 @@ export default function ManutencaoEquipamentos() {
       modelo: eq.modelo || '', fabricante: eq.fabricante || '',
       numero_serie: eq.numero_serie || '', ano: eq.ano ?? '',
       horimetro_atual: eq.horimetro_atual ?? '', observacoes: eq.observacoes || '', ativo: eq.ativo !== false,
+      cat_modelo_id: eq.cat_modelo_id || '',
     })
     setShowModal(true)
   }
@@ -99,6 +108,7 @@ export default function ManutencaoEquipamentos() {
       horimetro_atual: formEq.horimetro_atual !== '' ? Number(formEq.horimetro_atual) : null,
       observacoes: formEq.observacoes || null,
       ativo: formEq.ativo,
+      cat_modelo_id: formEq.cat_modelo_id || null,
     }
     if (editId) {
       const { error } = await supabase.from('manut_equipamentos').update(payload).eq('id', editId)
@@ -245,6 +255,9 @@ export default function ManutencaoEquipamentos() {
                           <td style={tdStyle}>
                             <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{eq.fabricante || '—'}</div>
                             <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{eq.modelo || ''}</div>
+                            {eq.cat_modelo_id && (
+                              <div style={{ fontSize: 10, color: '#10b981', fontWeight: 600, marginTop: 2 }}>✓ catálogo</div>
+                            )}
                           </td>
                           <td style={tdStyle}><span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{eq.ano || '—'}</span></td>
                           <td style={tdStyle}><span style={{ fontSize: 12, color: '#0ea5e9' }}>{eq.horimetro_atual != null ? `${Number(eq.horimetro_atual).toLocaleString('pt-BR')}h` : '—'}</span></td>
@@ -354,12 +367,43 @@ export default function ManutencaoEquipamentos() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Fabricante</label>
-                  <input value={formEq.fabricante} onChange={e => setFormEq(f => ({ ...f, fabricante: e.target.value }))} placeholder="Ex: John Deere" style={inputStyle} />
+                  <input value={formEq.fabricante} onChange={e => setFormEq(f => ({ ...f, fabricante: e.target.value, cat_modelo_id: '' }))} placeholder="Ex: John Deere" style={inputStyle} />
                 </div>
                 <div>
                   <label style={labelStyle}>Modelo</label>
-                  <input value={formEq.modelo} onChange={e => setFormEq(f => ({ ...f, modelo: e.target.value }))} placeholder="Ex: 6110J" style={inputStyle} />
+                  <input value={formEq.modelo} onChange={e => setFormEq(f => ({ ...f, modelo: e.target.value, cat_modelo_id: '' }))} placeholder="Ex: 6110J" style={inputStyle} />
                 </div>
+              </div>
+              {/* Vínculo ao catálogo técnico */}
+              <div>
+                <label style={labelStyle}>Vincular ao Catálogo Técnico</label>
+                <select
+                  value={formEq.cat_modelo_id}
+                  onChange={e => {
+                    const sel = catalogoModelos.find(m => m.id === e.target.value)
+                    setFormEq(f => ({
+                      ...f,
+                      cat_modelo_id: e.target.value,
+                      fabricante: sel ? sel.fabricante : f.fabricante,
+                      modelo: sel ? sel.modelo : f.modelo,
+                    }))
+                  }}
+                  style={inputStyle}
+                >
+                  <option value="">— nenhum vínculo —</option>
+                  {catalogoModelos
+                    .filter(m => !formEq.fabricante || m.fabricante.toLowerCase().includes(formEq.fabricante.toLowerCase()))
+                    .map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.fabricante} — {m.modelo}{m.familia ? ` (${m.familia})` : ''}
+                      </option>
+                    ))
+                  }
+                </select>
+                {formEq.cat_modelo_id
+                  ? <div style={{ fontSize: 11, color: '#10b981', marginTop: 4, fontWeight: 600 }}>✓ Vinculado — planos de manutenção e documentos técnicos disponíveis</div>
+                  : <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Vincule para habilitar planos de manutenção e documentos técnicos do catálogo</div>
+                }
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                 <div>
