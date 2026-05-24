@@ -170,7 +170,8 @@ const navGroups = [
       { to: '/admin/mensagens',    icon: ChatBubbleLeftRightIcon,   label: 'Log de Mensagens',   moduleKey: null, adminOnly: true },
       { to: '/admin/usuarios',     icon: UsersIcon,                 label: 'Usuários',           moduleKey: null, adminOnly: true },
       { to: '/admin/assinaturas',  icon: CreditCardIcon,            label: 'Assinaturas',        moduleKey: null, adminOnly: true },
-      { to: '/admin/catalogo',     icon: CpuChipIcon,               label: 'Catálogo Modelos',   moduleKey: null, adminOnly: true },
+      { to: '/admin/catalogo',            icon: CpuChipIcon,          label: 'Catálogo Modelos',      moduleKey: null, adminOnly: true },
+      { to: '/admin/catalogo-documentos', icon: DocumentTextIcon,     label: 'Docs Técnicos',         moduleKey: null, adminOnly: true },
     ],
   },
 ]

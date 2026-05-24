@@ -258,6 +258,7 @@ export default function ManutencaoAPIPlanos() {
   // DB result state
   const [resultModelo, setResultModelo] = useState(null)   // row de cat_modelos
   const [resultPlanos, setResultPlanos] = useState([])     // rows de cat_planos c/ cat_planos_itens
+  const [resultDocumentos, setResultDocumentos] = useState([]) // rows de cat_documentos
   const [searchedTerms, setSearchedTerms] = useState(null) // { fabricante, modelo } da última busca
   const [loadingMsg, setLoadingMsg] = useState('')         // mensagem de fase do loading
 
@@ -349,6 +350,7 @@ export default function ManutencaoAPIPlanos() {
         toast.error(`"${[form.fabricante, form.modelo].filter(Boolean).join(' ')}" não encontrado no catálogo`)
         setResultModelo(null)
         setResultPlanos([])
+        setResultDocumentos([])
         setSearched(true)
         setLoading(false)
         return
@@ -402,8 +404,21 @@ export default function ManutencaoAPIPlanos() {
         setLoadingMsg('')
       }
 
+      // 4. Busca documentos técnicos vinculados ao modelo
+      const { data: documentos } = await supabase
+        .from('cat_documentos')
+        .select('*')
+        .eq('modelo_id', m.id)
+        .order('tipo')
+
+      // Fallback: busca por fabricante quando modelo_id não tem documentos ainda
+      const docsFinais = (documentos && documentos.length > 0)
+        ? documentos
+        : (await supabase.from('cat_documentos').select('*').ilike('fabricante', `%${m.fabricante}%`).order('tipo')).data || []
+
       setResultModelo(m)
       setResultPlanos(planos || [])
+      setResultDocumentos(docsFinais)
       setLastSync(new Date().toLocaleString('pt-BR'))
       setSearched(true)
       setTab('resumo')
@@ -417,6 +432,7 @@ export default function ManutencaoAPIPlanos() {
       toast.error('Catálogo indisponível no momento')
       setResultModelo(null)
       setResultPlanos([])
+      setResultDocumentos([])
       setSearched(true)
     } finally {
       setLoading(false)
@@ -430,6 +446,7 @@ export default function ManutencaoAPIPlanos() {
     setSelectedInterval(null)
     setResultModelo(null)
     setResultPlanos([])
+    setResultDocumentos([])
     setSearchedTerms(null)
   }
 
@@ -487,11 +504,11 @@ export default function ManutencaoAPIPlanos() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
               <ShieldCheckIcon style={{ width: 12, height: 12, color: '#64748b' }} />
-              <span style={{ fontSize: 10, color: '#64748b' }}>3 fontes processadas</span>
+              <span style={{ fontSize: 10, color: '#64748b' }}>{resultDocumentos.length > 0 ? `${resultDocumentos.length} doc${resultDocumentos.length > 1 ? 's' : ''} vinculados` : 'sem docs vinculados'}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
               <DocumentTextIcon style={{ width: 12, height: 12, color: '#64748b' }} />
-              <span style={{ fontSize: 10, color: '#64748b' }}>1 plano encontrado</span>
+              <span style={{ fontSize: 10, color: '#64748b' }}>{resultPlanos.length > 0 ? `${resultPlanos.length} intervalo${resultPlanos.length > 1 ? 's' : ''} no plano` : 'plano via IA'}</span>
             </div>
           </div>
         </div>
@@ -1301,58 +1318,155 @@ export default function ManutencaoAPIPlanos() {
   // TAB: FONTES
   // ─────────────────────────────────────────────────────────────────────────────
   function renderTabFontes() {
+    const TIPO_DOC_CFG = {
+      manual_operador:       { label: 'Manual do Operador',    color: '#16a34a', icon: '📗' },
+      manual_manutencao:     { label: 'Manual de Manutenção',  color: '#0ea5e9', icon: '🔧' },
+      manual_servico:        { label: 'Manual de Serviço',     color: '#7c3aed', icon: '🛠️' },
+      catalogo_pecas:        { label: 'Catálogo de Peças',     color: '#f59e0b', icon: '📦' },
+      quick_reference:       { label: 'Quick Reference',       color: '#06b6d4', icon: '⚡' },
+      boletim_tecnico:       { label: 'Boletim Técnico',       color: '#f97316', icon: '📋' },
+      procedimento_interno:  { label: 'Procedimento Interno',  color: '#8b5cf6', icon: '✅' },
+      vista_explodida:       { label: 'Vista Explodida',       color: '#64748b', icon: '🔩' },
+    }
+    const STATUS_VAL_CFG = {
+      oficial:               { label: 'Oficial',               color: '#16a34a', bg: '#f0fdf4' },
+      referencial:           { label: 'Referencial',           color: '#0ea5e9', bg: '#f0f9ff' },
+      estimado:              { label: 'Estimado',              color: '#94a3b8', bg: '#f8fafc' },
+      pendente_validacao:    { label: 'Pendente',              color: '#ca8a04', bg: '#fefce8' },
+    }
+    const STATUS_LIC_CFG = {
+      link_oficial:          { label: 'Link Oficial',          color: '#16a34a' },
+      licenciado:            { label: 'Licenciado',            color: '#0ea5e9' },
+      interno_validado:      { label: 'Interno Validado',      color: '#8b5cf6' },
+      pendente:              { label: 'Pendente',              color: '#ca8a04' },
+    }
+
+    const docs = resultDocumentos
+    const hasReal = docs.length > 0
+
     return (
       <div>
-        <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
-          {DEMO_FONTES.length} fontes técnicas processadas — rastreabilidade completa de cada informação.
-        </p>
-        <div style={{ display: 'grid', gap: 12 }}>
-          {DEMO_FONTES.map(f => {
-            const tipoCfg = TIPO_FONTE_CFG[f.tipo] || { color: '#64748b', icon: '📄' }
-            return (
-              <div key={f.id} style={{ background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', padding: '16px 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, background: `${tipoCfg.color}15`, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-                    {tipoCfg.icon}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{f.titulo}</span>
-                      <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${tipoCfg.color}15`, color: tipoCfg.color, fontWeight: 700 }}>{f.tipo}</span>
-                      <ValidPill status={f.status === 'ativo' ? 'validado' : 'pendente'} />
-                      <ConfPill nivel={f.confianca} />
+        {/* Cabeçalho */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', margin: 0 }}>
+              {hasReal ? `${docs.length} documento${docs.length > 1 ? 's' : ''} técnico${docs.length > 1 ? 's' : ''} vinculados` : 'Nenhum documento cadastrado para este modelo'}
+            </p>
+            <p style={{ fontSize: 11, color: '#64748b', margin: '2px 0 0' }}>
+              {hasReal ? 'Links oficiais e referências técnicas disponíveis' : 'Cadastre documentos no painel admin → Catálogo → Documentos'}
+            </p>
+          </div>
+          {hasReal && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '5px 12px', fontSize: 11, color: '#16a34a', fontWeight: 600 }}>
+              <CheckCircleIcon style={{ width: 13, height: 13 }} />
+              Dados do banco — catálogo SmartPro
+            </div>
+          )}
+        </div>
+
+        {!hasReal ? (
+          <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8fafc', borderRadius: 12, border: '2px dashed #e2e8f0' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>📁</div>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#64748b', margin: '0 0 6px' }}>Biblioteca vazia para este modelo</h3>
+            <p style={{ fontSize: 13, color: '#94a3b8', margin: '0 0 16px', maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>
+              Cadastre manuais, catálogos e boletins técnicos pelo painel administrativo para enriquecer a biblioteca.
+            </p>
+            <a href="/admin/catalogo-documentos" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#16a34a', color: 'white', textDecoration: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600 }}>
+              + Cadastrar Documento
+            </a>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 12 }}>
+            {docs.map(doc => {
+              const tipoCfg   = TIPO_DOC_CFG[doc.tipo]   || { label: doc.tipo, color: '#64748b', icon: '📄' }
+              const statusCfg = STATUS_VAL_CFG[doc.status_val] || STATUS_VAL_CFG.pendente_validacao
+              const licCfg    = STATUS_LIC_CFG[doc.status_licenca] || STATUS_LIC_CFG.pendente
+              return (
+                <div key={doc.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                    {/* Ícone tipo */}
+                    <div style={{ width: 44, height: 44, background: `${tipoCfg.color}12`, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, border: `1px solid ${tipoCfg.color}25` }}>
+                      {tipoCfg.icon}
                     </div>
-                    <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 10px' }}>{f.obs}</p>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                      {[
-                        ['Fabricante', f.fabricante], ['Modelo', f.modelo], ['Idioma', f.idioma],
-                        ['Versão', f.versao],
-                        ['Data da Fonte', new Date(f.data_fonte + 'T12:00:00').toLocaleDateString('pt-BR')],
-                        ['Data Coleta', new Date(f.data_coleta + 'T12:00:00').toLocaleDateString('pt-BR')],
-                      ].map(([k, v]) => (
-                        <div key={k}>
-                          <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>{k}</div>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>{v}</div>
-                        </div>
-                      ))}
+
+                    {/* Conteúdo */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Badges */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 5 }}>
+                        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${tipoCfg.color}15`, color: tipoCfg.color, fontWeight: 700 }}>
+                          {tipoCfg.label}
+                        </span>
+                        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: statusCfg.bg, color: statusCfg.color, fontWeight: 700, border: `1px solid ${statusCfg.color}30` }}>
+                          {statusCfg.label}
+                        </span>
+                        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: '#f1f5f9', color: licCfg.color, fontWeight: 600 }}>
+                          {licCfg.label}
+                        </span>
+                        {doc.idioma && (
+                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: '#f1f5f9', color: '#64748b', fontWeight: 600 }}>
+                            {doc.idioma}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Título */}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                        {doc.titulo}
+                        {doc.codigo_pub && (
+                          <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: '#64748b', background: '#f1f5f9', borderRadius: 5, padding: '1px 6px' }}>
+                            {doc.codigo_pub}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Observação */}
+                      {doc.observacoes && (
+                        <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px', lineHeight: 1.4 }}>{doc.observacoes}</p>
+                      )}
+
+                      {/* Meta dados */}
+                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                        {[
+                          ['Fonte', doc.fonte],
+                          doc.pagina_ref && ['Seção/Página', doc.pagina_ref],
+                          doc.data_doc   && ['Data Doc.', new Date(doc.data_doc + 'T12:00:00').toLocaleDateString('pt-BR')],
+                          ['Consultado em', new Date(doc.data_consulta + 'T12:00:00').toLocaleDateString('pt-BR')],
+                        ].filter(Boolean).map(([k, v]) => v ? (
+                          <div key={k}>
+                            <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>{k}</div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>{v}</div>
+                          </div>
+                        ) : null)}
+                      </div>
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    {[
-                      { label: 'Abrir', icon: ArrowTopRightOnSquareIcon, onClick: () => toast('Abrindo documento...', { icon: '📄' }) },
-                      { label: 'Ver dados', icon: InformationCircleIcon, onClick: () => openPanel('fonte', f) },
-                      { label: 'Comparar', icon: DocumentDuplicateIcon, onClick: () => toast('Comparação em breve') },
-                    ].map(btn => (
-                      <button key={btn.label} title={btn.label} onClick={btn.onClick}
+
+                    {/* Ações */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                      {doc.url_oficial ? (
+                        <a href={doc.url_oficial} target="_blank" rel="noopener noreferrer"
+                          style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#16a34a', color: 'white', textDecoration: 'none', borderRadius: 7, padding: '6px 10px', fontSize: 11, fontWeight: 600 }}>
+                          <ArrowTopRightOnSquareIcon style={{ width: 12, height: 12 }} /> Abrir
+                        </a>
+                      ) : (
+                        <button disabled style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f1f5f9', color: '#94a3b8', border: 'none', borderRadius: 7, padding: '6px 10px', fontSize: 11, cursor: 'not-allowed' }}>
+                          <ArrowTopRightOnSquareIcon style={{ width: 12, height: 12 }} /> Sem link
+                        </button>
+                      )}
+                      <button onClick={() => openPanel('documento', doc)}
                         style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: 7, padding: '6px 10px', fontSize: 11, cursor: 'pointer' }}>
-                        <btn.icon style={{ width: 12, height: 12 }} /> {btn.label}
+                        <InformationCircleIcon style={{ width: 12, height: 12 }} /> Detalhes
                       </button>
-                    ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+        )}
+
+        {/* Aviso sobre redistribuição */}
+        <div style={{ marginTop: 16, padding: '10px 14px', background: '#fffbeb', borderRadius: 8, border: '1px solid #fde68a', fontSize: 11, color: '#92400e' }}>
+          <strong>⚖️ Nota legal:</strong> Os documentos listados são referências a fontes oficiais dos fabricantes. O SmartPro armazena apenas metadados e links, sem redistribuir conteúdo protegido por direitos autorais.
         </div>
       </div>
     )

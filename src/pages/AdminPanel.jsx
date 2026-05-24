@@ -13,6 +13,7 @@ import {
 import toast from 'react-hot-toast'
 import SaudeTab from './SaudeTab'
 import CatalogoCRUD from './CatalogoCRUD'
+import CatalogoDocumentos from './CatalogoDocumentos'
 
 const ALL_MODULES = [
   { key: 'inicio',       label: 'Início' },
@@ -1213,6 +1214,12 @@ export default function AdminPanel() {
                   <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13 }}>Gerenciar modelos de equipamentos da API de Planos de Manutenção</p>
                 </div>
                 <CatalogoCRUD />
+              </div>
+            )}
+
+            {tab === 'catalogo-documentos' && (
+              <div>
+                <CatalogoDocumentos />
               </div>
             )}
 
