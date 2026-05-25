@@ -49,7 +49,7 @@ export default function Login() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', overflow: 'hidden', background: '#fff' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', overflow: 'hidden', background: '#fff', position: 'relative' }}>
 
       {/* â”€â”€ Fundo: imagem desfocada â”€â”€ */}
       <div style={{
