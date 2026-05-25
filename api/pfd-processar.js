@@ -31,7 +31,7 @@ function getSupabase() {
 }
 
 // ── OpenAI com retry/backoff ─────────────────────────────────────────────────
-async function openaiWithRetry(client, params, maxAttempts = 3) {
+async function openaiWithRetry(client, params, maxAttempts = 4) {
   let lastErr
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -41,7 +41,12 @@ async function openaiWithRetry(client, params, maxAttempts = 3) {
       const status = err?.status || err?.response?.status
       const retriable = status === 429 || (status >= 500 && status < 600)
       if (!retriable || attempt === maxAttempts) throw err
-      const delay = Math.pow(2, attempt - 1) * 1000 + Math.floor(Math.random() * 500)
+      // Respeita retry-after do OpenAI (em segundos); fallback: backoff exponencial
+      const retryAfter = Number(err?.headers?.['retry-after'] || 0)
+      const delay = retryAfter > 0
+        ? retryAfter * 1000
+        : Math.pow(2, attempt) * 2000 + Math.floor(Math.random() * 1000)
+      console.log(`[pfd] OpenAI ${status} — aguardando ${Math.round(delay/1000)}s (tentativa ${attempt}/${maxAttempts})`)
       await new Promise(r => setTimeout(r, delay))
     }
   }
@@ -298,7 +303,7 @@ export default async function handler(req, res) {
     const paginasParaProcessar = paginasManutencao.length > 0
       ? paginasManutencao
       : paginas.slice(0, 15)
-    L(`páginas para Groq: ${paginasParaProcessar.map(p => p.pagina).join(', ')}`)
+    L(`páginas para OpenAI: ${paginasParaProcessar.map(p => p.pagina).join(', ')}`)
 
     // ── Concatena todas as páginas de manutenção em um bloco → OpenAI ─────────
     // GPT-4o-mini: 200k TPM — sem restrição de tamanho por requisição
@@ -306,7 +311,7 @@ export default async function handler(req, res) {
     const textoBloco = paginasParaProcessar
       .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
       .join('\n\n')
-      .slice(0, 80000)
+      .slice(0, 50000)
     L(`bloco montado: ${textoBloco.length} chars de ${paginasParaProcessar.length} páginas → OpenAI GPT-4o-mini`)
 
     const extracao = await extrairIntervalosDoBloco(openai, textoBloco, modeloEquip)
@@ -358,14 +363,21 @@ export default async function handler(req, res) {
     L(`❌ ERRO: ${err.message}`)
     console.error('[pfd] stack:', err.stack)
 
+    // Detalha erros da API OpenAI para diagnóstico
+    const openaiDetail = err?.error?.message || err?.message || ''
+    const httpStatus = err?.status || 500
+    const errMsg = httpStatus === 429
+      ? `OpenAI rate limit / quota: ${openaiDetail}`
+      : err.message
+
     if (publicacao_id) {
       await sb.from('pfd_publicacoes').update({
         status: 'erro',
-        erro_msg: err.message,
+        erro_msg: errMsg,
         updated_at: new Date().toISOString(),
       }).eq('id', publicacao_id)
     }
 
-    return res.status(500).json({ error: err.message, log })
+    return res.status(500).json({ error: errMsg, openai_status: httpStatus, log })
   }
 }
