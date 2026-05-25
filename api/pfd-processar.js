@@ -662,7 +662,7 @@ export default async function handler(req, res) {
         let paginasFiltradas = extrairBlocoManutencao(paginas, candidatas)
         if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 20)
         paginasUsadas = paginasFiltradas.map(p => p.pagina)
-        L(`fallback: ${paginasFiltradas.length} págs bloco manutenção → OpenAI`)
+        L(`fallback: ${paginasFiltradas.length} págs bloco manutenção → OpenAI [${paginasFiltradas.map(p => p.pagina).join(', ')}]`)
 
         const extracaoRaw = await extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L)
         L(`fallback OpenAI: ${extracaoRaw.intervalos?.length || 0} intervalos`)
