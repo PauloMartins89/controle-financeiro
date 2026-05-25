@@ -149,7 +149,7 @@ Regras OBRIGATÓRIAS:
 - Se um intervalo não tiver tarefas identificáveis, omita-o`,
       },
     ],
-    max_tokens: 8000,
+    max_tokens: 2500,
     temperature: 0,
   })
 
@@ -297,12 +297,12 @@ export default async function handler(req, res) {
     L(`páginas para Groq: ${paginasParaProcessar.map(p => p.pagina).join(', ')}`)
 
     // ── Concatena páginas top em um bloco para o Groq ────────────────────────
-    // 35k chars ≈ 8k tokens input — muito abaixo do limite diário do Groq free
+    // TPM free tier = 6000 tokens/min → max ~8k chars input + 2500 max_tokens ≈ 4500 tokens
     const modeloEquip = publicacao?.modelo || req.body?.modelo || 'John Deere'
     const textoBloco = paginasParaProcessar
       .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
       .join('\n\n')
-      .slice(0, 35000)
+      .slice(0, 8000)
     L(`bloco montado: ${textoBloco.length} chars de ${paginasParaProcessar.length} páginas → 1 chamada ao Groq`)
 
     L('enviando bloco completo ao Groq...')
