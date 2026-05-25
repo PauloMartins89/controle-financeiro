@@ -354,9 +354,16 @@ Retorne este JSON:
           "tipo": "verificacao",
           "insumo": "JD Plus-50 II",
           "quantidade": "10,2 L",
-          "pagina": 120,
+          "pagina": 120
+        },
+        {
+          "sistema": "Motor",
+          "componente": "Filtro de ar",
+          "tarefa": "Verificar filtro de ar",
+          "tipo": "verificacao",
+          "pagina": 121,
           "condicional": true,
-          "condicao": "Se equipado com ar condicionado"
+          "condicao": "Se equipado com pré-filtro"
         }
       ]
     }
@@ -366,15 +373,15 @@ Retorne este JSON:
 Regras OBRIGATÓRIAS:
 - Inclua TODOS os intervalos encontrados no texto — não resuma nem agrupe
 - Para cada intervalo, inclua TODAS as tarefas listadas sem exceção
-- "horas": número (Amaciamento=0, Primeiras 600h=600, Anual=1000)
+- "horas": número inteiro (Amaciamento=0, Primeiras 600h=600, Anual=1000, A cada 2 anos ou 1500h=1500, A cada 6 anos=6000)
 - "sistema": Motor | Transmissão | Hidráulico | Eixo Dianteiro | Freios | Cabine | Combustível | Geral | outro
-- "componente": parte específica ("Cárter", "Filtro de ar", "Virabrequim") — OMITA se não identificável
+- "componente": SEMPRE infira a parte do equipamento envolvida: "Cárter" (óleo motor), "Filtro de óleo", "Filtro de ar", "Radiador", "Transmissão", "Diferencial", etc. — use "Geral" apenas se realmente não há componente específico
 - "tipo": verificacao | troca | lubrificacao | limpeza | ajuste | inspecao | substituicao | outro
-- "insumo": lubrificante, fluido ou peça citada ("JD Plus-50 II", "Hy-Gard") — OMITA se não há
-- "quantidade": com unidade ("10,2 L", "500 g") — OMITA se não há
-- "pagina": número da página do manual de onde veio a tarefa (use o marcador === PÁGINA N ===) — OMITA se incerto
-- "condicional"+"condicao": apenas se a tarefa tem condição ("se equipado", "somente quando", "tratores com") — OMITA se não condicional
-- Omita campos com valor vazio, false ou null para manter JSON compacto
+- "insumo": se o texto mencionar lubrificante, fluido ou peça, inclua exatamente ("JD Plus-50 II", "Hy-Gard", "Cool-Gard II") — OMITA apenas se não citado
+- "quantidade": com unidade ("10,2 L", "500 g") — OMITA se não mencionado
+- "pagina": número da página do marcador === PÁGINA N === de onde veio a tarefa — SEMPRE inclua
+- "condicional"+"condicao": apenas se há condição explícita no texto ("se equipado", "somente quando") — OMITA se não condicional
+- Omita apenas campos com valor false ou null; nunca omita "componente" ou "pagina"
 - Se um intervalo não tiver tarefas identificáveis, omita-o`,
       },
     ],
@@ -394,11 +401,16 @@ Regras OBRIGATÓRIAS:
 }
 
 function mesclarIntervalos(lista) {
+  // Valores de horas válidos para manuais John Deere
+  const HORAS_VALIDAS = new Set([0, 10, 50, 100, 125, 200, 250, 400, 500, 600, 750, 1000, 1500, 2000, 6000, 8760])
   const mapa = {}
   for (const item of lista) {
     for (const iv of (item.intervalos || [])) {
-      const key = String(iv.horas)
-      if (!mapa[key]) mapa[key] = { ...iv, tarefas: [] }
+      const h = Number(iv.horas)
+      // Descarta intervalos com horas inválidas (ex: 6, 3, 99) — provavelmente erro do modelo
+      if (isNaN(h) || !HORAS_VALIDAS.has(h)) continue
+      const key = String(h)
+      if (!mapa[key]) mapa[key] = { ...iv, horas: h, tarefas: [] }
       for (const t of (iv.tarefas || [])) {
         const exists = mapa[key].tarefas.some(
           ex => ex.tarefa?.toLowerCase() === t.tarefa?.toLowerCase()
