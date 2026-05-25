@@ -49,271 +49,241 @@ export default function Login() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', position: 'relative', overflow: 'hidden', background: '#040c1e' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', overflow: 'hidden', background: '#fff' }}>
 
       {/* â”€â”€ Fundo: imagem desfocada â”€â”€ */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'url(/tela%20de%20login/01_fundo_limpo_4k.png)',
+        backgroundImage: 'url(/tela%20de%20login/sala%20ampla%20escritorio.png)',
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        filter: 'blur(3px) brightness(0.35)',
-        transform: 'scale(1.08)',
+        backgroundPosition: 'center right',
         zIndex: 0,
       }} />
-
-      {/* â”€â”€ Overlay principal: escurece e adiciona profundidade â”€â”€ */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'linear-gradient(125deg, rgba(4,12,30,0.82) 0%, rgba(4,10,24,0.65) 50%, rgba(4,12,30,0.90) 100%)',
+        background: 'linear-gradient(105deg, rgba(5,14,40,0.90) 0%, rgba(5,14,40,0.72) 55%, rgba(5,14,40,0.52) 100%)',
         zIndex: 1,
       }} />
 
-      {/* â”€â”€ Gradiente radial central: iluminaÃ§Ã£o cinematogrÃ¡fica â”€â”€ */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(14,165,233,0.07) 0%, rgba(16,185,129,0.04) 40%, transparent 70%)',
-        zIndex: 2,
-      }} />
-
-      {/* â”€â”€ Coluna esquerda: branding â”€â”€ */}
+      {/* Logo topo-esquerdo */}
       <div className="login-left" style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flex: '0 0 58%',
         position: 'relative',
-        zIndex: 3,
-        padding: '60px 48px',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '44px 52px',
+        zIndex: 2,
       }}>
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            position: 'absolute',
-            width: 520,
-            height: 260,
-            background: 'radial-gradient(ellipse, rgba(16,185,129,0.20) 0%, rgba(14,165,233,0.12) 50%, transparent 75%)',
-            filter: 'blur(40px)',
-            borderRadius: '50%',
-          }} />
-          <img
-            src="/tela%20de%20login/02_logo_smartpro_4k.png"
-            alt="SmartPro"
-            style={{
-              maxWidth: 720,
-              width: '92%',
-              objectFit: 'contain',
-              position: 'relative',
-              filter: 'drop-shadow(0 4px 28px rgba(16,185,129,0.28)) drop-shadow(0 2px 10px rgba(14,165,233,0.18))',
-            }}
-          />
+            width: 38, height: 38, borderRadius: 10,
+            background: 'linear-gradient(135deg, #10b981 0%, #0ea5e9 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+              <rect x="3" y="12" width="4" height="9" rx="1" fill="white" fillOpacity="0.9"/>
+              <rect x="10" y="7" width="4" height="14" rx="1" fill="white"/>
+              <rect x="17" y="3" width="4" height="18" rx="1" fill="white" fillOpacity="0.7"/>
+            </svg>
+          </div>
+          <span style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: -0.3 }}>SmartPro</span>
         </div>
+
+        {/* Headline + features */}
+        <div>
+          <h1 style={{ fontSize: 42, fontWeight: 800, color: '#fff', lineHeight: 1.15, letterSpacing: -1, marginBottom: 16 }}>
+            Do apontamento<br/>ao faturamento,<br/>
+            <span style={{ color: '#2dd4bf' }}>tudo conectado.</span>
+          </h1>
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.62)', lineHeight: 1.65, maxWidth: 420, marginBottom: 36 }}>
+            Centralize lançamentos, compras, refeições,<br/>
+            manutenção, frota, aprovações e faturamento<br/>
+            em uma única plataforma.
+          </p>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Operação',    icon: <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.85)" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg> },
+              { label: 'Aprovação',   icon: <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.85)" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+              { label: 'Manutenção', icon: <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.85)" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" /></svg> },
+              { label: 'Faturamento', icon: <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.85)" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg> },
+            ].map(f => (
+              <div key={f.label} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 12, padding: '16px 20px', minWidth: 92, backdropFilter: 'blur(6px)',
+              }}>
+                {f.icon}
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.80)', fontWeight: 500 }}>{f.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)', margin: 0 }}>
+          © 2026 SmartPro. Plataforma para operações inteligentes.
+        </p>
       </div>
 
-      {/* ── Coluna direita: Card de login ── */}
+      {/* Coluna direita: formulário limpo */}
       <div className="login-right" style={{
-        width: 500,
-        minWidth: 340,
+        flex: '0 0 42%',
+        background: '#fff',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'flex-start',
+        justifyContent: 'center',
+        padding: '48px 52px',
         position: 'relative',
-        zIndex: 3,
-        padding: '40px 32px',
+        zIndex: 2,
       }}>
-        <div className="login-card" style={{
-          width: '100%',
-          maxWidth: 440,
-          background: 'linear-gradient(145deg, rgba(15,32,55,0.72), rgba(4,14,31,0.58))',
-          backdropFilter: 'blur(22px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(22px) saturate(140%)',
-          borderRadius: 22,
-          border: '1px solid rgba(125,190,255,0.22)',
-          padding: '44px 40px',
-          boxShadow: '0 28px 80px rgba(0,0,0,0.45), 0 0 42px rgba(0,174,239,0.10), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 0 40px rgba(255,255,255,0.025)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}>
-          {/* Brilho radial superior esquerdo */}
-          <div style={{
-            position: 'absolute', inset: 0, borderRadius: 22, pointerEvents: 'none',
-            background: 'radial-gradient(circle at 18% 0%, rgba(255,255,255,0.13), transparent 32%), linear-gradient(180deg, rgba(255,255,255,0.06), transparent 22%)',
-          }} />
+        <div style={{ width: '100%', maxWidth: 400 }}>
 
-          {/* TÃ­tulo */}
           <div style={{ marginBottom: 32 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: '#f1f5f9', marginBottom: 8, letterSpacing: -0.6, lineHeight: 1.2 }}>
-              Bem-vindo de volta
+            <h1 style={{ fontSize: 30, fontWeight: 800, color: '#111827', marginBottom: 6, letterSpacing: -0.5 }}>
+              Bem-vindo ao SmartPro
             </h1>
-            <p style={{ fontSize: 13.5, color: '#64748b', lineHeight: 1.6 }}>
-              Acesse sua conta no{' '}
-              <span style={{ color: '#10b981', fontWeight: 600 }}>SmartPro</span>.
+            <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.5 }}>
+              Acesse sua central de gestão operacional
             </p>
           </div>
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* E-mail */}
             <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>
-                E-mail
+              <label style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: '#374151', marginBottom: 7 }}>
+                Email
               </label>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#334155', display: 'flex', pointerEvents: 'none' }}>
-                  <MailIcon />
-                </span>
-                <input
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                  style={{
-                    width: '100%', paddingLeft: 42, paddingRight: 16, paddingTop: 13, paddingBottom: 13,
-                    background: 'rgba(4,12,28,0.65)',
-                    border: '1px solid rgba(125,190,255,0.12)',
-                    borderRadius: 10, color: '#cbd5e1', fontSize: 14, outline: 'none',
-                    boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.10), 0 0 12px rgba(14,165,233,0.08)' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(125,190,255,0.12)'; e.target.style.boxShadow = 'none' }}
-                />
-              </div>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                style={{
+                  width: '100%', padding: '12px 14px',
+                  background: '#f9fafb', border: '1.5px solid #e5e7eb',
+                  borderRadius: 10, color: '#111827', fontSize: 14.5, outline: 'none',
+                  boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s', fontFamily: 'inherit',
+                }}
+                onFocus={e => { e.target.style.borderColor = '#10b981'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)' }}
+                onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }}
+              />
             </div>
 
-            {/* Senha */}
             <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>
-                Senha
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                <label style={{ fontSize: 13.5, fontWeight: 600, color: '#374151' }}>Senha</label>
+                <button type="button" style={{ background: 'none', border: 'none', color: '#10b981', fontSize: 13, cursor: 'pointer', padding: 0, fontWeight: 500 }}>
+                  Esqueci minha senha
+                </button>
+              </div>
               <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#334155', display: 'flex', pointerEvents: 'none' }}>
-                  <LockIcon />
-                </span>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="**********"
+                  placeholder="••••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
                   style={{
-                    width: '100%', paddingLeft: 42, paddingRight: 44, paddingTop: 13, paddingBottom: 13,
-                    background: 'rgba(4,12,28,0.65)',
-                    border: '1px solid rgba(125,190,255,0.12)',
-                    borderRadius: 10, color: '#cbd5e1', fontSize: 14, outline: 'none',
-                    boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s',
-                    backdropFilter: 'blur(8px)',
+                    width: '100%', padding: '12px 44px 12px 14px',
+                    background: '#f9fafb', border: '1.5px solid #e5e7eb',
+                    borderRadius: 10, color: '#111827', fontSize: 14.5, outline: 'none',
+                    boxSizing: 'border-box', transition: 'border-color 0.2s, box-shadow 0.2s', fontFamily: 'inherit',
                   }}
-                  onFocus={e => { e.target.style.borderColor = 'rgba(16,185,129,0.50)'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.10), 0 0 12px rgba(14,165,233,0.08)' }}
-                  onBlur={e => { e.target.style.borderColor = 'rgba(125,190,255,0.12)'; e.target.style.boxShadow = 'none' }}
+                  onFocus={e => { e.target.style.borderColor = '#10b981'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)' }}
+                  onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#334155', cursor: 'pointer', display: 'flex', padding: 0 }}
+                  style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', display: 'flex', padding: 0 }}
                 >
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
             </div>
 
-            {/* Lembrar + Esqueceu */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, color: '#64748b' }}>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  style={{ accentColor: '#10b981', width: 14, height: 14, cursor: 'pointer' }}
-                />
-                Lembrar de mim
-              </label>
-              <button type="button" style={{ background: 'none', border: 'none', color: '#10b981', fontSize: 13, cursor: 'pointer', padding: 0, fontWeight: 500, opacity: 0.85 }}>
-                Esqueceu sua senha?
-              </button>
-            </div>
-
-            {/* BotÃ£o Entrar */}
             <button
               type="submit"
               disabled={loading}
               className="login-btn-enter"
               style={{
                 width: '100%', padding: '14px 0',
-                fontSize: 14, fontWeight: 700, color: '#fff',
-                background: loading ? 'rgba(30,41,59,0.8)' : 'linear-gradient(90deg, #10b981 0%, #0ea5e9 100%)',
+                fontSize: 15, fontWeight: 700, color: '#fff',
+                background: loading ? '#9ca3af' : '#10b981',
                 border: 'none', borderRadius: 10,
                 cursor: loading ? 'not-allowed' : 'pointer',
-                letterSpacing: 0.4, marginTop: 4,
-                transition: 'transform 0.15s, box-shadow 0.15s, opacity 0.15s',
-                boxShadow: loading ? 'none' : '0 4px 24px rgba(16,185,129,0.30), 0 1px 4px rgba(0,0,0,0.3)',
+                letterSpacing: 0.3, marginTop: 4,
+                transition: 'background 0.15s, transform 0.1s, box-shadow 0.15s',
+                boxShadow: loading ? 'none' : '0 4px 18px rgba(16,185,129,0.30)',
+                fontFamily: 'inherit',
               }}
             >
-              {loading ? 'Entrando...' : 'Entrar na plataforma'}
+              {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
-
-          {/* Divisor */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0' }}>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
-            <span style={{ fontSize: 12, color: '#334155' }}>ou</span>
-            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
-          </div>
-
-          {/* Acesso mediante convite */}
-          <button
-            type="button"
-            className="login-btn-invite"
-            style={{
-              width: '100%', padding: '13px 0',
-              fontSize: 13, fontWeight: 500, color: '#64748b',
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 10, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
-              transition: 'border-color 0.2s, color 0.2s',
-            }}
-          >
-            <MailIcon />
-            Acesso mediante convite
-          </button>
-
-          {/* RodapÃ© */}
-          <p style={{ marginTop: 22, fontSize: 12, color: '#334155', textAlign: 'center', lineHeight: 1.75 }}>
-            Precisa de ajuda?{' '}
-            <a href="mailto:suporte@smartpro.app.br" style={{ color: '#10b981', textDecoration: 'none', fontWeight: 500 }}>Fale com o suporte</a>
-            {' '}ou{' '}
-            <a href="mailto:suporte@smartpro.app.br" style={{ color: '#10b981', textDecoration: 'none', fontWeight: 500 }}>solicite acesso</a>.
-          </p>
 
           {error && (
             <div style={{
               marginTop: 16, padding: '10px 14px',
-              background: 'rgba(239,68,68,0.08)',
-              border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 8, color: '#f87171', fontSize: 13,
+              background: '#fef2f2', border: '1px solid #fecaca',
+              borderRadius: 8, color: '#dc2626', fontSize: 13,
             }}>{error}</div>
           )}
+
+          <p style={{ marginTop: 20, fontSize: 13, color: '#9ca3af', textAlign: 'center' }}>
+            Acesso restrito a usuários autorizados
+          </p>
+        </div>
+
+        {/* Banner: Instale o app */}
+        <div style={{
+          position: 'absolute', bottom: 28, left: 52, right: 52,
+          display: 'flex', alignItems: 'center', gap: 12,
+          background: '#f0fdf4', border: '1px solid #bbf7d0',
+          borderRadius: 12, padding: '12px 16px',
+        }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 8,
+            background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#10b981" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Instale o app</div>
+            <div style={{ fontSize: 12, color: '#6b7280' }}>Acesso rápido direto da tela inicial</div>
+          </div>
+          <button
+            type="button"
+            className="login-btn-install"
+            style={{
+              padding: '7px 16px', background: '#fff',
+              border: '1.5px solid #10b981', borderRadius: 8,
+              fontSize: 13, fontWeight: 600, color: '#10b981',
+              cursor: 'pointer', fontFamily: 'inherit', transition: 'background 0.15s',
+            }}
+          >
+            Instalar
+          </button>
         </div>
       </div>
 
       <style>{`
-        @media (max-width: 600px) {
+        @media (max-width: 768px) {
           .login-left { display: none !important; }
-          .login-right { width: 100% !important; min-width: unset !important; }
+          .login-right { flex: 1 !important; padding: 40px 28px !important; }
         }
         .login-btn-enter:not(:disabled):hover {
-          transform: translateY(-1px);
-          box-shadow: 0 8px 32px rgba(16,185,129,0.40), 0 2px 8px rgba(0,0,0,0.4) !important;
-          opacity: 0.95;
+          background: #059669 !important;
+          box-shadow: 0 6px 24px rgba(16,185,129,0.35) !important;
         }
-        .login-btn-enter:not(:disabled):active {
-          transform: translateY(0px);
-        }
-        .login-btn-invite:hover {
-          border-color: rgba(255,255,255,0.14) !important;
-          color: #94a3b8 !important;
-        }
+        .login-btn-enter:not(:disabled):active { transform: translateY(1px); }
+        .login-btn-install:hover { background: #f0fdf4 !important; }
       `}</style>
     </div>
   )
