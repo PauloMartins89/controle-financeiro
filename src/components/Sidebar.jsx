@@ -9,7 +9,6 @@ import {
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
   TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon, BeakerIcon, DevicePhoneMobileIcon,
-  ExclamationTriangleIcon, WrenchScrewdriverIcon, CpuChipIcon, BookOpenIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -39,8 +38,6 @@ const navGroups = [
     items: [
       { to: '/prospectar/dashboard',  icon: ChartBarIcon,              label: 'Dashboard',         moduleKey: 'negocios' },
       { to: '/prospectar/buscar',     icon: MagnifyingGlassIcon,       label: 'Buscar Prospectos', moduleKey: 'negocios' },
-      { to: '/prospectar/radar',      icon: SignalIcon,                label: 'Radar Comercial',   moduleKey: 'negocios' },
-      { to: '/prospectar/relacoes',    icon: UserGroupIcon,             label: 'Relações Comerciais', moduleKey: 'negocios' },
       { to: '/prospectar/contratos',  icon: DocumentTextIcon,          label: 'Contratos',         moduleKey: 'negocios' },
       { to: '/prospectar/relatorios', icon: PresentationChartLineIcon, label: 'Relatórios',        moduleKey: 'negocios' },
     ],
@@ -109,7 +106,6 @@ const navGroups = [
       { to: '/refeicoes/relatorios/rel-restaurante',    icon: PresentationChartLineIcon,  label: 'Rel. Restaurante', moduleKey: 'refeicoes' },
       { to: '/refeicoes/relatorios/rel-cdc',            icon: TableCellsIcon,             label: 'Rel. CDC',         moduleKey: 'refeicoes' },
       { to: '/refeicoes/relatorios/rel-divergencias',   icon: ChartBarIcon,               label: 'Divergências',     moduleKey: 'refeicoes' },
-      { to: '/refeicoes/mapa',                          icon: TableCellsIcon,             label: 'Mapa Gerencial',   moduleKey: 'refeicoes' },
     ],
   },
   {
@@ -118,34 +114,6 @@ const navGroups = [
       { to: '/importar',      icon: ArrowUpTrayIcon,  label: 'Importar',      moduleKey: 'importar' },
       { to: '/escanear',      icon: CameraIcon,       label: 'Escanear Doc.', moduleKey: 'escanear' },
       { to: '/notas-fiscais', icon: DocumentTextIcon, label: 'Notas Fiscais', moduleKey: 'notas-fiscais' },
-    ],
-  },
-  {
-    title: 'Máquinas',
-    items: [
-      { to: '/mapa-maquina',            icon: TableCellsIcon,          label: 'Mapa de Apontamento', moduleKey: 'lancamentos' },
-      { to: '/maquinas/dashboard',      icon: ChartBarIcon,             label: 'Dashboard & Relatórios', moduleKey: 'lancamentos' },
-      { to: '/maquinas/pendencias',     icon: ExclamationTriangleIcon,  label: 'Pendências',          moduleKey: 'lancamentos' },
-      { to: '/cadastros?aba=maquinas',  icon: WrenchScrewdriverIcon,   label: 'Cadastros',           moduleKey: 'lancamentos' },
-    ],
-  },
-  {
-    title: 'Agendamentos',
-    items: [
-      { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agendamentos', moduleKey: 'agendamentos' },
-    ],
-  },
-  {
-    title: 'Manutenção',
-    items: [
-      { to: '/manutencao',                          icon: WrenchScrewdriverIcon,      label: 'Dashboard',          moduleKey: 'manutencao' },
-      { to: '/manutencao/operacoes/os',             icon: ClipboardDocumentListIcon,  label: 'Ordens de Serviço',  moduleKey: 'manutencao' },
-      { to: '/manutencao/operacoes/preventiva',     icon: CalendarDaysIcon,           label: 'Preventiva',         moduleKey: 'manutencao' },
-      { to: '/manutencao/api-planos',              icon: CpuChipIcon,                label: 'API Planos',         moduleKey: 'manutencao' },
-      { to: '/manutencao/planos-pfd',               icon: CpuChipIcon,                label: 'Planos PFD',         moduleKey: 'manutencao' },
-      { to: '/manutencao/catalogo',                  icon: BookOpenIcon,               label: 'Catálogo',           moduleKey: 'manutencao' },
-      { to: '/manutencao/cadastros/equipamentos',   icon: WrenchScrewdriverIcon,      label: 'Equipamentos',       moduleKey: 'manutencao' },
-      { to: '/manutencao/cadastros/tecnicos',       icon: UsersIcon,                  label: 'Técnicos',           moduleKey: 'manutencao' },
     ],
   },
   {
@@ -172,8 +140,6 @@ const navGroups = [
       { to: '/admin/mensagens',    icon: ChatBubbleLeftRightIcon,   label: 'Log de Mensagens',   moduleKey: null, adminOnly: true },
       { to: '/admin/usuarios',     icon: UsersIcon,                 label: 'Usuários',           moduleKey: null, adminOnly: true },
       { to: '/admin/assinaturas',  icon: CreditCardIcon,            label: 'Assinaturas',        moduleKey: null, adminOnly: true },
-      { to: '/admin/catalogo',            icon: CpuChipIcon,          label: 'Catálogo Modelos',      moduleKey: null, adminOnly: true },
-      { to: '/admin/catalogo-documentos', icon: DocumentTextIcon,     label: 'Docs Técnicos',         moduleKey: null, adminOnly: true },
     ],
   },
 ]
@@ -272,11 +238,11 @@ export default function Sidebar({ collapsed, onToggle }) {
 
   return (
     <aside
-      style={{ width: collapsed ? 64 : 224, minWidth: collapsed ? 64 : 224 }}
+      style={{ width: collapsed ? 64 : 246, minWidth: collapsed ? 64 : 246 }}
       className="h-screen flex flex-col transition-all duration-300 border-r"
       style={{
-        width: collapsed ? 64 : 224,
-        minWidth: collapsed ? 64 : 224,
+        width: collapsed ? 64 : 246,
+        minWidth: collapsed ? 64 : 246,
         background: 'var(--sb-bg)',
         borderRight: '1px solid var(--sb-border)',
         transition: 'all 0.3s ease',
