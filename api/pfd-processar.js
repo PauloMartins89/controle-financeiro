@@ -585,16 +585,7 @@ export default async function handler(req, res) {
     }
     L(`PDF obtido: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
 
-    // ── Metadados via pdf-parse (contagem de páginas apenas) ──────────────
-    let totalPaginas = null
     let paginasUsadas = null
-    try {
-      const meta = await pdfParse(pdfBuffer, { max: 1 })
-      totalPaginas = meta.numpages
-      L(`pdf-parse: ${totalPaginas} páginas no documento`)
-    } catch (e) {
-      L(`pdf-parse metadata falhou: ${e.message} (não-crítico)`)
-    }
 
     const modeloEquip     = publicacao?.modelo     || modelo     || 'John Deere'
     const fabricanteEquip = publicacao?.fabricante || fabricante || 'John Deere'
@@ -604,23 +595,15 @@ export default async function handler(req, res) {
 
     if (providerUsado === 'openai') {
       // ── PATH: OpenAI (explicitamente configurado via AI_PROVIDER=openai) ──
-      L('provider=openai → extraindo texto com pdf-parse...')
+      L('provider=openai → extraindo texto com pdf-parse (único pass 1-200)...')
       const openai = new OpenAI({ apiKey: openaiApiKey })
-      // Pass 1: páginas 1-80 para detectar sumário/índice (rápido)
-      const paginasIniciais = await pdfParaTexto(pdfBuffer, { maxPagina: 80 })
-      L(`pass1: ${paginasIniciais.length} págs (1-80) para detecção de sumário`)
-      if (paginasIniciais.length === 0) throw new Error('Nenhum texto extraído do PDF (pdf-parse)')
-      const sumario = detectarSumario(paginasIniciais)
-      // Pass 2: extrair janela da seção de manutenção
-      let paginas
-      if (sumario) {
-        const ate = Math.min(totalPaginas || 999, sumario.paginaToc + 200)
-        L(`sumário: pág ${sumario.paginaToc}, ${sumario.refs.length} refs — extraindo págs ${sumario.paginaToc}-${ate}`)
-        paginas = await pdfParaTexto(pdfBuffer, { minPagina: sumario.paginaToc, maxPagina: ate })
-      } else {
-        L('sumário não detectado — extraindo págs 1-200 para busca por texto')
-        paginas = await pdfParaTexto(pdfBuffer, { maxPagina: 200 })
-      }
+      // Single pass: 1-200 páginas (evita múltiplos cold-starts de pdfParse)
+      const paginas = await pdfParaTexto(pdfBuffer, { maxPagina: 200 })
+      L(`pdf-parse: ${paginas.length} págs extraídas (1-200)`)
+      if (paginas.length === 0) throw new Error('Nenhum texto extraído do PDF (pdf-parse)')
+      const sumario = detectarSumario(paginas)
+      if (sumario) L(`sumário detectado: pág ${sumario.paginaToc}, ${sumario.refs.length} refs`)
+      else L('sumário não detectado — buscando por texto')
       const candidatas = localizarSecaoManutencao(paginas, sumario)
       L(`seção localizada: ${candidatas.length} páginas candidatas`)
       let paginasFiltradas = extrairBlocoManutencao(paginas, candidatas)
@@ -643,20 +626,12 @@ export default async function handler(req, res) {
         L('Tentando fallback OpenAI + pdf-parse...')
 
         const openai = new OpenAI({ apiKey: openaiApiKey })
-        // Pass 1: páginas 1-80 para detectar sumário
-        const paginasIniciais = await pdfParaTexto(pdfBuffer, { maxPagina: 80 })
-        L(`pass1: ${paginasIniciais.length} págs (1-80)`)
-        const sumario = detectarSumario(paginasIniciais)
-        // Pass 2: janela da seção de manutenção
-        let paginas
-        if (sumario) {
-          const ate = Math.min(totalPaginas || 999, sumario.paginaToc + 200)
-          L(`sumário: pág ${sumario.paginaToc}, ${sumario.refs.length} refs — extraindo págs ${sumario.paginaToc}-${ate}`)
-          paginas = await pdfParaTexto(pdfBuffer, { minPagina: sumario.paginaToc, maxPagina: ate })
-        } else {
-          L('sumário não detectado — extraindo págs 1-200')
-          paginas = await pdfParaTexto(pdfBuffer, { maxPagina: 200 })
-        }
+        // Single pass: 1-200 páginas (evita múltiplos cold-starts de pdfParse)
+        const paginas = await pdfParaTexto(pdfBuffer, { maxPagina: 200 })
+        L(`pdf-parse: ${paginas.length} págs extraídas (1-200)`)
+        const sumario = detectarSumario(paginas)
+        if (sumario) L(`sumário detectado: pág ${sumario.paginaToc}, ${sumario.refs.length} refs`)
+        else L('sumário não detectado — buscando por texto')
         const candidatas = localizarSecaoManutencao(paginas, sumario)
         L(`seção localizada: ${candidatas.length} páginas candidatas`)
         let paginasFiltradas = extrairBlocoManutencao(paginas, candidatas)
@@ -700,7 +675,6 @@ export default async function handler(req, res) {
     await sb.from('pfd_publicacoes')
       .update({
         status: 'processado',
-        paginas_total: totalPaginas,
         updated_at: new Date().toISOString(),
       })
       .eq('id', publicacao_id)
