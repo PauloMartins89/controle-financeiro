@@ -79,6 +79,7 @@ import ManutencaoOS from './pages/ManutencaoOS'
 import ManutencaoPreventiva from './pages/ManutencaoPreventiva'
 import ManutencaoEquipamentos from './pages/ManutencaoEquipamentos'
 import ManutencaoAPIPlanos from './pages/ManutencaoAPIPlanos'
+import ManutencaoPlanosPFD from './pages/ManutencaoPlanosPFD'
 import CatalogoModelos from './pages/CatalogoModelos'
 
 // Verifica se assinatura está ativa (trial válido, ativo, ou isento)
@@ -549,6 +550,7 @@ export default function App() {
                   <Route path="/manutencao/operacoes/os" element={<ManutencaoOS />} />
                   <Route path="/manutencao/operacoes/preventiva" element={<ManutencaoPreventiva />} />
                   <Route path="/manutencao/api-planos" element={<ManutencaoAPIPlanos />} />
+                  <Route path="/manutencao/planos-pfd" element={<ManutencaoPlanosPFD />} />
                   <Route path="/manutencao/catalogo" element={<CatalogoModelos />} />
                   <Route path="/manutencao/cadastros/equipamentos" element={<ManutencaoEquipamentos />} />
                   <Route path="/manutencao/cadastros/tecnicos" element={<ManutencaoEquipamentos />} />
