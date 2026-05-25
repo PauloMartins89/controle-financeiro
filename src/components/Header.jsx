@@ -19,7 +19,6 @@ export default function Header({ title, subtitle, action, accentColor = '#3b82f6
     <header style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '10px 24px', borderBottom: '1px solid var(--sb-border)',
-      borderTop: `3px solid ${accentColor}`,
       background: theme === 'light' ? 'rgba(240,242,248,0.95)' : 'rgba(8,14,28,0.85)',
       backdropFilter: 'blur(16px)',
       position: 'sticky', top: 0, zIndex: 10,

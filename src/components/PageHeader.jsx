@@ -30,7 +30,6 @@ export default function PageHeader({
     <div style={{
       background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #16213e 100%)',
       padding: '18px 28px',
-      borderTop: `3px solid ${iconColor}`,
       borderBottom: `1px solid ${ic.border}`,
       position: 'sticky', top: 0, zIndex: 20,
       flexShrink: 0,
