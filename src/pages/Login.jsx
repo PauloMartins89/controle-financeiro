@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from 'react'
 
-const SLIDES = [
+const DEFAULT_SLIDES = [
   '/tela%20de%20login/tela%201.jpeg',
   '/tela%20de%20login/tela3.jpeg',
   '/tela%20de%20login/tela5.png',
@@ -46,15 +46,28 @@ export default function Login() {
 
   const [slideIdx, setSlideIdx] = useState(0)
   const [prevIdx,  setPrevIdx]  = useState(null)
+  const [slides,   setSlides]   = useState(DEFAULT_SLIDES)
+
+  // Busca slides configurados no banco; fallback para padrões se vazio
   useEffect(() => {
+    supabase?.from('login_slides').select('url').order('ordem').then(({ data }) => {
+      if (data?.length > 0) setSlides(data.map(r => r.url))
+    })
+  }, [])
+
+  // Reinicia intervalo sempre que slides mudar
+  useEffect(() => {
+    if (!slides.length) return
+    setSlideIdx(0)
+    setPrevIdx(null)
     const t = setInterval(() => {
       setSlideIdx(i => {
         setPrevIdx(i)
-        return (i + 1) % SLIDES.length
+        return (i + 1) % slides.length
       })
     }, 7000)
     return () => clearInterval(t)
-  }, [])
+  }, [slides])
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -83,7 +96,7 @@ export default function Login() {
         zIndex: 2,
       }}>
         {/* Slides com cross-fade */}
-        {SLIDES.map((src, i) => (
+        {slides.map((src, i) => (
           <div key={src} style={{
             position: 'absolute', inset: 0,
             backgroundImage: `url(${src})`,
