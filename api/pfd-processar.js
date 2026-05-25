@@ -150,7 +150,6 @@ async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
     },
   })
   L(`Gemini model: ${geminiModel}`)
-  L(`Gemini key: ${geminiApiKey ? geminiApiKey.slice(0,8)+'...(len='+geminiApiKey.length+')' : 'UNDEFINED'}`)
 
   const prompt = buildGeminiPrompt(modelo, fabricante)
   let pdfPart
