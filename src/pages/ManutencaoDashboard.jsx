@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import {
@@ -124,7 +124,12 @@ export default function ManutencaoDashboard() {
 
   if (loading) return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
-      <Header title="Manutenção" subtitle="Dashboard" />
+      <PageHeader
+        icon={WrenchScrewdriverIcon}
+        iconColor="#6366f1"
+        title="Dashboard — Manutenção"
+        subtitle="Visão geral das ordens de serviço e planos preventivos"
+      />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-secondary)' }}>Carregando...</div>
     </div>
   )
@@ -133,17 +138,21 @@ export default function ManutencaoDashboard() {
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
-      <Header title="Manutenção" subtitle="Dashboard" actions={
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => load(workspaceId)} style={btnSecStyle} disabled={refreshing}>
-            <ArrowPathIcon style={{ width: 14, height: 14, ...(refreshing ? { animation: 'spin 1s linear infinite' } : {}) }} />
-            Atualizar
-          </button>
-          <button onClick={() => navigate('/manutencao/operacoes/os?nova=1')} style={btnPrimStyle}>
-            <PlusIcon style={{ width: 14, height: 14 }} /> Nova OS
-          </button>
-        </div>
-      } />
+      <PageHeader
+        icon={WrenchScrewdriverIcon}
+        iconColor="#6366f1"
+        title="Dashboard — Manutenção"
+        subtitle="Visão geral das ordens de serviço e planos preventivos"
+        badges={[
+          { label: `${kpis.abertas} OS abertas`, icon: ClipboardDocumentListIcon, color: '#6366f1', primary: kpis.abertas > 0 },
+          { label: `${kpis.andamento} em andamento`, icon: BoltIcon, color: '#0ea5e9', primary: kpis.andamento > 0 },
+          kpis.vencidas > 0 && { label: `${kpis.vencidas} preventivas vencidas`, icon: ExclamationTriangleIcon, color: '#ef4444', primary: true },
+        ].filter(Boolean)}
+        actions={[
+          { label: refreshing ? 'Atualizando...' : 'Atualizar', icon: ArrowPathIcon, onClick: () => load(workspaceId), disabled: refreshing },
+          { label: 'Nova OS', icon: PlusIcon, onClick: () => navigate('/manutencao/operacoes/os?nova=1'), primary: true },
+        ]}
+      />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 

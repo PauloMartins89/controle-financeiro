@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import { toast } from 'react-hot-toast'
@@ -253,11 +253,20 @@ export default function ManutencaoOS() {
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
-      <Header title="Manutenção" subtitle="Ordens de Serviço" actions={
-        <button onClick={() => openNova('corretiva')} style={btnPrimStyle}>
-          <PlusIcon style={{ width: 14, height: 14 }} /> Nova OS
-        </button>
-      } />
+      <PageHeader
+        icon={ClipboardDocumentListIcon}
+        iconColor="#6366f1"
+        title="Ordens de Serviço"
+        subtitle="Gestão de OS corretivas, preventivas e preditivas"
+        badges={[
+          { label: `${lista.filter(o => o.status === 'aberta').length} abertas`, icon: ClipboardDocumentListIcon, color: '#6366f1', primary: lista.filter(o => o.status === 'aberta').length > 0 },
+          { label: `${lista.filter(o => o.status === 'em_andamento').length} em andamento`, icon: PlayIcon, color: '#0ea5e9' },
+          lista.filter(o => o.status === 'aguardando_peca').length > 0 && { label: `${lista.filter(o => o.status === 'aguardando_peca').length} aguardando peça`, icon: ExclamationTriangleIcon, color: '#f59e0b', primary: true },
+        ].filter(Boolean)}
+        actions={[
+          { label: 'Nova OS', icon: PlusIcon, onClick: () => openNova('corretiva'), primary: true },
+        ]}
+      />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 

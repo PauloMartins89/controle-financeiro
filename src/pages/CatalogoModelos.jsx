@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import PageHeader from '../components/PageHeader'
 import {
   MagnifyingGlassIcon, FunnelIcon, CubeIcon, BoltIcon, ChevronRightIcon,
-  XMarkIcon, Squares2X2Icon, ListBulletIcon, ArrowTopRightOnSquareIcon,
+  XMarkIcon, Squares2X2Icon, ListBulletIcon, ArrowTopRightOnSquareIcon, BookOpenIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Cores por fabricante (sem CDN, 100% inline CSS) ──────────────────────────
@@ -308,69 +309,61 @@ export default function CatalogoModelos() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
-      {/* ── Cabeçalho ─────────────────────────────────────────────────────── */}
+      {/* ── Cabeçalho escuro padrão ─────────────────────────────────────── */}
+      <PageHeader
+        icon={BookOpenIcon}
+        iconColor="#8b5cf6"
+        title="Catálogo de Equipamentos"
+        subtitle={`${modelos.length.toLocaleString('pt-BR')} modelos cadastrados · ${fabsComModelos.length} fabricantes`}
+        badges={[
+          filtroFab !== 'Todos' && { label: filtroFab, color: '#8b5cf6', primary: true },
+          (search || filtroFab !== 'Todos' || filtroTipo !== 'todos') && { label: `${modelosFiltrados.length} encontrados`, color: '#0ea5e9', primary: true },
+        ].filter(Boolean)}
+        actions={[
+          { label: viewMode === 'cards' ? 'Vista Lista' : 'Vista Cards', icon: viewMode === 'cards' ? ListBulletIcon : Squares2X2Icon, onClick: () => setViewMode(v => v === 'cards' ? 'lista' : 'cards') },
+          { label: 'Plano API', icon: ChevronRightIcon, onClick: () => navigate('/manutencao/api-planos'), primary: true },
+        ]}
+      />
+
+      {/* ── Barra de busca + pills de fabricante ─────────────────────────── */}
       <div style={{
         background: 'var(--card)', borderBottom: '1px solid var(--border)',
-        padding: '18px 24px 0',
+        padding: '10px 24px 0',
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
-              Catálogo de Equipamentos
-            </h1>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>
-              {modelos.length.toLocaleString('pt-BR')} modelos cadastrados · {fabsComModelos.length} fabricantes
-            </p>
-          </div>
-
-          {/* Busca + toggle de view */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ position: 'relative' }}>
-              <MagnifyingGlassIcon style={{
-                position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
-                width: 16, height: 16, color: 'var(--text-muted)',
-              }} />
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar modelo, família…"
-                style={{
-                  paddingLeft: 32, paddingRight: search ? 28 : 10,
-                  paddingTop: 7, paddingBottom: 7,
-                  background: 'var(--input-bg,#f8fafc)', border: '1px solid var(--border)',
-                  borderRadius: 8, fontSize: 13, color: 'var(--text)', outline: 'none', width: 220,
-                }}
-              />
-              {search && (
-                <button onClick={() => setSearch('')} style={{
-                  position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                  color: 'var(--text-muted)',
-                }}>
-                  <XMarkIcon style={{ width: 14, height: 14 }} />
-                </button>
-              )}
-            </div>
-            <button
-              onClick={() => setViewMode(viewMode === 'cards' ? 'lista' : 'cards')}
+        {/* Busca inline */}
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ position: 'relative', maxWidth: 340 }}>
+            <MagnifyingGlassIcon style={{
+              position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
+              width: 15, height: 15, color: 'var(--text-muted)',
+            }} />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar modelo, família…"
               style={{
-                background: 'var(--badge-bg,#f1f5f9)', border: '1px solid var(--border)',
-                borderRadius: 7, padding: '7px 10px', cursor: 'pointer', color: 'var(--text-secondary)',
+                paddingLeft: 32, paddingRight: search ? 28 : 10,
+                paddingTop: 7, paddingBottom: 7,
+                background: 'var(--input-bg,#f8fafc)', border: '1px solid var(--border)',
+                borderRadius: 8, fontSize: 13, color: 'var(--text)', outline: 'none', width: '100%',
               }}
-              title={viewMode === 'cards' ? 'Mudar para lista' : 'Mudar para cards'}
-            >
-              {viewMode === 'cards'
-                ? <ListBulletIcon style={{ width: 16, height: 16 }} />
-                : <Squares2X2Icon style={{ width: 16, height: 16 }} />
-              }
-            </button>
+            />
+            {search && (
+              <button onClick={() => setSearch('')} style={{
+                position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                color: 'var(--text-muted)',
+              }}>
+                <XMarkIcon style={{ width: 14, height: 14 }} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ── Pills de fabricante ────────────────────────────────────────── */}
+        {/* Pills de fabricante */}
         <div style={{
-          display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 12,
+          display: 'flex', gap: 6, overflowX: 'auto',
           scrollbarWidth: 'thin',
         }}>
           <button

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import { toast } from 'react-hot-toast'
@@ -197,11 +197,19 @@ export default function ManutencaoEquipamentos() {
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
-      <Header title="Manutenção" subtitle="Cadastros" actions={
-        <button onClick={() => isEq ? openNovoEq() : openNovoTec()} style={btnPrimStyle}>
-          <PlusIcon style={{ width: 14, height: 14 }} /> {isEq ? 'Novo Equipamento' : 'Novo Técnico'}
-        </button>
-      } />
+      <PageHeader
+        icon={WrenchScrewdriverIcon}
+        iconColor="#0ea5e9"
+        title="Equipamentos & Técnicos"
+        subtitle="Cadastro e gestão de máquinas e equipe técnica"
+        badges={[
+          { label: `${equipamentos.filter(e => e.ativo !== false).length} equipamentos`, icon: WrenchScrewdriverIcon, color: '#0ea5e9', primary: true },
+          { label: `${tecnicos.filter(t => t.ativo !== false).length} técnicos`, icon: UsersIcon, color: '#64748b' },
+        ]}
+        actions={[
+          { label: isEq ? 'Novo Equipamento' : 'Novo Técnico', icon: PlusIcon, onClick: () => isEq ? openNovoEq() : openNovoTec(), primary: true },
+        ]}
+      />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
