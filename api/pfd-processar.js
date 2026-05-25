@@ -44,14 +44,11 @@ async function groqWithRetry(groq, params, maxAttempts = 3) {
 
 // ── Baixa PDF e converte para array de páginas base64 ──────────────────────
 // Usa canvas nativo do Node.js via pdfjs-dist
-async function pdfParaImagens(pdfBuffer, maxPaginas = 20) {
-  // Importação dinâmica para não quebrar se não instalado
+// Extrai texto de cada página do PDF via pdfjs-dist (sem canvas, sem addon nativo)
+async function pdfParaTexto(pdfBuffer, maxPaginas = 30) {
   const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs').catch(() => null)
-  if (!pdfjsLib) {
-    throw new Error('pdfjs-dist não instalado. Instale com: npm install pdfjs-dist')
-  }
+  if (!pdfjsLib) throw new Error('pdfjs-dist não instalado. Execute: npm install pdfjs-dist')
 
-  // Desabilita worker para ambiente Node (serverless)
   pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 
   const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) })
@@ -61,77 +58,47 @@ async function pdfParaImagens(pdfBuffer, maxPaginas = 20) {
   const paginas = []
   for (let i = 1; i <= numPages; i++) {
     const page = await pdfDoc.getPage(i)
-    const viewport = page.getViewport({ scale: 1.5 })
-
-    // Usa OffscreenCanvas se disponível, senão usa canvas npm package
-    let canvas
-    try {
-      canvas = new OffscreenCanvas(viewport.width, viewport.height)
-    } catch (_) {
-      const { createCanvas } = await import('canvas').catch(() => ({ createCanvas: null }))
-      if (!createCanvas) throw new Error('Canvas não disponível. Instale "canvas": npm install canvas')
-      canvas = createCanvas(viewport.width, viewport.height)
-    }
-
-    const ctx = canvas.getContext('2d')
-    await page.render({ canvasContext: ctx, viewport }).promise
-
-    // Converte para base64 JPEG
-    const blob = canvas.toBuffer ? canvas.toBuffer('image/jpeg', { quality: 0.85 }) : null
-    if (blob) {
-      paginas.push({ pagina: i, base64: blob.toString('base64') })
-    }
+    const content = await page.getTextContent()
+    const texto = content.items.map(item => item.str || '').join(' ').replace(/\s+/g, ' ').trim()
+    if (texto.length > 10) paginas.push({ pagina: i, texto })
   }
 
   return paginas
 }
 
-// ── Identifica páginas de intervalos de manutenção ─────────────────────────
-// Envia uma amostra de páginas ao Groq para identificar quais contêm tabelas de manutenção
-async function identificarPaginasManutencao(groq, paginas) {
-  // Amostra: verifica até 8 páginas distribuídas pelo documento
-  const step = Math.max(1, Math.floor(paginas.length / 8))
-  const amostra = paginas.filter((_, i) => i % step === 0).slice(0, 8)
-
-  const promises = amostra.map(async (p) => {
-    const imgUrl = `data:image/jpeg;base64,${p.base64}`
-    const res = await groqWithRetry(groq, {
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image_url', image_url: { url: imgUrl } },
-          {
-            type: 'text',
-            text: `Esta página contém uma tabela de INTERVALOS DE MANUTENÇÃO (serviço periódico em horas: 10h, 50h, 100h, 250h, 500h, etc.) de um manual de equipamento?\nResponda apenas: sim | nao`,
-          },
-        ],
-      }],
-      max_tokens: 5,
-      temperature: 0,
-    })
-    const answer = res.choices[0]?.message?.content?.trim().toLowerCase() || 'nao'
-    return { pagina: p.pagina, isManutencao: answer.includes('sim') }
+// ── Identifica páginas de manutenção por palavras-chave (sem Groq, instantâneo) ──
+function identificarPaginasManutencao(paginas) {
+  const KEYWORDS = [
+    '10 h', '50 h', '100 h', '250 h', '500 h', '1000 h', '1500 h', '2000 h',
+    '10h', '50h', '100h', '250h', '500h', '1000h',
+    'intervalo de manutenção', 'serviço periódico', 'manutenção periódica',
+    'lubrificação', 'troca de óleo', 'verificar nível', 'drenar', 'filtro de óleo',
+    'óleo do motor', 'fluido hidráulico', 'graxa', 'lubrificar',
+  ]
+  return paginas.filter(p => {
+    const lower = p.texto.toLowerCase()
+    const matches = KEYWORDS.filter(kw => lower.includes(kw.toLowerCase())).length
+    return matches >= 2
   })
-
-  const resultados = await Promise.all(promises)
-  return resultados.filter(r => r.isManutencao).map(r => r.pagina)
 }
 
-// ── Extrai intervalos de manutenção de uma página ──────────────────────────
-async function extrairIntervalosDaPagina(groq, pageBase64, modelo) {
-  const imgUrl = `data:image/jpeg;base64,${pageBase64}`
-
+// ── Extrai intervalos de manutenção de uma página (texto → Groq LLM) ────────
+async function extrairIntervalosDaPagina(groq, texto, modelo) {
   const res = await groqWithRetry(groq, {
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'image_url', image_url: { url: imgUrl } },
-        {
-          type: 'text',
-          text: `Você está analisando uma página do manual do operador do equipamento ${modelo || 'John Deere'}.
-Extraia a tabela de intervalos de manutenção periódica e retorne APENAS este JSON (sem texto adicional):
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      {
+        role: 'system',
+        content: 'Você é um especialista em extrair dados de manuais técnicos de equipamentos agrícolas. Responda APENAS com JSON válido, sem texto adicional, sem markdown.',
+      },
+      {
+        role: 'user',
+        content: `Analise o texto abaixo de uma página do manual do operador do equipamento ${modelo || 'John Deere'} e extraia os intervalos de manutenção periódica.
+
+TEXTO DA PÁGINA:
+${texto.slice(0, 6000)}
+
+Retorne APENAS este JSON:
 {
   "intervalos": [
     {
@@ -151,13 +118,11 @@ Extraia a tabela de intervalos de manutenção periódica e retorne APENAS este 
 }
 
 Regras:
-- Inclua TODOS os intervalos visíveis (10h, 25h, 50h, 100h, 250h, 500h, 1000h, 1500h, 2000h, anual, etc.)
-- Para cada tarefa: extraia sistema (ex: Motor, Transmissão, Hidráulico), descrição da tarefa, código do lubrificante/fluido se indicado, capacidade e unidade se presentes
-- Se a página não tiver tabela de manutenção, retorne: {"intervalos": []}
-- Responda SOMENTE o JSON, sem markdown`,
-        },
-      ],
-    }],
+- Inclua TODOS os intervalos (10h, 25h, 50h, 100h, 250h, 500h, 1000h, 1500h, 2000h, anual, etc.)
+- Para cada tarefa: sistema, descrição, código do lubrificante, capacidade e unidade se presentes
+- Se não houver tabela de manutenção no texto, retorne: {"intervalos": []}`,
+      },
+    ],
     max_tokens: 4000,
     temperature: 0,
   })
@@ -276,23 +241,23 @@ export default async function handler(req, res) {
       pdfBuffer = Buffer.from(b64, 'base64')
     }
 
-    // ── Converte PDF → imagens ─────────────────────────────────────────────
-    const paginas = await pdfParaImagens(pdfBuffer, 30)
+    // ── Extrai texto de cada página do PDF (sem canvas) ────────────────────
+    const paginas = await pdfParaTexto(pdfBuffer, 40)
 
-    if (paginas.length === 0) throw new Error('Não foi possível converter o PDF em imagens')
+    if (paginas.length === 0) throw new Error('Não foi possível extrair texto do PDF')
 
-    // ── Identifica páginas de manutenção ──────────────────────────────────
-    const paginasManutencao = await identificarPaginasManutencao(groq, paginas)
+    // ── Identifica páginas de manutenção por palavras-chave ───────────────
+    const paginasManutencao = identificarPaginasManutencao(paginas)
 
-    // Se não encontrou nenhuma na amostra, processa todas até 15
+    // Se não encontrou por keyword, processa todas até 20
     const paginasParaProcessar = paginasManutencao.length > 0
-      ? paginas.filter(p => paginasManutencao.includes(p.pagina))
-      : paginas.slice(0, 15)
+      ? paginasManutencao
+      : paginas.slice(0, 20)
 
-    // ── Extrai intervalos de cada página ──────────────────────────────────
+    // ── Extrai intervalos de cada página via Groq LLM (texto) ─────────────
     const modelo = publicacao?.modelo || req.body?.modelo || 'John Deere'
     const extracoesPromises = paginasParaProcessar.map(p =>
-      extrairIntervalosDaPagina(groq, p.base64, modelo)
+      extrairIntervalosDaPagina(groq, p.texto, modelo)
     )
     const extracoes = await Promise.all(extracoesPromises)
 
