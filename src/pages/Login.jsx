@@ -72,7 +72,7 @@ export default function Login() {
           background: 'linear-gradient(105deg, rgba(5,14,40,0.88) 0%, rgba(5,14,40,0.70) 60%, rgba(5,14,40,0.50) 100%)',
           zIndex: 0, pointerEvents: 'none',
         }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
           <div style={{
             width: 38, height: 38, borderRadius: 10,
             background: 'linear-gradient(135deg, #10b981 0%, #0ea5e9 100%)',
@@ -88,7 +88,7 @@ export default function Login() {
         </div>
 
         {/* Headline + features */}
-        <div>
+        <div style={{ position: 'relative', zIndex: 1 }}>
           <h1 style={{ fontSize: 42, fontWeight: 800, color: '#fff', lineHeight: 1.15, letterSpacing: -1, marginBottom: 16 }}>
             Do apontamento<br/>ao faturamento,<br/>
             <span style={{ color: '#2dd4bf' }}>tudo conectado.</span>
@@ -117,7 +117,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)', margin: 0 }}>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)', margin: 0, position: 'relative', zIndex: 1 }}>
           © 2026 SmartPro. Plataforma para operações inteligentes.
         </p>
       </div>
