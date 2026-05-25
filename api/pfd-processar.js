@@ -213,7 +213,7 @@ async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
 // ── PROVIDER: OPENAI GPT-4o-mini — texto via pdf-parse (fallback) ─────────────
 // ══════════════════════════════════════════════════════════════════════════════
 
-async function openaiWithRetry(client, params, maxAttempts = 4) {
+async function openaiWithRetry(client, params, maxAttempts = 2) {
   let lastErr
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -224,9 +224,11 @@ async function openaiWithRetry(client, params, maxAttempts = 4) {
       const retriable = status === 429 || (status >= 500 && status < 600)
       if (!retriable || attempt === maxAttempts) throw err
       const retryAfter = Number(err?.headers?.['retry-after'] || 0)
-      const delay = retryAfter > 0
-        ? retryAfter * 1000
-        : Math.pow(2, attempt) * 2000 + Math.floor(Math.random() * 1000)
+      // Cap em 12s — retry-after do OpenAI pode ser 60s+ e estoura os 300s do Vercel
+      const delay = Math.min(
+        retryAfter > 0 ? retryAfter * 1000 : Math.pow(2, attempt) * 2000 + Math.floor(Math.random() * 1000),
+        12000
+      )
       console.log(`[pfd] OpenAI ${status} — aguardando ${Math.round(delay / 1000)}s (tentativa ${attempt}/${maxAttempts})`)
       await new Promise(r => setTimeout(r, delay))
     }
@@ -304,17 +306,18 @@ function localizarSecaoManutencao(paginas, sumario) {
   return candidatas
 }
 
-// 3. Extrai o bloco contínuo: do mínimo + janela de 40 págs (cobre todos os intervalos)
-//    Evita cortar a seção no meio caso max(candidatas) seja anterior a 400h/750h
+// 3. Extrai o bloco contínuo — limitado a 20 páginas para caber em 300s do Vercel
+//    (pdfParse cold start = ~120s; cada batch OpenAI = ~15s; 20 págs / batchSize=5 = 4 batches = ~60s)
 function extrairBlocoManutencao(todasPaginas, paginasLocalizadas) {
   if (paginasLocalizadas.length === 0) return []
   const nums = paginasLocalizadas.map(p => p.pagina)
   const min = Math.max(1, Math.min(...nums) - 1)
-  // Janela de 45 págs desde o início OU até +20 além do último candidato — o que for maior
-  const ultimoPagMax = Math.max(...nums) + 20
-  const janelaMax    = min + 45
+  const ultimoPagMax = Math.max(...nums) + 10
+  const janelaMax    = min + 20
   const max = Math.min(todasPaginas[todasPaginas.length - 1]?.pagina || 9999, Math.max(ultimoPagMax, janelaMax))
-  return todasPaginas.filter(p => p.pagina >= min && p.pagina <= max)
+  const bloco = todasPaginas.filter(p => p.pagina >= min && p.pagina <= max)
+  // Hard cap: nunca mais de 20 páginas para garantir que cabe em 300s
+  return bloco.length > 20 ? bloco.slice(0, 20) : bloco
 }
 
 async function extrairComOpenAI(openai, textoBloco, modelo) {
@@ -399,7 +402,7 @@ function mesclarIntervalos(lista) {
 
 // Processa páginas filtradas em lotes (batch), em paralelo, e mescla os resultados.
 // Evita o limite de 50k chars e melhora precisão (cada lote = contexto menor e focado).
-async function extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L, batchSize = 3) {
+async function extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L, batchSize = 5) {
   const batches = []
   for (let i = 0; i < paginasFiltradas.length; i += batchSize) {
     batches.push(paginasFiltradas.slice(i, i + batchSize))
