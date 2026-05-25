@@ -337,7 +337,7 @@ O texto pode estar desformatado (tabelas viram texto corrido). Identifique TODOS
 
 Intervalos típicos John Deere: Amaciamento, Primeiras 600h, 10h/Diário, 50h/Semanal, 100h, 125h, 200h/Mensal, 250h, 400h, 500h, 750h, 1000h, 1500h/2 anos, 2000h/2 anos, Anual, 6000h/6 anos.
 
-TEXTO DAS PÁGINAS DE MANUTENÇÃO:
+TEXTO DAS PÁGINAS DE MANUTENÇÃO (cada bloco começa com === PÁGINA N ===):
 ${textoBloco}
 
 Retorne este JSON:
@@ -349,10 +349,14 @@ Retorne este JSON:
       "tarefas": [
         {
           "sistema": "Motor",
+          "componente": "Cárter",
           "tarefa": "Verificar nível do óleo do motor",
-          "codigo_lubrificante": "JD Plus-50 II",
-          "capacidade": "",
-          "unidade": ""
+          "tipo": "verificacao",
+          "insumo": "JD Plus-50 II",
+          "quantidade": "10,2 L",
+          "pagina": 120,
+          "condicional": true,
+          "condicao": "Se equipado com ar condicionado"
         }
       ]
     }
@@ -360,11 +364,17 @@ Retorne este JSON:
 }
 
 Regras OBRIGATÓRIAS:
-- Inclua TODOS os intervalos encontrados no texto
-- Para cada intervalo, inclua TODAS as tarefas listadas — não resuma nem agrupe
-- Campo "horas": número (Amaciamento=0, Primeiras 600h=600, Anual=1000)
-- Campo "sistema": Motor, Transmissão, Hidráulico, Eixo Dianteiro, Freios, Cabine, Geral, etc.
-- Campos "codigo_lubrificante", "capacidade", "unidade": preencha se presentes, caso contrário deixe ""
+- Inclua TODOS os intervalos encontrados no texto — não resuma nem agrupe
+- Para cada intervalo, inclua TODAS as tarefas listadas sem exceção
+- "horas": número (Amaciamento=0, Primeiras 600h=600, Anual=1000)
+- "sistema": Motor | Transmissão | Hidráulico | Eixo Dianteiro | Freios | Cabine | Combustível | Geral | outro
+- "componente": parte específica ("Cárter", "Filtro de ar", "Virabrequim") — OMITA se não identificável
+- "tipo": verificacao | troca | lubrificacao | limpeza | ajuste | inspecao | substituicao | outro
+- "insumo": lubrificante, fluido ou peça citada ("JD Plus-50 II", "Hy-Gard") — OMITA se não há
+- "quantidade": com unidade ("10,2 L", "500 g") — OMITA se não há
+- "pagina": número da página do manual de onde veio a tarefa (use o marcador === PÁGINA N ===) — OMITA se incerto
+- "condicional"+"condicao": apenas se a tarefa tem condição ("se equipado", "somente quando", "tratores com") — OMITA se não condicional
+- Omita campos com valor vazio, false ou null para manter JSON compacto
 - Se um intervalo não tiver tarefas identificáveis, omita-o`,
       },
     ],
@@ -441,17 +451,23 @@ function legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, edicao,
       titulo_intervalo: iv.nome || `A cada ${iv.horas} horas`,
       periodicidade: (iv.horas === 0 || iv.horas === 600) ? 'uma_vez' : 'recorrente',
       tarefas: (iv.tarefas || []).map(t => ({
-        sistema: t.sistema || '',
-        descricao_tarefa: t.tarefa || '',
-        tipo: 'outro',
-        lubrificante_fluido: t.codigo_lubrificante || '',
-        capacidade: t.capacidade || '',
-        pecas_citadas: [],
-        condicional: false,
-        aplicabilidade: '',
-        observacao: '',
-        pagina_fonte: null,
-        confianca: 'media',
+        sistema:             t.sistema     || '',
+        componente:          t.componente  || '',
+        descricao_tarefa:    t.tarefa      || '',
+        atividade:           t.tarefa      || '',
+        tipo_atividade:      t.tipo        || 'outro',
+        tipo:                t.tipo        || 'outro',
+        insumo_ou_peca:      t.insumo      || t.codigo_lubrificante || '',
+        lubrificante_fluido: t.insumo      || t.codigo_lubrificante || '',
+        quantidade:          t.quantidade  || t.capacidade || '',
+        capacidade:          t.quantidade  || t.capacidade || '',
+        pagina_fonte:        t.pagina      ?? null,
+        texto_original:      '',
+        pecas_citadas:       [],
+        condicional:         t.condicional || false,
+        aplicabilidade:      t.condicao    || '',
+        observacao:          '',
+        confianca:           'media',
       })),
       status_extracao: (iv.tarefas?.length || 0) > 0 ? 'ok' : 'falha_extracao',
     })),
