@@ -17,7 +17,10 @@ import { createClient } from '@supabase/supabase-js'
 import Groq from 'groq-sdk'
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
-const pdfParse = require('pdf-parse')
+// Usa o lib interno do pdf-parse v1.1.1 para evitar leitura de arquivo de
+// teste no carregamento do módulo (bug conhecido do index.js do pacote).
+// pdf-parse v1 usa pdfjs-dist v2 internamente — sem Worker nem DOMMatrix.
+const pdfParse = require('pdf-parse/lib/pdf-parse.js')
 
 const supabaseUrl        = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
