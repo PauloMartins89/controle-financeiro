@@ -59,7 +59,7 @@ export default function Login() {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         padding: '44px 52px',
         backgroundImage: 'url(/tela%20de%20login/sala%20ampla%20escritorio.png)',
         backgroundSize: 'cover',
@@ -73,7 +73,8 @@ export default function Login() {
           background: 'linear-gradient(105deg, rgba(5,14,40,0.88) 0%, rgba(5,14,40,0.70) 60%, rgba(5,14,40,0.50) 100%)',
           zIndex: 0, pointerEvents: 'none',
         }} />
-        <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* Logo fixada no topo */}
+        <div style={{ position: 'absolute', top: 44, left: 52, zIndex: 1 }}>
           <img src="/tela%20de%20login/logo_smartpro.png" alt="SmartPro" style={{ height: 166, width: 'auto' }} />
         </div>
 
@@ -107,7 +108,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)', margin: 0, position: 'relative', zIndex: 1 }}>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)', margin: 0, position: 'absolute', bottom: 44, left: 52, zIndex: 1 }}>
           © 2026 SmartPro. Plataforma para operações inteligentes.
         </p>
       </div>
