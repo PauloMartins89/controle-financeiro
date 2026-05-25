@@ -1576,17 +1576,20 @@ function SecaoDashboard({ sols, onNav }) {
                   <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1.5, maxWidth: '72%' }}>{k.label}</span>
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{k.icon}</div>
                 </div>
-                <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em', marginBottom: 7 }}>{k.val}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 7 }}>
+                  <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em' }}>{k.val}</div>
+                  {k.ref !== undefined && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                      <span style={{ fontSize: 13, color: TEXT2 }}>🍽️ <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong></span>
+                      <span style={{ fontSize: 13, color: TEXT2 }}>☕ <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong></span>
+                    </div>
+                  )}
+                </div>
                 {k.var
                   ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: k.var.up ? '#059669' : '#DC2626', background: k.var.up ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${k.var.up ? '#A7F3D0' : '#FECACA'}`, borderRadius: 999, padding: '2px 8px', marginBottom: 9 }}>
                       {k.var.text} {k.varLabel}
                     </div>
-                  : k.ref !== undefined
-                    ? <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 6, marginTop: 1 }}>
-                        <span style={{ fontSize: 13, color: TEXT2 }}>🍽️ <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong></span>
-                        <span style={{ fontSize: 13, color: TEXT2 }}>☕ <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong></span>
-                      </div>
-                    : <div style={{ height: 22, marginBottom: 1 }} />
+                  : <div style={{ height: 22, marginBottom: 1 }} />
                 }
                 <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
               </div>
