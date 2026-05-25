@@ -1,9 +1,9 @@
 ﻿import { useState, useEffect } from 'react'
 
 const SLIDES = [
-  '/tela%20de%20login/sala%20ampla%20escritorio.png',
-  '/tela%20de%20login/01_fundo_limpo_4k.png',
-  '/tela%20de%20login/04_card_login_4k.png',
+  '/tela%20de%20login/tela%201.jpeg',
+  '/tela%20de%20login/tela3.jpeg',
+  '/tela%20de%20login/tela2.jpeg',
 ]
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
