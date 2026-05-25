@@ -35,6 +35,8 @@ const TODOS_MODULOS = [
   { key: 'chat_ia',       label: 'Chat IA',               descricao: 'Assistente de inteligência artificial' },
   // ── Agenda ────────────────────────────────────────────────────────────────
   { key: 'agendamentos',  label: 'Agendamentos',          descricao: 'Agenda de serviços via WhatsApp' },
+  // ── Manutenção ────────────────────────────────────────────────────────────
+  { key: 'manutencao',    label: 'Manutenção',            descricao: 'Ordens de serviço, preventiva, planos PFD' },
 ]
 
 export default function PlataformaModulos() {

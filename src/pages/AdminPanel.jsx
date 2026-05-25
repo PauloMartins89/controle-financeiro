@@ -38,6 +38,9 @@ const ALL_MODULES = [
   { key: 'negocios',     label: 'Negócios' },
   { key: 'compras',      label: 'Compras' },
   { key: 'refeicoes',    label: 'Refeições' },
+  { key: 'manutencao',   label: 'Manutenção' },
+  { key: 'agendamentos', label: 'Agendamentos' },
+  { key: 'chat_ia',      label: 'Chat IA' },
 ]
 
 
