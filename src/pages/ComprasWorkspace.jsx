@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import { useNavigate } from 'react-router-dom'
 import useStore from '../store/useStore'
 import toast from 'react-hot-toast'
@@ -108,14 +108,10 @@ export default function ComprasWorkspace() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <PageHeader
-        icon={BoltIcon} iconColor="#3b82f6"
+      <Header
         title="Workspace do Comprador"
         subtitle="Todas as pendências e ações necessárias em um só lugar"
-        badges={[
-          totalPendencias > 0 && { label: `${totalPendencias} pendência${totalPendencias > 1 ? 's' : ''}`, color: '#f59e0b', primary: true },
-        ].filter(Boolean)}
-        actions={[{ label: 'Atualizar', icon: ArrowPathIcon, onClick: () => wsId && loadAll(wsId), disabled: refreshing }]}
+        action={{ label: 'Atualizar', icon: ArrowPathIcon, onClick: () => wsId && loadAll(wsId) }}
       />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, marginBottom: 20 }}>

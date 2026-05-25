@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { waLink } from '../lib/utils'
 import useStore from '../store/useStore'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
   PlusIcon, ArrowPathIcon, PencilIcon, TrashIcon,
@@ -156,15 +156,10 @@ export default function ComprasFornecedores() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <PageHeader
-        icon={BuildingOfficeIcon} iconColor="#3b82f6"
+      <Header
         title="Fornecedores"
         subtitle="Cadastro de fornecedores do módulo Compras"
-        badges={[
-          { label: `${data.length} fornecedores`, color: '#64748b' },
-          busca && filtrado.length !== data.length && { label: `${filtrado.length} encontrados`, color: '#3b82f6', primary: true },
-        ].filter(Boolean)}
-        actions={[{ label: 'Novo Fornecedor', icon: PlusIcon, onClick: () => setShowModal(true), primary: true }]}
+        action={{ label: 'Novo Fornecedor', onClick: () => setShowModal(true) }}
       />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 

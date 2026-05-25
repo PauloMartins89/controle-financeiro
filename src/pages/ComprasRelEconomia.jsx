@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import { ArrowPathIcon, BanknotesIcon, TrophyIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline'
 
 function fmtCurrency(v) {
@@ -58,14 +58,9 @@ export default function ComprasRelEconomia() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <PageHeader
-        icon={ArrowTrendingDownIcon} iconColor="#3b82f6"
+      <Header
         title="Economia / Savings"
         subtitle="Comparativo entre orçamento e valor aprovado"
-        badges={[
-          pctEconomia > 0 && { label: `${pctEconomia}% economia`, color: '#10b981', primary: true },
-          comValores.length > 0 && { label: `${comValores.length} pedidos`, color: '#64748b' },
-        ].filter(Boolean)}
       />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 

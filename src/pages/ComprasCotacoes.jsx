@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { waLink } from '../lib/utils'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
   TrophyIcon, PlusIcon, ArrowPathIcon, ClipboardDocumentIcon,
@@ -368,15 +368,9 @@ export default function ComprasCotacoes() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <PageHeader
-        icon={TrophyIcon} iconColor="#3b82f6"
+      <Header
         title="Cotações / Leilão"
         subtitle="Leilões abertos e propostas de fornecedores"
-        badges={[
-          FILTROS[0].count > 0 && { label: `${FILTROS[0].count} em andamento`, color: '#3b82f6', primary: true },
-          FILTROS[1].count > 0 && { label: `${FILTROS[1].count} encerrados`, color: '#64748b' },
-          { label: `${sols.length} total`, color: '#475569' },
-        ].filter(Boolean)}
       />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { waLink } from '../lib/utils'
 import useStore from '../store/useStore'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
   MagnifyingGlassIcon, MapPinIcon,
@@ -847,14 +847,7 @@ export default function ComprasBuscaFornecedor() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <PageHeader
-        icon={MagnifyingGlassIcon} iconColor="#3b82f6"
-        title="Buscar Fornecedores"
-        subtitle="Descubra fornecedores por região ou consulte CNPJ completo"
-        badges={[
-          adicionados.size > 0 && { label: `${adicionados.size} adicionados`, color: '#10b981', primary: true },
-        ].filter(Boolean)}
-      />
+      <Header title="Buscar Fornecedores" subtitle="Descubra fornecedores por região ou consulte CNPJ completo" />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
         <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 0 }}>
           {abas.map(a => {

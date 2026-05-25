@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import { ArrowPathIcon, TagIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 
 function fmtCurrency(v) {
@@ -79,14 +79,9 @@ export default function ComprasRelCategoria() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <PageHeader
-        icon={ChartBarIcon} iconColor="#3b82f6"
+      <Header
         title="Relatório por Categoria"
         subtitle="Distribuição de gastos por tipo de compra"
-        badges={[
-          categorias.length > 0 && { label: `${categorias.length} categorias`, color: '#64748b' },
-          totalGeral > 0 && { label: fmtCurrency(totalGeral), color: '#10b981', primary: true },
-        ].filter(Boolean)}
       />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 

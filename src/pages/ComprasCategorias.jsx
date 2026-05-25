@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
   PlusIcon, ArrowPathIcon, PencilIcon, TrashIcon, TagIcon,
@@ -128,15 +128,10 @@ export default function ComprasCategorias() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <PageHeader
-        icon={TagIcon} iconColor="#3b82f6"
+      <Header
         title="Categorias de Compra"
         subtitle="Classifique as compras por tipo"
-        badges={[
-          ativas.length > 0 && { label: `${ativas.length} ativas`, color: '#10b981', primary: true },
-          inativas.length > 0 && { label: `${inativas.length} inativas`, color: '#64748b' },
-        ].filter(Boolean)}
-        actions={[{ label: 'Nova Categoria', icon: PlusIcon, onClick: () => setShowModal(true), primary: true }]}
+        action={{ label: 'Nova Categoria', onClick: () => setShowModal(true) }}
       />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 

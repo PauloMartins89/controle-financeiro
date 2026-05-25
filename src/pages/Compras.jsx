@@ -1,16 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { waLink } from '../lib/utils'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
   PlusIcon, ShoppingCartIcon, ClockIcon, CheckCircleIcon,
   XCircleIcon, ArrowPathIcon, MagnifyingGlassIcon,
   ExclamationTriangleIcon, DocumentTextIcon, BanknotesIcon,
   TruckIcon, FunnelIcon, PencilIcon, TrashIcon, ListBulletIcon,
-  ClipboardDocumentIcon, TrophyIcon, PrinterIcon,
+  ClipboardDocumentIcon, TrophyIcon,
 } from '@heroicons/react/24/outline'
-import { exportarRequisicaoPDF } from '../lib/exportPDF'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 function fmtCurrency(v) {
@@ -56,70 +54,24 @@ function StatusBadge({ status }) {
 // ─── Modal: Nova Solicitação ──────────────────────────────────────────────────
 function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
   const [form, setForm] = useState({
-    titulo: '', descricao: '', fornecedor: '',
-    contato_fornecedor: '', telefone_fornecedor: '', email_fornecedor: '',
-    urgencia: 'media', data_necessidade: '', tipo: 'direta',
+    titulo: '', descricao: '', valor_estimado: '', fornecedor: '',
+    quantidade: '', urgencia: 'media', data_necessidade: '', tipo: 'direta',
     requisitante_nome: '', requisitante_telefone: '',
   })
-  const [itens, setItens] = useState([{ descricao: '', quantidade: '1', valor_unitario: '' }])
   const [saving, setSaving] = useState(false)
-  const [fornecedores, setFornecedores] = useState([])
-  const [fornQuery, setFornQuery] = useState('')
-  const [showFornDrop, setShowFornDrop] = useState(false)
-
-  useEffect(() => {
-    if (!workspaceId) return
-    supabase.from('fornecedores')
-      .select('id, nome, contato, telefone, email')
-      .eq('workspace_id', workspaceId)
-      .eq('ativo', true)
-      .order('nome')
-      .then(({ data }) => setFornecedores(data || []))
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      supabase.from('pessoas').select('nome, telefone').eq('user_id', user.id).limit(1).single()
-        .then(({ data: p }) => {
-          if (p?.nome) setForm(f => ({ ...f, requisitante_nome: f.requisitante_nome || p.nome }))
-          if (p?.telefone) setForm(f => ({ ...f, requisitante_telefone: f.requisitante_telefone || p.telefone }))
-        })
-    })
-  }, [workspaceId])
-
-  const fornFiltrados = fornecedores.filter(f =>
-    fornQuery.trim() === '' ? true : f.nome.toLowerCase().includes(fornQuery.toLowerCase())
-  )
-
-  function selectFornecedor(f) {
-    setFornQuery(f.nome)
-    setForm(p => ({ ...p, fornecedor: f.nome, contato_fornecedor: f.contato || '', telefone_fornecedor: f.telefone || '', email_fornecedor: f.email || '' }))
-    setShowFornDrop(false)
-  }
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
-  const addItem = () => setItens(p => [...p, { descricao: '', quantidade: '1', valor_unitario: '' }])
-  const removeItem = (i) => setItens(p => p.filter((_, idx) => idx !== i))
-  const updateItem = (i, k, v) => setItens(p => p.map((it, idx) => idx === i ? { ...it, [k]: v } : it))
-  const itensValidos = itens.filter(it => String(it.descricao || '').trim())
-  const totalEstimado = itens.reduce((acc, it) => {
-    const q = parseFloat(String(it.quantidade).replace(',', '.')) || 0
-    const v = parseFloat(String(it.valor_unitario).replace(',', '.')) || 0
-    return acc + q * v
-  }, 0)
-
   async function handleSave() {
-    if (itensValidos.length === 0) { toast.error('Adicione pelo menos um item'); return }
-    const titulo = form.titulo.trim() || itensValidos[0].descricao.trim()
+    if (!form.titulo.trim()) { toast.error('Informe o que precisa comprar'); return }
     setSaving(true)
     const { data: inserted, error } = await supabase.from('solicitacoes_compra').insert({
       workspace_id:          workspaceId,
-      titulo,
+      titulo:                form.titulo.trim(),
       descricao:             form.descricao.trim() || null,
-      valor_estimado:        totalEstimado > 0 ? totalEstimado : null,
+      valor_estimado:        form.valor_estimado ? parseFloat(form.valor_estimado.replace(',', '.')) : null,
       fornecedor:            form.fornecedor.trim() || null,
-      contato_fornecedor:    form.contato_fornecedor.trim() || null,
-      telefone_fornecedor:   form.telefone_fornecedor.trim() || null,
-      email_fornecedor:      form.email_fornecedor.trim() || null,
+      quantidade:            form.quantidade.trim() || null,
       urgencia:              form.urgencia,
       tipo:                  form.tipo,
       data_necessidade:      form.data_necessidade || null,
@@ -128,14 +80,8 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
       status:                'em_cotacao',
     }).select('id').single()
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
-    // Insere itens
-    const itensInsert = itensValidos.map((it, i) => {
-      const q = parseFloat(String(it.quantidade).replace(',', '.')) || 1
-      const v = parseFloat(String(it.valor_unitario).replace(',', '.')) || null
-      return { solicitacao_id: inserted.id, descricao: it.descricao.trim(), quantidade: q, valor_unitario: v, valor_total: v ? q * v : null, ordem: i }
-    })
-    await supabase.from('itens_solicitacao_compra').insert(itensInsert)
     toast.success('Solicitação criada!')
+    // Notifica aprovador (telefone buscado automaticamente das configurações)
     if (inserted?.id) {
       fetch('/api/notify-compras', {
         method: 'POST',
@@ -157,138 +103,57 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 700, maxHeight: '92vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Nova Requisição de Compra</div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>Preencha os itens e dados do fornecedor</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Nova Solicitação de Compra</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>Será enviada para aprovação após salvar</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 20 }}>×</button>
         </div>
 
-        {/* Solicitado por */}
-        <div style={{ background: 'rgba(99,102,241,0.06)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, border: '1px solid rgba(99,102,241,0.15)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.4 }}>Solicitado por (opcional)</div>
+        {/* Requisitante (opcional) */}
+        <div style={{ background: 'rgba(99,102,241,0.06)', borderRadius: 10, padding: '12px 14px', marginBottom: 18, border: '1px solid rgba(99,102,241,0.15)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.4 }}>Quem solicitou? (opcional)</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={labelStyle}>Nome</label>
               <input style={inputStyle} value={form.requisitante_nome} onChange={e => set('requisitante_nome', e.target.value)} placeholder="Ex: Pedro Motorista" />
             </div>
             <div>
-              <label style={labelStyle}>WhatsApp</label>
-              <input style={inputStyle} value={form.requisitante_telefone} onChange={e => set('requisitante_telefone', e.target.value)} placeholder="(67) 99999-0000" />
+              <label style={labelStyle}>WhatsApp do solicitante</label>
+              <input style={inputStyle} value={form.requisitante_telefone} onChange={e => set('requisitante_telefone', e.target.value)} placeholder="(11) 99999-0000" />
             </div>
           </div>
         </div>
 
-        {/* Dados da Solicitação (fornecedor) */}
-        <div style={{ background: 'rgba(16,185,129,0.05)', borderRadius: 10, padding: '12px 14px', marginBottom: 16, border: '1px solid rgba(16,185,129,0.15)' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.4 }}>Dados da Solicitação</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-            <div style={{ position: 'relative' }}>
-              <label style={labelStyle}>Fornecedor</label>
-              <input
-                style={inputStyle}
-                value={fornQuery}
-                onChange={e => { setFornQuery(e.target.value); set('fornecedor', e.target.value); setShowFornDrop(true) }}
-                onFocus={() => setShowFornDrop(true)}
-                onBlur={() => setTimeout(() => setShowFornDrop(false), 160)}
-                placeholder="Nome do fornecedor"
-                autoComplete="off"
-              />
-              {showFornDrop && fornFiltrados.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
-                  background: 'var(--bg-secondary)', border: '1px solid var(--border)',
-                  borderRadius: 8, boxShadow: '0 6px 20px rgba(0,0,0,0.18)',
-                  maxHeight: 200, overflowY: 'auto', marginTop: 3,
-                }}>
-                  {fornFiltrados.map(f => (
-                    <div
-                      key={f.id}
-                      onMouseDown={() => selectFornecedor(f)}
-                      style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
-                      onMouseLeave={e => e.currentTarget.style.background = ''}
-                    >
-                      <div style={{ fontWeight: 600 }}>{f.nome}</div>
-                      {(f.contato || f.telefone) && (
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 1 }}>
-                          {[f.contato, f.telefone].filter(Boolean).join(' · ')}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div>
-              <label style={labelStyle}>Contato</label>
-              <input style={inputStyle} value={form.contato_fornecedor} onChange={e => set('contato_fornecedor', e.target.value)} placeholder="Nome do contato" />
-            </div>
-            <div>
-              <label style={labelStyle}>Telefone</label>
-              <input style={inputStyle} value={form.telefone_fornecedor} onChange={e => set('telefone_fornecedor', e.target.value)} placeholder="(00) 00000-0000" />
-            </div>
+        {/* Pedido */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>O que comprar? *</label>
+          <input style={inputStyle} value={form.titulo} onChange={e => set('titulo', e.target.value)} placeholder="Ex: Óleo 15W40 — 50 litros" autoFocus />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          <div>
+            <label style={labelStyle}>Quantidade / Unidade</label>
+            <input style={inputStyle} value={form.quantidade} onChange={e => set('quantidade', e.target.value)} placeholder="Ex: 50 litros" />
           </div>
           <div>
-            <label style={labelStyle}>E-mail</label>
-            <input style={inputStyle} value={form.email_fornecedor} onChange={e => set('email_fornecedor', e.target.value)} placeholder="email@fornecedor.com" />
+            <label style={labelStyle}>Valor estimado (R$)</label>
+            <input style={inputStyle} value={form.valor_estimado} onChange={e => set('valor_estimado', e.target.value)} placeholder="0,00" type="number" step="0.01" />
           </div>
         </div>
 
-        {/* Título da requisição (opcional) */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Título da Requisição (opcional)</label>
-          <input style={inputStyle} value={form.titulo} onChange={e => set('titulo', e.target.value)} placeholder="Ex: Compra de lubrificantes — maio/2026" />
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Se vazio, será preenchido com o 1º item automaticamente.</div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Fornecedor sugerido</label>
+          <input style={inputStyle} value={form.fornecedor} onChange={e => set('fornecedor', e.target.value)} placeholder="Ex: Auto Peças Central" />
         </div>
 
-        {/* Itens solicitados */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={labelStyle}>Itens Solicitados *</div>
-            <button onClick={addItem} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 7, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', cursor: 'pointer', color: '#818cf8', fontSize: 12, fontWeight: 700 }}>
-              <PlusIcon style={{ width: 13, height: 13 }} /> Adicionar item
-            </button>
-          </div>
-
-          {/* Cabeçalho */}
-          <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr 110px 110px 34px', gap: 6, marginBottom: 4, paddingLeft: 2 }}>
-            {['QUANT.', 'DISCRIMINAÇÃO', 'P. UNIT. (R$)', 'TOTAL (R$)', ''].map((h, i) => (
-              <div key={i} style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3 }}>{h}</div>
-            ))}
-          </div>
-
-          {itens.map((it, i) => {
-            const q = parseFloat(String(it.quantidade).replace(',', '.')) || 0
-            const v = parseFloat(String(it.valor_unitario).replace(',', '.')) || 0
-            const sub = q * v
-            return (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '72px 1fr 110px 110px 34px', gap: 6, marginBottom: 6 }}>
-                <input style={{ ...inputStyle, textAlign: 'center' }} value={it.quantidade} onChange={e => updateItem(i, 'quantidade', e.target.value)} placeholder="1" type="number" min="0" step="0.001" />
-                <input style={inputStyle} value={it.descricao} onChange={e => updateItem(i, 'descricao', e.target.value)} placeholder="Descrição do item" autoFocus={i === 0} />
-                <input style={{ ...inputStyle, textAlign: 'right' }} value={it.valor_unitario} onChange={e => updateItem(i, 'valor_unitario', e.target.value)} placeholder="0,00" type="number" step="0.01" />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', fontWeight: 700, fontSize: 13, color: sub > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', padding: '0 8px', borderRadius: 8, background: sub > 0 ? 'rgba(16,185,129,0.06)' : 'transparent', border: `1px solid ${sub > 0 ? 'rgba(16,185,129,0.2)' : 'transparent'}` }}>
-                  {sub > 0 ? sub.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—'}
-                </div>
-                <button onClick={() => removeItem(i)} disabled={itens.length === 1} title="Remover item"
-                  style={{ padding: 5, borderRadius: 7, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', cursor: itens.length === 1 ? 'not-allowed' : 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: itens.length === 1 ? 0.3 : 1 }}>
-                  <TrashIcon style={{ width: 13, height: 13 }} />
-                </button>
-              </div>
-            )
-          })}
-
-          {totalEstimado > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 14, marginTop: 8, padding: '10px 16px', borderRadius: 8, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>TOTAL ESTIMADO</span>
-              <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{totalEstimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-            </div>
-          )}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelStyle}>Motivo / Justificativa</label>
+          <textarea style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }} value={form.descricao} onChange={e => set('descricao', e.target.value)} placeholder="Por que é necessário comprar?" />
         </div>
 
-        {/* Campos extras */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
           <div>
             <label style={labelStyle}>Urgência</label>
@@ -309,11 +174,6 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
               <option value="leilao">Abrir leilão</option>
             </select>
           </div>
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Observações</label>
-          <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical' }} value={form.descricao} onChange={e => set('descricao', e.target.value)} placeholder="Instruções adicionais, condições especiais..." />
         </div>
 
         {form.tipo === 'leilao' && (
@@ -796,7 +656,6 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
   const [showHistorico, setShowHistorico]     = useState(false)
   const [showVencedor, setShowVencedor]       = useState(false)
   const [deleting, setDeleting]               = useState(false)
-  const [exportingPDF, setExportingPDF]       = useState(false)
   const urg = URGENCIA[s.urgencia] || URGENCIA.media
   const diasCriado = diasAtras(s.created_at)
   const isAprovado = s.status === 'aprovado' || s.status === 'pedido_emitido'
@@ -816,19 +675,6 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
     if (error) { toast.error('Erro: ' + error.message); setDeleting(false); return }
     toast.success('Solicitação excluída')
     onRefresh()
-  }
-
-  async function handleExportPDF() {
-    setExportingPDF(true)
-    try {
-      const { data: itens } = await supabase
-        .from('itens_solicitacao_compra').select('*').eq('solicitacao_id', s.id).order('ordem')
-      await exportarRequisicaoPDF({ solicitacao: s, itens: itens || [] })
-    } catch (e) {
-      toast.error('Erro ao gerar PDF: ' + e.message)
-    } finally {
-      setExportingPDF(false)
-    }
   }
 
   return (
@@ -941,7 +787,7 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
                             </button>
                             {c.fornecedor_telefone && (
                               <a title="Enviar pelo WhatsApp"
-                                href={waLink(c.fornecedor_telefone, msgWA) || '#'}
+                                href={`https://wa.me/${c.fornecedor_telefone.replace(/\D/g,'')}?text=${encodeURIComponent(msgWA)}`}
                                 target="_blank" rel="noreferrer"
                                 style={{ padding: '4px 7px', borderRadius: 5, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', cursor: 'pointer', color: '#25d366', textDecoration: 'none', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center' }}>
                                 WA
@@ -996,12 +842,6 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
 
             {/* Linha de ícones de ação */}
             <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-              {/* PDF */}
-              <button onClick={handleExportPDF} disabled={exportingPDF} title="Exportar Requisição PDF"
-                style={{ padding: '5px 7px', borderRadius: 7, background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.2)', cursor: exportingPDF ? 'not-allowed' : 'pointer', color: '#0ea5e9', display: 'flex', alignItems: 'center', opacity: exportingPDF ? 0.5 : 1 }}>
-                <PrinterIcon style={{ width: 14, height: 14 }} />
-              </button>
-
               {/* Histórico — sempre visível */}
               <button onClick={() => setShowHistorico(true)} title="Histórico"
                 style={{ padding: '5px 7px', borderRadius: 7, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center' }}>
@@ -1088,7 +928,7 @@ function ModalConfigAprovador({ onClose }) {
       })
       const json = await res.json().catch(() => ({}))
       if (json.ok) toast.success('📱 Mensagem de teste enviada!')
-      else toast.error('Falha no teste: ' + (json.debug?.error || json.debug?.body?.error || json.error || res.status))
+      else toast.error('Falha no teste: ' + (json.error || res.status))
     } catch (e) {
       toast.error('Erro de rede: ' + e.message)
     } finally {
@@ -1211,15 +1051,10 @@ export default function Compras() {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
-      <PageHeader
-        icon={ShoppingCartIcon} iconColor="#3b82f6"
-        title="Solicitações de Compra"
-        subtitle="Gestão de solicitações e aprovações"
-        badges={[
-          { label: `${total} total`, color: '#64748b' },
-          pendentes > 0 && { label: `${pendentes} aguardando`, color: '#f59e0b', primary: true },
-        ].filter(Boolean)}
-        actions={[{ label: 'Nova Solicitação', icon: PlusIcon, onClick: () => setShowModal(true), primary: true }]}
+      <Header
+        title="Compras"
+        subtitle="Solicitações e aprovações de compra"
+        action={{ label: 'Nova Solicitação', onClick: () => setShowModal(true), icon: PlusIcon }}
       />
 
       <div style={{ padding: '0 24px 32px' }}>
@@ -1321,4 +1156,3 @@ export default function Compras() {
     </div>
   )
 }
-

@@ -11,7 +11,7 @@ import {
   BanknotesIcon,
   XCircleIcon,
 } from '@heroicons/react/24/outline'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -185,13 +185,9 @@ export default function ComprasPesquisaPrecos({ produto: produtoProp, onBenchmar
   // â”€â”€ Página standalone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
-      <PageHeader
-        icon={MagnifyingGlassIcon} iconColor="#3b82f6"
+      <Header
         title="Pesquisa de Preço"
         subtitle="Mercado Livre + Google Shopping em tempo real"
-        badges={[
-          resultado?.total > 0 && { label: `${resultado.total} resultados`, color: '#10b981', primary: true },
-        ].filter(Boolean)}
       />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>

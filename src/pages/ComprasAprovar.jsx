@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
   CheckCircleIcon, XCircleIcon, ArrowPathIcon, MagnifyingGlassIcon,
@@ -532,16 +532,7 @@ export default function ComprasAprovar() {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
-      <PageHeader
-        icon={CheckCircleIcon} iconColor="#3b82f6"
-        title="Aprovações de Compra"
-        subtitle="Decisão central de todos os pedidos"
-        badges={[
-          aguardando.length > 0 && { label: `${aguardando.length} aguardando`, color: '#f59e0b', primary: true },
-          leiloesAbertos.length > 0 && { label: `${leiloesAbertos.length} leilões`, color: '#8b5cf6' },
-        ].filter(Boolean)}
-        actions={[{ label: 'Atualizar', icon: ArrowPathIcon, onClick: loadData }]}
-      />
+      <Header title="Aprovações de Compra" subtitle="Decisão central de todos os pedidos" action={{ label: 'Atualizar', onClick: loadData }} />
 
       <div style={{ padding: '0 24px 32px' }}>
         {/* KPIs */}
