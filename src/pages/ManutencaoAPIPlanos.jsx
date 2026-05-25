@@ -901,14 +901,12 @@ export default function ManutencaoAPIPlanos() {
       transmissao: 'e23™ PowerShift',
     }
 
-    const totalIntervalos = isReal ? resultPlanos.length        : DEMO_INTERVALOS.length
-    const totalItens      = isReal
-      ? resultPlanos.reduce((acc, p) => acc + (p.cat_planos_itens?.length || 0), 0)
-      : Object.values(DEMO_PECAS).flat().length
+    const totalIntervalos = resultPlanos.length
+    const totalItens      = resultPlanos.reduce((acc, p) => acc + (p.cat_planos_itens?.length || 0), 0)
 
     const miniKpis = [
-      { label: 'Intervalos', value: totalIntervalos || DEMO_INTERVALOS.length, color: '#16a34a', icon: ClockIcon, note: totalIntervalos > 0 ? (resultModelo?._ia || resultModelo?._ia_planos ? 'gerados por IA' : 'do banco de dados') : 'sem planos — demo' },
-      { label: 'Itens de Plano', value: totalItens  || DEMO_FILTROS.length + Object.values(DEMO_PECAS).flat().length, color: '#0ea5e9', icon: FunnelIcon, note: 'filtros e peças' },
+      { label: 'Intervalos', value: totalIntervalos, color: '#16a34a', icon: ClockIcon, note: totalIntervalos > 0 ? (resultModelo?._ia || resultModelo?._ia_planos ? 'gerados por IA' : 'do banco de dados') : 'sem planos cadastrados' },
+      { label: 'Itens de Plano', value: totalItens, color: '#0ea5e9', icon: FunnelIcon, note: totalItens > 0 ? 'filtros e peças' : 'sem dados cadastrados' },
       { label: 'Potência', value: eq.potencia, color: '#8b5cf6', icon: BoltIcon, note: 'potência máxima' },
       { label: 'Tração', value: eq.tracao, color: '#f59e0b', icon: Cog6ToothIcon, note: eq.transmissao },
       { label: 'Conflitos', value: DEMO_CONFLITOS.length, color: '#16a34a', icon: ExclamationTriangleIcon, note: 'nenhum conflito' },
@@ -959,8 +957,8 @@ export default function ManutencaoAPIPlanos() {
               ['Nível de Confiança', ''],
               ['Fonte Principal',   eq.fonte_principal],
               ['Sincronizado em',   lastSync],
-              ['Total de Intervalos', totalIntervalos || DEMO_INTERVALOS.length],
-              ['Itens de Manutenção', totalItens || DEMO_FILTROS.length + Object.values(DEMO_PECAS).flat().length],
+              ['Total de Intervalos', totalIntervalos || 0],
+              ['Itens de Manutenção', totalItens || 0],
               ['Potência Máxima',   eq.potencia],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
@@ -1018,7 +1016,7 @@ export default function ManutencaoAPIPlanos() {
             status:     'validado',
           })),
         }))
-      : DEMO_INTERVALOS
+      : []
 
     return (
       <div>
@@ -1034,6 +1032,13 @@ export default function ManutencaoAPIPlanos() {
             {intervalos.length} intervalos estimados por IA — confirmar com manual oficial
           </div>
         )}
+        {intervalos.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8fafc', borderRadius: 12, border: '2px dashed #e2e8f0', marginTop: 8 }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>⚙️</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>Sem planos cadastrados</div>
+            <div style={{ fontSize: 13, color: '#94a3b8' }}>Não há intervalos de manutenção registrados no banco para este modelo.</div>
+          </div>
+        ) : <>
         <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
           Clique em um intervalo para ver as tarefas detalhadas.&nbsp;
           <span style={{ color: '#16a34a', fontWeight: 700 }}>●</span> Padrão &nbsp;
@@ -1078,6 +1083,7 @@ export default function ManutencaoAPIPlanos() {
             </div>
           ))}
         </div>
+        </>}
       </div>
     )
   }
@@ -1089,19 +1095,53 @@ export default function ManutencaoAPIPlanos() {
     const th = { fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, padding: '8px 12px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', textAlign: 'left', whiteSpace: 'nowrap' }
     const td = (bold = false) => ({ fontSize: 12, padding: '10px 12px', borderBottom: '1px solid #f1f5f9', color: bold ? '#1e293b' : '#475569', fontWeight: bold ? 600 : 400 })
 
+    // Extrai filtros reais dos planos cadastrados
+    const filtrosReais = []
+    if (resultPlanos.length > 0) {
+      const seen = new Set()
+      resultPlanos.forEach(plano => {
+        ;(plano.cat_planos_itens || [])
+          .filter(i => i.categoria === 'filtro')
+          .forEach(item => {
+            const key = `${item.referencia || ''}_${item.descricao}`
+            if (!seen.has(key)) {
+              seen.add(key)
+              filtrosReais.push({
+                id: item.id,
+                sistema: item.categoria || 'Filtro',
+                item: item.descricao,
+                codigo: item.referencia || '—',
+                descricao: item.especificacao || item.descricao,
+                intervalo: `${plano.intervalo_h}h`,
+                condicao: item.especificacao || '—',
+                status: 'validado',
+              })
+            }
+          })
+      })
+    }
+
     return (
       <div>
-        <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
-          {DEMO_FILTROS.length} filtros e elementos cadastrados — organizados por sistema.
-        </p>
+        {filtrosReais.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8fafc', borderRadius: 12, border: '2px dashed #e2e8f0' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🔧</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>Sem filtros cadastrados</div>
+            <div style={{ fontSize: 13, color: '#94a3b8' }}>Não há itens de filtro registrados no plano deste modelo.</div>
+          </div>
+        ) : (
+          <>
+            <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+              {filtrosReais.length} filtros e elementos — dados do banco de dados.
+            </p>
         <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>{['Sistema', 'Item', 'Código', 'Descrição', 'Intervalo', 'Condição', 'Fonte', 'Status', 'Ações'].map(h => <th key={h} style={th}>{h}</th>)}</tr>
+              <tr>{['Sistema', 'Item', 'Código', 'Descrição', 'Intervalo', 'Condição', 'Fonte', 'Status'].map(h => <th key={h} style={th}>{h}</th>)}</tr>
             </thead>
             <tbody>
-              {DEMO_FILTROS.map(f => (
-                <tr key={f.id} style={{ cursor: 'pointer' }}
+              {filtrosReais.map(f => (
+                <tr key={f.id}
                   onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <td style={td(true)}>{f.sistema}</td>
@@ -1110,28 +1150,15 @@ export default function ManutencaoAPIPlanos() {
                   <td style={td()}>{f.descricao}</td>
                   <td style={td(true)}>{f.intervalo}</td>
                   <td style={td()}>{f.condicao}</td>
-                  <td style={{ ...td() }}><span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', fontWeight: 700 }}>{f.fonte}</span></td>
+                  <td style={{ ...td() }}><span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', fontWeight: 700 }}>Banco</span></td>
                   <td style={td()}><ValidPill status={f.status} /></td>
-                  <td style={{ ...td(), padding: '10px 8px' }}>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {[
-                        { icon: InformationCircleIcon, title: 'Ver detalhe',  onClick: () => openPanel('filtro', f) },
-                        { icon: PlusIcon,              title: 'Adicionar à OS', onClick: () => { toast.success(`${f.item} adicionado à OS`); navigate('/manutencao/operacoes/os') } },
-                        { icon: DocumentDuplicateIcon, title: 'Copiar código', onClick: () => copyToClipboard(f.codigo) },
-                        { icon: ArrowTopRightOnSquareIcon, title: 'Ver fonte', onClick: () => openPanel('fonte', DEMO_FONTES[0]) },
-                      ].map(btn => (
-                        <button key={btn.title} title={btn.title} onClick={btn.onClick}
-                          style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#64748b' }}>
-                          <btn.icon style={{ width: 12, height: 12 }} />
-                        </button>
-                      ))}
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+          </>
+        )}
       </div>
     )
   }
@@ -1180,22 +1207,29 @@ export default function ManutencaoAPIPlanos() {
       pecasData = grupos
     }
 
-    const source       = pecasData || DEMO_PECAS
-    const totalPecas   = Object.values(source).flat().length
-    const isDB         = !!pecasData
+    if (!pecasData) {
+      return (
+        <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8fafc', borderRadius: 12, border: '2px dashed #e2e8f0' }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🔩</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>Sem peças cadastradas</div>
+          <div style={{ fontSize: 13, color: '#94a3b8' }}>Não há itens com código de referência registrados no plano deste modelo.</div>
+        </div>
+      )
+    }
+
+    const source     = pecasData
+    const totalPecas = Object.values(source).flat().length
 
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div>
             <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
-              {totalPecas} {isDB ? 'itens carregados do banco' : 'peças catalogadas'} em {Object.keys(source).length} grupos
+              {totalPecas} itens carregados do banco em {Object.keys(source).length} grupos
             </p>
-            {isDB && (
-              <p style={{ fontSize: 11, color: '#16a34a', margin: '2px 0 0', fontWeight: 600 }}>
-                ✓ Lista gerada a partir dos planos preventivos do banco de dados
-              </p>
-            )}
+            <p style={{ fontSize: 11, color: '#16a34a', margin: '2px 0 0', fontWeight: 600 }}>
+              ✓ Lista gerada a partir dos planos preventivos do banco de dados
+            </p>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {['cards', 'table'].map(v => (
@@ -1289,40 +1323,74 @@ export default function ManutencaoAPIPlanos() {
   function renderTabFluidos() {
     const sistemaColors = {
       'Combustível': '#f59e0b', 'Motor': '#ef4444', 'Arrefecimento': '#0ea5e9',
-      'Hidráulico / Trans. MFWD': '#8b5cf6', 'Hidráulico / Trans. ILS': '#7c3aed',
-      'Eixo MFWD (carcaça)': '#64748b', 'Cubos MFWD': '#64748b', 'Cubos ILS': '#475569',
+      'Hidráulico': '#8b5cf6', 'Transmissão': '#7c3aed', 'Eixo': '#64748b',
     }
+
+    // Extrai fluidos/lubrificantes reais dos planos cadastrados
+    const fluidosReais = []
+    if (resultPlanos.length > 0) {
+      const seen = new Set()
+      resultPlanos.forEach(plano => {
+        ;(plano.cat_planos_itens || [])
+          .filter(i => i.categoria === 'fluido')
+          .forEach(item => {
+            const key = `${item.referencia || ''}_${item.descricao}`
+            if (!seen.has(key)) {
+              seen.add(key)
+              fluidosReais.push({
+                id: item.id,
+                sistema: item.descricao,
+                tipo: item.especificacao || item.descricao,
+                capacidade: item.quantidade != null ? item.quantidade : '—',
+                unidade: item.unidade || '',
+                especificacao: item.especificacao || '—',
+                observacao: `Intervalo ${plano.intervalo_h}h`,
+                status: 'validado',
+              })
+            }
+          })
+      })
+    }
+
     return (
       <div>
-        <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
-          {DEMO_FLUIDOS.length} sistemas de fluidos e capacidades mapeados — {DEMO_EQ.modelo}
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-          {DEMO_FLUIDOS.map(fl => {
-            const cor = sistemaColors[fl.sistema] || '#64748b'
-            return (
-              <div key={fl.id} onClick={() => openPanel('fluido', fl)}
-                style={{ background: 'white', borderRadius: 12, border: `1px solid ${cor}25`, borderTop: `3px solid ${cor}`, padding: '14px 16px', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,.04)', transition: 'box-shadow 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.08)'}
-                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,.04)'}>
-                <div style={{ fontSize: 10, color: cor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
-                  {fl.sistema}
-                </div>
-                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>{fl.tipo}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
-                  <span style={{ fontSize: 28, fontWeight: 800, color: cor, lineHeight: 1 }}>{fl.capacidade}</span>
-                  <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600 }}>{fl.unidade}</span>
-                </div>
-                <div style={{ fontSize: 10, color: '#64748b', borderTop: `1px solid ${cor}15`, paddingTop: 8 }}>{fl.especificacao}</div>
-                {fl.observacao && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4, fontStyle: 'italic' }}>{fl.observacao}</div>}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
-                  <ValidPill status={fl.status} />
-                  <span style={{ fontSize: 10, color: '#94a3b8' }}>{fl.fonte}</span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+        {fluidosReais.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 24px', background: '#f8fafc', borderRadius: 12, border: '2px dashed #e2e8f0' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🧴</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>Sem especificações de fluidos cadastradas</div>
+            <div style={{ fontSize: 13, color: '#94a3b8' }}>Não há itens de fluido/lubrificante registrados no plano deste modelo.</div>
+          </div>
+        ) : (
+          <>
+            <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+              {fluidosReais.length} sistemas de fluidos — {resultModelo?.fabricante} {resultModelo?.modelo}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+              {fluidosReais.map(fl => {
+                const cor = sistemaColors[fl.sistema] || '#64748b'
+                return (
+                  <div key={fl.id}
+                    style={{ background: 'white', borderRadius: 12, border: `1px solid ${cor}25`, borderTop: `3px solid ${cor}`, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,.04)' }}>
+                    <div style={{ fontSize: 10, color: cor, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+                      {fl.sistema}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>{fl.tipo}</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
+                      <span style={{ fontSize: 28, fontWeight: 800, color: cor, lineHeight: 1 }}>{fl.capacidade}</span>
+                      <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600 }}>{fl.unidade}</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: '#64748b', borderTop: `1px solid ${cor}15`, paddingTop: 8 }}>{fl.especificacao}</div>
+                    {fl.observacao && <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4, fontStyle: 'italic' }}>{fl.observacao}</div>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
+                      <ValidPill status={fl.status} />
+                      <span style={{ fontSize: 10, color: '#94a3b8' }}>banco</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
       </div>
     )
   }
