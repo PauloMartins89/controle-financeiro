@@ -145,9 +145,9 @@ async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
     model: geminiModel,
     generationConfig: {
       responseMimeType: 'application/json',
-      maxOutputTokens: 24576,
+      maxOutputTokens: 40960, // 40K: thinking (8K) + JSON de saída (32K)
       temperature: 0,
-      thinkingConfig: { thinkingBudget: 8192 }, // thinking separado dos output tokens — melhora extração de tabelas
+      thinkingConfig: { thinkingBudget: 8192 }, // melhora extração de tabelas complexas
     },
   })
   L(`Gemini model: ${geminiModel}`)
