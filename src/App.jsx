@@ -42,6 +42,8 @@ import CotacaoPublica from './pages/CotacaoPublica'
 import AprovarPublica from './pages/AprovarPublica'
 import RefeicaoPublica from './pages/RefeicaoPublica'
 import RefeicaoAprovar from './pages/RefeicaoAprovar'
+import RefeicaoConfirmarRestaurante from './pages/RefeicaoConfirmarRestaurante'
+import RefeicaoValidar from './pages/RefeicaoValidar'
 import Refeicoes from './pages/Refeicoes'
 import ManutencaoDashboard from './pages/ManutencaoDashboard'
 import ManutencaoOS from './pages/ManutencaoOS'
@@ -442,7 +444,9 @@ export default function App() {
         <Route path="/cotacao/:token" element={<CotacaoPublica />} />
         <Route path="/aprovar/:token" element={<AprovarPublica />} />
         <Route path="/refeicao/:token" element={<RefeicaoPublica />} />
+        <Route path="/refeicao/validar/:token" element={<RefeicaoValidar />} />
         <Route path="/ar/:token" element={<RefeicaoAprovar />} />
+        <Route path="/confirmar-restaurante/:token" element={<RefeicaoConfirmarRestaurante />} />
         <Route path="/*" element={
           <RequireAuth>
             <RequireSubscription>
