@@ -14,6 +14,7 @@ function useTheme() {
 export default function Header({ title, subtitle, action, accentColor = '#3b82f6' }) {
   const { currentUser } = useStore()
   const [theme, setTheme] = useTheme()
+  const ActionIcon = action?.icon || PlusIcon
 
   return (
     <header style={{
@@ -44,7 +45,7 @@ export default function Header({ title, subtitle, action, accentColor = '#3b82f6
         </button>
         {action && (
           <button className="btn-primary" onClick={action.onClick}>
-            <PlusIcon style={{ width: 15, height: 15 }} />
+            <ActionIcon style={{ width: 15, height: 15 }} />
             {action.label}
           </button>
         )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import { useNavigate } from 'react-router-dom'
 import {
   ShoppingCartIcon, ClockIcon, CheckCircleIcon, TrophyIcon,
@@ -76,7 +76,7 @@ export default function ComprasDashboard() {
 
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <PageHeader icon={ShoppingCartIcon} iconColor="#3b82f6" title="Dashboard de Compras" subtitle="Visão geral e KPIs do módulo de compras" />
+      <Header title="Dashboard de Compras" subtitle="Visão geral e KPIs do módulo de compras" action={{ label: 'Atualizar', icon: ArrowPathIcon, onClick: load }} />
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <ArrowPathIcon style={{ width: 24, height: 24, color: 'var(--text-secondary)', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -139,16 +139,10 @@ export default function ComprasDashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <PageHeader
-        icon={ShoppingCartIcon} iconColor="#3b82f6"
+      <Header
         title="Dashboard de Compras"
         subtitle="Visão geral e KPIs do módulo de compras"
-        badges={[
-          emAndamento.length > 0 && { label: `${emAndamento.length} em andamento`, color: '#f59e0b', primary: true },
-          agAprovacao.length > 0 && { label: `${agAprovacao.length} aguardando`, color: '#ef4444', primary: true },
-          leiloesAbertos.length > 0 && { label: `${leiloesAbertos.length} leilões`, color: '#8b5cf6' },
-        ].filter(Boolean)}
-        actions={[{ label: 'Atualizar', icon: ArrowPathIcon, onClick: load }]}
+        action={{ label: 'Atualizar', icon: ArrowPathIcon, onClick: load }}
       />
 
       {/* ── Faixa de Próxima Ação ── */}
