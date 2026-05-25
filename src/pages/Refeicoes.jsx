@@ -1580,8 +1580,8 @@ function SecaoDashboard({ sols, onNav }) {
                   <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em' }}>{k.val}</div>
                   {k.ref !== undefined && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                      <span style={{ fontSize: 13, color: TEXT2 }}>🍽️ <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong></span>
-                      <span style={{ fontSize: 13, color: TEXT2 }}>☕ <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong></span>
+                      <span style={{ fontSize: 13, color: TEXT2 }}>🍽️ <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Refeições</span></span>
+                      <span style={{ fontSize: 13, color: TEXT2 }}>☕ <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Cafés</span></span>
                     </div>
                   )}
                 </div>
