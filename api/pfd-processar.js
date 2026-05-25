@@ -104,7 +104,7 @@ function identificarPaginasManutencao(paginas, topN = 15) {
 // ── Extrai intervalos do bloco completo de manutenção (texto concatenado → Groq) ──
 async function extrairIntervalosDoBloco(groq, textoBloco, modelo) {
   const res = await groqWithRetry(groq, {
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama-3.1-8b-instant',
     messages: [
       {
         role: 'system',
