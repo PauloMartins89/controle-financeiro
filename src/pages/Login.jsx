@@ -51,19 +51,6 @@ export default function Login() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', overflow: 'hidden', background: '#fff', position: 'relative' }}>
 
-      {/* â”€â”€ Fundo: imagem desfocada â”€â”€ */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: 'url(/tela%20de%20login/sala%20ampla%20escritorio.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center right',
-        zIndex: 0,
-      }} />
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(105deg, rgba(5,14,40,0.90) 0%, rgba(5,14,40,0.72) 55%, rgba(5,14,40,0.52) 100%)',
-        zIndex: 1,
-      }} />
 
       {/* Logo topo-esquerdo */}
       <div className="login-left" style={{
@@ -74,8 +61,17 @@ export default function Login() {
         flexDirection: 'column',
         justifyContent: 'space-between',
         padding: '44px 52px',
+        backgroundImage: 'url(/tela%20de%20login/sala%20ampla%20escritorio.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'right center',
         zIndex: 2,
       }}>
+        {/* Overlay escuro */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(105deg, rgba(5,14,40,0.88) 0%, rgba(5,14,40,0.70) 60%, rgba(5,14,40,0.50) 100%)',
+          zIndex: 0, pointerEvents: 'none',
+        }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 38, height: 38, borderRadius: 10,
