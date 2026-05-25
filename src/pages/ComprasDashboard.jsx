@@ -84,6 +84,59 @@ export default function ComprasDashboard() {
     </div>
   )
 
+  // ── Próxima Ação Recomendada ──────────────────────────────────────────
+  const requisicaoNova   = data.filter(s => s.status === 'requisicao_nova')
+  const emCotacao        = data.filter(s => s.status === 'em_cotacao')
+  const leilaoEncerrado  = data.filter(s => s.status === 'leilao_encerrado')
+
+  const diasAtras = (isoDate) => Math.floor((now - new Date(isoDate)) / 86400000)
+
+  let proximaAcao = null
+  if (agAprovacao.length > 0) {
+    const maisParado = Math.max(...agAprovacao.map(s => diasAtras(s.created_at)))
+    proximaAcao = {
+      cor: '#ef4444', bg: 'rgba(239,68,68,0.10)', borda: 'rgba(239,68,68,0.30)',
+      emoji: '🔴',
+      msg: `${agAprovacao.length} pedido${agAprovacao.length > 1 ? 's' : ''} aguarda${agAprovacao.length === 1 ? '' : 'm'} aprovação${maisParado > 1 ? ` — o mais antigo há ${maisParado} dias` : ''}`,
+      acao: 'Aprovar agora', rota: '/compras/aprovar',
+    }
+  } else if (leilaoEncerrado.length > 0) {
+    proximaAcao = {
+      cor: '#f97316', bg: 'rgba(249,115,22,0.10)', borda: 'rgba(249,115,22,0.30)',
+      emoji: '⏰',
+      msg: `${leilaoEncerrado.length} leilão${leilaoEncerrado.length > 1 ? 'ões' : ''} encerrado${leilaoEncerrado.length > 1 ? 's' : ''} aguardando seleção do vencedor`,
+      acao: 'Selecionar vencedor', rota: '/compras/cotacoes',
+    }
+  } else if (leiloesAbertos.length > 0) {
+    proximaAcao = {
+      cor: '#8b5cf6', bg: 'rgba(139,92,246,0.10)', borda: 'rgba(139,92,246,0.30)',
+      emoji: '🏆',
+      msg: `${leiloesAbertos.length} leilão${leiloesAbertos.length > 1 ? 'ões' : ''} aberto${leiloesAbertos.length > 1 ? 's' : ''} — fornecedores podem enviar propostas`,
+      acao: 'Ver leilões', rota: '/compras/cotacoes',
+    }
+  } else if (requisicaoNova.length > 0) {
+    proximaAcao = {
+      cor: '#6366f1', bg: 'rgba(99,102,241,0.10)', borda: 'rgba(99,102,241,0.30)',
+      emoji: '💬',
+      msg: `${requisicaoNova.length} requisição${requisicaoNova.length > 1 ? 'ões' : ''} nova${requisicaoNova.length > 1 ? 's' : ''} aguardando início de cotação`,
+      acao: 'Iniciar cotação', rota: '/compras/pedidos',
+    }
+  } else if (emCotacao.length > 0) {
+    proximaAcao = {
+      cor: '#0ea5e9', bg: 'rgba(14,165,233,0.10)', borda: 'rgba(14,165,233,0.30)',
+      emoji: '📋',
+      msg: `${emCotacao.length} pedido${emCotacao.length > 1 ? 's' : ''} em montagem aguardando envio ao fornecedor`,
+      acao: 'Ver pedidos', rota: '/compras/pedidos',
+    }
+  } else {
+    proximaAcao = {
+      cor: '#10b981', bg: 'rgba(16,185,129,0.10)', borda: 'rgba(16,185,129,0.25)',
+      emoji: '✅',
+      msg: 'Pipeline sem pendências críticas' + (economiaMes > 0 ? ` — economia acumulada no mês: ${fmtCurrency(economiaMes)}` : ''),
+      acao: null, rota: null,
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <PageHeader
@@ -97,6 +150,43 @@ export default function ComprasDashboard() {
         ].filter(Boolean)}
         actions={[{ label: 'Atualizar', icon: ArrowPathIcon, onClick: load }]}
       />
+
+      {/* ── Faixa de Próxima Ação ── */}
+      {proximaAcao && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 28px',
+          background: proximaAcao.bg,
+          borderBottom: `1px solid ${proximaAcao.borda}`,
+          gap: 12, flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 15 }}>{proximaAcao.emoji}</span>
+            <span style={{ fontSize: 13, color: proximaAcao.cor, fontWeight: 600 }}>
+              Próxima ação:
+            </span>
+            <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+              {proximaAcao.msg}
+            </span>
+          </div>
+          {proximaAcao.acao && (
+            <button
+              onClick={() => navigate(proximaAcao.rota)}
+              style={{
+                padding: '6px 16px', borderRadius: 8, border: `1px solid ${proximaAcao.borda}`,
+                background: proximaAcao.bg, color: proximaAcao.cor,
+                fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={e => e.target.style.opacity = '0.75'}
+              onMouseLeave={e => e.target.style.opacity = '1'}
+            >
+              {proximaAcao.acao} →
+            </button>
+          )}
+        </div>
+      )}
+
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* KPI Cards */}

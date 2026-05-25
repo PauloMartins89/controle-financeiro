@@ -1438,7 +1438,31 @@ function SecaoDashboard({ sols, onNav }) {
     if (reprov7.length) alertas.push({ type: 'danger', icon: '❌', title: `${reprov7.length} pedido${reprov7.length > 1 ? 's' : ''} reprovado${reprov7.length > 1 ? 's' : ''} nos últimos 7 dias`, desc: 'Verifique os motivos de reprovação no histórico', action: null })
     if (divergencias.length) alertas.push({ type: 'warn', icon: '⚠️', title: `${divergencias.length} divergência${divergencias.length > 1 ? 's' : ''} pendente${divergencias.length > 1 ? 's' : ''}`, desc: 'Pedidos com ocorrências aguardando validação', action: null })
 
-    return { kpis, chartLabels: last7, chartRef7, chartCaf7, chartCDC, cdcLabel, donut, rankingEq, rankingRest, painelHoje, alertas, pendentesCount: pendentes.length, hoje }
+    // ── Próxima Ação Recomendada ──────────────────────────────────────────
+    let proximaAcao = null
+    if (pendLongos.length > 0) {
+      proximaAcao = { cor: '#ef4444', bg: 'rgba(239,68,68,0.10)', borda: 'rgba(239,68,68,0.30)',
+        emoji: '🔴', msg: `${pendLongos.length} solicitação(ões) aguardando aprovação há mais de 2h`,
+        acao: 'Aprovar agora', navKey: 'aprovacoes' }
+    } else if (pendentes.length > 0) {
+      proximaAcao = { cor: '#f59e0b', bg: 'rgba(245,158,11,0.10)', borda: 'rgba(245,158,11,0.30)',
+        emoji: '⏳', msg: `${pendentes.length} solicitação(ões) aguardando aprovação`,
+        acao: 'Ver aprovações', navKey: 'aprovacoes' }
+    } else if (divergencias.length > 0) {
+      proximaAcao = { cor: '#f97316', bg: 'rgba(249,115,22,0.10)', borda: 'rgba(249,115,22,0.30)',
+        emoji: '⚠️', msg: `${divergencias.length} divergência(s) pendente(s) de validação`,
+        acao: 'Resolver', navKey: 'historico' }
+    } else if (aguardEnt.length > 0) {
+      proximaAcao = { cor: '#8b5cf6', bg: 'rgba(139,92,246,0.10)', borda: 'rgba(139,92,246,0.30)',
+        emoji: '🚚', msg: `${aguardEnt.length} pedido(s) aprovado(s) aguardando entrega do restaurante`,
+        acao: 'Monitorar', navKey: null }
+    } else {
+      proximaAcao = { cor: '#10b981', bg: 'rgba(16,185,129,0.10)', borda: 'rgba(16,185,129,0.25)',
+        emoji: '✅', msg: 'Sem pendências críticas no momento' + (valorMes > 0 ? ` — custo acumulado no mês: ${fmtBRL(valorMes)}` : ''),
+        acao: null, navKey: null }
+    }
+
+    return { kpis, chartLabels: last7, chartRef7, chartCaf7, chartCDC, cdcLabel, donut, rankingEq, rankingRest, painelHoje, alertas, pendentesCount: pendentes.length, hoje, proximaAcao }
   }, [sols, dateFilter])
 
   const COLORS  = ['#4F6EF7', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4', '#F97316', '#14B8A6']
@@ -1480,6 +1504,30 @@ function SecaoDashboard({ sols, onNav }) {
           )}
         </div>
       </div>
+
+      {/* ── Faixa de Próxima Ação ── */}
+      {dash.proximaAcao && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 28px', background: dash.proximaAcao.bg,
+          borderBottom: `1px solid ${dash.proximaAcao.borda}`, gap: 12, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 15 }}>{dash.proximaAcao.emoji}</span>
+            <span style={{ fontSize: 13, color: dash.proximaAcao.cor, fontWeight: 600 }}>Próxima ação:</span>
+            <span style={{ fontSize: 13, color: TEXT }}>{dash.proximaAcao.msg}</span>
+          </div>
+          {dash.proximaAcao.acao && dash.proximaAcao.navKey && (
+            <button
+              onClick={() => onNav('operacoes', dash.proximaAcao.navKey)}
+              style={{ padding: '6px 16px', borderRadius: 8, border: `1px solid ${dash.proximaAcao.borda}`,
+                background: dash.proximaAcao.bg, color: dash.proximaAcao.cor,
+                fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+              onMouseEnter={e => e.target.style.opacity = '0.75'}
+              onMouseLeave={e => e.target.style.opacity = '1'}>
+              {dash.proximaAcao.acao} →
+            </button>
+          )}
+        </div>
+      )}
 
       <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 22 }}>
 
@@ -1897,11 +1945,9 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
     'todos',
     'aguardando_aprovacao',
     'aprovado',
-    'consolidado',
     'enviado_restaurante',
     'confirmado_restaurante',
     'entregue',
-    'aguardando_validacao',
     'finalizado',
     'finalizado_com_ocorrencia',
     'reprovado',
