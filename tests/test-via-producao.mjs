@@ -25,7 +25,7 @@ try {
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || ''
-const API_URL      = process.env.VERCEL_URL || 'https://controle-financeiro.vercel.app/api/pfd-processar'
+const API_URL      = process.env.VERCEL_URL || 'https://controle-financeiro-taupe-alpha.vercel.app/api/pfd-processar'
 
 if (!SUPABASE_URL || !SUPABASE_KEY) { console.error('Defina SUPABASE_URL/SUPABASE_SERVICE_KEY no .env'); process.exit(1) }
 
