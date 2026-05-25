@@ -234,12 +234,12 @@ async function openaiWithRetry(client, params, maxAttempts = 4) {
   throw lastErr
 }
 
-async function pdfParaTexto(pdfBuffer, maxPaginas = 80) {
+// Extrai texto de TODAS as páginas do PDF (sem limite), retornando número físico + texto
+async function pdfParaTexto(pdfBuffer) {
   const paginas = []
   let paginaAtual = 0
   async function renderPage(pageData) {
     paginaAtual++
-    if (paginaAtual > maxPaginas) return ''
     const textContent = await pageData.getTextContent()
     const texto = textContent.items.map(item => item.str || '').join(' ').replace(/\s+/g, ' ').trim()
     if (texto.length > 10) paginas.push({ pagina: paginaAtual, texto })
@@ -249,29 +249,63 @@ async function pdfParaTexto(pdfBuffer, maxPaginas = 80) {
   return paginas
 }
 
-function identificarPaginasManutencao(paginas, topN = 15, minScore = 3) {
-  const HIGH = [
-    '10 h', '50 h', '100 h', '125 h', '200 h', '250 h', '400 h', '500 h',
-    '750 h', '1000 h', '1500 h', '2000 h', '6000 h',
-    '10h', '50h', '100h', '125h', '200h', '250h', '400h', '500h',
-    '750h', '1000h', '1500h', '2000h', '6000h',
-    'amaciamento', 'primeiras 600', 'diariamente', 'semanalmente', 'mensalmente', 'anualmente',
+// ── MOTOR DE BUSCA DA SEÇÃO DE MANUTENÇÃO ──────────────────────────────────
+
+// 1. Detecta o sumário/índice e extrai as referências de página internas (ex: "207-1")
+function detectarSumario(paginas) {
+  const TITULOS = [
+    /tabela\s+de\s+intervalos\s+de\s+servi[çc]o/i,
+    /manuten[çc][ãa]o\s*[—–\-]\s*a\s+cada\s+\d/i,
+    /manuten[çc][ãa]o\s*[—–\-]\s*(diariamente|semanalmente|anualmente)/i,
+    /maintenance\s+(interval|schedule)/i,
+    /service\s+interval/i,
   ]
-  const MID = [
-    'intervalo de manutenção', 'serviço periódico', 'manutenção periódica',
-    'lubrificação', 'troca de óleo', 'verificar nível', 'drenar',
-    'filtro de óleo', 'óleo do motor', 'fluido hidráulico', 'graxa',
-    'lubrificar', 'substituir filtro', 'apertar parafuso', 'verificar folga',
-    'arrefecimento', 'diferencial', 'embreagem', 'bico injetor',
-    'correia', 'rolamento', 'pivo', 'cubo de roda',
-  ]
-  const scored = paginas.map(p => {
-    const lower = p.texto.toLowerCase()
-    const highScore = HIGH.filter(kw => lower.includes(kw.toLowerCase())).length * 3
-    const midScore = MID.filter(kw => lower.includes(kw.toLowerCase())).length
-    return { ...p, score: highScore + midScore }
-  }).filter(p => p.score >= minScore)
-  return scored.sort((a, b) => b.score - a.score).slice(0, topN).sort((a, b) => a.pagina - b.pagina)
+  for (const p of paginas) {
+    const hits = TITULOS.filter(pat => pat.test(p.texto)).length
+    if (hits >= 2) {
+      const refs = [...p.texto.matchAll(/\b(\d{3}-\d{1,3})\b/g)].map(m => m[1])
+      if (refs.length >= 3) {
+        return { paginaToc: p.pagina, refs: [...new Set(refs)] }
+      }
+    }
+  }
+  return null
+}
+
+// 2. Localiza as páginas físicas que contêm a seção de manutenção
+//    Estratégia 1: usa refs do sumário (ex: "207-1" no rodapé/cabeçalho da página)
+//    Estratégia 2: busca por texto real se sumário não encontrado
+function localizarSecaoManutencao(paginas, sumario) {
+  let candidatas = []
+
+  if (sumario?.refs?.length > 0) {
+    for (const p of paginas) {
+      if (sumario.refs.some(ref => p.texto.includes(ref))) {
+        candidatas.push(p)
+      }
+    }
+  }
+
+  if (candidatas.length < 3) {
+    candidatas = paginas.filter(p =>
+      /manuten[çc][ãa]o\s*[—–\-]\s*(a\s+cada|diariamente|semanalmente)/i.test(p.texto) ||
+      /tabela\s+de\s+intervalos\s+de\s+servi[çc]o/i.test(p.texto) ||
+      /intervalos\s+de\s+servi[çc]o/i.test(p.texto) ||
+      /service\s+interval\s+chart/i.test(p.texto)
+    )
+  }
+
+  return candidatas
+}
+
+// 3. Extrai o bloco contínuo: do mínimo ao máximo das páginas localizadas
+//    Inclui todas as páginas intermediárias (garante 400h/750h não sejam perdidas)
+function extrairBlocoManutencao(todasPaginas, paginasLocalizadas) {
+  if (paginasLocalizadas.length === 0) return []
+  const nums = paginasLocalizadas.map(p => p.pagina)
+  const min = Math.max(1, Math.min(...nums) - 1)
+  const max = Math.min(todasPaginas[todasPaginas.length - 1]?.pagina || 9999, Math.max(...nums) + 1)
+  return todasPaginas.filter(p => p.pagina >= min && p.pagina <= max)
 }
 
 async function extrairComOpenAI(openai, textoBloco, modelo) {
@@ -418,7 +452,7 @@ function legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, edicao,
 // ══════════════════════════════════════════════════════════════════════════════
 
 // Intervalos que, se encontrados no PDF, NÃO podem vir vazios
-const INTERVALOS_CRITICOS = [10, 50, 500, 750, 1500, 2000]
+const INTERVALOS_CRITICOS = [10, 50, 125, 200, 250, 500, 750, 1500, 2000, 6000]
 
 function validarExtracao(resultado) {
   const alertas = resultado.alertas ? [...resultado.alertas] : []
@@ -563,14 +597,18 @@ export default async function handler(req, res) {
       // ── PATH: OpenAI (explicitamente configurado via AI_PROVIDER=openai) ──
       L('provider=openai → extraindo texto com pdf-parse...')
       const openai = new OpenAI({ apiKey: openaiApiKey })
-      const paginas = await pdfParaTexto(pdfBuffer, 80)
+      const paginas = await pdfParaTexto(pdfBuffer)
       L(`pdf-parse: ${paginas.length} páginas com texto`)
       if (paginas.length === 0) throw new Error('Nenhum texto extraído do PDF (pdf-parse)')
 
-      let paginasFiltradas = identificarPaginasManutencao(paginas, 15, 3)
-      if (paginasFiltradas.length === 0) paginasFiltradas = identificarPaginasManutencao(paginas, 15, 1)
-      if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 15)
-      L(`páginas filtradas para OpenAI: ${paginasFiltradas.map(p => p.pagina).join(', ')}`)
+      const sumario = detectarSumario(paginas)
+      if (sumario) L(`sumário: pág ${sumario.paginaToc}, ${sumario.refs.length} refs (${sumario.refs.slice(0, 5).join(', ')}...)`)
+      else L('sumário não detectado — usando busca por texto')
+      const candidatas = localizarSecaoManutencao(paginas, sumario)
+      L(`seção localizada: ${candidatas.length} páginas candidatas`)
+      let paginasFiltradas = extrairBlocoManutencao(paginas, candidatas)
+      if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 20)
+      L(`bloco manutenção: ${paginasFiltradas.length} págs [${paginasFiltradas.map(p => p.pagina).join(', ')}]`)
       paginasUsadas = paginasFiltradas.map(p => p.pagina)
 
       const extracaoRaw = await extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L)
@@ -588,11 +626,16 @@ export default async function handler(req, res) {
         L('Tentando fallback OpenAI + pdf-parse...')
 
         const openai = new OpenAI({ apiKey: openaiApiKey })
-        const paginas = await pdfParaTexto(pdfBuffer, 80)
-        let paginasFiltradas = identificarPaginasManutencao(paginas, 15, 3)
-        if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 15)
+        const paginas = await pdfParaTexto(pdfBuffer)
+        const sumario = detectarSumario(paginas)
+        if (sumario) L(`sumário: pág ${sumario.paginaToc}, ${sumario.refs.length} refs`)
+        else L('sumário não detectado — usando busca por texto')
+        const candidatas = localizarSecaoManutencao(paginas, sumario)
+        L(`seção localizada: ${candidatas.length} páginas candidatas`)
+        let paginasFiltradas = extrairBlocoManutencao(paginas, candidatas)
+        if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 20)
         paginasUsadas = paginasFiltradas.map(p => p.pagina)
-        L(`fallback: ${paginasFiltradas.length} páginas → OpenAI`)
+        L(`fallback: ${paginasFiltradas.length} págs bloco manutenção → OpenAI`)
 
         const extracaoRaw = await extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L)
         L(`fallback OpenAI: ${extracaoRaw.intervalos?.length || 0} intervalos`)
