@@ -42,12 +42,9 @@ async function groqWithRetry(groq, params, maxAttempts = 3) {
   throw lastErr
 }
 
-// ── Baixa PDF e converte para array de páginas base64 ──────────────────────
-// Usa canvas nativo do Node.js via pdfjs-dist
-// Extrai texto de cada página do PDF via pdfjs-dist (sem canvas, sem addon nativo)
+// ── Extrai texto de cada página do PDF via pdfjs-dist (sem canvas, sem addon nativo) ──
 async function pdfParaTexto(pdfBuffer, maxPaginas = 30) {
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs').catch(() => null)
-  if (!pdfjsLib) throw new Error('pdfjs-dist não instalado. Execute: npm install pdfjs-dist')
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 
@@ -250,24 +247,32 @@ export default async function handler(req, res) {
     }
 
     // ── Extrai texto de cada página do PDF (sem canvas) ────────────────────
+    console.log('[pfd-processar] extraindo texto do PDF...')
     const paginas = await pdfParaTexto(pdfBuffer, 40)
+    console.log(`[pfd-processar] ${paginas.length} páginas com texto extraídas`)
 
     if (paginas.length === 0) throw new Error('Não foi possível extrair texto do PDF')
 
     // ── Identifica páginas de manutenção por palavras-chave ───────────────
     const paginasManutencao = identificarPaginasManutencao(paginas)
+    console.log(`[pfd-processar] ${paginasManutencao.length} páginas de manutenção identificadas por keyword`)
 
     // Se não encontrou por keyword, processa todas até 20
     const paginasParaProcessar = paginasManutencao.length > 0
       ? paginasManutencao
       : paginas.slice(0, 20)
 
-    // ── Extrai intervalos de cada página via Groq LLM (texto) ─────────────
-    const modelo = publicacao?.modelo || req.body?.modelo || 'John Deere'
-    const extracoesPromises = paginasParaProcessar.map(p =>
-      extrairIntervalosDaPagina(groq, p.texto, modelo)
-    )
-    const extracoes = await Promise.all(extracoesPromises)
+    // ── Extrai intervalos de cada página via Groq LLM (lotes de 5 — evita rate-limit) ──
+    const modeloEquip = publicacao?.modelo || req.body?.modelo || 'John Deere'
+    console.log(`[pfd-processar] processando ${paginasParaProcessar.length} páginas via Groq (lotes de 5)...`)
+    const extracoes = []
+    const LOTE = 5
+    for (let i = 0; i < paginasParaProcessar.length; i += LOTE) {
+      const lote = paginasParaProcessar.slice(i, i + LOTE)
+      const resultados = await Promise.all(lote.map(p => extrairIntervalosDaPagina(groq, p.texto, modeloEquip)))
+      extracoes.push(...resultados)
+      console.log(`[pfd-processar] lote ${Math.floor(i / LOTE) + 1} concluído (${Math.min(i + LOTE, paginasParaProcessar.length)}/${paginasParaProcessar.length})`)
+    }
 
     // ── Mescla todos os intervalos ────────────────────────────────────────
     const intervalos = mesclarIntervalos(extracoes)
@@ -304,6 +309,7 @@ export default async function handler(req, res) {
       }).eq('id', publicacao_id)
     }
 
+    console.log(`[pfd-processar] ✅ concluído: ${totalIntervalos} intervalos, ${totalTarefas} tarefas`)
     return res.json({
       ok: true,
       plano_id: planoSalvo.id,
@@ -314,7 +320,8 @@ export default async function handler(req, res) {
     })
 
   } catch (err) {
-    console.error('[pfd-processar]', err)
+    console.error('[pfd-processar] ERRO:', err.message)
+    console.error('[pfd-processar] stack:', err.stack)
 
     // Atualiza publicação → erro
     if (publicacao_id) {
@@ -325,6 +332,6 @@ export default async function handler(req, res) {
       }).eq('id', publicacao_id)
     }
 
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: err.message, stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined })
   }
 }
