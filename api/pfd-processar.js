@@ -15,6 +15,9 @@
 
 import { createClient } from '@supabase/supabase-js'
 import Groq from 'groq-sdk'
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
+const pdfParse = require('pdf-parse')
 
 const supabaseUrl        = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
@@ -42,46 +45,21 @@ async function groqWithRetry(groq, params, maxAttempts = 3) {
   throw lastErr
 }
 
-// ── Polyfill DOMMatrix (pdfjs-dist v5 requer, Node.js serverless não tem) ──────
-if (typeof globalThis.DOMMatrix === 'undefined') {
-  globalThis.DOMMatrix = class DOMMatrix {
-    constructor() {
-      this.a=1; this.b=0; this.c=0; this.d=1; this.e=0; this.f=0
-      this.m11=1; this.m12=0; this.m13=0; this.m14=0
-      this.m21=0; this.m22=1; this.m23=0; this.m24=0
-      this.m31=0; this.m32=0; this.m33=1; this.m34=0
-      this.m41=0; this.m42=0; this.m43=0; this.m44=1
-      this.is2D=true; this.isIdentity=true
-    }
-    static fromMatrix() { return new globalThis.DOMMatrix() }
-    static fromFloat32Array() { return new globalThis.DOMMatrix() }
-    static fromFloat64Array() { return new globalThis.DOMMatrix() }
-    multiply() { return new globalThis.DOMMatrix() }
-    translate(tx=0, ty=0) { const m = new globalThis.DOMMatrix(); m.e=tx; m.f=ty; return m }
-    scale(sx=1, sy=sx) { const m = new globalThis.DOMMatrix(); m.a=sx; m.d=sy; return m }
-    inverse() { return new globalThis.DOMMatrix() }
-    transformPoint(p={}) { return { x: p.x||0, y: p.y||0, z: 0, w: 1 } }
-  }
-}
-
-// ── Extrai texto de cada página do PDF via pdfjs-dist (sem canvas, sem addon nativo) ──
-async function pdfParaTexto(pdfBuffer, maxPaginas = 30) {
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs')
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-
-  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) })
-  const pdfDoc = await loadingTask.promise
-  const numPages = Math.min(pdfDoc.numPages, maxPaginas)
-
+// ── Extrai texto por página via pdf-parse (Node.js nativo, sem worker/DOM) ─────
+async function pdfParaTexto(pdfBuffer, maxPaginas = 40) {
   const paginas = []
-  for (let i = 1; i <= numPages; i++) {
-    const page = await pdfDoc.getPage(i)
-    const content = await page.getTextContent()
-    const texto = content.items.map(item => item.str || '').join(' ').replace(/\s+/g, ' ').trim()
-    if (texto.length > 10) paginas.push({ pagina: i, texto })
+  let paginaAtual = 0
+
+  async function renderPage(pageData) {
+    paginaAtual++
+    if (paginaAtual > maxPaginas) return ''
+    const textContent = await pageData.getTextContent()
+    const texto = textContent.items.map(item => item.str || '').join(' ').replace(/\s+/g, ' ').trim()
+    if (texto.length > 10) paginas.push({ pagina: paginaAtual, texto })
+    return texto
   }
 
+  await pdfParse(pdfBuffer, { pagerender: renderPage })
   return paginas
 }
 
