@@ -7,20 +7,21 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { fileURLToPath } from 'url'
 import fs from 'fs'
 
-// Lê .env manualmente (sem dependência de dotenv)
-function loadEnv() {
-  try {
-    const envPath = new URL('../.env', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1')
-    const lines = fs.readFileSync(envPath, 'utf8').split('\n')
-    for (const line of lines) {
-      const m = line.match(/^([A-Z_]+)=(.*)$/)
-      if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^['"](.*)['"]$/, '$1')
+// Lê .env diretamente (sem dotenv)
+try {
+  const envContent = fs.readFileSync(fileURLToPath(new URL('../.env', import.meta.url)), 'utf8')
+  for (const line of envContent.split(/\r?\n/)) {
+    const eqIdx = line.indexOf('=')
+    if (eqIdx > 0 && !line.startsWith('#')) {
+      const key = line.slice(0, eqIdx).trim()
+      const val = line.slice(eqIdx + 1).trim()
+      if (key && !process.env[key]) process.env[key] = val
     }
-  } catch (_) {}
-}
-loadEnv()
+  }
+} catch (_) {}
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || ''
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY || ''

@@ -60,7 +60,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/ar/:token", "destination": "/aprovar.html?token=:token" },
     { "source": "/rc/:token", "destination": "/confirmar-restaurante.html?token=:token" },
     { "source": "/vr/:token", "destination": "/validar-entrega.html?token=:token" },
