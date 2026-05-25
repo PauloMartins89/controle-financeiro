@@ -1323,8 +1323,9 @@ function SecaoDashboard({ sols, onNav }) {
       const d = new Date(now); d.setDate(d.getDate() - (6 - i)); return d.toISOString().slice(0, 10)
     })
 
-    const ativos      = sols.filter(s => s.status !== 'rascunho' && s.status !== 'reprovado')
-    const reprovados  = sols.filter(s => s.status === 'reprovado')
+    const solsBase    = dateFilter ? sols.filter(s => s.data_refeicao === hoje) : sols
+    const ativos      = solsBase.filter(s => s.status !== 'rascunho' && s.status !== 'reprovado')
+    const reprovados  = solsBase.filter(s => s.status === 'reprovado')
     const pendentes   = ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status))
     const aprovSts    = ativos.filter(s => s.status === 'aprovado')
     const emPreparo   = ativos.filter(s => ['confirmado_restaurante', 'enviado_restaurante', 'em_acompanhamento'].includes(s.status))
