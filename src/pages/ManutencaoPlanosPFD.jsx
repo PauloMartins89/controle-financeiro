@@ -40,8 +40,8 @@ const ABAS = [
 // ═══════════════════════════════════════════════════════════════════════════
 export default function ManutencaoPlanosPFD() {
   const navigate = useNavigate()
-  const { workspace, iconColors: ic } = useStore()
-  const wsId = workspace?.id
+  const { iconColors: ic } = useStore()
+  const wsId = useStore(s => s.workspaceId)
   const accent = ic?.accent || '#3b82f6'
   const surface = ic?.surface || '#fff'
   const border  = ic?.border  || '#e5e7eb'
