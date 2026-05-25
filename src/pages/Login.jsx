@@ -72,19 +72,8 @@ export default function Login() {
           background: 'linear-gradient(105deg, rgba(5,14,40,0.88) 0%, rgba(5,14,40,0.70) 60%, rgba(5,14,40,0.50) 100%)',
           zIndex: 0, pointerEvents: 'none',
         }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative', zIndex: 1 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: 'linear-gradient(135deg, #10b981 0%, #0ea5e9 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
-              <rect x="3" y="12" width="4" height="9" rx="1" fill="white" fillOpacity="0.9"/>
-              <rect x="10" y="7" width="4" height="14" rx="1" fill="white"/>
-              <rect x="17" y="3" width="4" height="18" rx="1" fill="white" fillOpacity="0.7"/>
-            </svg>
-          </div>
-          <span style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: -0.3 }}>SmartPro</span>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <img src="/tela%20de%20login/logo_smartpro.png" alt="SmartPro" style={{ height: 48, width: 'auto' }} />
         </div>
 
         {/* Headline + features */}
