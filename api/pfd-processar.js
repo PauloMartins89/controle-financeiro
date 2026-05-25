@@ -12,8 +12,12 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleAIFileManager } from '@google/generative-ai/server'
 import OpenAI from 'openai'
 import { createRequire } from 'module'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
 const require = createRequire(import.meta.url)
 // Usa lib interno do pdf-parse para evitar bug de leitura de arquivo de teste
 const pdfParse = require('pdf-parse/lib/pdf-parse.js')
@@ -50,8 +54,8 @@ SCHEMA COMPACTO — OMITA CAMPOS COM VALOR VAZIO (""), false, null OU []:
       "h": 50,
       "n": "Semanalmente ou a cada 50 horas de operação",
       "tv": [
-        {"s": "Motor", "d": "Verificar nível de óleo do motor", "tp": "verificacao", "l": "JD Plus-50 II", "cap": "10,2 L"},
-        {"s": "Geral", "d": "Limpar grade frontal e radiador", "tp": "limpeza", "cn": true, "ap": "Se equipado com ar condicionado"}
+        {"s": "Motor", "cmp": "Cárter", "a": "Verificar nível de óleo do motor", "tp": "verificacao", "ins": "JD Plus-50 II", "qty": "10,2 L", "pg": 120, "raw": "Verificar o nível do óleo do motor."},
+        {"s": "Geral", "a": "Limpar grade frontal e radiador", "tp": "limpeza", "cn": true, "ap": "Se equipado com ar condicionado", "pg": 121}
       ]
     }
   ]
@@ -66,10 +70,13 @@ MAPEAMENTO DE CAMPOS:
   • st = status — OMITA se ok; use "falha" se intervalo encontrado mas tarefas não identificáveis; "nao_enc" se não consta no manual
   • tv = tarefas (array)
     • s   = sistema: Motor | Transmissão | Hidráulico | Eixo Dianteiro | Freios | Cabine | Combustível | Geral | outro
-    • d   = descrição completa da tarefa (texto exato do manual)
+    • cmp = componente específico (ex: "Cárter", "Filtro de ar", "Radiador") — OMITA se não identificável
+    • a   = atividade: descrição completa da tarefa (texto fiel ao manual)
     • tp  = tipo: verificacao | troca | lubrificacao | limpeza | ajuste | inspecao | substituicao | outro
-    • l   = lubrificante/fluido (ex: "JD Plus-50 II", "Hy-Gard") — OMITA se não há
-    • cap = capacidade com unidade (ex: "10,2 L") — OMITA se não há
+    • ins = insumo/peça: lubrificante, fluido ou peça (ex: "JD Plus-50 II", "Hy-Gard", "Filtro RE504836") — OMITA se não há
+    • qty = quantidade com unidade (ex: "10,2 L", "500 g") — OMITA se não há
+    • pg  = página do manual onde está a tarefa (número inteiro) — OMITA se não souber
+    • raw = texto exato copiado do manual para esta tarefa — OMITA se igual a "a"
     • cn  = true se tarefa tem condição ("se equipado", "somente", "quando", "tratores com") — OMITA se não condicional
     • ap  = texto exato da condição — OMITA se não condicional
     • ob  = observação adicional — OMITA se não há
@@ -100,17 +107,23 @@ function expandGeminiCompact(compact) {
       titulo_intervalo: iv.n || `A cada ${iv.h} horas`,
       periodicidade:    iv.u || 'recorrente',
       tarefas: (iv.tv || []).map(t => ({
-        sistema:           t.s   || '',
-        descricao_tarefa:  t.d   || '',
-        tipo:              t.tp  || 'outro',
-        lubrificante_fluido: t.l || '',
-        capacidade:        t.cap || '',
-        pecas_citadas:     [],
-        condicional:       t.cn  || false,
-        aplicabilidade:    t.ap  || '',
-        observacao:        t.ob  || '',
-        pagina_fonte:      null,
-        confianca:         t.cf  || 'alta',
+        sistema:             t.s   || '',
+        componente:          t.cmp || '',
+        atividade:           t.a   || t.d || '',   // a=novo, d=retrocompat
+        descricao_tarefa:    t.a   || t.d || '',   // alias
+        tipo_atividade:      t.tp  || 'outro',
+        tipo:                t.tp  || 'outro',     // alias
+        insumo_ou_peca:      t.ins || t.l  || '',  // ins=novo, l=retrocompat
+        lubrificante_fluido: t.ins || t.l  || '',  // alias
+        quantidade:          t.qty || t.cap || '', // qty=novo, cap=retrocompat
+        capacidade:          t.qty || t.cap || '', // alias
+        pagina_fonte:        t.pg  ?? null,
+        texto_original:      t.raw || '',
+        pecas_citadas:       [],
+        condicional:         t.cn  || false,
+        aplicabilidade:      t.ap  || '',
+        observacao:          t.ob  || '',
+        confianca:           t.cf  || 'alta',
       })),
       status_extracao:
         iv.st === 'falha'   ? 'falha_extracao' :
@@ -126,29 +139,59 @@ async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
   const mbSize = (pdfBuffer.length / 1024 / 1024).toFixed(2)
   L(`Gemini: PDF ${mbSize} MB`)
 
-  if (pdfBuffer.length > GEMINI_INLINE_LIMIT) {
-    throw new Error(`PDF muito grande para Gemini inline (${mbSize} MB > 18 MB). Configure AI_PROVIDER=openai ou comprima o PDF.`)
-  }
-
   const genAI = new GoogleGenerativeAI(geminiApiKey)
   const model = genAI.getGenerativeModel({
     model: 'gemini-1.5-flash',
     generationConfig: {
       responseMimeType: 'application/json',
-      maxOutputTokens: 65536,
-      temperature: 0.1,
+      maxOutputTokens: 8192,
+      temperature: 0,
     },
   })
 
   const prompt = buildGeminiPrompt(modelo, fabricante)
-  const pdfPart = {
-    inlineData: {
-      mimeType: 'application/pdf',
-      data: pdfBuffer.toString('base64'),
-    },
+  let pdfPart
+
+  if (pdfBuffer.length <= GEMINI_INLINE_LIMIT) {
+    // PDF pequeno: envia inline (mais rápido, sem upload)
+    L('Modo: inline data')
+    pdfPart = { inlineData: { mimeType: 'application/pdf', data: pdfBuffer.toString('base64') } }
+  } else {
+    // PDF grande: usa Gemini File API (suporta até 2 GB)
+    L(`PDF ${mbSize} MB > 18 MB — usando Gemini File API`)
+    const fileManager = new GoogleAIFileManager(geminiApiKey)
+    const tmpPath = path.join(os.tmpdir(), `pfd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.pdf`)
+    fs.writeFileSync(tmpPath, pdfBuffer)
+    L(`Arquivo temporário: ${tmpPath}`)
+    try {
+      L('Enviando ao Gemini File API...')
+      const upload = await fileManager.uploadFile(tmpPath, {
+        mimeType: 'application/pdf',
+        displayName: `${fabricante || 'JD'}_${modelo || ''}.pdf`,
+      })
+      L(`Upload concluído: ${upload.file.uri}`)
+
+      // Aguarda o arquivo ficar ACTIVE (normalmente imediato)
+      let file = upload.file
+      let retries = 0
+      while (file.state === 'PROCESSING' && retries < 12) {
+        await new Promise(r => setTimeout(r, 5000))
+        file = await fileManager.getFile(file.name)
+        retries++
+        L(`File API estado: ${file.state} (${retries}/12)`)
+      }
+      if (file.state !== 'ACTIVE') {
+        throw new Error(`Gemini File API: estado inesperado ${file.state}`)
+      }
+
+      pdfPart = { fileData: { mimeType: 'application/pdf', fileUri: file.uri } }
+    } finally {
+      // Remove sempre o arquivo temporário
+      try { fs.unlinkSync(tmpPath) } catch (_) {}
+    }
   }
 
-  L('Enviando PDF ao Gemini 1.5 Flash...')
+  L('Enviando PDF + prompt ao Gemini 1.5 Flash...')
   const result = await model.generateContent([pdfPart, { text: prompt }])
 
   // Loga uso de tokens para diagnóstico

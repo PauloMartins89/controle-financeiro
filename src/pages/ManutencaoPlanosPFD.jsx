@@ -608,15 +608,18 @@ function normIv(iv) {
 
 function normTarefa(t) {
   return {
-    sistema:      t.sistema || '',
-    tarefa:       t.descricao_tarefa || t.tarefa || '',
-    lubrificante: t.lubrificante_fluido || t.codigo_lubrificante || '',
-    capacidade:   t.capacidade ? `${t.capacidade}${t.unidade ? ' ' + t.unidade : ''}` : '',
-    condicional:  t.condicional || false,
+    sistema:        t.sistema || '',
+    componente:     t.componente || '',
+    tarefa:         t.atividade || t.descricao_tarefa || t.tarefa || '',
+    tipo:           t.tipo_atividade || t.tipo || '',
+    insumo:         t.insumo_ou_peca || t.lubrificante_fluido || t.codigo_lubrificante || '',
+    quantidade:     t.quantidade || (t.capacidade ? `${t.capacidade}${t.unidade ? ' ' + t.unidade : ''}` : ''),
+    pagina_fonte:   t.pagina_fonte ?? null,
+    texto_original: t.texto_original || '',
+    condicional:    t.condicional || false,
     aplicabilidade: t.aplicabilidade || '',
-    observacao:   t.observacao || '',
-    tipo:         t.tipo || '',
-    confianca:    t.confianca || '',
+    observacao:     t.observacao || '',
+    confianca:      t.confianca || '',
   }
 }
 
@@ -799,17 +802,18 @@ function IntervaloDetalhe({ iv, surface, border }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['Sistema', 'Tarefa', 'Lubrificante / Fluido', 'Capacidade'].map(h => (
-                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12, borderBottom: `1px solid ${border}` }}>{h}</th>
+                {['Sistema', 'Componente', 'Atividade', 'Insumo / Peça', 'Qtd'].map(h => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {tarefas.map((t, i) => (
                 <tr key={i} style={{ borderBottom: `1px solid ${border}`, background: t.condicional ? '#fffbeb' : 'transparent' }}>
-                  <td style={{ padding: '10px 16px' }}>
+                  <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
                     <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 6, background: `${cor}18`, color: cor, fontSize: 11, fontWeight: 700 }}>{t.sistema || '—'}</span>
                   </td>
+                  <td style={{ padding: '10px 16px', color: '#475569', fontSize: 12, whiteSpace: 'nowrap' }}>{t.componente || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <div style={{ color: '#1e293b' }}>
                       {t.tarefa || '—'}
@@ -823,9 +827,12 @@ function IntervaloDetalhe({ iv, surface, border }) {
                     {t.observacao && (
                       <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{t.observacao}</div>
                     )}
+                    {t.texto_original && t.texto_original !== t.tarefa && (
+                      <div style={{ fontSize: 10, color: '#b0b8c1', marginTop: 2, fontStyle: 'italic' }}>Orig: {t.texto_original}</div>
+                    )}
                   </td>
-                  <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>{t.lubrificante || '—'}</td>
-                  <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>{t.capacidade || '—'}</td>
+                  <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>{t.insumo || '—'}</td>
+                  <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12, whiteSpace: 'nowrap' }}>{t.quantidade || '—'}</td>
                 </tr>
               ))}
             </tbody>
