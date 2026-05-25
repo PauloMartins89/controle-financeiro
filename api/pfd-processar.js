@@ -34,74 +34,90 @@ function getSupabase() {
 // ── PROVIDER: GEMINI 1.5 Flash — PDF nativo ───────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 
+// Schema compacto para caber no limite de 8.192 output tokens do Gemini 1.5 Flash.
+// Chaves curtas + omitir campos vazios reduz ~7.000 → ~1.700 tokens para 70+ tarefas.
 function buildGeminiPrompt(modelo, fabricante) {
-  return `Você está analisando o Manual do Operador de um equipamento agrícola.
+  return `Analise TODAS as páginas do PDF do Manual do Operador: ${fabricante || 'John Deere'} ${modelo || ''}
 
-EQUIPAMENTO: ${fabricante || 'John Deere'} ${modelo || ''}
+TAREFA: Extraia TODAS as tabelas de manutenção periódica do manual.
+Procure: "Serviço Periódico", "Manutenção Periódica", "Intervalos de Manutenção", "Lubrificação e Manutenção" (e equivalentes em inglês).
 
-TAREFA: Leia TODAS as páginas do PDF e extraia as tabelas de manutenção periódica.
-
-Procure seções com estes títulos (ou equivalentes em inglês):
-- "Serviço Periódico" / "Periodic Service"
-- "Manutenção Periódica" / "Periodic Maintenance"
-- "Intervalos de Manutenção" / "Maintenance Intervals"
-- "Tabela de Manutenção" / "Maintenance Schedule"
-- "Lubrificação e Manutenção" / "Lubrication and Maintenance"
-
-Para CADA intervalo encontrado (Amaciamento, 10h, 50h, 100h, 125h, 200h, 250h, 400h, 500h, 600h, 750h, 1000h, 1500h, 2000h, 6000h, Anual, etc.):
-- Extraia TODAS as tarefas da tabela — nenhuma linha pode ser omitida
-- Preserve EXATAMENTE o texto das observações condicionais ("se equipado", "somente tratores com", etc.)
-- Identifique o sistema de cada tarefa (Motor, Transmissão, Hidráulico, Eixo Dianteiro, Freios, Cabine, Geral, etc.)
-- Capture lubrificante/fluido e capacidade quando presentes na tabela
-
-SCHEMA DE RETORNO (JSON estrito, sem texto fora do JSON):
+SCHEMA COMPACTO — OMITA CAMPOS COM VALOR VAZIO (""), false, null OU []:
 {
-  "equipamento": {
-    "marca": "${fabricante || 'John Deere'}",
-    "modelo": "${modelo || ''}",
-    "manual": "",
-    "regiao": "",
-    "idioma": "pt"
-  },
-  "intervalos": [
+  "eq": {"marca": "${fabricante || 'John Deere'}", "modelo": "${modelo || ''}", "idioma": "pt"},
+  "iv": [
     {
-      "intervalo_horas": 10,
-      "titulo_intervalo": "A cada 10 horas de operação ou diariamente",
-      "periodicidade": "recorrente",
-      "tarefas": [
-        {
-          "sistema": "Motor",
-          "descricao_tarefa": "Verificar nível de óleo do motor",
-          "tipo": "verificacao",
-          "lubrificante_fluido": "JD Plus-50 II",
-          "capacidade": "",
-          "pecas_citadas": [],
-          "condicional": false,
-          "aplicabilidade": "",
-          "observacao": "",
-          "pagina_fonte": null,
-          "confianca": "alta"
-        }
-      ],
-      "status_extracao": "ok"
+      "h": 50,
+      "n": "Semanalmente ou a cada 50 horas de operação",
+      "tv": [
+        {"s": "Motor", "d": "Verificar nível de óleo do motor", "tp": "verificacao", "l": "JD Plus-50 II", "cap": "10,2 L"},
+        {"s": "Geral", "d": "Limpar grade frontal e radiador", "tp": "limpeza", "cn": true, "ap": "Se equipado com ar condicionado"}
+      ]
     }
-  ],
-  "alertas": []
+  ]
 }
 
-REGRAS OBRIGATÓRIAS:
-1. intervalo_horas: use número. Amaciamento=0, Primeiras600h=600, Anual sem horas definidas=8760
-2. periodicidade: "uma_vez" para Amaciamento e Primeiras 600h; "recorrente" para todos os demais
-3. tipo: "verificacao" | "troca" | "lubrificacao" | "limpeza" | "ajuste" | "inspecao" | "substituicao" | "outro"
-4. condicional: true se a tarefa tem condição ("se equipado", "somente", "conforme", "quando", "tratores com", "primeiras")
-5. aplicabilidade: copie exatamente o texto da condição (ex: "Somente tratores com tração dianteira", "Se equipado com cabine")
-6. observacao: qualquer nota adicional da tarefa (intervalos alternativos, produtos aceitos, etc.)
-7. status_extracao: "ok" se tarefas foram extraídas; "falha_extracao" se intervalo existe no manual mas tarefas não foram identificadas; "intervalo_nao_encontrado" se o intervalo não consta no manual
-8. confianca: "alta" se texto claro na tabela; "media" se interpretado/inferido; "baixa" se incerto
-9. NUNCA omita linhas de tarefa — se a tabela tem 12 linhas para um intervalo, retorne 12 tarefas
-10. Inclua tarefas condicionais com condicional=true — não as descarte
-11. Se o mesmo intervalo aparecer em múltiplas tabelas, mescle as tarefas sem duplicar
-12. Preserve os nomes dos lubrificantes exatamente como aparecem (ex: "JD Plus-50 II", "Hy-Gard", "Cool-Gard II")`
+MAPEAMENTO DE CAMPOS:
+• eq = equipamento: marca, modelo, idioma
+• iv = intervalos (array)
+  • h  = horas (número). Amaciamento=0, Primeiras600h=600, Anual=8760
+  • n  = título do intervalo
+  • u  = "uma_vez" SOMENTE para Amaciamento e Primeiras 600h — OMITA para recorrente
+  • st = status — OMITA se ok; use "falha" se intervalo encontrado mas tarefas não identificáveis; "nao_enc" se não consta no manual
+  • tv = tarefas (array)
+    • s   = sistema: Motor | Transmissão | Hidráulico | Eixo Dianteiro | Freios | Cabine | Combustível | Geral | outro
+    • d   = descrição completa da tarefa (texto exato do manual)
+    • tp  = tipo: verificacao | troca | lubrificacao | limpeza | ajuste | inspecao | substituicao | outro
+    • l   = lubrificante/fluido (ex: "JD Plus-50 II", "Hy-Gard") — OMITA se não há
+    • cap = capacidade com unidade (ex: "10,2 L") — OMITA se não há
+    • cn  = true se tarefa tem condição ("se equipado", "somente", "quando", "tratores com") — OMITA se não condicional
+    • ap  = texto exato da condição — OMITA se não condicional
+    • ob  = observação adicional — OMITA se não há
+    • cf  = "media" ou "baixa" — OMITA se confiança é alta (padrão)
+
+REGRAS ABSOLUTAS:
+1. Extraia TODOS os intervalos e TODAS as linhas de tarefa de cada tabela sem exceção
+2. Se o mesmo intervalo aparecer em múltiplas tabelas (ex: cumulativa + específica), mescle sem duplicar
+3. Tarefas condicionais: inclua com cn=true e ap=texto exato da condição — não descarte
+4. Preserve nomes de lubrificantes exatamente ("JD Plus-50 II", "Hy-Gard", "Cool-Gard II", "BioHy-Gard")
+5. NUNCA omita linhas — se a tabela tem 15 linhas para um intervalo, retorne 15 tarefas no campo tv
+6. Omita campos com valor vazio, false, null ou [] para manter o JSON compacto`
+}
+
+// Converte schema compacto do Gemini para schema completo interno
+function expandGeminiCompact(compact) {
+  if (!compact?.iv) throw new Error('Resposta Gemini não contém campo "iv" (intervalos)')
+  return {
+    equipamento: {
+      marca:  compact.eq?.marca  || 'John Deere',
+      modelo: compact.eq?.modelo || '',
+      manual: '',
+      regiao: compact.eq?.regiao || '',
+      idioma: compact.eq?.idioma || 'pt',
+    },
+    intervalos: compact.iv.map(iv => ({
+      intervalo_horas:  iv.h ?? 0,
+      titulo_intervalo: iv.n || `A cada ${iv.h} horas`,
+      periodicidade:    iv.u || 'recorrente',
+      tarefas: (iv.tv || []).map(t => ({
+        sistema:           t.s   || '',
+        descricao_tarefa:  t.d   || '',
+        tipo:              t.tp  || 'outro',
+        lubrificante_fluido: t.l || '',
+        capacidade:        t.cap || '',
+        pecas_citadas:     [],
+        condicional:       t.cn  || false,
+        aplicabilidade:    t.ap  || '',
+        observacao:        t.ob  || '',
+        pagina_fonte:      null,
+        confianca:         t.cf  || 'alta',
+      })),
+      status_extracao:
+        iv.st === 'falha'   ? 'falha_extracao' :
+        iv.st === 'nao_enc' ? 'intervalo_nao_encontrado' : 'ok',
+    })),
+    alertas: [],
+  }
 }
 
 async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
@@ -134,12 +150,18 @@ async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
 
   L('Enviando PDF ao Gemini 1.5 Flash...')
   const result = await model.generateContent([pdfPart, { text: prompt }])
+
+  // Loga uso de tokens para diagnóstico
+  const usage = result.response.usageMetadata
+  if (usage) L(`Gemini tokens: entrada=${usage.promptTokenCount}, saída=${usage.candidatesTokenCount}, total=${usage.totalTokenCount}`)
+
   const text = result.response.text()
   L(`Gemini respondeu: ${text.length} chars`)
 
   const parsed = JSON.parse(text)
-  if (!Array.isArray(parsed.intervalos)) throw new Error('Gemini não retornou campo "intervalos" como array')
-  return parsed
+  const expanded = expandGeminiCompact(parsed)
+  L(`Gemini extraiu: ${expanded.intervalos.length} intervalos, ${expanded.intervalos.reduce((a, iv) => a + iv.tarefas.length, 0)} tarefas`)
+  return expanded
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
