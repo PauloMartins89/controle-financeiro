@@ -13,7 +13,6 @@ function fmtData(d) {
 
 export default function RefeicaoAprovar() {
   const { token } = useParams()
-  const [searchParams] = useSearchParams()
 
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)

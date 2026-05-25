@@ -56,13 +56,15 @@ const STATUS_SOL = {
   aguardando_aprovacao:      'pendente',
   aprovado:                  'aprovado',
   confirmado_restaurante:    'aprovado',
+  consolidado:               'aprovado',
   enviado_restaurante:       'aprovado',
   em_acompanhamento:         'aprovado',
   entregue:                  'entregue',
+  aguardando_validacao:      'entregue',
+  finalizado:                'entregue',
   faturado:                  'faturado',
   enviado_faturamento:       'faturado',
   reprovado:                 'divergencia',
-  aguardando_validacao:      'divergencia',
   finalizado_com_ocorrencia: 'divergencia',
 }
 
