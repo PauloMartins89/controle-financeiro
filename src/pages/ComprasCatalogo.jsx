@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import useStore from '../store/useStore'
@@ -211,7 +211,16 @@ export default function ComprasCatalogo() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="Catálogo de Itens" subtitle="Itens padronizados com referência de preço e histórico de compras" />
+      <PageHeader
+        icon={CubeIcon} iconColor="#3b82f6"
+        title="Catálogo de Itens"
+        subtitle="Itens padronizados com referência de preço e histórico de compras"
+        badges={[
+          { label: `${stats.total} itens`, color: '#64748b' },
+          stats.comPreco > 0 && { label: `${stats.comPreco} com preço`, color: '#10b981', primary: true },
+        ].filter(Boolean)}
+        actions={[{ label: 'Novo Item', icon: PlusIcon, onClick: () => { setEditItem(null); setModalOpen(true) }, primary: true }]}
+      />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
       {/* KPI Cards */}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import Header from '../components/Header'
-import { ArrowPathIcon, BanknotesIcon, TrophyIcon } from '@heroicons/react/24/outline'
+import PageHeader from '../components/PageHeader'
+import { ArrowPathIcon, BanknotesIcon, TrophyIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline'
 
 function fmtCurrency(v) {
   return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -58,7 +58,15 @@ export default function ComprasRelEconomia() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="Economia / Savings" subtitle="Comparativo entre orçamento e valor aprovado" />
+      <PageHeader
+        icon={ArrowTrendingDownIcon} iconColor="#3b82f6"
+        title="Economia / Savings"
+        subtitle="Comparativo entre orçamento e valor aprovado"
+        badges={[
+          pctEconomia > 0 && { label: `${pctEconomia}% economia`, color: '#10b981', primary: true },
+          comValores.length > 0 && { label: `${comValores.length} pedidos`, color: '#64748b' },
+        ].filter(Boolean)}
+      />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* Filtro de período */}

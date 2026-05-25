@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, CheckCircleIcon, CogIcon,
@@ -81,9 +81,14 @@ export default function ComprasParametros() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header
+      <PageHeader
+        icon={CogIcon} iconColor="#3b82f6"
         title="Parâmetros de Compras"
         subtitle="Configurações do módulo — aprovação, cotações, notificações"
+        badges={[
+          dirty && { label: 'alterações não salvas', color: '#f59e0b', primary: true },
+        ].filter(Boolean)}
+        actions={[{ label: 'Salvar', icon: CheckCircleIcon, onClick: handleSave, primary: true, disabled: !dirty || saving }]}
       />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 

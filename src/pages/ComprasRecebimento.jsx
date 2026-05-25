@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, TruckIcon, CheckCircleIcon, ExclamationTriangleIcon,
@@ -151,7 +151,15 @@ export default function ComprasRecebimento() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="Recebimento" subtitle="Confirme a entrega das compras emitidas" />
+      <PageHeader
+        icon={TruckIcon} iconColor="#3b82f6"
+        title="Recebimento"
+        subtitle="Confirme a entrega das compras emitidas"
+        badges={[
+          { label: `${data.length} compras`, color: '#64748b' },
+          atrasados.length > 0 && { label: `${atrasados.length} atrasados`, color: '#ef4444', primary: true },
+        ].filter(Boolean)}
+      />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* Stats rápidas */}

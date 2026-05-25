@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { waLink } from '../lib/utils'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import toast from 'react-hot-toast'
 import {
   PlusIcon, ShoppingCartIcon, ClockIcon, CheckCircleIcon,
@@ -1211,10 +1211,15 @@ export default function Compras() {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
-      <Header
-        title="Compras"
-        subtitle="Solicitações e aprovações de compra"
-        action={{ label: 'Nova Solicitação', onClick: () => setShowModal(true), icon: PlusIcon }}
+      <PageHeader
+        icon={ShoppingCartIcon} iconColor="#3b82f6"
+        title="Solicitações de Compra"
+        subtitle="Gestão de solicitações e aprovações"
+        badges={[
+          { label: `${total} total`, color: '#64748b' },
+          pendentes > 0 && { label: `${pendentes} aguardando`, color: '#f59e0b', primary: true },
+        ].filter(Boolean)}
+        actions={[{ label: 'Nova Solicitação', icon: PlusIcon, onClick: () => setShowModal(true), primary: true }]}
       />
 
       <div style={{ padding: '0 24px 32px' }}>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import { ArrowPathIcon, BuildingOfficeIcon, StarIcon } from '@heroicons/react/24/outline'
 
 function fmtCurrency(v) {
@@ -75,7 +75,15 @@ export default function ComprasRelFornecedor() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="Relatório por Fornecedor" subtitle="Histórico, ranking e desempenho dos fornecedores" />
+      <PageHeader
+        icon={BuildingOfficeIcon} iconColor="#3b82f6"
+        title="Relatório por Fornecedor"
+        subtitle="Histórico, ranking e desempenho dos fornecedores"
+        badges={[
+          fornecedores.length > 0 && { label: `${fornecedores.length} fornecedores`, color: '#64748b' },
+          totalGeral > 0 && { label: fmtCurrency(totalGeral), color: '#10b981', primary: true },
+        ].filter(Boolean)}
+      />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 22, alignItems: 'center' }}>

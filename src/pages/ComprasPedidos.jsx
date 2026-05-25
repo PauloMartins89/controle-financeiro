@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import Header from '../components/Header'
+import PageHeader from '../components/PageHeader'
 import toast from 'react-hot-toast'
 import {
   ArrowPathIcon, CheckCircleIcon, ClipboardDocumentListIcon,
@@ -250,7 +250,15 @@ export default function ComprasPedidos() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="Pedidos Emitidos" subtitle="Acompanhe a execução das compras aprovadas" />
+      <PageHeader
+        icon={ClipboardDocumentListIcon} iconColor="#3b82f6"
+        title="Pedidos Emitidos"
+        subtitle="Acompanhe a execução das compras aprovadas"
+        badges={[
+          { label: `${data.length} pedidos`, color: '#64748b' },
+          pendentes.length > 0 && { label: `${pendentes.length} pendentes`, color: '#f59e0b', primary: true },
+        ].filter(Boolean)}
+      />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         {/* Alerta de pendentes */}

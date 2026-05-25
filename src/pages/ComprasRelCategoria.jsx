@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import Header from '../components/Header'
-import { ArrowPathIcon, TagIcon } from '@heroicons/react/24/outline'
+import PageHeader from '../components/PageHeader'
+import { ArrowPathIcon, TagIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 
 function fmtCurrency(v) {
   return (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -79,7 +79,15 @@ export default function ComprasRelCategoria() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="Relatório por Categoria" subtitle="Distribuição de gastos por tipo de compra" />
+      <PageHeader
+        icon={ChartBarIcon} iconColor="#3b82f6"
+        title="Relatório por Categoria"
+        subtitle="Distribuição de gastos por tipo de compra"
+        badges={[
+          categorias.length > 0 && { label: `${categorias.length} categorias`, color: '#64748b' },
+          totalGeral > 0 && { label: fmtCurrency(totalGeral), color: '#10b981', primary: true },
+        ].filter(Boolean)}
+      />
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 22, alignItems: 'center' }}>
