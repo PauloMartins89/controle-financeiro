@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import {
@@ -124,9 +124,7 @@ export default function ManutencaoDashboard() {
 
   if (loading) return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
-      <PageHeader
-        icon={WrenchScrewdriverIcon}
-        iconColor="#6366f1"
+      <Header
         title="Dashboard — Manutenção"
         subtitle="Visão geral das ordens de serviço e planos preventivos"
       />
@@ -138,20 +136,10 @@ export default function ManutencaoDashboard() {
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
-      <PageHeader
-        icon={WrenchScrewdriverIcon}
-        iconColor="#6366f1"
+      <Header
         title="Dashboard — Manutenção"
         subtitle="Visão geral das ordens de serviço e planos preventivos"
-        badges={[
-          { label: `${kpis.abertas} OS abertas`, icon: ClipboardDocumentListIcon, color: '#6366f1', primary: kpis.abertas > 0 },
-          { label: `${kpis.andamento} em andamento`, icon: BoltIcon, color: '#0ea5e9', primary: kpis.andamento > 0 },
-          kpis.vencidas > 0 && { label: `${kpis.vencidas} preventivas vencidas`, icon: ExclamationTriangleIcon, color: '#ef4444', primary: true },
-        ].filter(Boolean)}
-        actions={[
-          { label: refreshing ? 'Atualizando...' : 'Atualizar', icon: ArrowPathIcon, onClick: () => load(workspaceId), disabled: refreshing },
-          { label: 'Nova OS', icon: PlusIcon, onClick: () => navigate('/manutencao/operacoes/os?nova=1'), primary: true },
-        ]}
+        action={{ label: 'Nova OS', icon: PlusIcon, onClick: () => navigate('/manutencao/operacoes/os?nova=1') }}
       />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 24 }}>

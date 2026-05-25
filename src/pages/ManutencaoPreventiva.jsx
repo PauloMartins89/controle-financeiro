@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import PageHeader from '../components/PageHeader'
+import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import { toast } from 'react-hot-toast'
@@ -180,18 +180,10 @@ export default function ManutencaoPreventiva() {
 
   return (
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column', overflow: 'hidden' }}>
-      <PageHeader
-        icon={CalendarDaysIcon}
-        iconColor="#10b981"
+      <Header
         title="Planos Preventivos"
         subtitle="Agendamento e controle de manutenção preventiva por horas / período"
-        badges={[
-          { label: `${ativos.length} planos ativos`, icon: CheckCircleIcon, color: '#10b981', primary: ativos.length > 0 },
-          inativos.length > 0 && { label: `${inativos.length} inativos`, icon: CalendarDaysIcon, color: '#64748b' },
-        ].filter(Boolean)}
-        actions={[
-          { label: 'Novo Plano', icon: PlusIcon, onClick: openNovo, primary: true },
-        ]}
+        action={{ label: 'Novo Plano', icon: PlusIcon, onClick: openNovo }}
       />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
