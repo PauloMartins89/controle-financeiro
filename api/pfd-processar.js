@@ -1,6 +1,6 @@
 // api/pfd-processar.js
 // Importa e processa PDF de manual técnico John Deere
-// Extrai intervalos de manutenção via Groq vision (Llama 4)
+// Extrai intervalos de manutenção via OpenAI GPT-4o-mini
 //
 // Modos de entrada (JSON body):
 //   { modo: 'url',    url_pdf, publicacao_id, workspace_id }
@@ -8,13 +8,13 @@
 //
 // Fluxo:
 //   1. Obtém o PDF (baixa URL ou usa base64 enviado)
-//   2. Converte páginas para imagens base64 via pdfjs-dist (server-side)
-//   3. Envia páginas relevantes ao Groq vision
-//   4. Extrai JSON com intervalos + tarefas de manutenção
+//   2. Extrai texto por página via pdf-parse
+//   3. Filtra páginas de manutenção por score de keywords
+//   4. Envia bloco concatenado ao OpenAI GPT-4o-mini
 //   5. Salva em pfd_planos + atualiza status em pfd_publicacoes
 
 import { createClient } from '@supabase/supabase-js'
-import Groq from 'groq-sdk'
+import OpenAI from 'openai'
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
 // Usa o lib interno do pdf-parse v1.1.1 para evitar leitura de arquivo de
@@ -24,18 +24,18 @@ const pdfParse = require('pdf-parse/lib/pdf-parse.js')
 
 const supabaseUrl        = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
-const groqApiKey         = process.env.GROQ_API_KEY
+const openaiApiKey       = process.env.OPENAI_API_KEY
 
 function getSupabase() {
   return createClient(supabaseUrl, supabaseServiceKey)
 }
 
-// ── Groq com retry/backoff ──────────────────────────────────────────────────
-async function groqWithRetry(groq, params, maxAttempts = 3) {
+// ── OpenAI com retry/backoff ─────────────────────────────────────────────────
+async function openaiWithRetry(client, params, maxAttempts = 3) {
   let lastErr
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await groq.chat.completions.create(params)
+      return await client.chat.completions.create(params)
     } catch (err) {
       lastErr = err
       const status = err?.status || err?.response?.status
@@ -103,14 +103,15 @@ function identificarPaginasManutencao(paginas, topN = 15, minScore = 3) {
     .sort((a, b) => a.pagina - b.pagina)
 }
 
-// ── Extrai intervalos do bloco completo de manutenção (texto concatenado → Groq) ──
-async function extrairIntervalosDoBloco(groq, textoBloco, modelo) {
-  const res = await groqWithRetry(groq, {
-    model: 'llama-3.1-8b-instant',
+// ── Extrai intervalos do bloco (texto concatenado → OpenAI GPT-4o-mini) ─────
+async function extrairIntervalosDoBloco(openai, textoBloco, modelo) {
+  const res = await openaiWithRetry(openai, {
+    model: 'gpt-4o-mini',
+    response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
-        content: 'Você é um especialista em extrair dados estruturados de manuais técnicos de equipamentos agrícolas John Deere. Responda APENAS com JSON válido, sem texto adicional, sem markdown, sem comentários.',
+        content: 'Você é um especialista em extrair dados estruturados de manuais técnicos de equipamentos agrícolas John Deere. Responda APENAS com JSON válido.',
       },
       {
         role: 'user',
@@ -123,7 +124,7 @@ Intervalos típicos John Deere: Amaciamento, Primeiras 600h, 10h/Diário, 50h/Se
 TEXTO DAS PÁGINAS DE MANUTENÇÃO:
 ${textoBloco}
 
-Retorne APENAS este JSON (sem nenhum texto fora do JSON):
+Retorne este JSON:
 {
   "intervalos": [
     {
@@ -151,16 +152,12 @@ Regras OBRIGATÓRIAS:
 - Se um intervalo não tiver tarefas identificáveis, omita-o`,
       },
     ],
-    max_tokens: 2500,
+    max_tokens: 8000,
     temperature: 0,
   })
 
-  const raw = res.choices[0]?.message?.content?.trim() || ''
-  const match = raw.match(/\{[\s\S]*\}/)
-  if (!match) return { intervalos: [] }
-
   try {
-    return JSON.parse(match[0])
+    return JSON.parse(res.choices[0]?.message?.content || '{}')
   } catch (_) {
     return { intervalos: [] }
   }
@@ -210,7 +207,7 @@ export default async function handler(req, res) {
   if (!workspace_id) return res.status(400).json({ error: 'workspace_id obrigatório', log })
 
   const sb = getSupabase()
-  const groq = new Groq({ apiKey: groqApiKey })
+  const openai = new OpenAI({ apiKey: openaiApiKey })
 
   // ── Cria ou usa a publicação ──────────────────────────────────────────────
   let publicacao_id = pubIdRecebido
@@ -303,18 +300,17 @@ export default async function handler(req, res) {
       : paginas.slice(0, 15)
     L(`páginas para Groq: ${paginasParaProcessar.map(p => p.pagina).join(', ')}`)
 
-    // ── Concatena páginas top em um bloco para o Groq ────────────────────────
-    // TPM free tier = 6000 tokens/min → max ~8k chars input + 2500 max_tokens ≈ 4500 tokens
+    // ── Concatena todas as páginas de manutenção em um bloco → OpenAI ─────────
+    // GPT-4o-mini: 200k TPM — sem restrição de tamanho por requisição
     const modeloEquip = publicacao?.modelo || req.body?.modelo || 'John Deere'
     const textoBloco = paginasParaProcessar
       .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
       .join('\n\n')
-      .slice(0, 8000)
-    L(`bloco montado: ${textoBloco.length} chars de ${paginasParaProcessar.length} páginas → 1 chamada ao Groq`)
+      .slice(0, 80000)
+    L(`bloco montado: ${textoBloco.length} chars de ${paginasParaProcessar.length} páginas → OpenAI GPT-4o-mini`)
 
-    L('enviando bloco completo ao Groq...')
-    const extracao = await extrairIntervalosDoBloco(groq, textoBloco, modeloEquip)
-    L(`Groq retornou: ${extracao.intervalos?.length || 0} intervalos`)
+    const extracao = await extrairIntervalosDoBloco(openai, textoBloco, modeloEquip)
+    L(`OpenAI retornou: ${extracao.intervalos?.length || 0} intervalos`)
 
     // ── Mescla (dedup por horas) e salva ─────────────────────────────────
     const intervalos = mesclarIntervalos([extracao])
