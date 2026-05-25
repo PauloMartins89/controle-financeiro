@@ -73,7 +73,7 @@ export default function Login() {
           zIndex: 0, pointerEvents: 'none',
         }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <img src="/tela%20de%20login/logo_smartpro.png" alt="SmartPro" style={{ height: 48, width: 'auto' }} />
+          <img src="/tela%20de%20login/logo_smartpro.png" alt="SmartPro" style={{ height: 144, width: 'auto' }} />
         </div>
 
         {/* Headline + features */}
