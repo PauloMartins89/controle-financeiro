@@ -52,7 +52,7 @@ export default function Login() {
         setPrevIdx(i)
         return (i + 1) % SLIDES.length
       })
-    }, 5000)
+    }, 7000)
     return () => clearInterval(t)
   }, [])
 
@@ -90,7 +90,7 @@ export default function Login() {
             backgroundSize: 'cover',
             backgroundPosition: 'right center',
             opacity: i === slideIdx ? 1 : 0,
-            transition: i === slideIdx ? 'opacity 1.4s ease' : (i === prevIdx ? 'opacity 1.4s ease' : 'none'),
+            transition: i === slideIdx ? 'opacity 2.5s ease' : (i === prevIdx ? 'opacity 2.5s ease' : 'none'),
             zIndex: 0,
           }} />
         ))}
