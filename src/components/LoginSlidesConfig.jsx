@@ -79,10 +79,10 @@ export default function LoginSlidesConfig() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
-            Imagens do Slideshow de Login
+            Imagens da Tela de Login
           </h3>
           <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-            {slides.length}/{MAX_SLIDES} imagens — exibidas em sequência na tela de login.
+            {slides.length}/{MAX_SLIDES} imagens — exibidas para todos os clientes na tela de login.
             {slides.length === 0 && ' Enquanto vazio, as imagens padrão do sistema serão usadas.'}
           </p>
         </div>

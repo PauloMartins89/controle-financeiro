@@ -37,7 +37,7 @@ const ALL_MODULES = [
 
 const TABS = [
   { id: 'saude',         label: 'Saúde do Sistema',   icon: ShieldCheckIcon },
-  { id: 'slides_login',  label: 'Slideshow Login',    icon: PhotoIcon },
+  { id: 'slides_login',  label: 'Tela de Login',       icon: PhotoIcon },
   { id: 'workspaces',     label: 'Workspaces',        icon: BuildingOffice2Icon },
   { id: 'notificacoes',   label: 'Notificações',      icon: BellAlertIcon },
   { id: 'motoristas',    label: 'Motoristas WA',     icon: TruckIcon },
