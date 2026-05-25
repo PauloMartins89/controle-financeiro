@@ -422,29 +422,33 @@ function mesclarIntervalos(lista) {
   return Object.values(mapa).sort((a, b) => Number(a.horas) - Number(b.horas))
 }
 
-// Processa páginas filtradas em lotes (batch), em paralelo, e mescla os resultados.
-// Evita o limite de 50k chars e melhora precisão (cada lote = contexto menor e focado).
-async function extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L, batchSize = 5) {
-  const batches = []
-  for (let i = 0; i < paginasFiltradas.length; i += batchSize) {
-    batches.push(paginasFiltradas.slice(i, i + batchSize))
-  }
-  L(`extração por página: ${paginasFiltradas.length} págs em ${batches.length} lotes (batch=${batchSize})`)
+// Processa páginas filtradas em 3 grupos semânticos paralelos (1 round):
+// Grupo A = 1º terço (intervalos baixos: 0h–250h)
+// Grupo B = 2º terço (intervalos médios: 400h–750h)
+// Grupo C = 3º terço (intervalos altos: 1000h–6000h)
+// Reduz de 3 rounds sequenciais (8 lotes) para 1 round de 3 paralelas.
+async function extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L) {
+  if (paginasFiltradas.length === 0) return { intervalos: [] }
 
-  const resultados = []
-  // Processa no máx 3 lotes simultâneos para não saturar rate limit
-  for (let i = 0; i < batches.length; i += 3) {
-    const chunk = batches.slice(i, i + 3)
-    const parciais = await Promise.all(chunk.map(batch => {
-      const texto = batch.map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`).join('\n\n')
-      return extrairComOpenAI(openai, texto, modeloEquip)
-    }))
-    resultados.push(...parciais)
-    L(`lotes ${i + 1}-${Math.min(i + 3, batches.length)}/${batches.length} processados`)
-  }
+  const n = paginasFiltradas.length
+  const c1 = Math.ceil(n / 3)
+  const c2 = Math.ceil(2 * n / 3)
+  const grupos = [
+    paginasFiltradas.slice(0, c1),
+    paginasFiltradas.slice(c1, c2),
+    paginasFiltradas.slice(c2),
+  ].filter(g => g.length > 0)
+
+  const labels = grupos.map(g => `${g[0].pagina}-${g[g.length - 1].pagina}`)
+  L(`extração: ${n} págs → ${grupos.length} grupos paralelos [${labels.join(' | ')}]`)
+
+  const resultados = await Promise.all(grupos.map(grupo => {
+    const texto = grupo.map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`).join('\n\n')
+    return extrairComOpenAI(openai, texto, modeloEquip)
+  }))
 
   const totalBruto = resultados.reduce((acc, r) => acc + (r.intervalos?.length || 0), 0)
-  L(`merge: ${totalBruto} intervalos brutos de ${resultados.length} lotes`)
+  L(`merge: ${totalBruto} intervalos brutos de ${resultados.length} grupos`)
   return { intervalos: mesclarIntervalos(resultados) }
 }
 
