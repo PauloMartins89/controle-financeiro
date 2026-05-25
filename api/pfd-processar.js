@@ -139,15 +139,17 @@ async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
   const mbSize = (pdfBuffer.length / 1024 / 1024).toFixed(2)
   L(`Gemini: PDF ${mbSize} MB`)
 
+  const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash'
   const genAI = new GoogleGenerativeAI(geminiApiKey)
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: geminiModel,
     generationConfig: {
       responseMimeType: 'application/json',
       maxOutputTokens: 8192,
       temperature: 0,
     },
   })
+  L(`Gemini model: ${geminiModel}`)
 
   const prompt = buildGeminiPrompt(modelo, fabricante)
   let pdfPart
