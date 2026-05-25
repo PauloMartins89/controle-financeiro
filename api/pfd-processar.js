@@ -160,19 +160,23 @@ function mesclarIntervalos(lista) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
+  const log = []
+  const L = (msg) => { log.push(`[${new Date().toISOString().slice(11,23)}] ${msg}`); console.log('[pfd]', msg) }
+
   const {
     modo, url_pdf, pdf_base64, storage_path, workspace_id,
-    // publicacao_id pode vir pronto OU os dados do form para criar aqui
     publicacao_id: pubIdRecebido,
     codigo_pub, titulo, fabricante, modelo,
     familia, classificacao, serie_inicio, serie_fim,
     edicao, idioma,
   } = req.body || {}
 
+  L(`request recebido: modo=${modo}, workspace_id=${workspace_id}, storage_path=${storage_path}`)
+
   if (!modo || !['url', 'upload', 'storage'].includes(modo)) {
-    return res.status(400).json({ error: 'Parâmetro modo inválido. Use: url | storage | upload' })
+    return res.status(400).json({ error: 'Parâmetro modo inválido. Use: url | storage | upload', log })
   }
-  if (!workspace_id) return res.status(400).json({ error: 'workspace_id obrigatório' })
+  if (!workspace_id) return res.status(400).json({ error: 'workspace_id obrigatório', log })
 
   const sb = getSupabase()
   const groq = new Groq({ apiKey: groqApiKey })
@@ -180,7 +184,7 @@ export default async function handler(req, res) {
   // ── Cria ou usa a publicação ──────────────────────────────────────────────
   let publicacao_id = pubIdRecebido
   if (!publicacao_id) {
-    // Frontend passou os dados do form — criamos aqui com SERVICE_KEY (sem RLS)
+    L('criando publicação no banco...')
     const { data: novaPub, error: pubErr } = await sb
       .from('pfd_publicacoes')
       .insert({
@@ -200,10 +204,14 @@ export default async function handler(req, res) {
       })
       .select()
       .single()
-    if (pubErr) return res.status(500).json({ error: 'Erro ao criar publicação: ' + pubErr.message })
+    if (pubErr) {
+      L(`ERRO ao criar publicação: ${pubErr.message}`)
+      return res.status(500).json({ error: 'Erro ao criar publicação: ' + pubErr.message, log })
+    }
     publicacao_id = novaPub.id
+    L(`publicação criada: ${publicacao_id}`)
   } else {
-    // Atualiza status → processando
+    L(`usando publicação existente: ${publicacao_id}`)
     await sb.from('pfd_publicacoes')
       .update({ status: 'processando', updated_at: new Date().toISOString() })
       .eq('id', publicacao_id)
@@ -213,103 +221,97 @@ export default async function handler(req, res) {
   let publicacao = null
 
   try {
-    // ── Carrega dados da publicação ────────────────────────────────────────
-    if (publicacao_id) {
-      const { data } = await sb.from('pfd_publicacoes').select('*').eq('id', publicacao_id).single()
-      publicacao = data
-    }
+    const { data } = await sb.from('pfd_publicacoes').select('*').eq('id', publicacao_id).single()
+    publicacao = data
 
     // ── Obtém o PDF ───────────────────────────────────────────────────────
     if (modo === 'storage') {
-      // Baixa do Supabase Storage usando SERVICE_KEY (sem limite de body)
       if (!storage_path) throw new Error('storage_path obrigatório para modo storage')
+      L(`baixando PDF do storage: ${storage_path}`)
       const { data: fileBlob, error: fileErr } = await sb.storage
         .from('pfd-manuais')
         .download(storage_path)
       if (fileErr) throw new Error('Erro ao baixar PDF do storage: ' + fileErr.message)
       pdfBuffer = Buffer.from(await fileBlob.arrayBuffer())
+      L(`PDF baixado do storage: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
     } else if (modo === 'url') {
       const pdfUrl = url_pdf || publicacao?.url_pdf
       if (!pdfUrl) throw new Error('URL do PDF não informada')
+      L(`baixando PDF da URL: ${pdfUrl}`)
       const pdfRes = await fetch(pdfUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; SmartPro/1.0)',
-          'Accept': 'application/pdf,*/*',
-        },
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SmartPro/1.0)', 'Accept': 'application/pdf,*/*' },
       })
       if (!pdfRes.ok) throw new Error(`Erro ao baixar PDF: HTTP ${pdfRes.status}`)
       pdfBuffer = Buffer.from(await pdfRes.arrayBuffer())
+      L(`PDF baixado da URL: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
     } else {
-      // upload (legado): base64 → buffer
       if (!pdf_base64) throw new Error('pdf_base64 obrigatório para modo upload')
       const b64 = pdf_base64.replace(/^data:[^;]+;base64,/, '')
       pdfBuffer = Buffer.from(b64, 'base64')
+      L(`PDF decodificado de base64: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
     }
 
-    // ── Extrai texto de cada página do PDF (sem canvas) ────────────────────
-    console.log('[pfd-processar] extraindo texto do PDF...')
+    // ── Extrai texto ──────────────────────────────────────────────────────
+    L('iniciando extração de texto (pdf-parse)...')
     const paginas = await pdfParaTexto(pdfBuffer, 40)
-    console.log(`[pfd-processar] ${paginas.length} páginas com texto extraídas`)
+    L(`extração concluída: ${paginas.length} páginas com texto`)
 
     if (paginas.length === 0) throw new Error('Não foi possível extrair texto do PDF')
 
-    // ── Identifica páginas de manutenção por palavras-chave ───────────────
+    // ── Filtra páginas de manutenção ──────────────────────────────────────
     const paginasManutencao = identificarPaginasManutencao(paginas)
-    console.log(`[pfd-processar] ${paginasManutencao.length} páginas de manutenção identificadas por keyword`)
+    L(`keyword filter: ${paginasManutencao.length}/${paginas.length} páginas com termos de manutenção`)
 
-    // Se não encontrou por keyword, processa todas até 20
     const paginasParaProcessar = paginasManutencao.length > 0
       ? paginasManutencao
       : paginas.slice(0, 20)
+    L(`páginas para Groq: ${paginasParaProcessar.map(p => p.pagina).join(', ')}`)
 
-    // ── Extrai intervalos de cada página via Groq LLM (lotes de 5 — evita rate-limit) ──
+    // ── Groq em lotes de 5 ────────────────────────────────────────────────
     const modeloEquip = publicacao?.modelo || req.body?.modelo || 'John Deere'
-    console.log(`[pfd-processar] processando ${paginasParaProcessar.length} páginas via Groq (lotes de 5)...`)
+    L(`enviando para Groq (${paginasParaProcessar.length} páginas em lotes de 5)...`)
     const extracoes = []
     const LOTE = 5
     for (let i = 0; i < paginasParaProcessar.length; i += LOTE) {
       const lote = paginasParaProcessar.slice(i, i + LOTE)
       const resultados = await Promise.all(lote.map(p => extrairIntervalosDaPagina(groq, p.texto, modeloEquip)))
       extracoes.push(...resultados)
-      console.log(`[pfd-processar] lote ${Math.floor(i / LOTE) + 1} concluído (${Math.min(i + LOTE, paginasParaProcessar.length)}/${paginasParaProcessar.length})`)
+      const ivCount = resultados.reduce((a, r) => a + (r.intervalos?.length || 0), 0)
+      L(`lote ${Math.floor(i / LOTE) + 1}: ${ivCount} intervalos encontrados`)
     }
 
-    // ── Mescla todos os intervalos ────────────────────────────────────────
+    // ── Mescla e salva ────────────────────────────────────────────────────
     const intervalos = mesclarIntervalos(extracoes)
     const totalIntervalos = intervalos.length
     const totalTarefas = intervalos.reduce((acc, iv) => acc + (iv.tarefas?.length || 0), 0)
+    L(`mesclagem: ${totalIntervalos} intervalos, ${totalTarefas} tarefas`)
 
-    // ── Salva no banco ────────────────────────────────────────────────────
-    const planoData = {
-      publicacao_id: publicacao_id || null,
-      workspace_id,
-      modelo: publicacao?.modelo || req.body?.modelo,
-      fabricante: publicacao?.fabricante || 'John Deere',
-      intervalos,
-      total_intervalos: totalIntervalos,
-      total_tarefas: totalTarefas,
-      paginas_usadas: paginasParaProcessar.map(p => p.pagina),
-      extraido_em: new Date().toISOString(),
-    }
-
+    L('salvando plano no banco...')
     const { data: planoSalvo, error: planoErr } = await sb
       .from('pfd_planos')
-      .insert(planoData)
+      .insert({
+        publicacao_id: publicacao_id || null,
+        workspace_id,
+        modelo: publicacao?.modelo || req.body?.modelo,
+        fabricante: publicacao?.fabricante || 'John Deere',
+        intervalos,
+        total_intervalos: totalIntervalos,
+        total_tarefas: totalTarefas,
+        paginas_usadas: paginasParaProcessar.map(p => p.pagina),
+        extraido_em: new Date().toISOString(),
+      })
       .select()
       .single()
 
     if (planoErr) throw new Error(`Erro ao salvar plano: ${planoErr.message}`)
 
-    // Atualiza publicação → processado
-    if (publicacao_id) {
-      await sb.from('pfd_publicacoes').update({
-        status: 'processado',
-        paginas_total: paginas.length,
-        updated_at: new Date().toISOString(),
-      }).eq('id', publicacao_id)
-    }
+    await sb.from('pfd_publicacoes').update({
+      status: 'processado',
+      paginas_total: paginas.length,
+      updated_at: new Date().toISOString(),
+    }).eq('id', publicacao_id)
 
-    console.log(`[pfd-processar] ✅ concluído: ${totalIntervalos} intervalos, ${totalTarefas} tarefas`)
+    L(`✅ concluído com sucesso: plano_id=${planoSalvo.id}`)
     return res.json({
       ok: true,
       plano_id: planoSalvo.id,
@@ -317,13 +319,13 @@ export default async function handler(req, res) {
       total_tarefas: totalTarefas,
       paginas_processadas: paginasParaProcessar.length,
       intervalos,
+      log,
     })
 
   } catch (err) {
-    console.error('[pfd-processar] ERRO:', err.message)
-    console.error('[pfd-processar] stack:', err.stack)
+    L(`❌ ERRO: ${err.message}`)
+    console.error('[pfd] stack:', err.stack)
 
-    // Atualiza publicação → erro
     if (publicacao_id) {
       await sb.from('pfd_publicacoes').update({
         status: 'erro',
@@ -332,6 +334,6 @@ export default async function handler(req, res) {
       }).eq('id', publicacao_id)
     }
 
-    return res.status(500).json({ error: err.message, stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined })
+    return res.status(500).json({ error: err.message, log })
   }
 }
