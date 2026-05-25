@@ -157,12 +157,17 @@ Regras OBRIGATÓRIAS:
 - Se um intervalo não tiver tarefas identificáveis, omita-o`,
       },
     ],
-    max_tokens: 8000,
+    max_tokens: 16000,
     temperature: 0,
   })
 
+  const choice = res.choices[0]
+  if (choice?.finish_reason === 'length') {
+    console.warn('[pfd] AVISO: resposta OpenAI truncada (max_tokens atingido) — JSON pode estar incompleto')
+  }
+
   try {
-    return JSON.parse(res.choices[0]?.message?.content || '{}')
+    return JSON.parse(choice?.message?.content || '{}')
   } catch (_) {
     return { intervalos: [] }
   }
