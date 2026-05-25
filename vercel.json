@@ -25,6 +25,12 @@
     },
     "api/busca-modelo-ia.js": {
       "maxDuration": 30
+    },
+    "api/pfd-processar.js": {
+      "maxDuration": 300
+    },
+    "api/pfd-buscar.js": {
+      "maxDuration": 15
     }
   },
   "crons": [

@@ -148,13 +148,15 @@ export default function ManutencaoPlanosPFD() {
       }
 
       if (pdfArquivo) {
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onload = () => resolve(reader.result)
-          reader.onerror = reject
-          reader.readAsDataURL(pdfArquivo)
-        })
-        payload.modo = 'upload'; payload.pdf_base64 = base64
+        // Upload para Supabase Storage (evita limite de 4.5 MB do body Vercel)
+        toast('Enviando PDF...', { icon: '📤' })
+        const storageKey = `${wsId}/${Date.now()}_${pdfArquivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('pfd-manuais')
+          .upload(storageKey, pdfArquivo, { contentType: 'application/pdf', upsert: false })
+        if (uploadErr) throw new Error('Erro no upload do PDF: ' + uploadErr.message)
+        payload.modo = 'storage'
+        payload.storage_path = uploadData.path
       } else {
         payload.modo = 'url'; payload.url_pdf = form.url_pdf.trim()
       }

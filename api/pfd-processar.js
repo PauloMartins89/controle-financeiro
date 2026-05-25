@@ -164,7 +164,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const {
-    modo, url_pdf, pdf_base64, workspace_id,
+    modo, url_pdf, pdf_base64, storage_path, workspace_id,
     // publicacao_id pode vir pronto OU os dados do form para criar aqui
     publicacao_id: pubIdRecebido,
     codigo_pub, titulo, fabricante, modelo,
@@ -172,8 +172,8 @@ export default async function handler(req, res) {
     edicao, idioma,
   } = req.body || {}
 
-  if (!modo || !['url', 'upload'].includes(modo)) {
-    return res.status(400).json({ error: 'Parâmetro modo inválido. Use: url | upload' })
+  if (!modo || !['url', 'upload', 'storage'].includes(modo)) {
+    return res.status(400).json({ error: 'Parâmetro modo inválido. Use: url | storage | upload' })
   }
   if (!workspace_id) return res.status(400).json({ error: 'workspace_id obrigatório' })
 
@@ -223,7 +223,15 @@ export default async function handler(req, res) {
     }
 
     // ── Obtém o PDF ───────────────────────────────────────────────────────
-    if (modo === 'url') {
+    if (modo === 'storage') {
+      // Baixa do Supabase Storage usando SERVICE_KEY (sem limite de body)
+      if (!storage_path) throw new Error('storage_path obrigatório para modo storage')
+      const { data: fileBlob, error: fileErr } = await sb.storage
+        .from('pfd-manuais')
+        .download(storage_path)
+      if (fileErr) throw new Error('Erro ao baixar PDF do storage: ' + fileErr.message)
+      pdfBuffer = Buffer.from(await fileBlob.arrayBuffer())
+    } else if (modo === 'url') {
       const pdfUrl = url_pdf || publicacao?.url_pdf
       if (!pdfUrl) throw new Error('URL do PDF não informada')
       const pdfRes = await fetch(pdfUrl, {
@@ -235,7 +243,7 @@ export default async function handler(req, res) {
       if (!pdfRes.ok) throw new Error(`Erro ao baixar PDF: HTTP ${pdfRes.status}`)
       pdfBuffer = Buffer.from(await pdfRes.arrayBuffer())
     } else {
-      // upload: base64 → buffer
+      // upload (legado): base64 → buffer
       if (!pdf_base64) throw new Error('pdf_base64 obrigatório para modo upload')
       const b64 = pdf_base64.replace(/^data:[^;]+;base64,/, '')
       pdfBuffer = Buffer.from(b64, 'base64')
