@@ -1350,6 +1350,7 @@ function SecaoDashboard({ sols, onNav }) {
     const cafMes    = sum(mesSols, 'total_cafes')
 
     const entreguesHoje = entregues.filter(s => s.data_refeicao === hoje).length
+    const reprov7       = reprovados.filter(s => s.data_refeicao >= last7[0])
 
     const fv = (cur, prev) => {
       if (!prev) return null
@@ -1365,6 +1366,7 @@ function SecaoDashboard({ sols, onNav }) {
       { icon: '☕',  label: 'Cafés hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `Mês: ${cafMes} cafés`,    secondary: hojeCaf, secondaryLabel: 'cafés hoje' },
       { icon: '⏳',  label: 'Aguardando Aprovação', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ✓' },
       { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues` },
+      { icon: '❌',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos últimos 7 dias` : 'Nenhuma reprovação' },
       { icon: '🚚',  label: 'Aguardando Entrega',    val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje` },
       { icon: '⚠️',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência' },
       { icon: '💰',  label: 'Custo previsto dia',  val: fmtBRL(hojeCusto), isText: true,  color: '#14B8A6', var: null, varLabel: null, footer: `${hojeRef + hojeCaf} itens previstos` },
@@ -1434,7 +1436,6 @@ function SecaoDashboard({ sols, onNav }) {
     const aprovHoje = aprovSts.filter(s => s.data_refeicao === hoje)
     if (aprovHoje.length) alertas.push({ type: 'warn', icon: '🚚', title: `${aprovHoje.length} entrega${aprovHoje.length > 1 ? 's' : ''} com confirmação pendente`, desc: 'Aprovados mas restaurante ainda não confirmou a entrega', action: null })
     if (valorMAnt > 0 && (valorMes - valorMAnt) / valorMAnt > 0.15) alertas.push({ type: 'danger', icon: '📈', title: 'Custo do mês acima do período anterior', desc: `${fmtBRL(valorMes)} vs ${fmtBRL(valorMAnt)} — variação de +${(((valorMes - valorMAnt) / valorMAnt) * 100).toFixed(0)}%`, action: null })
-    const reprov7 = reprovados.filter(s => s.data_refeicao >= last7[0])
     if (reprov7.length) alertas.push({ type: 'danger', icon: '❌', title: `${reprov7.length} pedido${reprov7.length > 1 ? 's' : ''} reprovado${reprov7.length > 1 ? 's' : ''} nos últimos 7 dias`, desc: 'Verifique os motivos de reprovação no histórico', action: null })
     if (divergencias.length) alertas.push({ type: 'warn', icon: '⚠️', title: `${divergencias.length} divergência${divergencias.length > 1 ? 's' : ''} pendente${divergencias.length > 1 ? 's' : ''}`, desc: 'Pedidos com ocorrências aguardando validação', action: null })
 
