@@ -54,8 +54,10 @@ async function main() {
     console.log(`  ${i + 1}. [${p.id.slice(0, 8)}] ${p.fabricante} ${p.modelo} | ${p.status}`)
   })
 
-  // Usa a publicação John Deere 5078 conhecida
-  const pub = pubs.find(p => p.modelo === '5078' && p.workspace_id) || pubs[0]
+  // Usa a publicação John Deere 5078 conhecida (evita entradas presas em "processando")
+  const pub = pubs.find(p => p.modelo === '5078' && p.workspace_id && p.status !== 'processando')
+            || pubs.find(p => p.modelo === '5078' && p.workspace_id)
+            || pubs[0]
   ok(`Usando: ${pub.fabricante} ${pub.modelo} (id: ${pub.id})`)
   ok(`workspace_id: ${pub.workspace_id}`)
 

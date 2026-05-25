@@ -304,13 +304,16 @@ function localizarSecaoManutencao(paginas, sumario) {
   return candidatas
 }
 
-// 3. Extrai o bloco contínuo: do mínimo ao máximo das páginas localizadas
-//    Inclui todas as páginas intermediárias (garante 400h/750h não sejam perdidas)
+// 3. Extrai o bloco contínuo: do mínimo + janela de 40 págs (cobre todos os intervalos)
+//    Evita cortar a seção no meio caso max(candidatas) seja anterior a 400h/750h
 function extrairBlocoManutencao(todasPaginas, paginasLocalizadas) {
   if (paginasLocalizadas.length === 0) return []
   const nums = paginasLocalizadas.map(p => p.pagina)
   const min = Math.max(1, Math.min(...nums) - 1)
-  const max = Math.min(todasPaginas[todasPaginas.length - 1]?.pagina || 9999, Math.max(...nums) + 1)
+  // Janela de 45 págs desde o início OU até +20 além do último candidato — o que for maior
+  const ultimoPagMax = Math.max(...nums) + 20
+  const janelaMax    = min + 45
+  const max = Math.min(todasPaginas[todasPaginas.length - 1]?.pagina || 9999, Math.max(ultimoPagMax, janelaMax))
   return todasPaginas.filter(p => p.pagina >= min && p.pagina <= max)
 }
 
