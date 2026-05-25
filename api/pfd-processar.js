@@ -49,7 +49,7 @@ async function groqWithRetry(groq, params, maxAttempts = 3) {
 }
 
 // ── Extrai texto por página via pdf-parse (Node.js nativo, sem worker/DOM) ─────
-async function pdfParaTexto(pdfBuffer, maxPaginas = 40) {
+async function pdfParaTexto(pdfBuffer, maxPaginas = 80) {
   const paginas = []
   let paginaAtual = 0
 
@@ -69,41 +69,54 @@ async function pdfParaTexto(pdfBuffer, maxPaginas = 40) {
 // ── Identifica páginas de manutenção por palavras-chave (sem Groq, instantâneo) ──
 function identificarPaginasManutencao(paginas) {
   const KEYWORDS = [
-    '10 h', '50 h', '100 h', '250 h', '500 h', '1000 h', '1500 h', '2000 h',
-    '10h', '50h', '100h', '250h', '500h', '1000h',
+    // intervalos numéricos
+    '10 h', '50 h', '100 h', '125 h', '200 h', '250 h', '400 h', '500 h',
+    '750 h', '1000 h', '1500 h', '2000 h', '6000 h',
+    '10h', '50h', '100h', '125h', '200h', '250h', '400h', '500h',
+    '750h', '1000h', '1500h', '2000h', '6000h',
+    // termos de período
+    'amaciamento', 'primeiras 600', 'diariamente', 'semanalmente',
+    'mensalmente', 'anualmente', 'a cada',
+    // termos de tarefa
     'intervalo de manutenção', 'serviço periódico', 'manutenção periódica',
-    'lubrificação', 'troca de óleo', 'verificar nível', 'drenar', 'filtro de óleo',
-    'óleo do motor', 'fluido hidráulico', 'graxa', 'lubrificar',
+    'lubrificação', 'troca de óleo', 'verificar nível', 'drenar',
+    'filtro de óleo', 'óleo do motor', 'fluido hidráulico', 'graxa',
+    'lubrificar', 'substituir filtro', 'apertar', 'verificar folga',
+    'arrefecimento', 'transmissão', 'diferencial', 'embreagem', 'freio',
   ]
   return paginas.filter(p => {
     const lower = p.texto.toLowerCase()
-    const matches = KEYWORDS.filter(kw => lower.includes(kw.toLowerCase())).length
-    return matches >= 2
+    // threshold = 1: qualquer página com ao menos 1 termo relevante passa
+    return KEYWORDS.some(kw => lower.includes(kw.toLowerCase()))
   })
 }
 
-// ── Extrai intervalos de manutenção de uma página (texto → Groq LLM) ────────
-async function extrairIntervalosDaPagina(groq, texto, modelo) {
+// ── Extrai intervalos do bloco completo de manutenção (texto concatenado → Groq) ──
+async function extrairIntervalosDoBloco(groq, textoBloco, modelo) {
   const res = await groqWithRetry(groq, {
     model: 'llama-3.3-70b-versatile',
     messages: [
       {
         role: 'system',
-        content: 'Você é um especialista em extrair dados de manuais técnicos de equipamentos agrícolas. Responda APENAS com JSON válido, sem texto adicional, sem markdown.',
+        content: 'Você é um especialista em extrair dados estruturados de manuais técnicos de equipamentos agrícolas John Deere. Responda APENAS com JSON válido, sem texto adicional, sem markdown, sem comentários.',
       },
       {
         role: 'user',
-        content: `Analise o texto abaixo de uma página do manual do operador do equipamento ${modelo || 'John Deere'} e extraia os intervalos de manutenção periódica.
+        content: `Abaixo está o texto extraído das páginas de manutenção do manual do operador do equipamento ${modelo || 'John Deere'}.
 
-TEXTO DA PÁGINA:
-${texto.slice(0, 6000)}
+O texto pode estar desformatado (tabelas viram texto corrido). Identifique TODOS os intervalos de manutenção e TODAS as tarefas de cada intervalo.
 
-Retorne APENAS este JSON:
+Intervalos típicos John Deere: Amaciamento, Primeiras 600h, 10h/Diário, 50h/Semanal, 100h, 125h, 200h/Mensal, 250h, 400h, 500h, 750h, 1000h, 1500h/2 anos, 2000h/2 anos, Anual, 6000h/6 anos.
+
+TEXTO DAS PÁGINAS DE MANUTENÇÃO:
+${textoBloco}
+
+Retorne APENAS este JSON (sem nenhum texto fora do JSON):
 {
   "intervalos": [
     {
       "horas": 10,
-      "nome": "A cada 10 horas ou diariamente",
+      "nome": "Diariamente ou a cada 10 horas de operação",
       "tarefas": [
         {
           "sistema": "Motor",
@@ -117,13 +130,16 @@ Retorne APENAS este JSON:
   ]
 }
 
-Regras:
-- Inclua TODOS os intervalos (10h, 25h, 50h, 100h, 250h, 500h, 1000h, 1500h, 2000h, anual, etc.)
-- Para cada tarefa: sistema, descrição, código do lubrificante, capacidade e unidade se presentes
-- Se não houver tabela de manutenção no texto, retorne: {"intervalos": []}`,
+Regras OBRIGATÓRIAS:
+- Inclua TODOS os intervalos encontrados no texto
+- Para cada intervalo, inclua TODAS as tarefas listadas — não resuma nem agrupe
+- Campo "horas": use número (ex: 10, 50, 250). Para "Amaciamento" use 0. Para "Anual" use 1000 se não houver horas. Para "Primeiras 600h" use 600
+- Campo "sistema": Motor, Transmissão, Hidráulico, Eixo Dianteiro, Freios, Cabine, Geral, etc.
+- Campos "codigo_lubrificante", "capacidade", "unidade": preencha se presentes no texto, caso contrário deixe ""
+- Se um intervalo não tiver tarefas identificáveis, omita-o`,
       },
     ],
-    max_tokens: 4000,
+    max_tokens: 8000,
     temperature: 0,
   })
 
@@ -256,7 +272,7 @@ export default async function handler(req, res) {
 
     // ── Extrai texto ──────────────────────────────────────────────────────
     L('iniciando extração de texto (pdf-parse)...')
-    const paginas = await pdfParaTexto(pdfBuffer, 40)
+    const paginas = await pdfParaTexto(pdfBuffer, 80)
     L(`extração concluída: ${paginas.length} páginas com texto`)
 
     if (paginas.length === 0) throw new Error('Não foi possível extrair texto do PDF')
@@ -267,24 +283,25 @@ export default async function handler(req, res) {
 
     const paginasParaProcessar = paginasManutencao.length > 0
       ? paginasManutencao
-      : paginas.slice(0, 20)
+      : paginas.slice(0, 30)
     L(`páginas para Groq: ${paginasParaProcessar.map(p => p.pagina).join(', ')}`)
 
-    // ── Groq em lotes de 5 ────────────────────────────────────────────────
+    // ── Concatena todas as páginas em um único bloco para o Groq ─────────
+    // Estratégia: um único bloco de texto → uma única chamada → contexto completo
+    // O modelo vê a relação intervalo→tarefa inteira, não fragmentada por página
     const modeloEquip = publicacao?.modelo || req.body?.modelo || 'John Deere'
-    L(`enviando para Groq (${paginasParaProcessar.length} páginas em lotes de 5)...`)
-    const extracoes = []
-    const LOTE = 5
-    for (let i = 0; i < paginasParaProcessar.length; i += LOTE) {
-      const lote = paginasParaProcessar.slice(i, i + LOTE)
-      const resultados = await Promise.all(lote.map(p => extrairIntervalosDaPagina(groq, p.texto, modeloEquip)))
-      extracoes.push(...resultados)
-      const ivCount = resultados.reduce((a, r) => a + (r.intervalos?.length || 0), 0)
-      L(`lote ${Math.floor(i / LOTE) + 1}: ${ivCount} intervalos encontrados`)
-    }
+    const textoBloco = paginasParaProcessar
+      .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
+      .join('\n\n')
+      .slice(0, 90000) // ~22k tokens — bem dentro do contexto de 128k do llama-3.3
+    L(`bloco montado: ${textoBloco.length} chars de ${paginasParaProcessar.length} páginas → 1 chamada ao Groq`)
 
-    // ── Mescla e salva ────────────────────────────────────────────────────
-    const intervalos = mesclarIntervalos(extracoes)
+    L('enviando bloco completo ao Groq...')
+    const extracao = await extrairIntervalosDoBloco(groq, textoBloco, modeloEquip)
+    L(`Groq retornou: ${extracao.intervalos?.length || 0} intervalos`)
+
+    // ── Mescla (dedup por horas) e salva ─────────────────────────────────
+    const intervalos = mesclarIntervalos([extracao])
     const totalIntervalos = intervalos.length
     const totalTarefas = intervalos.reduce((acc, iv) => acc + (iv.tarefas?.length || 0), 0)
     L(`mesclagem: ${totalIntervalos} intervalos, ${totalTarefas} tarefas`)
