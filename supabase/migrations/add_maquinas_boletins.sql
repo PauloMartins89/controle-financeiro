@@ -51,6 +51,7 @@ CREATE INDEX IF NOT EXISTS maquinas_boletim_tipos_ws_idx
 
 ALTER TABLE maquinas_boletim_tipos ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "members_maquinas_boletim_tipos" ON maquinas_boletim_tipos;
 CREATE POLICY "members_maquinas_boletim_tipos" ON maquinas_boletim_tipos
   FOR ALL USING   (workspace_id IN (SELECT get_my_workspace_ids()))
   WITH CHECK      (workspace_id IN (SELECT get_my_workspace_ids()));
@@ -94,6 +95,7 @@ CREATE INDEX IF NOT EXISTS maquinas_colaboradores_wa_idx
 
 ALTER TABLE maquinas_colaboradores ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "members_maquinas_colaboradores" ON maquinas_colaboradores;
 CREATE POLICY "members_maquinas_colaboradores" ON maquinas_colaboradores
   FOR ALL USING   (workspace_id IN (SELECT get_my_workspace_ids()))
   WITH CHECK      (workspace_id IN (SELECT get_my_workspace_ids()));
@@ -155,6 +157,7 @@ CREATE INDEX IF NOT EXISTS maquinas_boletins_data_idx
 
 ALTER TABLE maquinas_boletins ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "members_maquinas_boletins" ON maquinas_boletins;
 CREATE POLICY "members_maquinas_boletins" ON maquinas_boletins
   FOR ALL USING   (workspace_id IN (SELECT get_my_workspace_ids()))
   WITH CHECK      (workspace_id IN (SELECT get_my_workspace_ids()));
@@ -212,6 +215,7 @@ CREATE INDEX IF NOT EXISTS maquinas_boletins_campos_status_idx
 -- Sem RLS própria — acesso controlado via maquinas_boletins (workspace)
 ALTER TABLE maquinas_boletins_campos ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "members_maquinas_boletins_campos" ON maquinas_boletins_campos;
 CREATE POLICY "members_maquinas_boletins_campos" ON maquinas_boletins_campos
   FOR ALL USING (
     boletim_id IN (
@@ -257,6 +261,7 @@ CREATE INDEX IF NOT EXISTS maquinas_aliases_lookup_idx
 
 ALTER TABLE maquinas_aliases ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "members_maquinas_aliases" ON maquinas_aliases;
 CREATE POLICY "members_maquinas_aliases" ON maquinas_aliases
   FOR ALL USING   (workspace_id IN (SELECT get_my_workspace_ids()))
   WITH CHECK      (workspace_id IN (SELECT get_my_workspace_ids()));

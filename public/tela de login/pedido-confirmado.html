@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedido Confirmado — SmartLíder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #CBD5E1;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px 48px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── PHONE SHELL ──────────────────────────────────── */
+    .phone {
+      width: 390px;
+      min-height: 844px;
+      background: #F0F4F8;
+      border-radius: 48px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.18),
+        0 32px 80px rgba(0,0,0,0.45),
+        0 8px 24px rgba(0,0,0,0.2);
+      position: relative;
+    }
+
+    .phone-scroll {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .phone-scroll::-webkit-scrollbar { display: none; }
+
+    /* ─── HERO ─────────────────────────────────────────── */
+    .hero {
+      background:
+        radial-gradient(ellipse 80% 60% at 110% -20%, rgba(34,197,94,0.16) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at -10% 110%, rgba(34,197,94,0.08) 0%, transparent 60%),
+        linear-gradient(165deg, #07111F 0%, #0C1D32 30%, #0D2140 60%, #091828 100%);
+      padding: 12px 20px 30px;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    /* Grid decoration */
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(34,197,94,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,197,94,0.05) 1px, transparent 1px);
+      background-size: 36px 36px;
+      -webkit-mask-image: radial-gradient(ellipse 70% 70% at 85% 15%, black 0%, transparent 70%);
+      mask-image: radial-gradient(ellipse 70% 70% at 85% 15%, black 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-arc {
+      position: absolute;
+      top: -120px; right: -120px;
+      width: 360px; height: 360px;
+      border-radius: 50%;
+      border: 1px solid rgba(34,197,94,0.07);
+      box-shadow:
+        0 0 0 50px rgba(34,197,94,0.04),
+        0 0 0 100px rgba(34,197,94,0.025),
+        0 0 0 150px rgba(34,197,94,0.01);
+      pointer-events: none;
+    }
+
+    /* Nav row */
+    .hero-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-height: 36px;
+      margin-bottom: 20px;
+      z-index: 1;
+    }
+
+    .back-btn {
+      position: absolute;
+      left: 0;
+      width: 42px; height: 42px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .back-btn svg { width: 20px; height: 20px; stroke: rgba(255,255,255,0.9); stroke-width: 2.5; fill: none; }
+
+    /* Logo row */
+    .hero-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      z-index: 1;
+      position: relative;
+    }
+    .logo-icon {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, #22C55E, #16A34A);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 12px rgba(34,197,94,0.4);
+    }
+    .logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+    .logo-text { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -0.3px; }
+    .logo-text span { color: #4ADE80; }
+
+    /* Success circle */
+    .hero-body { position: relative; z-index: 1; margin-top: 20px; }
+
+    .success-ring {
+      width: 76px; height: 76px;
+      margin: 0 auto 16px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .success-ring::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: rgba(34,197,94,0.12);
+      animation: pulse-ring 2s ease-out infinite;
+    }
+    .success-ring::after {
+      content: '';
+      position: absolute;
+      inset: -16px;
+      border-radius: 50%;
+      background: rgba(34,197,94,0.06);
+      animation: pulse-ring 2s ease-out 0.4s infinite;
+    }
+    @keyframes pulse-ring {
+      0%   { transform: scale(0.85); opacity: 0.7; }
+      100% { transform: scale(1.15); opacity: 0; }
+    }
+    .success-circle {
+      width: 76px; height: 76px;
+      background: linear-gradient(135deg, #22C55E, #16A34A);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 24px rgba(34,197,94,0.45), 0 0 0 3px rgba(34,197,94,0.2);
+      position: relative;
+      z-index: 1;
+    }
+    .success-circle svg { width: 38px; height: 38px; stroke: #fff; stroke-width: 3; fill: none; }
+
+    .hero-title {
+      font-size: 26px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+    .hero-sub {
+      font-size: 13px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.5;
+      max-width: 280px;
+      margin: 0 auto 18px;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 18px;
+      background: rgba(245,158,11,0.15);
+      border: 1.5px solid rgba(245,158,11,0.45);
+      border-radius: 50px;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .status-badge svg { width: 14px; height: 14px; stroke: #FBBF24; stroke-width: 2; fill: none; }
+    .status-badge span { font-size: 12px; font-weight: 700; color: #FBBF24; letter-spacing: 0.3px; }
+
+    /* ─── BODY ─────────────────────────────────────────── */
+    .body {
+      padding: 18px 16px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ─── CARD ─────────────────────────────────────────── */
+    .card {
+      background: #FFFFFF;
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.03);
+    }
+
+    .sec-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 18px;
+    }
+    .sec-icon {
+      width: 34px; height: 34px;
+      background: #F0FDF4;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .sec-icon.amber { background: #FFFBEB; }
+    .sec-icon svg { width: 18px; height: 18px; }
+    .sec-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ─── RESUMO ROWS ──────────────────────────────────── */
+    .resumo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 0;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .resumo-row:last-of-type { border-bottom: none; padding-bottom: 0; }
+
+    .resumo-icon {
+      width: 32px; height: 32px;
+      background: #F0FDF4;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .resumo-icon svg { width: 16px; height: 16px; }
+
+    .resumo-label {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: #64748B;
+      flex: 1;
+    }
+    .resumo-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0F172A;
+      text-align: right;
+    }
+    .resumo-value.green { color: #16A34A; font-size: 15px; font-weight: 900; }
+    .resumo-value.ref {
+      font-size: 12px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: 0.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Date row at bottom */
+    .resumo-date {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid #F1F5F9;
+    }
+    .resumo-date svg { width: 14px; height: 14px; stroke: #94A3B8; stroke-width: 2; fill: none; }
+    .resumo-date span { font-size: 11.5px; color: #94A3B8; font-weight: 500; }
+
+    /* ─── STEPPER ──────────────────────────────────────── */
+    .stepper {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      padding: 4px 0 8px;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      gap: 8px;
+    }
+
+    .step-node-row {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .step-node {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+    }
+    .step-node.done {
+      background: linear-gradient(135deg, #22C55E, #16A34A);
+      box-shadow: 0 3px 10px rgba(34,197,94,0.35);
+    }
+    .step-node.done svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 2.5; fill: none; }
+    .step-node.active {
+      background: #FFFBEB;
+      border: 2px solid #F59E0B;
+      box-shadow: 0 0 0 4px rgba(245,158,11,0.12);
+    }
+    .step-node.active svg { width: 16px; height: 16px; stroke: #F59E0B; stroke-width: 2; fill: none; }
+    .step-node.pending {
+      background: #F1F5F9;
+      border: 2px solid #E2E8F0;
+      color: #94A3B8;
+    }
+
+    /* connector line */
+    .step-line {
+      flex: 1;
+      height: 2px;
+      margin-top: -2px; /* align with node center: 36/2 = 18px, compensate */
+      position: relative;
+      top: -9px;
+    }
+    .step-line.done { background: #22C55E; }
+    .step-line.dashed {
+      background: repeating-linear-gradient(90deg, #CBD5E1 0, #CBD5E1 6px, transparent 6px, transparent 12px);
+    }
+
+    .step-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.35;
+      max-width: 80px;
+    }
+    .step-label.done { color: #15803D; }
+    .step-label.active { color: #B45309; }
+    .step-label.pending { color: #94A3B8; }
+
+    /* ─── FOOTER ACTIONS ───────────────────────────────── */
+    .footer-actions {
+      padding: 4px 16px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-primary {
+      height: 50px;
+      background: linear-gradient(135deg, #22C55E, #16A34A);
+      border: none;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(34,197,94,0.35);
+      transition: opacity 0.2s;
+    }
+    .btn-primary:active { opacity: 0.85; }
+    .btn-primary svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 2.2; fill: none; }
+    .btn-primary span { font-size: 14px; font-weight: 800; color: #fff; letter-spacing: 0.2px; }
+
+    .btn-outline {
+      height: 50px;
+      background: #fff;
+      border: 1.5px solid #22C55E;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-outline:active { background: #F0FDF4; }
+    .btn-outline svg { width: 18px; height: 18px; stroke: #16A34A; stroke-width: 2.2; fill: none; }
+    .btn-outline span { font-size: 14px; font-weight: 700; color: #16A34A; }
+
+    .footer-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+    .footer-note svg { width: 13px; height: 13px; stroke: #94A3B8; stroke-width: 1.8; fill: none; flex-shrink: 0; }
+    .footer-note span { font-size: 11px; color: #94A3B8; font-weight: 500; }
+
+  </style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="phone-scroll">
+
+    <!-- ─── HERO ─── -->
+    <div class="hero">
+      <div class="hero-grid"></div>
+      <div class="hero-arc"></div>
+
+      <!-- Nav -->
+      <div class="hero-nav">
+        <button class="back-btn" aria-label="Voltar">
+          <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </div>
+
+      <!-- Success body -->
+      <div class="hero-body">
+        <div class="success-ring">
+          <div class="success-circle">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+        </div>
+
+        <div class="hero-title">Pedido Enviado!</div>
+        <div class="hero-sub">Sua solicitação foi enviada com sucesso e<br>agora aguarda aprovação do supervisor.</div>
+
+        <div class="status-badge">
+          <!-- clock icon -->
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>Aguardando aprovação</span>
+        </div>
+      </div>
+    </div><!-- /hero -->
+
+    <!-- ─── BODY ─── -->
+    <div class="body">
+
+      <!-- RESUMO DO PEDIDO -->
+      <div class="card">
+        <div class="sec-head">
+          <div class="sec-icon">
+            <!-- list icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </div>
+          <span class="sec-title">Resumo do Pedido</span>
+        </div>
+
+        <!-- Pedido # -->
+        <div class="resumo-row">
+          <div class="resumo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <span class="resumo-label">Pedido</span>
+          <span class="resumo-value ref">REF-2026-000041</span>
+        </div>
+
+        <!-- Equipe -->
+        <div class="resumo-row">
+          <div class="resumo-icon">
+            <svg viewBox="0 0 24 24" fill="#22C55E">
+              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+            </svg>
+          </div>
+          <span class="resumo-label">Equipe</span>
+          <span class="resumo-value">EQ-F07 · MANHÃ</span>
+        </div>
+
+        <!-- Refeições -->
+        <div class="resumo-row">
+          <div class="resumo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+              <line x1="7" y1="2" x2="7" y2="11"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>
+            </svg>
+          </div>
+          <span class="resumo-label">Refeições / Cafés</span>
+          <span class="resumo-value">7 ref · 6 cafés</span>
+        </div>
+
+        <!-- Restaurante -->
+        <div class="resumo-row">
+          <div class="resumo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+          <span class="resumo-label">Restaurante</span>
+          <span class="resumo-value">RESTAURANTE DO ZICO</span>
+        </div>
+
+        <!-- Total -->
+        <div class="resumo-row">
+          <div class="resumo-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M14.31 8a5 5 0 0 1 0 8M9.69 8a5 5 0 0 0 0 8M12 6v2m0 8v2"/>
+            </svg>
+          </div>
+          <span class="resumo-label">Total</span>
+          <span class="resumo-value green">R$&nbsp;205,50</span>
+        </div>
+
+        <!-- Date -->
+        <div class="resumo-date">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>25 de mai. de 2026 &bull; 08:14</span>
+        </div>
+      </div>
+
+      <!-- PRÓXIMAS ETAPAS -->
+      <div class="card">
+        <div class="sec-head">
+          <div class="sec-icon amber">
+            <!-- flag icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+              <line x1="4" y1="22" x2="4" y2="15"/>
+            </svg>
+          </div>
+          <span class="sec-title">Próximas etapas</span>
+        </div>
+
+        <!-- Stepper -->
+        <div class="stepper">
+
+          <!-- Step 1: Pedido criado (done) -->
+          <div class="step">
+            <div class="step-node-row">
+              <div style="flex:1"></div>
+              <div class="step-node done">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <!-- connector to step 2 -->
+              <div class="step-line done"></div>
+            </div>
+            <div class="step-label done">Pedido<br>criado</div>
+          </div>
+
+          <!-- Step 2: Aguardando aprovação (active) -->
+          <div class="step">
+            <div class="step-node-row">
+              <!-- connector from step 1 (already drawn by step 1's right line) -->
+              <div class="step-node active">
+                <!-- clock -->
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <!-- connector to step 3 -->
+              <div class="step-line dashed"></div>
+            </div>
+            <div class="step-label active">Aguardando<br>aprovação</div>
+          </div>
+
+          <!-- Step 3: Envio ao restaurante (pending) -->
+          <div class="step">
+            <div class="step-node-row">
+              <div class="step-node pending">3</div>
+              <div style="flex:1"></div>
+            </div>
+            <div class="step-label pending">Envio ao<br>restaurante</div>
+          </div>
+
+        </div><!-- /stepper -->
+      </div>
+
+    </div><!-- /body -->
+
+    <!-- ─── FOOTER ACTIONS ─── -->
+    <div class="footer-actions">
+      <button class="btn-primary">
+        <!-- bar chart / tracking icon -->
+        <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Acompanhar Pedido</span>
+      </button>
+
+      <button class="btn-outline">
+        <!-- home icon -->
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span>Voltar ao Início</span>
+      </button>
+
+      <div class="footer-note">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Você será avisado quando o supervisor aprovar.</span>
+      </div>
+    </div>
+
+  </div><!-- /phone-scroll -->
+</div><!-- /phone -->
+
+</body>
+</html>

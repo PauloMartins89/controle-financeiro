@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "e6b21e62-8e6f-457a-add8-cafb528e1c57"
+      }
+    },
+    "android": {
+      "package": "com.paulo_martins.controlefinanceiros"
+    }
+  }
+}

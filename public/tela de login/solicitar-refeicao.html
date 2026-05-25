@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitar Refeição — SmartLíder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #CBD5E1;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px 48px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── PHONE SHELL ──────────────────────────────────── */
+    .phone {
+      width: 390px;
+      min-height: 844px;
+      background: #F0F4F8;
+      border-radius: 48px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.18),
+        0 32px 80px rgba(0,0,0,0.45),
+        0 8px 24px rgba(0,0,0,0.2);
+      position: relative;
+    }
+
+    .phone-scroll {
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+    .phone-scroll::-webkit-scrollbar { display: none; }
+
+    /* ─── HERO HEADER ──────────────────────────────────── */
+    .hero {
+      background:
+        radial-gradient(ellipse 80% 60% at 110% -20%, rgba(34,197,94,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at -10% 110%, rgba(34,197,94,0.06) 0%, transparent 60%),
+        linear-gradient(165deg, #07111F 0%, #0C1D32 30%, #0D2140 60%, #091828 100%);
+      padding: 12px 20px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Grid decoration */
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(34,197,94,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,197,94,0.05) 1px, transparent 1px);
+      background-size: 36px 36px;
+      -webkit-mask-image: radial-gradient(ellipse 70% 70% at 85% 15%, black 0%, transparent 70%);
+      mask-image: radial-gradient(ellipse 70% 70% at 85% 15%, black 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Concentric arc decoration */
+    .hero-arc {
+      position: absolute;
+      top: -120px;
+      right: -120px;
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      border: 1px solid rgba(34,197,94,0.07);
+      box-shadow:
+        0 0 0 50px rgba(34,197,94,0.04),
+        0 0 0 100px rgba(34,197,94,0.025),
+        0 0 0 150px rgba(34,197,94,0.01);
+      pointer-events: none;
+    }
+
+    /* Glow dot */
+    .hero-glow {
+      position: absolute;
+      top: 40px;
+      right: 40px;
+      width: 120px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(34,197,94,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Nav row */
+    .hero-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      min-height: 36px;
+      margin-bottom: 6px;
+      z-index: 1;
+    }
+
+    .back-btn {
+      position: absolute;
+      left: 0;
+      width: 42px;
+      height: 42px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: background 0.2s;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.13); }
+    .back-btn svg { width: 20px; height: 20px; stroke: rgba(255,255,255,0.9); stroke-width: 2.5; fill: none; }
+
+
+
+    /* Hero text */
+    .hero-body {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: #FFFFFF;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .hero-sub {
+      font-size: 13px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.48);
+      margin-bottom: 12px;
+      letter-spacing: 0.1px;
+    }
+
+    /* Context chips */
+    .chips-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: nowrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(34,197,94,0.14);
+      border: 1.5px solid rgba(34,197,94,0.35);
+      border-radius: 50px;
+      padding: 7px 13px;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .chip svg {
+      width: 14px;
+      height: 14px;
+      fill: #4ADE80;
+      flex-shrink: 0;
+    }
+
+    .chip span {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #4ADE80;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    /* ─── BODY ─────────────────────────────────────────── */
+    .body {
+      padding: 18px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* ─── CARD ─────────────────────────────────────────── */
+    .card {
+      background: #FFFFFF;
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.03);
+    }
+
+    /* Section heading inside card */
+    .sec-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 18px;
+    }
+
+    .sec-icon {
+      width: 34px;
+      height: 34px;
+      background: #F0FDF4;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .sec-icon svg { width: 18px; height: 18px; }
+
+    .sec-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+    }
+
+    /* ─── CONFIG CARD ──────────────────────────────────── */
+    .config-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .field-wrap { display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow: hidden; }
+
+    .field-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94A3B8;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 13px;
+      transition: border-color 0.2s;
+    }
+
+    .field.active {
+      border-color: #22C55E;
+      background: #F0FDF4;
+    }
+
+    .field svg.fi { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .field-text {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #475569;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .field.active .field-text { color: #15803D; font-weight: 700; }
+
+    .chevron-down { width: 14px; height: 14px; flex-shrink: 0; }
+
+    .amanha-txt {
+      font-size: 12px;
+      font-weight: 600;
+      color: #22C55E;
+      margin-top: 5px;
+      padding-left: 2px;
+    }
+
+    /* Price chips */
+    .price-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+
+    .price-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 6px 11px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #475569;
+      white-space: nowrap;
+    }
+
+    .price-chip .pci { font-size: 14px; }
+
+    /* Entrega / Retirada toggle */
+    .entrega-row { display: flex; gap: 10px; }
+    .entrega-btn {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 10px 12px;
+      background: #F8FAFC;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 12px;
+      font-size: 13px; font-weight: 700;
+      color: #64748B;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .entrega-btn.sel {
+      background: #F0FDF4;
+      border-color: #22C55E;
+      color: #15803D;
+    }
+    /* Observação */
+    .obs-section { margin-top: 12px; }
+    .obs-field {
+      display: flex;
+      align-items: center;
+      padding: 11px 13px;
+      background: #F8FAFC;
+      border: 1.5px dashed #CBD5E1;
+      border-radius: 13px;
+      min-height: 42px;
+    }
+    .obs-ph {
+      font-size: 12.5px;
+      color: #CBD5E1;
+      font-style: italic;
+    }
+
+    /* ─── PEDIDOS EXTRAS ───────────────────────── */
+    .extras-card { border: 1.5px solid rgba(245,158,11,0.35); background: #FFFDF7; }
+    .extras-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 8px;
+    }
+    .extras-title-wrap { display: flex; flex-direction: column; gap: 3px; }
+    .extras-title-row { display: flex; align-items: center; gap: 6px; }
+    .extras-title-row svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .extras-label { font-size: 11.5px; font-weight: 800; color: #D97706; letter-spacing: 1px; text-transform: uppercase; }
+    .extras-sub { font-size: 11px; font-weight: 600; color: #92400E; opacity: 0.7; padding-left: 1px; }
+    .add-extra-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 7px 13px; background: #D97706; border: none;
+      border-radius: 50px; font-size: 11.5px; font-weight: 700;
+      color: #fff; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    }
+    .extra-item {
+      background: #FEF3C7;
+      border: 1.5px solid #FDE68A;
+      border-radius: 14px;
+      padding: 11px;
+    }
+    .extra-item-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 8px;
+    }
+    .extra-name-field {
+      flex: 1; min-width: 0;
+      padding: 8px 11px;
+      background: #fff;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 10px;
+      font-size: 12.5px; font-weight: 600; color: #334155;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .extra-btns { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+    .extra-type-btn {
+      width: 34px; height: 34px;
+      border: none; border-radius: 9px;
+      font-size: 15px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      background: #F1F5F9;
+    }
+    .extra-type-btn.sel { background: #7C3AED; }
+    .extra-remove-btn {
+      width: 30px; height: 30px;
+      border: none; border-radius: 8px;
+      background: #FEE2E2; color: #DC2626;
+      font-size: 18px; font-weight: 700; line-height: 1;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .extra-just-field {
+      padding: 9px 12px;
+      background: #fff;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 10px;
+      font-size: 12px; font-weight: 500; color: #475569;
+    }
+    /* OBSERVAÇÕES (OPCIONAL) */
+    .obs-bottom { padding: 0 2px; }
+    .obs-bottom-label {
+      font-size: 10.5px; font-weight: 700;
+      color: #94A3B8; letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .obs-bottom-field {
+      background: #fff;
+      border: 1.5px solid #E2E8F0;
+      border-radius: 16px;
+      padding: 14px 16px;
+      min-height: 58px;
+    }
+    .obs-bottom-ph { font-size: 12.5px; color: #CBD5E1; font-style: italic; }
+
+    /* ─── COLABORADORES ────────────────────────────────── */
+    .colab-header {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 14px;
+    }
+
+    .colab-header .sec-icon { flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; }
+    .colab-header .sec-icon svg { width: 15px; height: 15px; }
+
+    .colab-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .todos-btns {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .todos-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 9px;
+      border-radius: 50px;
+      border: 1.5px solid;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      background: transparent;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .todos-btn:hover { opacity: 0.75; }
+    .todos-btn.green { border-color: #22C55E; color: #22C55E; }
+    .todos-btn.amber { border-color: #F59E0B; color: #F59E0B; }
+    .todos-btn svg { width: 13px; height: 13px; }
+
+    /* Colab rows */
+    .colab-list { display: flex; flex-direction: column; }
+
+    .colab-row {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 13px 0;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    .colab-row:first-child { padding-top: 0; }
+    .colab-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      flex-shrink: 0;
+    }
+
+    .colab-info { flex: 1; min-width: 0; }
+
+    .colab-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0F172A;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .colab-role {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94A3B8;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .colab-toggles { display: flex; gap: 8px; flex-shrink: 0; }
+
+    .tog {
+      width: 44px;
+      height: 44px;
+      border-radius: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      transition: filter 0.15s, transform 0.1s;
+    }
+    .tog:hover { filter: brightness(0.93); transform: scale(0.96); }
+    .tog.food { background: #DCFCE7; }
+    .tog.caff { background: #FEF3C7; }
+    .tog svg { width: 20px; height: 20px; }
+
+    /* ─── FOOTER ───────────────────────────────────────── */
+    .footer {
+      background: #FFFFFF;
+      border-top: 1px solid #F1F5F9;
+      padding: 10px 16px 14px;
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.09);
+      border-radius: 22px 22px 0 0;
+      flex-shrink: 0;
+    }
+
+    .kpi-row {
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr 1px 1fr;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #F1F5F9;
+    }
+
+    .kpi {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .kpi-val {
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+    .kpi-val.g { color: #22C55E; }
+    .kpi-val.a { color: #F59E0B; }
+    .kpi-val.m { color: #22C55E; font-size: 17px; letter-spacing: -0.6px; }
+
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: #94A3B8;
+    }
+
+    .kpi-sep { background: #E2E8F0; height: 30px; }
+
+    .send-btn {
+      width: 100%;
+      height: 46px;
+      background: linear-gradient(130deg, #22C55E 0%, #16A34A 100%);
+      border: none;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 16px rgba(34,197,94,0.35), 0 2px 6px rgba(34,197,94,0.18);
+      transition: filter 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+    .send-btn:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(34,197,94,0.42);
+    }
+    .send-btn svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .send-btn span { font-size: 14px; font-weight: 800; color: #fff; letter-spacing: 0.2px; }
+
+    .footer-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+    .footer-note svg { width: 14px; height: 14px; }
+    .footer-note strong { color: #22C55E; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="phone-scroll">
+
+    <!-- ═══════════ HERO ═══════════ -->
+    <div class="hero">
+      <div class="hero-grid"></div>
+      <div class="hero-arc"></div>
+      <div class="hero-glow"></div>
+
+      <!-- Nav -->
+      <div class="hero-nav">
+        <button class="back-btn" aria-label="Voltar">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 18L9 12l6-6"/>
+          </svg>
+        </button>
+        <!-- logo removed -->
+      </div>
+
+      <!-- Text -->
+      <div class="hero-body">
+        <h1 class="hero-title">Solicitar Refeição</h1>
+        <p class="hero-sub">Selecione as opções e envie para aprovação.</p>
+
+        <!-- Context chips -->
+        <div class="chips-row">
+          <div class="chip">
+            <!-- people icon -->
+            <svg viewBox="0 0 24 24">
+              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+            </svg>
+            <span>EQ-F07 · MANHÃ</span>
+          </div>
+          <div class="chip">
+            <!-- person icon -->
+            <svg viewBox="0 0 24 24">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <span>1002@lider.smartpro</span>
+          </div>
+        </div>
+      </div>
+    </div><!-- /hero -->
+
+    <!-- ═══════════ BODY ═══════════ -->
+    <div class="body">
+
+      <!-- CONFIGURAÇÃO CARD -->
+      <div class="card">
+        <div class="sec-head">
+          <div class="sec-icon">
+            <!-- settings gear -->
+            <svg viewBox="0 0 24 24" fill="#22C55E">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            </svg>
+          </div>
+          <span class="sec-title">Configuração</span>
+        </div>
+
+        <div class="config-cols">
+          <!-- DATA -->
+          <div class="field-wrap">
+            <div class="field-label">Data</div>
+            <div class="field">
+              <!-- calendar icon -->
+              <svg class="fi" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span class="field-text">25 de mai. de 2026</span>
+            </div>
+            <div class="amanha-txt">Amanhã</div>
+          </div>
+
+          <!-- RESTAURANTE -->
+          <div class="field-wrap">
+            <div class="field-label">Restaurante</div>
+            <div class="field active">
+              <!-- storefront icon -->
+              <svg class="fi" viewBox="0 0 24 24" fill="#22C55E">
+                <path d="M20 4H4v2l1 1v12h14V7l1-1V4zm-9 13H7v-5h4v5zm6 0h-4v-5h4v5zM5 6l-1-1V4h16v1l-1 1H5zM9 8h6v2H9z"/>
+              </svg>
+              <span class="field-text">RESTAURANTE D...</span>
+              <!-- chevron down -->
+              <svg class="chevron-down" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Price chips -->
+        <div class="price-row">
+          <div class="price-chip">
+            <span class="pci">🍴</span>
+            <span>R$&nbsp;22,50/ref</span>
+          </div>
+          <div class="price-chip">
+            <span class="pci">☕</span>
+            <span>R$&nbsp;8,00/café</span>
+          </div>
+        </div>
+
+        <!-- MODO DE ENTREGA -->
+        <div class="field-wrap" style="margin-top:14px;">
+          <div class="field-label">Tipo de entrega</div>
+          <div class="entrega-row">
+            <button class="entrega-btn sel">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9 1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+              Entrega
+            </button>
+            <button class="entrega-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+              Retirada
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /config card -->
+
+      <!-- COLABORADORES CARD -->
+      <div class="card">
+        <div class="colab-header">
+          <div class="sec-icon">
+            <svg viewBox="0 0 24 24" fill="#22C55E" width="18" height="18">
+              <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+            </svg>
+          </div>
+          <span class="colab-title">Colaboradores (5)</span>
+          <div class="todos-btns">
+            <button class="todos-btn green">
+              <!-- crossed utensils (Lucide utensils-crossed) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/>
+                <path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/>
+                <path d="m2.1 21.8 6.4-6.3"/>
+                <path d="m19 5-7 7"/>
+              </svg>
+              Todos
+            </button>
+            <button class="todos-btn amber">
+              <!-- coffee cup -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+                <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+              </svg>
+              Todos
+            </button>
+          </div>
+        </div>
+
+        <div class="colab-list">
+
+          <!-- Antonio Carlos Silva -->
+          <div class="colab-row">
+            <div class="avatar" style="background:#DCFCE7; color:#166534;">AS</div>
+            <div class="colab-info">
+              <div class="colab-name">ANTONIO CARLOS SILVA</div>
+              <div class="colab-role">OP. MOTOSSERRA</div>
+            </div>
+            <div class="colab-toggles">
+              <button class="tog food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/>
+                  <path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/>
+                  <path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/>
+                </svg>
+              </button>
+              <button class="tog caff">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Jose Ferreira Santos -->
+          <div class="colab-row">
+            <div class="avatar" style="background:#DBEAFE; color:#1E40AF;">JS</div>
+            <div class="colab-info">
+              <div class="colab-name">JOSE FERREIRA SANTOS</div>
+              <div class="colab-role">AJUDANTE</div>
+            </div>
+            <div class="colab-toggles">
+              <button class="tog food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/>
+                  <path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/>
+                  <path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/>
+                </svg>
+              </button>
+              <button class="tog caff">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Lucas Oliveira -->
+          <div class="colab-row">
+            <div class="avatar" style="background:#EDE9FE; color:#6D28D9;">LO</div>
+            <div class="colab-info">
+              <div class="colab-name">LUCAS OLIVEIRA</div>
+              <div class="colab-role">OP. TRATOR</div>
+            </div>
+            <div class="colab-toggles">
+              <button class="tog food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/>
+                  <path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/>
+                  <path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/>
+                </svg>
+              </button>
+              <button class="tog caff">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Marcos Rodrigues -->
+          <div class="colab-row">
+            <div class="avatar" style="background:#FED7AA; color:#C2410C;">MR</div>
+            <div class="colab-info">
+              <div class="colab-name">MARCOS RODRIGUES</div>
+              <div class="colab-role">AJUDANTE</div>
+            </div>
+            <div class="colab-toggles">
+              <button class="tog food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/>
+                  <path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/>
+                  <path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/>
+                </svg>
+              </button>
+              <button class="tog caff">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Paulo Henrique -->
+          <div class="colab-row">
+            <div class="avatar" style="background:#CCFBF1; color:#0F766E;">PH</div>
+            <div class="colab-info">
+              <div class="colab-name">PAULO HENRIQUE</div>
+              <div class="colab-role">OP. ROÇADEIRA</div>
+            </div>
+            <div class="colab-toggles">
+              <button class="tog food">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/>
+                  <path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/>
+                  <path d="m2.1 21.8 6.4-6.3"/><path d="m19 5-7 7"/>
+                </svg>
+              </button>
+              <button class="tog caff">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+                  <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /colab-list -->
+      </div><!-- /colab card -->
+
+      <!-- PEDIDOS EXTRAS CARD -->
+      <div class="card extras-card">
+        <div class="extras-header">
+          <div class="extras-title-wrap">
+            <div class="extras-title-row">
+              <svg viewBox="0 0 24 24" fill="#D97706"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+              <span class="extras-label">Pedidos Extras</span>
+            </div>
+            <span class="extras-sub">Justificativa obrigatória</span>
+          </div>
+          <button class="add-extra-btn">+ Adicionar</button>
+        </div>
+
+        <!-- Exemplo: Patrícia Alves -->
+        <div class="extra-item">
+          <div class="extra-item-row">
+            <div class="extra-name-field">Patrícia Alves</div>
+            <div class="extra-btns">
+              <button class="extra-type-btn sel" title="Almoço">🍴</button>
+              <button class="extra-type-btn" title="Café">☕</button>
+              <button class="extra-remove-btn">&#215;</button>
+            </div>
+          </div>
+          <div class="extra-just-field">Visita técnica segurança do trabalho</div>
+        </div>
+      </div><!-- /extras card -->
+
+      <!-- OBSERVAÇÕES (OPCIONAL) -->
+      <div class="obs-bottom">
+        <div class="obs-bottom-label">Observações (Opcional)</div>
+        <div class="obs-bottom-field">
+          <span class="obs-bottom-ph">Ex: João não virá amanhã, substituir por...</span>
+        </div>
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /phone-scroll -->
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <div class="footer">
+    <div class="kpi-row">
+      <div class="kpi">
+        <span class="kpi-val g">7</span>
+        <span class="kpi-label">refeições</span>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi">
+        <span class="kpi-val a">6</span>
+        <span class="kpi-label">cafés</span>
+      </div>
+      <div class="kpi-sep"></div>
+      <div class="kpi">
+        <span class="kpi-val m">R$&nbsp;205,50</span>
+        <span class="kpi-label">estimado</span>
+      </div>
+    </div>
+
+    <button class="send-btn">
+      <!-- paper plane icon -->
+      <svg viewBox="0 0 24 24">
+        <line x1="22" y1="2" x2="11" y2="13"/>
+        <polygon points="22 2 15 22 11 13 2 9 22 2" fill="rgba(255,255,255,0.25)" stroke="white"/>
+      </svg>
+      <span>Enviar para Aprovação</span>
+    </button>
+
+    <div class="footer-note">
+      <!-- shield icon -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      Seguro, rastreável e sob sua gestão.
+    </div>
+  </div><!-- /footer -->
+
+</div><!-- /phone -->
+
+</body>
+</html>

@@ -9,7 +9,7 @@ import {
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
   TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon, BeakerIcon, DevicePhoneMobileIcon,
-  ExclamationTriangleIcon, WrenchScrewdriverIcon, CpuChipIcon,
+  ExclamationTriangleIcon, WrenchScrewdriverIcon, CpuChipIcon, BookOpenIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -142,6 +142,7 @@ const navGroups = [
       { to: '/manutencao/operacoes/os',             icon: ClipboardDocumentListIcon,  label: 'Ordens de Serviço',  moduleKey: 'manutencao' },
       { to: '/manutencao/operacoes/preventiva',     icon: CalendarDaysIcon,           label: 'Preventiva',         moduleKey: 'manutencao' },
       { to: '/manutencao/api-planos',              icon: CpuChipIcon,                label: 'API Planos',         moduleKey: 'manutencao' },
+      { to: '/manutencao/catalogo',                  icon: BookOpenIcon,               label: 'Catálogo',           moduleKey: 'manutencao' },
       { to: '/manutencao/cadastros/equipamentos',   icon: WrenchScrewdriverIcon,      label: 'Equipamentos',       moduleKey: 'manutencao' },
       { to: '/manutencao/cadastros/tecnicos',       icon: UsersIcon,                  label: 'Técnicos',           moduleKey: 'manutencao' },
     ],

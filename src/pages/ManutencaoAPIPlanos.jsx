@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import { toast } from 'react-hot-toast'
@@ -239,6 +239,7 @@ function MiniKpi({ label, value, color = '#16a34a', icon: Icon, note }) {
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function ManutencaoAPIPlanos() {
   const navigate = useNavigate()
+  const location = useLocation()
   const workspaceId = useStore(s => s.workspaceId)
 
   const [form, setForm] = useState({
@@ -247,6 +248,18 @@ export default function ManutencaoAPIPlanos() {
   })
   const [searched, setSearched] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // ── Pré-preencher via navegação do catálogo ─────────────────────────────────
+  useEffect(() => {
+    const prefill = location.state?.prefill
+    if (prefill) {
+      setForm(f => ({
+        ...f,
+        ...(prefill.fabricante ? { fabricante: prefill.fabricante } : {}),
+        ...(prefill.modelo     ? { modelo: prefill.modelo, configuracao: '' } : {}),
+      }))
+    }
+  }, [location.state])
   const [tab, setTab] = useState('resumo')
   const [sidePanel, setSidePanel] = useState(null)         // { type: 'intervalo'|'filtro'|'peca'|'fluido'|'fonte'|'frota', data }
   const [selectedInterval, setSelectedInterval] = useState(null)
