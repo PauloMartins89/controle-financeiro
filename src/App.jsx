@@ -20,8 +20,6 @@ import ProspectarClientes from './pages/ProspectarClientes'
 import ProspectarDashboard from './pages/ProspectarDashboard'
 import ProspectarContratos from './pages/ProspectarContratos'
 import ProspectarRelatorios from './pages/ProspectarRelatorios'
-import RadarComercial from './pages/RadarComercial'
-import RelacoesComercias from './pages/RelacoesComercias'
 import Proventos from './pages/Proventos'
 import Importar from './pages/Importar'
 import Compras from './pages/Compras'
@@ -44,14 +42,13 @@ import CotacaoPublica from './pages/CotacaoPublica'
 import AprovarPublica from './pages/AprovarPublica'
 import RefeicaoPublica from './pages/RefeicaoPublica'
 import RefeicaoAprovar from './pages/RefeicaoAprovar'
-import RefeicaoValidar from './pages/RefeicaoValidar'
-import RefeicaoConfirmarRestaurante from './pages/RefeicaoConfirmarRestaurante'
 import Refeicoes from './pages/Refeicoes'
-import DownloadApp from './pages/DownloadApp'
-import MapaGerencialRefeicoes from './pages/MapaGerencialRefeicoes'
-import MapaApontamentoMaquina from './pages/MapaApontamentoMaquina'
-import MaquinasDashboard from './pages/MaquinasDashboard'
-import BoletinsPendencias from './pages/BoletinsPendencias'
+import ManutencaoDashboard from './pages/ManutencaoDashboard'
+import ManutencaoOS from './pages/ManutencaoOS'
+import ManutencaoPreventiva from './pages/ManutencaoPreventiva'
+import ManutencaoEquipamentos from './pages/ManutencaoEquipamentos'
+import ManutencaoAPIPlanos from './pages/ManutencaoAPIPlanos'
+import ManutencaoPlanosPFD from './pages/ManutencaoPlanosPFD'
 import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
@@ -73,14 +70,6 @@ import PlataformaModulos from './pages/PlataformaModulos'
 import PlataformaAuditoria from './pages/PlataformaAuditoria'
 import ChatIA from './components/ChatIA'
 import GlobalSearch from './components/GlobalSearch'
-import AgendaServicos from './pages/AgendaServicos'
-import ManutencaoDashboard from './pages/ManutencaoDashboard'
-import ManutencaoOS from './pages/ManutencaoOS'
-import ManutencaoPreventiva from './pages/ManutencaoPreventiva'
-import ManutencaoEquipamentos from './pages/ManutencaoEquipamentos'
-import ManutencaoAPIPlanos from './pages/ManutencaoAPIPlanos'
-import ManutencaoPlanosPFD from './pages/ManutencaoPlanosPFD'
-import CatalogoModelos from './pages/CatalogoModelos'
 
 // Verifica se assinatura está ativa (trial válido, ativo, ou isento)
 function isSubscriptionActive(sub) {
@@ -248,8 +237,6 @@ export default function App() {
     }
 
     const load = async () => {
-      // Carrega usuário antes do batch para filtrar workspace_members corretamente
-      const { data: { user: authUser } } = await supabase.auth.getUser()
       const [
         { data: pessoas },
         { data: grupos },
@@ -273,9 +260,7 @@ export default function App() {
         supabase.from('negocios').select('*'),
         supabase.from('proventos').select('*').order('data', { ascending: false }),
         supabase.from('closures').select('*').order('mes', { ascending: true }),
-        authUser?.id
-          ? supabase.from('workspace_members').select('workspace_id, perfil_id, ativo, user_id').eq('user_id', authUser.id).limit(10)
-          : Promise.resolve({ data: [] }),
+        supabase.from('workspace_members').select('workspace_id, perfil_id, ativo, user_id').limit(10),
       ])
       // Usa o workspace com mais módulos configurados (usuário pode ter múltiplos)
       const allWorkspaceIds = (wsMembers || []).map(m => m.workspace_id).filter(Boolean)
@@ -337,6 +322,7 @@ export default function App() {
       const cfgSaldo = configs?.find(c => c.chave === 'saldoCaixa')
       if (cfgSaldo) update.saldoCaixa = parseFloat(cfgSaldo.valor) || 0
       // Verifica se o usuário é platform admin (substitui check hardcoded de e-mail)
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       if (authUser?.id) {
         const { data: adminRow } = await supabase
           .from('platform_admins')
@@ -344,7 +330,7 @@ export default function App() {
           .eq('user_id', authUser.id)
           .maybeSingle()
         update.isPlatformAdmin = !!adminRow
-        if (adminRow) update.enabledModules = null // admin plataforma vê todos os módulos sem exceção
+        if (adminRow) update.enabledModules = null // admin sempre vê todos os módulos
 
         // Carrega permissões: ['*'] = acesso total, array específico quando tem perfil restrito
         let permissoes = ['*'] // default: admin total da empresa (sem perfil_id)
@@ -440,8 +426,6 @@ export default function App() {
     }
   }, [])
 
-  if (window.location.pathname === '/download') return <DownloadApp />
-
   if (!ready) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-primary)', color: '#6366f1', flexDirection: 'column', gap: 16 }}>
       <div style={{ width: 48, height: 48, border: '4px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -459,9 +443,6 @@ export default function App() {
         <Route path="/aprovar/:token" element={<AprovarPublica />} />
         <Route path="/refeicao/:token" element={<RefeicaoPublica />} />
         <Route path="/ar/:token" element={<RefeicaoAprovar />} />
-        <Route path="/vr/:token" element={<RefeicaoValidar />} />
-        <Route path="/rc/:token" element={<RefeicaoConfirmarRestaurante />} />
-        <Route path="/download" element={<DownloadApp />} />
         <Route path="/*" element={
           <RequireAuth>
             <RequireSubscription>
@@ -486,8 +467,6 @@ export default function App() {
                   <Route path="/prospectar/buscar" element={<ProspectarClientes />} />
                   <Route path="/prospectar/contratos" element={<ProspectarContratos />} />
                   <Route path="/prospectar/relatorios" element={<ProspectarRelatorios />} />
-                  <Route path="/prospectar/radar" element={<RadarComercial />} />
-                  <Route path="/prospectar/relacoes" element={<RelacoesComercias />} />
                   <Route path="/proventos" element={<Proventos />} />
                   <Route path="/importar" element={<Importar />} />
                   <Route path="/escanear" element={<EscanearRecibo />} />
@@ -541,19 +520,14 @@ export default function App() {
                   <Route path="/refeicoes/relatorios/rel-restaurante" element={<Refeicoes />} />
                   <Route path="/refeicoes/relatorios/rel-cdc" element={<Refeicoes />} />
                   <Route path="/refeicoes/relatorios/rel-divergencias" element={<Refeicoes />} />
-                  <Route path="/refeicoes/mapa" element={<MapaGerencialRefeicoes />} />
-                  <Route path="/mapa-maquina" element={<MapaApontamentoMaquina />} />
-                  <Route path="/maquinas/dashboard" element={<MaquinasDashboard />} />
-                  <Route path="/maquinas/pendencias" element={<BoletinsPendencias />} />
-                  <Route path="/agenda-servicos" element={<AgendaServicos />} />
-                  <Route path="/manutencao" element={<ManutencaoDashboard />} />
+                  <Route path="/manutencao" element={<Navigate to="/manutencao/dashboard" replace />} />
+                  <Route path="/manutencao/dashboard" element={<ManutencaoDashboard />} />
                   <Route path="/manutencao/operacoes/os" element={<ManutencaoOS />} />
                   <Route path="/manutencao/operacoes/preventiva" element={<ManutencaoPreventiva />} />
-                  <Route path="/manutencao/api-planos" element={<ManutencaoAPIPlanos />} />
-                  <Route path="/manutencao/planos-pfd" element={<ManutencaoPlanosPFD />} />
-                  <Route path="/manutencao/catalogo" element={<CatalogoModelos />} />
                   <Route path="/manutencao/cadastros/equipamentos" element={<ManutencaoEquipamentos />} />
                   <Route path="/manutencao/cadastros/tecnicos" element={<ManutencaoEquipamentos />} />
+                  <Route path="/manutencao/api-planos" element={<ManutencaoAPIPlanos />} />
+                  <Route path="/manutencao/planos-pfd" element={<ManutencaoPlanosPFD />} />
                 </Routes>
               </main>
             </div>

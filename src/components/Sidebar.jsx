@@ -9,6 +9,7 @@ import {
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
   TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon, BeakerIcon, DevicePhoneMobileIcon,
+  WrenchScrewdriverIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -106,6 +107,17 @@ const navGroups = [
       { to: '/refeicoes/relatorios/rel-restaurante',    icon: PresentationChartLineIcon,  label: 'Rel. Restaurante', moduleKey: 'refeicoes' },
       { to: '/refeicoes/relatorios/rel-cdc',            icon: TableCellsIcon,             label: 'Rel. CDC',         moduleKey: 'refeicoes' },
       { to: '/refeicoes/relatorios/rel-divergencias',   icon: ChartBarIcon,               label: 'Divergências',     moduleKey: 'refeicoes' },
+    ],
+  },
+  {
+    title: 'Manutenção',
+    items: [
+      { to: '/manutencao/dashboard',              icon: ChartBarIcon,               label: 'Dashboard',         moduleKey: 'manutencao' },
+      { to: '/manutencao/operacoes/os',           icon: ClipboardDocumentListIcon,  label: 'Ordens de Serviço', moduleKey: 'manutencao' },
+      { to: '/manutencao/operacoes/preventiva',   icon: CalendarDaysIcon,           label: 'Preventiva',        moduleKey: 'manutencao' },
+      { to: '/manutencao/cadastros/equipamentos', icon: WrenchScrewdriverIcon,      label: 'Equipamentos',      moduleKey: 'manutencao' },
+      { to: '/manutencao/api-planos',             icon: BeakerIcon,                 label: 'Planos API',        moduleKey: 'manutencao' },
+      { to: '/manutencao/planos-pfd',             icon: DocumentTextIcon,           label: 'Planos PFD',        moduleKey: 'manutencao' },
     ],
   },
   {
