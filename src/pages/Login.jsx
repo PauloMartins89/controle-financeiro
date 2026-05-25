@@ -64,6 +64,7 @@ export default function Login() {
         backgroundImage: 'url(/tela%20de%20login/sala%20ampla%20escritorio.png)',
         backgroundSize: 'cover',
         backgroundPosition: 'right center',
+        backgroundColor: '#0a1628',
         zIndex: 2,
       }}>
         {/* Overlay escuro */}
