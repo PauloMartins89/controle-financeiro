@@ -4,6 +4,7 @@ const SLIDES = [
   '/tela%20de%20login/tela%201.jpeg',
   '/tela%20de%20login/tela3.jpeg',
   '/tela%20de%20login/tela2.jpeg',
+  '/tela%20de%20login/tela5.png',
 ]
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
