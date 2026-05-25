@@ -67,7 +67,7 @@ async function pdfParaTexto(pdfBuffer, maxPaginas = 80) {
 }
 
 // ── Pontua e seleciona as páginas mais relevantes de manutenção ─────────────────
-function identificarPaginasManutencao(paginas, topN = 15) {
+function identificarPaginasManutencao(paginas, topN = 15, minScore = 3) {
   // Palavras de alta relevância (são intervalos específicos) — peso 3
   const HIGH = [
     '10 h', '50 h', '100 h', '125 h', '200 h', '250 h', '400 h', '500 h',
@@ -92,7 +92,9 @@ function identificarPaginasManutencao(paginas, topN = 15) {
     const highScore = HIGH.filter(kw => lower.includes(kw.toLowerCase())).length * 3
     const midScore  = MID.filter(kw => lower.includes(kw.toLowerCase())).length
     return { ...p, score: highScore + midScore }
-  }).filter(p => p.score > 0)
+  // score >= minScore = pelo menos 1 keyword HIGH (ex: "250h", "amaciamento")
+  // Ignora páginas que só têm termos genéricos de manutenção
+  }).filter(p => p.score >= minScore)
 
   // Ordena por score desc, pega as topN, reordena por número de página
   return scored
@@ -288,7 +290,12 @@ export default async function handler(req, res) {
     if (paginas.length === 0) throw new Error('Não foi possível extrair texto do PDF')
 
     // ── Filtra páginas de manutenção ──────────────────────────────────────
-    const paginasManutencao = identificarPaginasManutencao(paginas)
+    // Tenta filtro estrito (score>=3 = ao menos 1 keyword de intervalo como "250h")
+    let paginasManutencao = identificarPaginasManutencao(paginas, 15, 3)
+    if (paginasManutencao.length === 0) {
+      // Fallback: qualquer página com keyword de manutenção (score>=1)
+      paginasManutencao = identificarPaginasManutencao(paginas, 15, 1)
+    }
     L(`keyword filter: ${paginasManutencao.length}/${paginas.length} páginas com termos de manutenção`)
 
     const paginasParaProcessar = paginasManutencao.length > 0
