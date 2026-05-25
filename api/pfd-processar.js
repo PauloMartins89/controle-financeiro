@@ -1,36 +1,151 @@
 // api/pfd-processar.js
-// Importa e processa PDF de manual técnico John Deere
-// Extrai intervalos de manutenção via OpenAI GPT-4o-mini
+// Extrai planos de manutenção de PDFs de manuais técnicos
+//
+// Provider IA configurável via AI_PROVIDER env var:
+//   gemini (padrão) — envia PDF nativo ao Gemini 1.5 Flash (lê tabelas visualmente)
+//   openai           — envia texto extraído pelo pdf-parse ao GPT-4o-mini (fallback explícito)
 //
 // Modos de entrada (JSON body):
-//   { modo: 'url',    url_pdf, publicacao_id, workspace_id }
-//   { modo: 'upload', pdf_base64, publicacao_id, workspace_id }
-//
-// Fluxo:
-//   1. Obtém o PDF (baixa URL ou usa base64 enviado)
-//   2. Extrai texto por página via pdf-parse
-//   3. Filtra páginas de manutenção por score de keywords
-//   4. Envia bloco concatenado ao OpenAI GPT-4o-mini
-//   5. Salva em pfd_planos + atualiza status em pfd_publicacoes
+//   { modo: 'storage', storage_path, workspace_id, ... }
+//   { modo: 'url',     url_pdf,      workspace_id, ... }
+//   { modo: 'upload',  pdf_base64,   workspace_id, ... }
 
 import { createClient } from '@supabase/supabase-js'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import OpenAI from 'openai'
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url)
-// Usa o lib interno do pdf-parse v1.1.1 para evitar leitura de arquivo de
-// teste no carregamento do módulo (bug conhecido do index.js do pacote).
-// pdf-parse v1 usa pdfjs-dist v2 internamente — sem Worker nem DOMMatrix.
+// Usa lib interno do pdf-parse para evitar bug de leitura de arquivo de teste
 const pdfParse = require('pdf-parse/lib/pdf-parse.js')
 
 const supabaseUrl        = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
+const geminiApiKey       = process.env.GEMINI_API_KEY
 const openaiApiKey       = process.env.OPENAI_API_KEY
+
+// Limite seguro para inline data do Gemini (18 MB — limite oficial é 20 MB)
+const GEMINI_INLINE_LIMIT = 18 * 1024 * 1024
 
 function getSupabase() {
   return createClient(supabaseUrl, supabaseServiceKey)
 }
 
-// ── OpenAI com retry/backoff ─────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// ── PROVIDER: GEMINI 1.5 Flash — PDF nativo ───────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+function buildGeminiPrompt(modelo, fabricante) {
+  return `Você está analisando o Manual do Operador de um equipamento agrícola.
+
+EQUIPAMENTO: ${fabricante || 'John Deere'} ${modelo || ''}
+
+TAREFA: Leia TODAS as páginas do PDF e extraia as tabelas de manutenção periódica.
+
+Procure seções com estes títulos (ou equivalentes em inglês):
+- "Serviço Periódico" / "Periodic Service"
+- "Manutenção Periódica" / "Periodic Maintenance"
+- "Intervalos de Manutenção" / "Maintenance Intervals"
+- "Tabela de Manutenção" / "Maintenance Schedule"
+- "Lubrificação e Manutenção" / "Lubrication and Maintenance"
+
+Para CADA intervalo encontrado (Amaciamento, 10h, 50h, 100h, 125h, 200h, 250h, 400h, 500h, 600h, 750h, 1000h, 1500h, 2000h, 6000h, Anual, etc.):
+- Extraia TODAS as tarefas da tabela — nenhuma linha pode ser omitida
+- Preserve EXATAMENTE o texto das observações condicionais ("se equipado", "somente tratores com", etc.)
+- Identifique o sistema de cada tarefa (Motor, Transmissão, Hidráulico, Eixo Dianteiro, Freios, Cabine, Geral, etc.)
+- Capture lubrificante/fluido e capacidade quando presentes na tabela
+
+SCHEMA DE RETORNO (JSON estrito, sem texto fora do JSON):
+{
+  "equipamento": {
+    "marca": "${fabricante || 'John Deere'}",
+    "modelo": "${modelo || ''}",
+    "manual": "",
+    "regiao": "",
+    "idioma": "pt"
+  },
+  "intervalos": [
+    {
+      "intervalo_horas": 10,
+      "titulo_intervalo": "A cada 10 horas de operação ou diariamente",
+      "periodicidade": "recorrente",
+      "tarefas": [
+        {
+          "sistema": "Motor",
+          "descricao_tarefa": "Verificar nível de óleo do motor",
+          "tipo": "verificacao",
+          "lubrificante_fluido": "JD Plus-50 II",
+          "capacidade": "",
+          "pecas_citadas": [],
+          "condicional": false,
+          "aplicabilidade": "",
+          "observacao": "",
+          "pagina_fonte": null,
+          "confianca": "alta"
+        }
+      ],
+      "status_extracao": "ok"
+    }
+  ],
+  "alertas": []
+}
+
+REGRAS OBRIGATÓRIAS:
+1. intervalo_horas: use número. Amaciamento=0, Primeiras600h=600, Anual sem horas definidas=8760
+2. periodicidade: "uma_vez" para Amaciamento e Primeiras 600h; "recorrente" para todos os demais
+3. tipo: "verificacao" | "troca" | "lubrificacao" | "limpeza" | "ajuste" | "inspecao" | "substituicao" | "outro"
+4. condicional: true se a tarefa tem condição ("se equipado", "somente", "conforme", "quando", "tratores com", "primeiras")
+5. aplicabilidade: copie exatamente o texto da condição (ex: "Somente tratores com tração dianteira", "Se equipado com cabine")
+6. observacao: qualquer nota adicional da tarefa (intervalos alternativos, produtos aceitos, etc.)
+7. status_extracao: "ok" se tarefas foram extraídas; "falha_extracao" se intervalo existe no manual mas tarefas não foram identificadas; "intervalo_nao_encontrado" se o intervalo não consta no manual
+8. confianca: "alta" se texto claro na tabela; "media" se interpretado/inferido; "baixa" se incerto
+9. NUNCA omita linhas de tarefa — se a tabela tem 12 linhas para um intervalo, retorne 12 tarefas
+10. Inclua tarefas condicionais com condicional=true — não as descarte
+11. Se o mesmo intervalo aparecer em múltiplas tabelas, mescle as tarefas sem duplicar
+12. Preserve os nomes dos lubrificantes exatamente como aparecem (ex: "JD Plus-50 II", "Hy-Gard", "Cool-Gard II")`
+}
+
+async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
+  if (!geminiApiKey) throw new Error('GEMINI_API_KEY não configurada')
+
+  const mbSize = (pdfBuffer.length / 1024 / 1024).toFixed(2)
+  L(`Gemini: PDF ${mbSize} MB`)
+
+  if (pdfBuffer.length > GEMINI_INLINE_LIMIT) {
+    throw new Error(`PDF muito grande para Gemini inline (${mbSize} MB > 18 MB). Configure AI_PROVIDER=openai ou comprima o PDF.`)
+  }
+
+  const genAI = new GoogleGenerativeAI(geminiApiKey)
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-1.5-flash',
+    generationConfig: {
+      responseMimeType: 'application/json',
+      maxOutputTokens: 65536,
+      temperature: 0.1,
+    },
+  })
+
+  const prompt = buildGeminiPrompt(modelo, fabricante)
+  const pdfPart = {
+    inlineData: {
+      mimeType: 'application/pdf',
+      data: pdfBuffer.toString('base64'),
+    },
+  }
+
+  L('Enviando PDF ao Gemini 1.5 Flash...')
+  const result = await model.generateContent([pdfPart, { text: prompt }])
+  const text = result.response.text()
+  L(`Gemini respondeu: ${text.length} chars`)
+
+  const parsed = JSON.parse(text)
+  if (!Array.isArray(parsed.intervalos)) throw new Error('Gemini não retornou campo "intervalos" como array')
+  return parsed
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── PROVIDER: OPENAI GPT-4o-mini — texto via pdf-parse (fallback) ─────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
 async function openaiWithRetry(client, params, maxAttempts = 4) {
   let lastErr
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -41,23 +156,20 @@ async function openaiWithRetry(client, params, maxAttempts = 4) {
       const status = err?.status || err?.response?.status
       const retriable = status === 429 || (status >= 500 && status < 600)
       if (!retriable || attempt === maxAttempts) throw err
-      // Respeita retry-after do OpenAI (em segundos); fallback: backoff exponencial
       const retryAfter = Number(err?.headers?.['retry-after'] || 0)
       const delay = retryAfter > 0
         ? retryAfter * 1000
         : Math.pow(2, attempt) * 2000 + Math.floor(Math.random() * 1000)
-      console.log(`[pfd] OpenAI ${status} — aguardando ${Math.round(delay/1000)}s (tentativa ${attempt}/${maxAttempts})`)
+      console.log(`[pfd] OpenAI ${status} — aguardando ${Math.round(delay / 1000)}s (tentativa ${attempt}/${maxAttempts})`)
       await new Promise(r => setTimeout(r, delay))
     }
   }
   throw lastErr
 }
 
-// ── Extrai texto por página via pdf-parse (Node.js nativo, sem worker/DOM) ─────
 async function pdfParaTexto(pdfBuffer, maxPaginas = 80) {
   const paginas = []
   let paginaAtual = 0
-
   async function renderPage(pageData) {
     paginaAtual++
     if (paginaAtual > maxPaginas) return ''
@@ -66,23 +178,18 @@ async function pdfParaTexto(pdfBuffer, maxPaginas = 80) {
     if (texto.length > 10) paginas.push({ pagina: paginaAtual, texto })
     return texto
   }
-
   await pdfParse(pdfBuffer, { pagerender: renderPage })
   return paginas
 }
 
-// ── Pontua e seleciona as páginas mais relevantes de manutenção ─────────────────
 function identificarPaginasManutencao(paginas, topN = 15, minScore = 3) {
-  // Palavras de alta relevância (são intervalos específicos) — peso 3
   const HIGH = [
     '10 h', '50 h', '100 h', '125 h', '200 h', '250 h', '400 h', '500 h',
     '750 h', '1000 h', '1500 h', '2000 h', '6000 h',
     '10h', '50h', '100h', '125h', '200h', '250h', '400h', '500h',
     '750h', '1000h', '1500h', '2000h', '6000h',
-    'amaciamento', 'primeiras 600', 'diariamente', 'semanalmente',
-    'mensalmente', 'anualmente',
+    'amaciamento', 'primeiras 600', 'diariamente', 'semanalmente', 'mensalmente', 'anualmente',
   ]
-  // Palavras de média relevância (tarefas comuns) — peso 1
   const MID = [
     'intervalo de manutenção', 'serviço periódico', 'manutenção periódica',
     'lubrificação', 'troca de óleo', 'verificar nível', 'drenar',
@@ -91,25 +198,16 @@ function identificarPaginasManutencao(paginas, topN = 15, minScore = 3) {
     'arrefecimento', 'diferencial', 'embreagem', 'bico injetor',
     'correia', 'rolamento', 'pivo', 'cubo de roda',
   ]
-
   const scored = paginas.map(p => {
     const lower = p.texto.toLowerCase()
     const highScore = HIGH.filter(kw => lower.includes(kw.toLowerCase())).length * 3
-    const midScore  = MID.filter(kw => lower.includes(kw.toLowerCase())).length
+    const midScore = MID.filter(kw => lower.includes(kw.toLowerCase())).length
     return { ...p, score: highScore + midScore }
-  // score >= minScore = pelo menos 1 keyword HIGH (ex: "250h", "amaciamento")
-  // Ignora páginas que só têm termos genéricos de manutenção
   }).filter(p => p.score >= minScore)
-
-  // Ordena por score desc, pega as topN, reordena por número de página
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topN)
-    .sort((a, b) => a.pagina - b.pagina)
+  return scored.sort((a, b) => b.score - a.score).slice(0, topN).sort((a, b) => a.pagina - b.pagina)
 }
 
-// ── Extrai intervalos do bloco (texto concatenado → OpenAI GPT-4o-mini) ─────
-async function extrairIntervalosDoBloco(openai, textoBloco, modelo) {
+async function extrairComOpenAI(openai, textoBloco, modelo) {
   const res = await openaiWithRetry(openai, {
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
@@ -151,9 +249,9 @@ Retorne este JSON:
 Regras OBRIGATÓRIAS:
 - Inclua TODOS os intervalos encontrados no texto
 - Para cada intervalo, inclua TODAS as tarefas listadas — não resuma nem agrupe
-- Campo "horas": use número (ex: 10, 50, 250). Para "Amaciamento" use 0. Para "Anual" use 1000 se não houver horas. Para "Primeiras 600h" use 600
+- Campo "horas": número (Amaciamento=0, Primeiras 600h=600, Anual=1000)
 - Campo "sistema": Motor, Transmissão, Hidráulico, Eixo Dianteiro, Freios, Cabine, Geral, etc.
-- Campos "codigo_lubrificante", "capacidade", "unidade": preencha se presentes no texto, caso contrário deixe ""
+- Campos "codigo_lubrificante", "capacidade", "unidade": preencha se presentes, caso contrário deixe ""
 - Se um intervalo não tiver tarefas identificáveis, omita-o`,
       },
     ],
@@ -163,9 +261,8 @@ Regras OBRIGATÓRIAS:
 
   const choice = res.choices[0]
   if (choice?.finish_reason === 'length') {
-    console.warn('[pfd] AVISO: resposta OpenAI truncada (max_tokens atingido) — JSON pode estar incompleto')
+    console.warn('[pfd] AVISO: resposta OpenAI truncada (max_tokens atingido)')
   }
-
   try {
     return JSON.parse(choice?.message?.content || '{}')
   } catch (_) {
@@ -173,16 +270,12 @@ Regras OBRIGATÓRIAS:
   }
 }
 
-// ── Mescla intervalos de múltiplas páginas ──────────────────────────────────
 function mesclarIntervalos(lista) {
   const mapa = {}
   for (const item of lista) {
     for (const iv of (item.intervalos || [])) {
       const key = String(iv.horas)
-      if (!mapa[key]) {
-        mapa[key] = { ...iv, tarefas: [] }
-      }
-      // Evita duplicatas de tarefas pelo texto
+      if (!mapa[key]) mapa[key] = { ...iv, tarefas: [] }
       for (const t of (iv.tarefas || [])) {
         const exists = mapa[key].tarefas.some(
           ex => ex.tarefa?.toLowerCase() === t.tarefa?.toLowerCase()
@@ -194,12 +287,88 @@ function mesclarIntervalos(lista) {
   return Object.values(mapa).sort((a, b) => Number(a.horas) - Number(b.horas))
 }
 
-// ── Handler principal ───────────────────────────────────────────────────────
+// Converte resultado OpenAI (formato legado) para novo schema
+function legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, edicao, idioma) {
+  return {
+    equipamento: {
+      marca: fabricanteEquip,
+      modelo: modeloEquip,
+      manual: '',
+      regiao: edicao || '',
+      idioma: idioma || 'pt',
+    },
+    intervalos: mesclarIntervalos([extracaoRaw]).map(iv => ({
+      intervalo_horas: iv.horas,
+      titulo_intervalo: iv.nome || `A cada ${iv.horas} horas`,
+      periodicidade: (iv.horas === 0 || iv.horas === 600) ? 'uma_vez' : 'recorrente',
+      tarefas: (iv.tarefas || []).map(t => ({
+        sistema: t.sistema || '',
+        descricao_tarefa: t.tarefa || '',
+        tipo: 'outro',
+        lubrificante_fluido: t.codigo_lubrificante || '',
+        capacidade: t.capacidade || '',
+        pecas_citadas: [],
+        condicional: false,
+        aplicabilidade: '',
+        observacao: '',
+        pagina_fonte: null,
+        confianca: 'media',
+      })),
+      status_extracao: (iv.tarefas?.length || 0) > 0 ? 'ok' : 'falha_extracao',
+    })),
+    alertas: [],
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── VALIDAÇÃO PÓS-EXTRAÇÃO ────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Intervalos que, se encontrados no PDF, NÃO podem vir vazios
+const INTERVALOS_CRITICOS = [10, 50, 500, 750, 1500, 2000]
+
+function validarExtracao(resultado) {
+  const alertas = resultado.alertas ? [...resultado.alertas] : []
+  const intervalos = resultado.intervalos || []
+
+  for (const iv of intervalos) {
+    const temTarefas = iv.tarefas && iv.tarefas.length > 0
+    if (!temTarefas && iv.status_extracao !== 'intervalo_nao_encontrado') {
+      iv.status_extracao = 'falha_extracao'
+      alertas.push({
+        tipo: 'falha_extracao',
+        horas: iv.intervalo_horas,
+        intervalo: iv.titulo_intervalo || `${iv.intervalo_horas}h`,
+        mensagem: `Intervalo ${iv.intervalo_horas}h encontrado mas sem tarefas extraídas`,
+      })
+    }
+  }
+
+  const temFalhaCritica = intervalos.some(iv =>
+    INTERVALOS_CRITICOS.includes(iv.intervalo_horas) && iv.status_extracao === 'falha_extracao'
+  )
+
+  const totalIntervalos = intervalos.length
+  const totalTarefas = intervalos.reduce((acc, iv) => acc + (iv.tarefas?.length || 0), 0)
+  const intervalosOk = intervalos.filter(iv => iv.status_extracao === 'ok').length
+  const statusGeral = totalIntervalos === 0
+    ? 'falha'
+    : intervalosOk === totalIntervalos
+      ? 'completo'
+      : intervalosOk > 0 ? 'parcial' : 'falha'
+
+  return { alertas, temFalhaCritica, statusGeral, totalIntervalos, totalTarefas, intervalosOk }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── HANDLER PRINCIPAL ─────────────────════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const log = []
-  const L = (msg) => { log.push(`[${new Date().toISOString().slice(11,23)}] ${msg}`); console.log('[pfd]', msg) }
+  const L = (msg) => { log.push(`[${new Date().toISOString().slice(11, 23)}] ${msg}`); console.log('[pfd]', msg) }
 
   const {
     modo, url_pdf, pdf_base64, storage_path, workspace_id,
@@ -209,7 +378,8 @@ export default async function handler(req, res) {
     edicao, idioma,
   } = req.body || {}
 
-  L(`request recebido: modo=${modo}, workspace_id=${workspace_id}, storage_path=${storage_path}`)
+  const providerUsado = process.env.AI_PROVIDER || 'gemini'
+  L(`request: modo=${modo}, provider=${providerUsado}, workspace=${workspace_id}`)
 
   if (!modo || !['url', 'upload', 'storage'].includes(modo)) {
     return res.status(400).json({ error: 'Parâmetro modo inválido. Use: url | storage | upload', log })
@@ -217,9 +387,8 @@ export default async function handler(req, res) {
   if (!workspace_id) return res.status(400).json({ error: 'workspace_id obrigatório', log })
 
   const sb = getSupabase()
-  const openai = new OpenAI({ apiKey: openaiApiKey })
 
-  // ── Cria ou usa a publicação ──────────────────────────────────────────────
+  // ── Cria ou usa publicação ────────────────────────────────────────────────
   let publicacao_id = pubIdRecebido
   if (!publicacao_id) {
     L('criando publicação no banco...')
@@ -240,12 +409,8 @@ export default async function handler(req, res) {
         url_pdf: url_pdf || null,
         status: 'processando',
       })
-      .select()
-      .single()
-    if (pubErr) {
-      L(`ERRO ao criar publicação: ${pubErr.message}`)
-      return res.status(500).json({ error: 'Erro ao criar publicação: ' + pubErr.message, log })
-    }
+      .select().single()
+    if (pubErr) return res.status(500).json({ error: 'Erro ao criar publicação: ' + pubErr.message, log })
     publicacao_id = novaPub.id
     L(`publicação criada: ${publicacao_id}`)
   } else {
@@ -265,124 +430,156 @@ export default async function handler(req, res) {
     // ── Obtém o PDF ───────────────────────────────────────────────────────
     if (modo === 'storage') {
       if (!storage_path) throw new Error('storage_path obrigatório para modo storage')
-      L(`baixando PDF do storage: ${storage_path}`)
-      const { data: fileBlob, error: fileErr } = await sb.storage
-        .from('pfd-manuais')
-        .download(storage_path)
+      L(`baixando do storage: ${storage_path}`)
+      const { data: fileBlob, error: fileErr } = await sb.storage.from('pfd-manuais').download(storage_path)
       if (fileErr) throw new Error('Erro ao baixar PDF do storage: ' + fileErr.message)
       pdfBuffer = Buffer.from(await fileBlob.arrayBuffer())
-      L(`PDF baixado do storage: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
     } else if (modo === 'url') {
       const pdfUrl = url_pdf || publicacao?.url_pdf
       if (!pdfUrl) throw new Error('URL do PDF não informada')
-      L(`baixando PDF da URL: ${pdfUrl}`)
+      L(`baixando URL: ${pdfUrl}`)
       const pdfRes = await fetch(pdfUrl, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SmartPro/1.0)', 'Accept': 'application/pdf,*/*' },
       })
-      if (!pdfRes.ok) throw new Error(`Erro ao baixar PDF: HTTP ${pdfRes.status}`)
+      if (!pdfRes.ok) throw new Error(`Erro HTTP ${pdfRes.status} ao baixar PDF`)
       pdfBuffer = Buffer.from(await pdfRes.arrayBuffer())
-      L(`PDF baixado da URL: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
     } else {
       if (!pdf_base64) throw new Error('pdf_base64 obrigatório para modo upload')
-      const b64 = pdf_base64.replace(/^data:[^;]+;base64,/, '')
-      pdfBuffer = Buffer.from(b64, 'base64')
-      L(`PDF decodificado de base64: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
+      pdfBuffer = Buffer.from(pdf_base64.replace(/^data:[^;]+;base64,/, ''), 'base64')
+    }
+    L(`PDF obtido: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
+
+    // ── Metadados via pdf-parse (contagem de páginas apenas) ──────────────
+    let totalPaginas = null
+    let paginasUsadas = null
+    try {
+      const meta = await pdfParse(pdfBuffer, { max: 1 })
+      totalPaginas = meta.numpages
+      L(`pdf-parse: ${totalPaginas} páginas no documento`)
+    } catch (e) {
+      L(`pdf-parse metadata falhou: ${e.message} (não-crítico)`)
     }
 
-    // ── Extrai texto ──────────────────────────────────────────────────────
-    L('iniciando extração de texto (pdf-parse)...')
-    const paginas = await pdfParaTexto(pdfBuffer, 80)
-    L(`extração concluída: ${paginas.length} páginas com texto`)
+    const modeloEquip     = publicacao?.modelo     || modelo     || 'John Deere'
+    const fabricanteEquip = publicacao?.fabricante || fabricante || 'John Deere'
 
-    if (paginas.length === 0) throw new Error('Não foi possível extrair texto do PDF')
+    // ── Extração IA ───────────────────────────────────────────────────────
+    let resultado
 
-    // ── Filtra páginas de manutenção ──────────────────────────────────────
-    // Tenta filtro estrito (score>=3 = ao menos 1 keyword de intervalo como "250h")
-    let paginasManutencao = identificarPaginasManutencao(paginas, 15, 3)
-    if (paginasManutencao.length === 0) {
-      // Fallback: qualquer página com keyword de manutenção (score>=1)
-      paginasManutencao = identificarPaginasManutencao(paginas, 15, 1)
+    if (providerUsado === 'openai') {
+      // ── PATH: OpenAI (explicitamente configurado via AI_PROVIDER=openai) ──
+      L('provider=openai → extraindo texto com pdf-parse...')
+      const openai = new OpenAI({ apiKey: openaiApiKey })
+      const paginas = await pdfParaTexto(pdfBuffer, 80)
+      L(`pdf-parse: ${paginas.length} páginas com texto`)
+      if (paginas.length === 0) throw new Error('Nenhum texto extraído do PDF (pdf-parse)')
+
+      let paginasFiltradas = identificarPaginasManutencao(paginas, 15, 3)
+      if (paginasFiltradas.length === 0) paginasFiltradas = identificarPaginasManutencao(paginas, 15, 1)
+      if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 15)
+      L(`páginas filtradas para OpenAI: ${paginasFiltradas.map(p => p.pagina).join(', ')}`)
+      paginasUsadas = paginasFiltradas.map(p => p.pagina)
+
+      const textoBloco = paginasFiltradas
+        .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
+        .join('\n\n')
+        .slice(0, 50000)
+      L(`bloco: ${textoBloco.length} chars → OpenAI GPT-4o-mini`)
+
+      const extracaoRaw = await extrairComOpenAI(openai, textoBloco, modeloEquip)
+      L(`OpenAI retornou: ${extracaoRaw.intervalos?.length || 0} intervalos`)
+      resultado = legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, edicao, idioma)
+
+    } else {
+      // ── PATH: Gemini (padrão) com fallback automático para OpenAI ─────
+      try {
+        resultado = await extrairComGemini(pdfBuffer, modeloEquip, fabricanteEquip, L)
+        L(`Gemini: ${resultado.intervalos?.length || 0} intervalos extraídos`)
+      } catch (geminiErr) {
+        L(`⚠️ Gemini falhou: ${geminiErr.message}`)
+        if (!openaiApiKey) throw geminiErr
+        L('Tentando fallback OpenAI + pdf-parse...')
+
+        const openai = new OpenAI({ apiKey: openaiApiKey })
+        const paginas = await pdfParaTexto(pdfBuffer, 80)
+        let paginasFiltradas = identificarPaginasManutencao(paginas, 15, 3)
+        if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 15)
+        paginasUsadas = paginasFiltradas.map(p => p.pagina)
+        L(`fallback: ${paginasFiltradas.length} páginas → OpenAI`)
+
+        const textoBloco = paginasFiltradas
+          .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
+          .join('\n\n')
+          .slice(0, 50000)
+        const extracaoRaw = await extrairComOpenAI(openai, textoBloco, modeloEquip)
+        L(`fallback OpenAI: ${extracaoRaw.intervalos?.length || 0} intervalos`)
+        resultado = legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, edicao, idioma)
+      }
     }
-    L(`keyword filter: ${paginasManutencao.length}/${paginas.length} páginas com termos de manutenção`)
 
-    const paginasParaProcessar = paginasManutencao.length > 0
-      ? paginasManutencao
-      : paginas.slice(0, 15)
-    L(`páginas para OpenAI: ${paginasParaProcessar.map(p => p.pagina).join(', ')}`)
+    // ── Validação ─────────────────────────────────────────────────────────
+    const validacao = validarExtracao(resultado)
+    resultado.alertas = validacao.alertas
+    L(`validação: status=${validacao.statusGeral}, intervalos=${validacao.totalIntervalos} (${validacao.intervalosOk} ok), tarefas=${validacao.totalTarefas}`)
+    if (validacao.temFalhaCritica) {
+      L('⚠️ FALHA EM INTERVALO CRÍTICO — salvo com alertas')
+    }
 
-    // ── Concatena todas as páginas de manutenção em um bloco → OpenAI ─────────
-    // GPT-4o-mini: 200k TPM — sem restrição de tamanho por requisição
-    const modeloEquip = publicacao?.modelo || req.body?.modelo || 'John Deere'
-    const textoBloco = paginasParaProcessar
-      .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
-      .join('\n\n')
-      .slice(0, 50000)
-    L(`bloco montado: ${textoBloco.length} chars de ${paginasParaProcessar.length} páginas → OpenAI GPT-4o-mini`)
-
-    const extracao = await extrairIntervalosDoBloco(openai, textoBloco, modeloEquip)
-    L(`OpenAI retornou: ${extracao.intervalos?.length || 0} intervalos`)
-
-    // ── Mescla (dedup por horas) e salva ─────────────────────────────────
-    const intervalos = mesclarIntervalos([extracao])
-    const totalIntervalos = intervalos.length
-    const totalTarefas = intervalos.reduce((acc, iv) => acc + (iv.tarefas?.length || 0), 0)
-    L(`mesclagem: ${totalIntervalos} intervalos, ${totalTarefas} tarefas`)
-
+    // ── Salva no banco ────────────────────────────────────────────────────
     L('salvando plano no banco...')
     const { data: planoSalvo, error: planoErr } = await sb
       .from('pfd_planos')
       .insert({
-        publicacao_id: publicacao_id || null,
+        publicacao_id,
         workspace_id,
-        modelo: publicacao?.modelo || req.body?.modelo,
-        fabricante: publicacao?.fabricante || 'John Deere',
-        intervalos,
-        total_intervalos: totalIntervalos,
-        total_tarefas: totalTarefas,
-        paginas_usadas: paginasParaProcessar.map(p => p.pagina),
+        modelo: modeloEquip,
+        fabricante: fabricanteEquip,
+        intervalos: resultado.intervalos,
+        total_intervalos: validacao.totalIntervalos,
+        total_tarefas: validacao.totalTarefas,
+        paginas_usadas: paginasUsadas,
         extraido_em: new Date().toISOString(),
       })
-      .select()
-      .single()
+      .select().single()
 
-    if (planoErr) throw new Error(`Erro ao salvar plano: ${planoErr.message}`)
+    if (planoErr) throw new Error('Erro ao salvar plano: ' + planoErr.message)
 
-    await sb.from('pfd_publicacoes').update({
-      status: 'processado',
-      paginas_total: paginas.length,
-      updated_at: new Date().toISOString(),
-    }).eq('id', publicacao_id)
+    await sb.from('pfd_publicacoes')
+      .update({
+        status: 'processado',
+        paginas_total: totalPaginas,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', publicacao_id)
 
-    L(`✅ concluído com sucesso: plano_id=${planoSalvo.id}`)
+    L(`✅ concluído: plano_id=${planoSalvo.id} (provider=${providerUsado})`)
+
     return res.json({
       ok: true,
       plano_id: planoSalvo.id,
-      total_intervalos: totalIntervalos,
-      total_tarefas: totalTarefas,
-      paginas_processadas: paginasParaProcessar.length,
-      intervalos,
+      provider: providerUsado,
+      status_extracao: validacao.statusGeral,
+      total_intervalos: validacao.totalIntervalos,
+      total_tarefas: validacao.totalTarefas,
+      intervalos_ok: validacao.intervalosOk,
+      alertas: validacao.alertas,
+      equipamento: resultado.equipamento,
       log,
     })
 
   } catch (err) {
     L(`❌ ERRO: ${err.message}`)
     console.error('[pfd] stack:', err.stack)
-
-    // Detalha erros da API OpenAI para diagnóstico
-    const openaiDetail = err?.error?.message || err?.message || ''
     const httpStatus = err?.status || 500
     const errMsg = httpStatus === 429
-      ? `OpenAI rate limit / quota: ${openaiDetail}`
+      ? `Rate limit / quota: ${err?.error?.message || err.message}`
       : err.message
 
     if (publicacao_id) {
-      await sb.from('pfd_publicacoes').update({
-        status: 'erro',
-        erro_msg: errMsg,
-        updated_at: new Date().toISOString(),
-      }).eq('id', publicacao_id)
+      await sb.from('pfd_publicacoes')
+        .update({ status: 'erro', erro_msg: errMsg, updated_at: new Date().toISOString() })
+        .eq('id', publicacao_id)
     }
-
-    return res.status(500).json({ error: errMsg, openai_status: httpStatus, log })
+    return res.status(500).json({ error: errMsg, log })
   }
 }

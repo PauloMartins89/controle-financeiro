@@ -595,11 +595,52 @@ function CampoSelect({ label, value, onChange, options, labels }) {
   )
 }
 
+// Normaliza intervalo para suportar schema novo (Gemini) e legado (OpenAI)
+function normIv(iv) {
+  return {
+    horas:     iv.intervalo_horas ?? iv.horas ?? 0,
+    nome:      iv.titulo_intervalo || iv.nome || `A cada ${iv.intervalo_horas ?? iv.horas ?? 0} horas`,
+    tarefas:   iv.tarefas || [],
+    status:    iv.status_extracao || 'ok',
+    periodo:   iv.periodicidade || 'recorrente',
+  }
+}
+
+function normTarefa(t) {
+  return {
+    sistema:      t.sistema || '',
+    tarefa:       t.descricao_tarefa || t.tarefa || '',
+    lubrificante: t.lubrificante_fluido || t.codigo_lubrificante || '',
+    capacidade:   t.capacidade ? `${t.capacidade}${t.unidade ? ' ' + t.unidade : ''}` : '',
+    condicional:  t.condicional || false,
+    aplicabilidade: t.aplicabilidade || '',
+    observacao:   t.observacao || '',
+    tipo:         t.tipo || '',
+    confianca:    t.confianca || '',
+  }
+}
+
+const STATUS_EXT = {
+  ok:                      { label: 'Extração completa',         bg: '#dcfce7', color: '#166534' },
+  falha_extracao:          { label: 'Falha de extração',         bg: '#fee2e2', color: '#991b1b' },
+  intervalo_nao_encontrado:{ label: 'Não encontrado no manual',  bg: '#f3f4f6', color: '#6b7280' },
+  parcial:                 { label: 'Extração parcial',          bg: '#fef9c3', color: '#854d0e' },
+}
+
 // ─── Viewer do plano ─────────────────────────────────────────────────────────
 function PlanoViewer({ plano, intervaloAberto, setIntervaloAberto, accent, surface, border }) {
   if (!plano) return null
-  const intervalos = plano.intervalos || []
+  const intervalos = (plano.intervalos || []).map(normIv)
   const pub = plano.pfd_publicacoes
+
+  // Badge de status geral da extração
+  const totalOk = intervalos.filter(iv => iv.status === 'ok').length
+  const statusGeral = totalOk === intervalos.length ? 'completo' : totalOk > 0 ? 'parcial' : 'falha'
+  const statusCfg = {
+    completo: { label: 'Extração completa',  bg: '#dcfce7', color: '#166534' },
+    parcial:  { label: 'Extração parcial',   bg: '#fef9c3', color: '#854d0e' },
+    falha:    { label: 'Falha de extração',  bg: '#fee2e2', color: '#991b1b' },
+  }[statusGeral]
 
   return (
     <div>
@@ -619,6 +660,9 @@ function PlanoViewer({ plano, intervaloAberto, setIntervaloAberto, accent, surfa
             {pub?.edicao && ` · ${pub.edicao}`}
             {pub?.serie_inicio && ` · Série ${pub.serie_inicio}${pub.serie_fim ? `–${pub.serie_fim}` : '+'}`}
           </p>
+          <span style={{ display: 'inline-block', marginTop: 8, padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: statusCfg.bg, color: statusCfg.color }}>
+            {statusCfg.label}
+          </span>
         </div>
         <div style={{ display: 'flex', gap: 20, flexShrink: 0 }}>
           <Stat label="Intervalos" value={plano.total_intervalos} color="#4ade80" />
@@ -629,21 +673,30 @@ function PlanoViewer({ plano, intervaloAberto, setIntervaloAberto, accent, surfa
 
       {/* Mapa de intervalos */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
-        {intervalos.map((iv, i) => (
-          <button key={i} onClick={() => setIntervaloAberto(intervaloAberto === i ? null : i)}
-            style={{
-              padding: '10px 18px', borderRadius: 10, border: 'none',
-              background: intervaloAberto === i ? corIntervalo(iv.horas) : `${corIntervalo(iv.horas)}18`,
-              color: intervaloAberto === i ? '#fff' : corIntervalo(iv.horas),
-              cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s',
-              boxShadow: intervaloAberto === i ? `0 2px 8px ${corIntervalo(iv.horas)}55` : 'none',
-            }}>
-            {iv.horas}h
-            <span style={{ display: 'block', fontSize: 10, fontWeight: 400, opacity: 0.8 }}>
-              {iv.tarefas?.length || 0} tarefa{iv.tarefas?.length !== 1 ? 's' : ''}
-            </span>
-          </button>
-        ))}
+        {intervalos.map((iv, i) => {
+          const cor = corIntervalo(iv.horas)
+          const ativo = intervaloAberto === i
+          const falha = iv.status !== 'ok'
+          return (
+            <button key={i} onClick={() => setIntervaloAberto(ativo ? null : i)}
+              style={{
+                padding: '10px 18px', borderRadius: 10, border: falha ? `1.5px solid ${falha ? '#fca5a5' : cor}` : 'none',
+                background: ativo ? cor : `${cor}18`,
+                color: ativo ? '#fff' : cor,
+                cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s',
+                boxShadow: ativo ? `0 2px 8px ${cor}55` : 'none',
+                position: 'relative',
+              }}>
+              {iv.horas === 0 ? 'Amac.' : `${iv.horas}h`}
+              <span style={{ display: 'block', fontSize: 10, fontWeight: 400, opacity: 0.85 }}>
+                {iv.status === 'ok'
+                  ? `${iv.tarefas.length} tarefa${iv.tarefas.length !== 1 ? 's' : ''}`
+                  : iv.status === 'intervalo_nao_encontrado' ? 'não encontrado'
+                  : 'falha extração'}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Detalhe do intervalo */}
@@ -658,32 +711,42 @@ function PlanoViewer({ plano, intervaloAberto, setIntervaloAberto, accent, surfa
             <span style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Todos os Intervalos</span>
             <span style={{ fontSize: 12, color: '#9ca3af', marginLeft: 8 }}>Clique em um intervalo acima para ver detalhes</span>
           </div>
-          {intervalos.map((iv, i) => (
-            <div key={i} style={{ borderBottom: `1px solid ${border}`, cursor: 'pointer', transition: 'background 0.15s' }}
-              onClick={() => setIntervaloAberto(i)}
-              onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-              onMouseLeave={e => e.currentTarget.style.background = ''}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px' }}>
-                <span style={{
-                  width: 52, height: 52, borderRadius: 10, flexShrink: 0,
-                  background: `${corIntervalo(iv.horas)}18`, color: corIntervalo(iv.horas),
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: 15, lineHeight: 1.1,
-                }}>
-                  {iv.horas}
-                  <span style={{ fontSize: 9, fontWeight: 600 }}>h</span>
-                </span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{iv.nome || `A cada ${iv.horas} horas`}</div>
-                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
-                    {iv.tarefas?.length || 0} tarefa{iv.tarefas?.length !== 1 ? 's' : ''}
-                    {iv.tarefas?.length > 0 && ` · ${[...new Set(iv.tarefas.map(t => t.sistema).filter(Boolean))].join(', ')}`}
+          {intervalos.map((iv, i) => {
+            const cor = corIntervalo(iv.horas)
+            const stExt = STATUS_EXT[iv.status] || STATUS_EXT.ok
+            const sistemas = [...new Set(iv.tarefas.map(t => normTarefa(t).sistema).filter(Boolean))]
+            return (
+              <div key={i} style={{ borderBottom: `1px solid ${border}`, cursor: 'pointer', transition: 'background 0.15s' }}
+                onClick={() => setIntervaloAberto(i)}
+                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                onMouseLeave={e => e.currentTarget.style.background = ''}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px' }}>
+                  <span style={{
+                    width: 52, height: 52, borderRadius: 10, flexShrink: 0,
+                    background: `${cor}18`, color: cor,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 800, fontSize: 15, lineHeight: 1.1,
+                  }}>
+                    {iv.horas === 0 ? '0' : iv.horas}
+                    <span style={{ fontSize: 9, fontWeight: 600 }}>h</span>
+                  </span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{iv.nome}</div>
+                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                      {iv.status === 'ok'
+                        ? <>{iv.tarefas.length} tarefa{iv.tarefas.length !== 1 ? 's' : ''}{sistemas.length > 0 && ` · ${sistemas.join(', ')}`}</>
+                        : <span style={{ color: stExt.color, fontWeight: 600 }}>{stExt.label}</span>
+                      }
+                    </div>
                   </div>
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, fontWeight: 600, background: stExt.bg, color: stExt.color, flexShrink: 0 }}>
+                    {stExt.label}
+                  </span>
+                  <ChevronRightIcon style={{ width: 16, height: 16, color: '#9ca3af', flexShrink: 0 }} />
                 </div>
-                <ChevronRightIcon style={{ width: 16, height: 16, color: '#9ca3af' }} />
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -692,45 +755,83 @@ function PlanoViewer({ plano, intervaloAberto, setIntervaloAberto, accent, surfa
 
 function IntervaloDetalhe({ iv, surface, border }) {
   const cor = corIntervalo(iv.horas)
-  const sistemas = [...new Set((iv.tarefas || []).map(t => t.sistema).filter(Boolean))]
+  const tarefas = (iv.tarefas || []).map(normTarefa)
+  const sistemas = [...new Set(tarefas.map(t => t.sistema).filter(Boolean))]
+  const stExt = STATUS_EXT[iv.status] || STATUS_EXT.ok
+  const temCondicional = tarefas.some(t => t.condicional)
+
   return (
     <div style={{ background: surface, borderRadius: 12, border: `2px solid ${cor}40`, overflow: 'hidden', marginBottom: 20 }}>
+      {/* Header */}
       <div style={{ background: `linear-gradient(135deg, ${cor}22, ${cor}0a)`, padding: '16px 24px', borderBottom: `1px solid ${cor}30`, display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 48, height: 48, borderRadius: 10, background: cor, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, lineHeight: 1.1, flexShrink: 0 }}>
-          {iv.horas}<span style={{ fontSize: 9, fontWeight: 500 }}>h</span>
+          {iv.horas === 0 ? '0' : iv.horas}<span style={{ fontSize: 9, fontWeight: 500 }}>h</span>
         </div>
-        <div>
-          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1e293b' }}>{iv.nome || `A cada ${iv.horas} horas`}</h3>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1e293b' }}>{iv.nome}</h3>
           <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b7280' }}>
-            {iv.tarefas?.length || 0} tarefas{sistemas.length > 0 && ` · ${sistemas.join(' · ')}`}
+            {tarefas.length} tarefas{sistemas.length > 0 && ` · ${sistemas.join(' · ')}`}
+            {iv.periodo === 'uma_vez' && <span style={{ marginLeft: 8, padding: '1px 6px', borderRadius: 4, background: '#fef3c7', color: '#92400e', fontSize: 11, fontWeight: 600 }}>Única vez</span>}
+            {temCondicional && <span style={{ marginLeft: 8, padding: '1px 6px', borderRadius: 4, background: '#eff6ff', color: '#1d4ed8', fontSize: 11, fontWeight: 600 }}>Tem condicionais</span>}
           </p>
         </div>
+        <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: stExt.bg, color: stExt.color }}>
+          {stExt.label}
+        </span>
       </div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ background: '#f8fafc' }}>
-              {['Sistema', 'Tarefa', 'Lubrificante / Fluido', 'Capacidade'].map(h => (
-                <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12, borderBottom: `1px solid ${border}` }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(iv.tarefas || []).map((t, i) => (
-              <tr key={i} style={{ borderBottom: `1px solid ${border}` }}>
-                <td style={{ padding: '10px 16px' }}>
-                  <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 6, background: `${cor}18`, color: cor, fontSize: 11, fontWeight: 700 }}>{t.sistema || '—'}</span>
-                </td>
-                <td style={{ padding: '10px 16px', color: '#1e293b' }}>{t.tarefa || '—'}</td>
-                <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>{t.codigo_lubrificante || t.codigo || '—'}</td>
-                <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>
-                  {t.capacidade ? `${t.capacidade}${t.unidade ? ' ' + t.unidade : ''}` : '—'}
-                </td>
+
+      {/* Mensagem quando sem tarefas */}
+      {tarefas.length === 0 && (
+        <div style={{ padding: 24, textAlign: 'center', color: stExt.color, background: stExt.bg }}>
+          <XCircleIcon style={{ width: 28, height: 28, margin: '0 auto 8px' }} />
+          <p style={{ margin: 0, fontWeight: 600 }}>{stExt.label}</p>
+          <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.8 }}>
+            {iv.status === 'intervalo_nao_encontrado'
+              ? 'Este intervalo não foi encontrado no manual analisado.'
+              : 'O intervalo foi detectado no manual mas as tarefas não puderam ser extraídas. Verifique o PDF original.'}
+          </p>
+        </div>
+      )}
+
+      {/* Tabela de tarefas */}
+      {tarefas.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                {['Sistema', 'Tarefa', 'Lubrificante / Fluido', 'Capacidade'].map(h => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12, borderBottom: `1px solid ${border}` }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {tarefas.map((t, i) => (
+                <tr key={i} style={{ borderBottom: `1px solid ${border}`, background: t.condicional ? '#fffbeb' : 'transparent' }}>
+                  <td style={{ padding: '10px 16px' }}>
+                    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 6, background: `${cor}18`, color: cor, fontSize: 11, fontWeight: 700 }}>{t.sistema || '—'}</span>
+                  </td>
+                  <td style={{ padding: '10px 16px' }}>
+                    <div style={{ color: '#1e293b' }}>
+                      {t.tarefa || '—'}
+                      {t.condicional && (
+                        <span style={{ marginLeft: 6, padding: '1px 5px', borderRadius: 4, background: '#dbeafe', color: '#1d4ed8', fontSize: 10, fontWeight: 700 }}>condicional</span>
+                      )}
+                    </div>
+                    {t.aplicabilidade && (
+                      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, fontStyle: 'italic' }}>{t.aplicabilidade}</div>
+                    )}
+                    {t.observacao && (
+                      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{t.observacao}</div>
+                    )}
+                  </td>
+                  <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>{t.lubrificante || '—'}</td>
+                  <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>{t.capacidade || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
