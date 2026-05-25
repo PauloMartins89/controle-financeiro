@@ -1,4 +1,10 @@
-﻿import { useState } from 'react'
+﻿import { useState, useEffect } from 'react'
+
+const SLIDES = [
+  '/tela%20de%20login/sala%20ampla%20escritorio.png',
+  '/tela%20de%20login/01_fundo_limpo_4k.png',
+  '/tela%20de%20login/04_card_login_4k.png',
+]
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -38,6 +44,18 @@ export default function Login() {
   const location = useLocation()
   const from = location.state?.from?.pathname || '/'
 
+  const [slideIdx, setSlideIdx] = useState(0)
+  const [prevIdx,  setPrevIdx]  = useState(null)
+  useEffect(() => {
+    const t = setInterval(() => {
+      setSlideIdx(i => {
+        setPrevIdx(i)
+        return (i + 1) % SLIDES.length
+      })
+    }, 5000)
+    return () => clearInterval(t)
+  }, [])
+
   async function handleLogin(e) {
     e.preventDefault()
     setError('')
@@ -61,17 +79,26 @@ export default function Login() {
         flexDirection: 'column',
         justifyContent: 'center',
         padding: '44px 52px',
-        backgroundImage: 'url(/tela%20de%20login/sala%20ampla%20escritorio.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'right center',
         backgroundColor: '#0a1628',
         zIndex: 2,
       }}>
+        {/* Slides com cross-fade */}
+        {SLIDES.map((src, i) => (
+          <div key={src} style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `url(${src})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'right center',
+            opacity: i === slideIdx ? 1 : 0,
+            transition: i === slideIdx ? 'opacity 1.4s ease' : (i === prevIdx ? 'opacity 1.4s ease' : 'none'),
+            zIndex: 0,
+          }} />
+        ))}
         {/* Overlay escuro */}
         <div style={{
           position: 'absolute', inset: 0,
           background: 'linear-gradient(105deg, rgba(5,14,40,0.88) 0%, rgba(5,14,40,0.70) 60%, rgba(5,14,40,0.50) 100%)',
-          zIndex: 0, pointerEvents: 'none',
+          zIndex: 1, pointerEvents: 'none',
         }} />
         {/* Logo fixada no topo */}
         <div style={{ position: 'absolute', top: 44, left: 52, zIndex: 1 }}>
