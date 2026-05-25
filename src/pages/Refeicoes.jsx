@@ -1583,8 +1583,8 @@ function SecaoDashboard({ sols, onNav }) {
                     </div>
                   : k.ref !== undefined
                     ? <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 6, marginTop: 1 }}>
-                        <span style={{ fontSize: 12, color: TEXT2 }}>🍽️ <strong style={{ fontSize: 14, color: TEXT }}>{k.ref}</strong> refeições</span>
-                        <span style={{ fontSize: 12, color: TEXT2 }}>☕ <strong style={{ fontSize: 14, color: TEXT }}>{k.caf}</strong> café{k.caf !== 1 ? 's' : ''}</span>
+                        <span style={{ fontSize: 13, color: TEXT2 }}>🍽️ <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong></span>
+                        <span style={{ fontSize: 13, color: TEXT2 }}>☕ <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong></span>
                       </div>
                     : <div style={{ height: 22, marginBottom: 1 }} />
                 }
