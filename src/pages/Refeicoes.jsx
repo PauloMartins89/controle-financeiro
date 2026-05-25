@@ -1364,11 +1364,11 @@ function SecaoDashboard({ sols, onNav }) {
     const kpis = [
       { icon: '🍽️', label: 'Refeições hoje', val: hojePedRef, isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem', footer: `Mês: ${refMes} refeições`, secondary: hojeRef, secondaryLabel: 'refeições hoje' },
       { icon: '☕',  label: 'Cafés hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `Mês: ${cafMes} cafés`,    secondary: hojeCaf, secondaryLabel: 'cafés hoje' },
-      { icon: '⏳',  label: 'Aguardando Aprovação', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ✓' },
-      { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues` },
-      { icon: '❌',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos últimos 7 dias` : 'Nenhuma reprovação' },
-      { icon: '🚚',  label: 'Aguardando Entrega',    val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje` },
-      { icon: '⚠️',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência' },
+      { icon: '⏳',  label: 'Aguardando Aprovação', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ✓', ref: sum(pendentes, 'total_refeicoes'), caf: sum(pendentes, 'total_cafes') },
+      { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues`, ref: sum(aprovSts, 'total_refeicoes'), caf: sum(aprovSts, 'total_cafes') },
+      { icon: '❌',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos últimos 7 dias` : 'Nenhuma reprovação', ref: sum(reprovados, 'total_refeicoes'), caf: sum(reprovados, 'total_cafes') },
+      { icon: '🚚',  label: 'Aguardando Entrega',    val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje`, ref: sum(aguardEnt, 'total_refeicoes'), caf: sum(aguardEnt, 'total_cafes') },
+      { icon: '⚠️',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência', ref: sum(divergencias, 'total_refeicoes'), caf: sum(divergencias, 'total_cafes') },
       { icon: '💰',  label: 'Custo previsto dia',  val: fmtBRL(hojeCusto), isText: true,  color: '#14B8A6', var: null, varLabel: null, footer: `${hojeRef + hojeCaf} itens previstos` },
       { icon: '📊',  label: 'Custo no mês',        val: fmtBRL(valorMes),  isText: true,  color: '#6366f1', var: fv(valorMes, valorMAnt), varLabel: 'vs mês ant.', footer: valorMAnt > 0 ? `Ant.: ${fmtBRL(valorMAnt)}` : 'Sem comparativo' },
     ]
@@ -1581,7 +1581,13 @@ function SecaoDashboard({ sols, onNav }) {
                   ? <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: k.var.up ? '#059669' : '#DC2626', background: k.var.up ? '#ECFDF5' : '#FEF2F2', border: `1px solid ${k.var.up ? '#A7F3D0' : '#FECACA'}`, borderRadius: 999, padding: '2px 8px', marginBottom: 9 }}>
                       {k.var.text} {k.varLabel}
                     </div>
-                  : <div style={{ height: 22, marginBottom: 1 }} />
+                  : k.ref !== undefined
+                    ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: TEXT3, marginBottom: 8, marginTop: 1 }}>
+                        <span>🍽️ <strong style={{ color: TEXT2 }}>{k.ref}</strong> ref.</span>
+                        <span style={{ color: BORDER }}>·</span>
+                        <span>☕ <strong style={{ color: TEXT2 }}>{k.caf}</strong> café{k.caf !== 1 ? 's' : ''}</span>
+                      </div>
+                    : <div style={{ height: 22, marginBottom: 1 }} />
                 }
                 <div style={{ paddingTop: 10, borderTop: `1px solid ${BORDER}`, fontSize: 11, color: TEXT3, lineHeight: 1.4 }}>{k.footer}</div>
               </div>
