@@ -609,9 +609,12 @@ export default async function handler(req, res) {
       else L('sumário não detectado — buscando por texto')
       const candidatas = localizarSecaoManutencao(paginas, sumario)
       L(`seção localizada: ${candidatas.length} páginas candidatas`)
-      let paginasFiltradas = extrairBlocoManutencao(paginas, candidatas)
-      if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 20)
-      L(`bloco manutenção: ${paginasFiltradas.length} págs [${paginasFiltradas.map(p => p.pagina).join(', ')}]`)
+      // Usa candidatas diretamente — já são as págs com refs/texto de manutenção
+      // cap 40: batchSize=5 = 8 lotes = 3 rounds ≈ 35s warm / 165s cold (< 300s)
+      const paginasFiltradas = candidatas.length > 0
+        ? [...candidatas].sort((a, b) => a.pagina - b.pagina).slice(0, 40)
+        : paginas.slice(0, 20)
+      L(`págs selecionadas: ${paginasFiltradas.length} [${paginasFiltradas.map(p => p.pagina).join(', ')}]`)
       paginasUsadas = paginasFiltradas.map(p => p.pagina)
 
       const extracaoRaw = await extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L)
@@ -637,10 +640,13 @@ export default async function handler(req, res) {
         else L('sumário não detectado — buscando por texto')
         const candidatas = localizarSecaoManutencao(paginas, sumario)
         L(`seção localizada: ${candidatas.length} páginas candidatas`)
-        let paginasFiltradas = extrairBlocoManutencao(paginas, candidatas)
-        if (paginasFiltradas.length === 0) paginasFiltradas = paginas.slice(0, 20)
+        // Usa candidatas diretamente — já são as págs com refs/texto de manutenção
+        // cap 40: batchSize=5 = 8 lotes = 3 rounds ≈ 35s warm / 165s cold (< 300s)
+        const paginasFiltradas = candidatas.length > 0
+          ? [...candidatas].sort((a, b) => a.pagina - b.pagina).slice(0, 40)
+          : paginas.slice(0, 20)
         paginasUsadas = paginasFiltradas.map(p => p.pagina)
-        L(`fallback: ${paginasFiltradas.length} págs bloco manutenção → OpenAI [${paginasFiltradas.map(p => p.pagina).join(', ')}]`)
+        L(`fallback: ${paginasFiltradas.length} págs candidatas → OpenAI [${paginasFiltradas.map(p => p.pagina).join(', ')}]`)
 
         const extracaoRaw = await extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L)
         L(`fallback OpenAI: ${extracaoRaw.intervalos?.length || 0} intervalos`)
