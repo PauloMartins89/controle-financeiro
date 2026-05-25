@@ -198,7 +198,14 @@ function mesclarIntervalos(lista) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { modo, url_pdf, pdf_base64, publicacao_id, workspace_id } = req.body || {}
+  const {
+    modo, url_pdf, pdf_base64, workspace_id,
+    // publicacao_id pode vir pronto OU os dados do form para criar aqui
+    publicacao_id: pubIdRecebido,
+    codigo_pub, titulo, fabricante, modelo,
+    familia, classificacao, serie_inicio, serie_fim,
+    edicao, idioma,
+  } = req.body || {}
 
   if (!modo || !['url', 'upload'].includes(modo)) {
     return res.status(400).json({ error: 'Parâmetro modo inválido. Use: url | upload' })
@@ -208,8 +215,33 @@ export default async function handler(req, res) {
   const sb = getSupabase()
   const groq = new Groq({ apiKey: groqApiKey })
 
-  // Atualiza status → processando
-  if (publicacao_id) {
+  // ── Cria ou usa a publicação ──────────────────────────────────────────────
+  let publicacao_id = pubIdRecebido
+  if (!publicacao_id) {
+    // Frontend passou os dados do form — criamos aqui com SERVICE_KEY (sem RLS)
+    const { data: novaPub, error: pubErr } = await sb
+      .from('pfd_publicacoes')
+      .insert({
+        workspace_id,
+        codigo_pub: codigo_pub || null,
+        titulo: titulo || `Manual ${fabricante || 'John Deere'} ${modelo || ''}`.trim(),
+        fabricante: fabricante || 'John Deere',
+        modelo: modelo || '',
+        familia: familia || null,
+        classificacao: classificacao || 'Base Unit',
+        serie_inicio: serie_inicio || null,
+        serie_fim: serie_fim || null,
+        edicao: edicao || null,
+        idioma: idioma || 'pt',
+        url_pdf: url_pdf || null,
+        status: 'processando',
+      })
+      .select()
+      .single()
+    if (pubErr) return res.status(500).json({ error: 'Erro ao criar publicação: ' + pubErr.message })
+    publicacao_id = novaPub.id
+  } else {
+    // Atualiza status → processando
     await sb.from('pfd_publicacoes')
       .update({ status: 'processando', updated_at: new Date().toISOString() })
       .eq('id', publicacao_id)

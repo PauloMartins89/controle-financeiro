@@ -131,20 +131,21 @@ export default function ManutencaoPlanosPFD() {
     if (!pdfArquivo && !form.url_pdf.trim()) { toast.error('Selecione o PDF ou informe a URL'); return }
     setProcessando(true)
     try {
-      const { data: pub, error: pubErr } = await supabase
-        .from('pfd_publicacoes').insert({
-          workspace_id: wsId,
-          codigo_pub: form.codigo_pub.trim() || null,
-          titulo: form.titulo.trim() || `Manual ${form.fabricante} ${form.modelo}`,
-          fabricante: form.fabricante, modelo: form.modelo.trim(),
-          familia: form.familia.trim(), classificacao: form.classificacao,
-          serie_inicio: form.serie_inicio.trim(), serie_fim: form.serie_fim.trim(),
-          edicao: form.edicao, idioma: form.idioma,
-          url_pdf: form.url_pdf.trim() || null, status: 'processando',
-        }).select().single()
-      if (pubErr) throw new Error(pubErr.message)
-
-      const payload = { publicacao_id: pub.id, workspace_id: wsId, modelo: form.modelo }
+      // O INSERT em pfd_publicacoes é feito pela API (usa SERVICE_KEY, sem RLS)
+      const payload = {
+        workspace_id: wsId,
+        modelo: form.modelo.trim(),
+        codigo_pub: form.codigo_pub.trim() || undefined,
+        titulo: form.titulo.trim() || undefined,
+        fabricante: form.fabricante,
+        familia: form.familia.trim() || undefined,
+        classificacao: form.classificacao,
+        serie_inicio: form.serie_inicio.trim() || undefined,
+        serie_fim: form.serie_fim.trim() || undefined,
+        edicao: form.edicao,
+        idioma: form.idioma,
+        url_pdf: form.url_pdf.trim() || undefined,
+      }
 
       if (pdfArquivo) {
         const base64 = await new Promise((resolve, reject) => {
