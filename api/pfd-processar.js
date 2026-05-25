@@ -66,29 +66,39 @@ async function pdfParaTexto(pdfBuffer, maxPaginas = 80) {
   return paginas
 }
 
-// ── Identifica páginas de manutenção por palavras-chave (sem Groq, instantâneo) ──
-function identificarPaginasManutencao(paginas) {
-  const KEYWORDS = [
-    // intervalos numéricos
+// ── Pontua e seleciona as páginas mais relevantes de manutenção ─────────────────
+function identificarPaginasManutencao(paginas, topN = 15) {
+  // Palavras de alta relevância (são intervalos específicos) — peso 3
+  const HIGH = [
     '10 h', '50 h', '100 h', '125 h', '200 h', '250 h', '400 h', '500 h',
     '750 h', '1000 h', '1500 h', '2000 h', '6000 h',
     '10h', '50h', '100h', '125h', '200h', '250h', '400h', '500h',
     '750h', '1000h', '1500h', '2000h', '6000h',
-    // termos de período
     'amaciamento', 'primeiras 600', 'diariamente', 'semanalmente',
-    'mensalmente', 'anualmente', 'a cada',
-    // termos de tarefa
+    'mensalmente', 'anualmente',
+  ]
+  // Palavras de média relevância (tarefas comuns) — peso 1
+  const MID = [
     'intervalo de manutenção', 'serviço periódico', 'manutenção periódica',
     'lubrificação', 'troca de óleo', 'verificar nível', 'drenar',
     'filtro de óleo', 'óleo do motor', 'fluido hidráulico', 'graxa',
-    'lubrificar', 'substituir filtro', 'apertar', 'verificar folga',
-    'arrefecimento', 'transmissão', 'diferencial', 'embreagem', 'freio',
+    'lubrificar', 'substituir filtro', 'apertar parafuso', 'verificar folga',
+    'arrefecimento', 'diferencial', 'embreagem', 'bico injetor',
+    'correia', 'rolamento', 'pivo', 'cubo de roda',
   ]
-  return paginas.filter(p => {
+
+  const scored = paginas.map(p => {
     const lower = p.texto.toLowerCase()
-    // threshold = 1: qualquer página com ao menos 1 termo relevante passa
-    return KEYWORDS.some(kw => lower.includes(kw.toLowerCase()))
-  })
+    const highScore = HIGH.filter(kw => lower.includes(kw.toLowerCase())).length * 3
+    const midScore  = MID.filter(kw => lower.includes(kw.toLowerCase())).length
+    return { ...p, score: highScore + midScore }
+  }).filter(p => p.score > 0)
+
+  // Ordena por score desc, pega as topN, reordena por número de página
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topN)
+    .sort((a, b) => a.pagina - b.pagina)
 }
 
 // ── Extrai intervalos do bloco completo de manutenção (texto concatenado → Groq) ──
@@ -283,17 +293,16 @@ export default async function handler(req, res) {
 
     const paginasParaProcessar = paginasManutencao.length > 0
       ? paginasManutencao
-      : paginas.slice(0, 30)
+      : paginas.slice(0, 15)
     L(`páginas para Groq: ${paginasParaProcessar.map(p => p.pagina).join(', ')}`)
 
-    // ── Concatena todas as páginas em um único bloco para o Groq ─────────
-    // Estratégia: um único bloco de texto → uma única chamada → contexto completo
-    // O modelo vê a relação intervalo→tarefa inteira, não fragmentada por página
+    // ── Concatena páginas top em um bloco para o Groq ────────────────────────
+    // 35k chars ≈ 8k tokens input — muito abaixo do limite diário do Groq free
     const modeloEquip = publicacao?.modelo || req.body?.modelo || 'John Deere'
     const textoBloco = paginasParaProcessar
       .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
       .join('\n\n')
-      .slice(0, 90000) // ~22k tokens — bem dentro do contexto de 128k do llama-3.3
+      .slice(0, 35000)
     L(`bloco montado: ${textoBloco.length} chars de ${paginasParaProcessar.length} páginas → 1 chamada ao Groq`)
 
     L('enviando bloco completo ao Groq...')
