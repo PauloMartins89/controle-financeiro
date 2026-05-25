@@ -54,7 +54,9 @@ SCHEMA COMPACTO — OMITA CAMPOS COM VALOR VAZIO (""), false, null OU []:
       "h": 50,
       "n": "Semanalmente ou a cada 50 horas de operação",
       "tv": [
-        {"s": "Motor", "cmp": "Cárter", "a": "Verificar nível de óleo do motor", "tp": "verificacao", "ins": "JD Plus-50 II", "qty": "10,2 L", "pg": 120, "raw": "Verificar o nível do óleo do motor."},
+        {"s": "Motor", "cmp": "Cárter", "a": "Verificar nível de óleo do motor", "tp": "verificacao", "ins": "JD Plus-50 II", "pn": "TY26674", "qty": "10,2 L", "esp": "SAE 15W-40 / API CK-4", "pg": 120, "raw": "Verificar o nível do óleo do motor."},
+        {"s": "Transmissão", "cmp": "Eixo de tração", "a": "Lubrificar graxeiras do eixo dianteiro", "tp": "lubrificacao", "ins": "JD Grease SD Polyurea", "pts": "4 graxeiras", "pg": 122},
+        {"s": "Hidráulico", "a": "Substituir filtro de retorno do sistema hidráulico", "tp": "substituicao", "ins": "Filtro hidráulico", "pn": "AT366485", "seg": "CUIDADO: Aliviar pressão do sistema antes de remover o filtro.", "pg": 135},
         {"s": "Geral", "a": "Limpar grade frontal e radiador", "tp": "limpeza", "cn": true, "ap": "Se equipado com ar condicionado", "pg": 121}
       ]
     }
@@ -73,8 +75,12 @@ MAPEAMENTO DE CAMPOS:
     • cmp = componente específico (ex: "Cárter", "Filtro de ar", "Radiador") — OMITA se não identificável
     • a   = atividade: descrição completa da tarefa (texto fiel ao manual)
     • tp  = tipo: verificacao | troca | lubrificacao | limpeza | ajuste | inspecao | substituicao | outro
-    • ins = insumo/peça: lubrificante, fluido ou peça (ex: "JD Plus-50 II", "Hy-Gard", "Filtro RE504836") — OMITA se não há
+    • ins = insumo/peça: nome do lubrificante, fluido ou peça (ex: "JD Plus-50 II", "Hy-Gard") — OMITA se não há
+    • pn  = código/número de peça (part number) separado do nome (ex: "RE504836", "AT174893", "TY26674") — OMITA se não mencionado
     • qty = quantidade com unidade (ex: "10,2 L", "500 g") — OMITA se não há
+    • esp = especificação técnica: viscosidade, norma API, torque, pressão (ex: "SAE 15W-40 / API CK-4", "torque: 110 Nm", "pressão: 207 kPa") — OMITA se não há
+    • pts = pontos de lubrificação: número e descrição das graxeiras (ex: "4 graxeiras", "3 pontos — articulações dianteiras") — OMITA se não aplicável
+    • seg = aviso de segurança diretamente ligado à tarefa (ex: "CUIDADO: Aliviar pressão antes de abrir", "PERIGO: fluido sob pressão") — OMITA se não há aviso específico
     • pg  = página do manual onde está a tarefa (número inteiro) — OMITA se não souber
     • raw = texto exato copiado do manual para esta tarefa — OMITA se igual a "a"
     • cn  = true se tarefa tem condição ("se equipado", "somente", "quando", "tratores com") — OMITA se não condicional
@@ -115,8 +121,12 @@ function expandGeminiCompact(compact) {
         tipo:                t.tp  || 'outro',     // alias
         insumo_ou_peca:      t.ins || t.l  || '',  // ins=novo, l=retrocompat
         lubrificante_fluido: t.ins || t.l  || '',  // alias
+        codigo_peca:         t.pn  || '',
         quantidade:          t.qty || t.cap || '', // qty=novo, cap=retrocompat
         capacidade:          t.qty || t.cap || '', // alias
+        especificacao:       t.esp || '',
+        pontos_lubrificacao: t.pts || '',
+        aviso_seguranca:     t.seg || '',
         pagina_fonte:        t.pg  ?? null,
         texto_original:      t.raw || '',
         pecas_citadas:       [],

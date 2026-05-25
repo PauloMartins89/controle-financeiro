@@ -608,18 +608,22 @@ function normIv(iv) {
 
 function normTarefa(t) {
   return {
-    sistema:        t.sistema || '',
-    componente:     t.componente || '',
-    tarefa:         t.atividade || t.descricao_tarefa || t.tarefa || '',
-    tipo:           t.tipo_atividade || t.tipo || '',
-    insumo:         t.insumo_ou_peca || t.lubrificante_fluido || t.codigo_lubrificante || '',
-    quantidade:     t.quantidade || (t.capacidade ? `${t.capacidade}${t.unidade ? ' ' + t.unidade : ''}` : ''),
-    pagina_fonte:   t.pagina_fonte ?? null,
-    texto_original: t.texto_original || '',
-    condicional:    t.condicional || false,
-    aplicabilidade: t.aplicabilidade || '',
-    observacao:     t.observacao || '',
-    confianca:      t.confianca || '',
+    sistema:             t.sistema || '',
+    componente:          t.componente || '',
+    tarefa:              t.atividade || t.descricao_tarefa || t.tarefa || '',
+    tipo:                t.tipo_atividade || t.tipo || '',
+    insumo:              t.insumo_ou_peca || t.lubrificante_fluido || t.codigo_lubrificante || '',
+    codigo_peca:         t.codigo_peca || '',
+    quantidade:          t.quantidade || (t.capacidade ? `${t.capacidade}${t.unidade ? ' ' + t.unidade : ''}` : ''),
+    especificacao:       t.especificacao || '',
+    pontos_lubrificacao: t.pontos_lubrificacao || '',
+    aviso_seguranca:     t.aviso_seguranca || '',
+    pagina_fonte:        t.pagina_fonte ?? null,
+    texto_original:      t.texto_original || '',
+    condicional:         t.condicional || false,
+    aplicabilidade:      t.aplicabilidade || '',
+    observacao:          t.observacao || '',
+    confianca:           t.confianca || '',
   }
 }
 
@@ -802,7 +806,7 @@ function IntervaloDetalhe({ iv, surface, border }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['Sistema', 'Componente', 'Atividade', 'Insumo / Peça', 'Qtd'].map(h => (
+                {['Sistema', 'Componente', 'Atividade', 'Insumo / Peça', 'Cód. Peça', 'Qtd', 'Especif.'].map(h => (
                   <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 12, borderBottom: `1px solid ${border}`, whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -821,6 +825,12 @@ function IntervaloDetalhe({ iv, surface, border }) {
                         <span style={{ marginLeft: 6, padding: '1px 5px', borderRadius: 4, background: '#dbeafe', color: '#1d4ed8', fontSize: 10, fontWeight: 700 }}>condicional</span>
                       )}
                     </div>
+                    {t.aviso_seguranca && (
+                      <div style={{ fontSize: 11, color: '#b45309', marginTop: 3, padding: '2px 6px', background: '#fef3c7', borderRadius: 4, display: 'inline-block' }}>⚠️ {t.aviso_seguranca}</div>
+                    )}
+                    {t.pontos_lubrificacao && (
+                      <div style={{ fontSize: 11, color: '#0369a1', marginTop: 2 }}>📍 {t.pontos_lubrificacao}</div>
+                    )}
                     {t.aplicabilidade && (
                       <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, fontStyle: 'italic' }}>{t.aplicabilidade}</div>
                     )}
@@ -832,7 +842,13 @@ function IntervaloDetalhe({ iv, surface, border }) {
                     )}
                   </td>
                   <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12 }}>{t.insumo || '—'}</td>
+                  <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                    {t.codigo_peca
+                      ? <span style={{ fontFamily: 'monospace', fontSize: 11, padding: '2px 7px', borderRadius: 5, background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}>{t.codigo_peca}</span>
+                      : <span style={{ color: '#cbd5e1' }}>—</span>}
+                  </td>
                   <td style={{ padding: '10px 16px', color: '#374151', fontSize: 12, whiteSpace: 'nowrap' }}>{t.quantidade || '—'}</td>
+                  <td style={{ padding: '10px 16px', color: '#475569', fontSize: 11, maxWidth: 160 }}>{t.especificacao || '—'}</td>
                 </tr>
               ))}
             </tbody>
