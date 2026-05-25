@@ -354,6 +354,32 @@ function mesclarIntervalos(lista) {
   return Object.values(mapa).sort((a, b) => Number(a.horas) - Number(b.horas))
 }
 
+// Processa páginas filtradas em lotes (batch), em paralelo, e mescla os resultados.
+// Evita o limite de 50k chars e melhora precisão (cada lote = contexto menor e focado).
+async function extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L, batchSize = 3) {
+  const batches = []
+  for (let i = 0; i < paginasFiltradas.length; i += batchSize) {
+    batches.push(paginasFiltradas.slice(i, i + batchSize))
+  }
+  L(`extração por página: ${paginasFiltradas.length} págs em ${batches.length} lotes (batch=${batchSize})`)
+
+  const resultados = []
+  // Processa no máx 3 lotes simultâneos para não saturar rate limit
+  for (let i = 0; i < batches.length; i += 3) {
+    const chunk = batches.slice(i, i + 3)
+    const parciais = await Promise.all(chunk.map(batch => {
+      const texto = batch.map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`).join('\n\n')
+      return extrairComOpenAI(openai, texto, modeloEquip)
+    }))
+    resultados.push(...parciais)
+    L(`lotes ${i + 1}-${Math.min(i + 3, batches.length)}/${batches.length} processados`)
+  }
+
+  const totalBruto = resultados.reduce((acc, r) => acc + (r.intervalos?.length || 0), 0)
+  L(`merge: ${totalBruto} intervalos brutos de ${resultados.length} lotes`)
+  return { intervalos: mesclarIntervalos(resultados) }
+}
+
 // Converte resultado OpenAI (formato legado) para novo schema
 function legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, edicao, idioma) {
   return {
@@ -547,13 +573,7 @@ export default async function handler(req, res) {
       L(`páginas filtradas para OpenAI: ${paginasFiltradas.map(p => p.pagina).join(', ')}`)
       paginasUsadas = paginasFiltradas.map(p => p.pagina)
 
-      const textoBloco = paginasFiltradas
-        .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
-        .join('\n\n')
-        .slice(0, 50000)
-      L(`bloco: ${textoBloco.length} chars → OpenAI GPT-4o-mini`)
-
-      const extracaoRaw = await extrairComOpenAI(openai, textoBloco, modeloEquip)
+      const extracaoRaw = await extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L)
       L(`OpenAI retornou: ${extracaoRaw.intervalos?.length || 0} intervalos`)
       resultado = legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, edicao, idioma)
 
@@ -574,11 +594,7 @@ export default async function handler(req, res) {
         paginasUsadas = paginasFiltradas.map(p => p.pagina)
         L(`fallback: ${paginasFiltradas.length} páginas → OpenAI`)
 
-        const textoBloco = paginasFiltradas
-          .map(p => `=== PÁGINA ${p.pagina} ===\n${p.texto}`)
-          .join('\n\n')
-          .slice(0, 50000)
-        const extracaoRaw = await extrairComOpenAI(openai, textoBloco, modeloEquip)
+        const extracaoRaw = await extrairPorPaginas(openai, paginasFiltradas, modeloEquip, L)
         L(`fallback OpenAI: ${extracaoRaw.intervalos?.length || 0} intervalos`)
         resultado = legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, edicao, idioma)
       }
