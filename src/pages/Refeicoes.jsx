@@ -1860,7 +1860,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
 
   function toggleGroup(id) { setCollapsed(p => ({ ...p, [id]: !p[id] })) }
 
-  const FILTROS = ['todos', 'pendente', 'aprovado', 'reprovado', 'entregue', 'fechado']
+  const FILTROS = ['todos', 'pendente', 'aprovado', 'reprovado', 'enviado_restaurante', 'confirmado_restaurante', 'entregue', 'fechado']
 
   return (
     <div>
