@@ -10,7 +10,8 @@ import {
   ChevronRightIcon, XMarkIcon, DocumentTextIcon,
   TruckIcon, ArrowTopRightOnSquareIcon, PlusIcon,
   InformationCircleIcon, CpuChipIcon,
-  CloudArrowUpIcon,
+  CloudArrowUpIcon, WrenchScrewdriverIcon, BeakerIcon,
+  FunnelIcon, ShieldCheckIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Paleta de cores por intervalo de horas ─────────────────────────────────
@@ -53,6 +54,8 @@ export default function ManutencaoPlanosPFD() {
   const [loadingPlanos, setLoadingPlanos] = useState(false)
   const [intervaloAberto, setIntervaloAberto] = useState(null)
   const [planoAtivo, setPlanoAtivo] = useState(null)
+  const [planTab, setPlanTab] = useState('resumo')
+  const [frota, setFrota] = useState([])
   const [busca, setBusca] = useState('')
   const [processando, setProcessando] = useState(false)
 
@@ -73,6 +76,13 @@ export default function ManutencaoPlanosPFD() {
 
   useEffect(() => { if (wsId) carregarPublicacoes() }, [wsId])
   useEffect(() => { if (wsId && abaAtiva === 'planos') carregarPlanos() }, [wsId, abaAtiva])
+  useEffect(() => {
+    if (!wsId) return
+    supabase.from('manut_equipamentos')
+      .select('id,nome,codigo,fabricante,modelo,horimetro_atual,ativo,tipo')
+      .eq('workspace_id', wsId).order('nome')
+      .then(({ data }) => setFrota(data || []))
+  }, [wsId])
 
   async function carregarPublicacoes() {
     if (!wsId) return
@@ -523,22 +533,6 @@ export default function ManutencaoPlanosPFD() {
         {/* ─── ABA: PLANOS EXTRAÍDOS ─────────────────────────────────────── */}
         {abaAtiva === 'planos' && (
           <div>
-            {planos.length > 1 && (
-              <div style={{ background: surface, borderRadius: 12, border: `1px solid ${border}`, padding: '12px 20px', marginBottom: 20, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Plano:</span>
-                {planos.map(pl => (
-                  <button key={pl.id} onClick={() => setPlanoAtivo(pl)} style={{
-                    padding: '5px 12px', borderRadius: 20, border: 'none',
-                    background: planoAtivo?.id === pl.id ? accent : '#f1f5f9',
-                    color: planoAtivo?.id === pl.id ? '#fff' : '#374151',
-                    cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                  }}>
-                    {pl.pfd_publicacoes?.modelo || pl.modelo} · {pl.pfd_publicacoes?.edicao || ''}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {loadingPlanos ? (
               <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
                 <ArrowPathIcon style={{ width: 32, height: 32, margin: '0 auto 8px', animation: 'spin 1s linear infinite' }} />
@@ -553,11 +547,20 @@ export default function ManutencaoPlanosPFD() {
                 </button>
               </div>
             ) : (
-              <PlanoViewer
+              <PlanoEstrategico
                 plano={planoAtivo || planos[0]}
+                planos={planos}
+                planoAtivo={planoAtivo || planos[0]}
+                setPlanoAtivo={setPlanoAtivo}
+                planTab={planTab}
+                setPlanTab={setPlanTab}
+                frota={frota}
+                surface={surface}
+                border={border}
+                navigate={navigate}
+                setAbaAtiva={setAbaAtiva}
                 intervaloAberto={intervaloAberto}
                 setIntervaloAberto={setIntervaloAberto}
-                accent={accent} surface={surface} border={border}
               />
             )}
           </div>
@@ -628,137 +631,500 @@ function normTarefa(t) {
 }
 
 const STATUS_EXT = {
-  ok:                      { label: 'Extração completa',         bg: '#dcfce7', color: '#166534' },
-  falha_extracao:          { label: 'Falha de extração',         bg: '#fee2e2', color: '#991b1b' },
-  intervalo_nao_encontrado:{ label: 'Não encontrado no manual',  bg: '#f3f4f6', color: '#6b7280' },
-  parcial:                 { label: 'Extração parcial',          bg: '#fef9c3', color: '#854d0e' },
+  ok:                      { label: 'Extração completa',        bg: '#dcfce7', color: '#166534' },
+  falha_extracao:          { label: 'Falha de extração',        bg: '#fee2e2', color: '#991b1b' },
+  intervalo_nao_encontrado:{ label: 'Não encontrado no manual', bg: '#f3f4f6', color: '#6b7280' },
+  parcial:                 { label: 'Extração parcial',         bg: '#fef9c3', color: '#854d0e' },
 }
 
-// ─── Viewer do plano ─────────────────────────────────────────────────────────
-function PlanoViewer({ plano, intervaloAberto, setIntervaloAberto, accent, surface, border }) {
-  if (!plano) return null
+const BRAND_COLORS_PFD = {
+  'John Deere':      { bg: '#367C2B', text: '#FFDE00', initials: 'JD' },
+  'Case IH':         { bg: '#C41230', text: '#fff',    initials: 'CIH' },
+  'New Holland':     { bg: '#004A9F', text: '#fff',    initials: 'NH' },
+  'Valtra':          { bg: '#B10000', text: '#fff',    initials: 'VAL' },
+  'Massey Ferguson': { bg: '#CC0000', text: '#fff',    initials: 'MF' },
+  'Caterpillar':     { bg: '#FFCD11', text: '#000',    initials: 'CAT' },
+  'Komatsu':         { bg: '#FF7A00', text: '#fff',    initials: 'KOM' },
+}
+
+function MiniKpiPFD({ label, value, color, icon: Icon, note }) {
+  return (
+    <div style={{ background: 'white', borderRadius: 10, padding: '11px 14px', border: '1px solid #e2e8f0', minWidth: 100 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+        {Icon && <Icon style={{ width: 12, height: 12, color }} />}
+        <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500 }}>{label}</span>
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1 }}>{value ?? '—'}</div>
+      {note && <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>{note}</div>}
+    </div>
+  )
+}
+
+// ─── Componente estratégico principal ────────────────────────────────────────
+function PlanoEstrategico({ plano, planos, planoAtivo, setPlanoAtivo, planTab, setPlanTab, frota, surface, border, navigate, setAbaAtiva, intervaloAberto, setIntervaloAberto }) {
   const intervalos = (plano.intervalos || []).map(normIv)
   const pub = plano.pfd_publicacoes
+  const fabricante = pub?.fabricante || plano.fabricante || 'John Deere'
+  const modelo = pub?.modelo || plano.modelo || ''
 
-  // Badge de status geral da extração
+  const todas = intervalos.flatMap(iv => iv.tarefas.map(normTarefa))
+  const filtros = todas.filter(t => t.tipo === 'substituicao')
+
+  const fluidosMap = new Map()
+  todas.filter(t => t.insumo).forEach(t => { if (!fluidosMap.has(t.insumo)) fluidosMap.set(t.insumo, t) })
+  const fluidosUnicos = [...fluidosMap.values()]
+
+  const frotaVinculada = frota.filter(eq => {
+    const fab = (eq.fabricante || '').toLowerCase()
+    const mod = (eq.modelo || '').toLowerCase()
+    const fabRef = fabricante.toLowerCase()
+    const modRef = modelo.toLowerCase()
+    return fab.includes(fabRef.slice(0, 4)) || mod.includes(modRef.slice(0, 4))
+  })
+
   const totalOk = intervalos.filter(iv => iv.status === 'ok').length
   const statusGeral = totalOk === intervalos.length ? 'completo' : totalOk > 0 ? 'parcial' : 'falha'
   const statusCfg = {
-    completo: { label: 'Extração completa',  bg: '#dcfce7', color: '#166534' },
-    parcial:  { label: 'Extração parcial',   bg: '#fef9c3', color: '#854d0e' },
-    falha:    { label: 'Falha de extração',  bg: '#fee2e2', color: '#991b1b' },
+    completo: { label: 'Extração completa', bg: '#dcfce7', color: '#166534' },
+    parcial:  { label: 'Extração parcial',  bg: '#fef9c3', color: '#854d0e' },
+    falha:    { label: 'Falha de extração', bg: '#fee2e2', color: '#991b1b' },
   }[statusGeral]
+
+  const brand = BRAND_COLORS_PFD[fabricante] || { bg: '#16a34a', text: '#fff', initials: fabricante.slice(0, 3).toUpperCase() }
+
+  const PLAN_TABS = [
+    { id: 'resumo',     label: 'Resumo',                            Icon: ClipboardDocumentListIcon },
+    { id: 'intervalos', label: 'Intervalos',                        Icon: ClockIcon },
+    { id: 'filtros',    label: `Filtros / Peças (${filtros.length})`,        Icon: FunnelIcon },
+    { id: 'fluidos',    label: `Fluidos (${fluidosUnicos.length})`,          Icon: BeakerIcon },
+    { id: 'frota',      label: `Frota (${frotaVinculada.length})`,           Icon: TruckIcon },
+  ]
 
   return (
     <div>
-      {/* Cabeçalho */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-        borderRadius: 12, padding: 24, marginBottom: 20, color: '#fff',
-        display: 'flex', alignItems: 'center', gap: 16,
-      }}>
-        <TruckIcon style={{ width: 40, height: 40, color: '#4ade80', flexShrink: 0 }} />
-        <div style={{ flex: 1 }}>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
-            {pub?.fabricante || plano.fabricante} {pub?.modelo || plano.modelo}
-          </h2>
-          <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: 13 }}>
-            {pub?.titulo || 'Manual do Operador'}
-            {pub?.edicao && ` · ${pub.edicao}`}
-            {pub?.serie_inicio && ` · Série ${pub.serie_inicio}${pub.serie_fim ? `–${pub.serie_fim}` : '+'}`}
-          </p>
-          <span style={{ display: 'inline-block', marginTop: 8, padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: statusCfg.bg, color: statusCfg.color }}>
-            {statusCfg.label}
-          </span>
+      {/* ─── Equipment card ─────────────────────────────────────────── */}
+      <div style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 0, boxShadow: '0 2px 8px rgba(0,0,0,.05)' }}>
+        <div style={{ height: 4, background: 'linear-gradient(90deg, #16a34a, #4ade80, #0ea5e9)' }} />
+        <div style={{ padding: '20px 24px' }}>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            {/* Brand badge */}
+            <div style={{ width: 68, height: 68, borderRadius: 12, background: brand.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontWeight: 900, fontSize: 17, color: brand.text, letterSpacing: -0.5 }}>{brand.initials}</span>
+            </div>
+
+            {/* Info + KPIs */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                <h2 style={{ margin: 0, fontSize: 21, fontWeight: 800, color: '#0f172a' }}>{fabricante} {modelo}</h2>
+                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: statusCfg.bg, color: statusCfg.color }}>{statusCfg.label}</span>
+                {pub?.edicao && <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#f1f5f9', color: '#475569' }}>{pub.edicao}</span>}
+              </div>
+              <p style={{ margin: '0 0 12px', color: '#64748b', fontSize: 13 }}>
+                {pub?.titulo || 'Manual do Operador'}
+                {pub?.serie_inicio && ` · Série ${pub.serie_inicio}${pub.serie_fim ? `–${pub.serie_fim}` : '+'}`}
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <MiniKpiPFD label="Intervalos"   value={plano.total_intervalos || intervalos.length} color="#16a34a" icon={ClockIcon}                 note={`${totalOk} ok`} />
+                <MiniKpiPFD label="Tarefas"      value={plano.total_tarefas    || todas.length}       color="#0ea5e9" icon={ClipboardDocumentListIcon} />
+                <MiniKpiPFD label="Filtros/Peças" value={filtros.length}                              color="#8b5cf6" icon={FunnelIcon}               note="substituições" />
+                <MiniKpiPFD label="Fluidos"      value={fluidosUnicos.length}                         color="#f59e0b" icon={BeakerIcon}               note="únicos" />
+                <MiniKpiPFD label="Frota Match"  value={frotaVinculada.length}                        color="#64748b" icon={TruckIcon}               note="equipamentos" />
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+              {planos.length > 1 && (
+                <select
+                  value={planoAtivo?.id || ''}
+                  onChange={e => setPlanoAtivo(planos.find(p => p.id === e.target.value))}
+                  style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12, cursor: 'pointer', color: '#374151' }}>
+                  {planos.map(pl => (
+                    <option key={pl.id} value={pl.id}>{pl.pfd_publicacoes?.modelo || pl.modelo} · {pl.pfd_publicacoes?.edicao || ''}</option>
+                  ))}
+                </select>
+              )}
+              <button onClick={() => navigate('/manutencao/operacoes/os')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                <WrenchScrewdriverIcon style={{ width: 13, height: 13 }} /> Gerar OS
+              </button>
+              <button onClick={() => setAbaAtiva('importar')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 14px', fontSize: 12, cursor: 'pointer' }}>
+                <CloudArrowUpIcon style={{ width: 13, height: 13 }} /> Importar novo
+              </button>
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 20, flexShrink: 0 }}>
-          <Stat label="Intervalos" value={plano.total_intervalos} color="#4ade80" />
-          <Stat label="Tarefas" value={plano.total_tarefas} color="#60a5fa" />
-          <Stat label="Páginas" value={plano.paginas_usadas?.length || '—'} color="#f472b6" />
+
+        {/* Tab nav */}
+        <div style={{ display: 'flex', borderTop: '1px solid #e2e8f0', overflowX: 'auto' }}>
+          {PLAN_TABS.map(t => {
+            const ativo = planTab === t.id
+            return (
+              <button key={t.id} onClick={() => setPlanTab(t.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 18px', fontSize: 12, fontWeight: ativo ? 700 : 500, color: ativo ? '#16a34a' : '#64748b', background: 'none', border: 'none', borderBottom: ativo ? '2px solid #16a34a' : '2px solid transparent', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'color 0.15s' }}>
+                <t.Icon style={{ width: 14, height: 14 }} />
+                {t.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      {/* Mapa de intervalos */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
+      {/* Tab content */}
+      <div style={{ background: 'white', borderRadius: '0 0 14px 14px', border: '1px solid #e2e8f0', borderTop: 'none', padding: 24, marginBottom: 24 }}>
+        {planTab === 'resumo'     && <TabPFDResumo     plano={plano} intervalos={intervalos} todas={todas} filtros={filtros} fluidosUnicos={fluidosUnicos} frotaVinculada={frotaVinculada} statusCfg={statusCfg} />}
+        {planTab === 'intervalos' && <TabPFDIntervalos intervalos={intervalos} intervaloAberto={intervaloAberto} setIntervaloAberto={setIntervaloAberto} surface={surface} border={border} />}
+        {planTab === 'filtros'    && <TabPFDFiltros    filtros={filtros} intervalos={intervalos} />}
+        {planTab === 'fluidos'    && <TabPFDFluidos    fluidosUnicos={fluidosUnicos} intervalos={intervalos} />}
+        {planTab === 'frota'      && <TabPFDFrota      frotaVinculada={frotaVinculada} frota={frota} navigate={navigate} fabricante={fabricante} modelo={modelo} />}
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab: Resumo ─────────────────────────────────────────────────────────────
+function TabPFDResumo({ plano, intervalos, todas, filtros, fluidosUnicos, frotaVinculada, statusCfg }) {
+  const pub = plano.pfd_publicacoes
+  const sistemas = [...new Set(todas.map(t => t.sistema).filter(Boolean))]
+  const tipoFreq = {}
+  todas.forEach(t => { if (t.tipo) tipoFreq[t.tipo] = (tipoFreq[t.tipo] || 0) + 1 })
+
+  const TIPO_CFG = {
+    verificacao:  { color: '#0284c7', bg: '#e0f2fe',  label: 'Verificação' },
+    substituicao: { color: '#7c3aed', bg: '#ede9fe',  label: 'Substituição' },
+    lubrificacao: { color: '#16a34a', bg: '#dcfce7',  label: 'Lubrificação' },
+    limpeza:      { color: '#0369a1', bg: '#dbeafe',  label: 'Limpeza' },
+    ajuste:       { color: '#ca8a04', bg: '#fef9c3',  label: 'Ajuste' },
+    inspecao:     { color: '#9333ea', bg: '#f3e8ff',  label: 'Inspeção' },
+    outro:        { color: '#64748b', bg: '#f1f5f9',  label: 'Outro' },
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: statusCfg.bg, border: `1px solid ${statusCfg.color}40`, borderRadius: 8, padding: '5px 12px', marginBottom: 16, fontSize: 11, color: statusCfg.color, fontWeight: 600 }}>
+        <ShieldCheckIcon style={{ width: 13, height: 13 }} />
+        {statusCfg.label} — extraído por IA do manual oficial
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+        {/* Identificação */}
+        <div style={{ background: '#f8fafc', borderRadius: 12, padding: 18, border: '1px solid #e2e8f0' }}>
+          <h4 style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 12px' }}>Identificação do Manual</h4>
+          {[
+            ['Fabricante',  pub?.fabricante || plano.fabricante],
+            ['Modelo',      pub?.modelo     || plano.modelo],
+            ['Edição',      pub?.edicao     || '—'],
+            ['Código',      pub?.codigo_pub || '—'],
+            ['Série',       pub?.serie_inicio ? `${pub.serie_inicio}${pub.serie_fim ? '–'+pub.serie_fim : '+'}` : '—'],
+            ['Idioma',      pub?.idioma === 'pt' ? 'Português' : pub?.idioma || '—'],
+          ].map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
+              <span style={{ color: '#64748b' }}>{k}</span>
+              <span style={{ fontWeight: 600, color: '#1e293b' }}>{v}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Extração */}
+        <div style={{ background: '#f8fafc', borderRadius: 12, padding: 18, border: '1px solid #e2e8f0' }}>
+          <h4 style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 12px' }}>Extração IA</h4>
+          {[
+            ['Provider',        plano.modelo_ai ? `Gemini (${plano.modelo_ai})` : 'Gemini'],
+            ['Intervalos ok',   `${intervalos.filter(iv => iv.status === 'ok').length} / ${intervalos.length}`],
+            ['Tarefas',         todas.length],
+            ['Com insumo/peça', `${todas.filter(t => t.insumo).length} (${Math.round(todas.filter(t => t.insumo).length / Math.max(todas.length, 1) * 100)}%)`],
+            ['Extraído em',     plano.extraido_em ? new Date(plano.extraido_em).toLocaleDateString('pt-BR') : '—'],
+          ].map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
+              <span style={{ color: '#64748b' }}>{k}</span>
+              <span style={{ fontWeight: 600, color: '#1e293b' }}>{v}</span>
+            </div>
+          ))}
+          {sistemas.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Sistemas:</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {sistemas.map(s => <span key={s} style={{ padding: '2px 7px', borderRadius: 5, background: '#e0e7ff', color: '#4338ca', fontSize: 11, fontWeight: 600 }}>{s}</span>)}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Distribuição por tipo */}
+      <div style={{ background: '#f8fafc', borderRadius: 12, padding: 18, border: '1px solid #e2e8f0' }}>
+        <h4 style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 14px' }}>Distribuição por Tipo de Tarefa</h4>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {Object.entries(tipoFreq).sort((a, b) => b[1] - a[1]).map(([tipo, count]) => {
+            const cfg = TIPO_CFG[tipo] || TIPO_CFG.outro
+            return (
+              <div key={tipo} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 8, background: cfg.bg }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: cfg.color }}>{count}</span>
+                <span style={{ fontSize: 12, color: cfg.color, fontWeight: 600 }}>{cfg.label}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab: Intervalos ─────────────────────────────────────────────────────────
+function TabPFDIntervalos({ intervalos, intervaloAberto, setIntervaloAberto, surface, border }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
         {intervalos.map((iv, i) => {
           const cor = corIntervalo(iv.horas)
           const ativo = intervaloAberto === i
-          const falha = iv.status !== 'ok'
           return (
             <button key={i} onClick={() => setIntervaloAberto(ativo ? null : i)}
-              style={{
-                padding: '10px 18px', borderRadius: 10, border: falha ? `1.5px solid ${falha ? '#fca5a5' : cor}` : 'none',
-                background: ativo ? cor : `${cor}18`,
-                color: ativo ? '#fff' : cor,
-                cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s',
-                boxShadow: ativo ? `0 2px 8px ${cor}55` : 'none',
-                position: 'relative',
-              }}>
-              {iv.horas === 0 ? 'Amac.' : `${iv.horas}h`}
+              style={{ padding: '10px 16px', borderRadius: 10, border: iv.status !== 'ok' ? '1.5px solid #fca5a5' : 'none', background: ativo ? cor : `${cor}18`, color: ativo ? '#fff' : cor, cursor: 'pointer', fontWeight: 700, fontSize: 13, transition: 'all 0.2s', boxShadow: ativo ? `0 2px 8px ${cor}55` : 'none' }}>
+              {iv.horas === -1 ? 'Conf.Nec.' : iv.horas === 0 ? 'Amac.' : `${iv.horas}h`}
               <span style={{ display: 'block', fontSize: 10, fontWeight: 400, opacity: 0.85 }}>
-                {iv.status === 'ok'
-                  ? `${iv.tarefas.length} tarefa${iv.tarefas.length !== 1 ? 's' : ''}`
-                  : iv.status === 'intervalo_nao_encontrado' ? 'não encontrado'
-                  : 'falha extração'}
+                {iv.status === 'ok' ? `${iv.tarefas.length} tarefas` : iv.status === 'intervalo_nao_encontrado' ? 'não encontrado' : 'falha'}
               </span>
             </button>
           )
         })}
       </div>
 
-      {/* Detalhe do intervalo */}
-      {intervaloAberto !== null && intervalos[intervaloAberto] && (
-        <IntervaloDetalhe iv={intervalos[intervaloAberto]} surface={surface} border={border} />
-      )}
-
-      {/* Lista resumida */}
-      {intervaloAberto === null && (
-        <div style={{ background: surface, borderRadius: 12, border: `1px solid ${border}`, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 20px', borderBottom: `1px solid ${border}` }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>Todos os Intervalos</span>
-            <span style={{ fontSize: 12, color: '#9ca3af', marginLeft: 8 }}>Clique em um intervalo acima para ver detalhes</span>
-          </div>
-          {intervalos.map((iv, i) => {
-            const cor = corIntervalo(iv.horas)
-            const stExt = STATUS_EXT[iv.status] || STATUS_EXT.ok
-            const sistemas = [...new Set(iv.tarefas.map(t => normTarefa(t).sistema).filter(Boolean))]
-            return (
-              <div key={i} style={{ borderBottom: `1px solid ${border}`, cursor: 'pointer', transition: 'background 0.15s' }}
-                onClick={() => setIntervaloAberto(i)}
-                onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                onMouseLeave={e => e.currentTarget.style.background = ''}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 20px' }}>
-                  <span style={{
-                    width: 52, height: 52, borderRadius: 10, flexShrink: 0,
-                    background: `${cor}18`, color: cor,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 800, fontSize: 15, lineHeight: 1.1,
-                  }}>
-                    {iv.horas === 0 ? '0' : iv.horas}
-                    <span style={{ fontSize: 9, fontWeight: 600 }}>h</span>
-                  </span>
+      {intervaloAberto !== null && intervalos[intervaloAberto]
+        ? <IntervaloDetalhe iv={intervalos[intervaloAberto]} surface={surface} border={border} />
+        : (
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+            {intervalos.map((iv, i) => {
+              const cor = corIntervalo(iv.horas)
+              const stExt = STATUS_EXT[iv.status] || STATUS_EXT.ok
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 18px', borderBottom: i < intervalos.length - 1 ? '1px solid #f1f5f9' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                  onClick={() => setIntervaloAberto(i)}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                  onMouseLeave={e => e.currentTarget.style.background = ''}>
+                  <div style={{ width: 46, height: 46, borderRadius: 9, background: `${cor}18`, color: cor, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, lineHeight: 1.1, flexShrink: 0 }}>
+                    {iv.horas === -1 ? 'CN' : iv.horas === 0 ? '0' : iv.horas}<span style={{ fontSize: 8 }}>h</span>
+                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>{iv.nome}</div>
-                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
-                      {iv.status === 'ok'
-                        ? <>{iv.tarefas.length} tarefa{iv.tarefas.length !== 1 ? 's' : ''}{sistemas.length > 0 && ` · ${sistemas.join(', ')}`}</>
-                        : <span style={{ color: stExt.color, fontWeight: 600 }}>{stExt.label}</span>
-                      }
-                    </div>
+                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 1 }}>{iv.tarefas.length} tarefas</div>
                   </div>
-                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, fontWeight: 600, background: stExt.bg, color: stExt.color, flexShrink: 0 }}>
-                    {stExt.label}
-                  </span>
-                  <ChevronRightIcon style={{ width: 16, height: 16, color: '#9ca3af', flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, fontWeight: 600, background: stExt.bg, color: stExt.color }}>{stExt.label}</span>
+                  <ChevronRightIcon style={{ width: 15, height: 15, color: '#9ca3af' }} />
                 </div>
-              </div>
+              )
+            })}
+          </div>
+        )
+      }
+    </div>
+  )
+}
+
+// ─── Tab: Filtros / Peças ────────────────────────────────────────────────────
+function TabPFDFiltros({ filtros, intervalos }) {
+  if (filtros.length === 0) return (
+    <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+      <FunnelIcon style={{ width: 36, height: 36, margin: '0 auto 10px', opacity: 0.3 }} />
+      <p style={{ margin: 0 }}>Nenhuma substituição extraída.</p>
+    </div>
+  )
+
+  const bySistema = {}
+  filtros.forEach(t => {
+    const s = t.sistema || 'Geral'
+    if (!bySistema[s]) bySistema[s] = []
+    bySistema[s].push(t)
+  })
+
+  function findHoras(tarefa) {
+    for (const iv of intervalos) {
+      if (iv.tarefas.some(t => normTarefa(t).tarefa === tarefa.tarefa)) return iv.horas
+    }
+    return null
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+        {filtros.length} peças/filtros identificados em {Object.keys(bySistema).length} sistemas.
+      </p>
+      {Object.entries(bySistema).map(([sistema, tarefas]) => (
+        <div key={sistema} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, padding: '5px 0', marginBottom: 6, borderBottom: '1px solid #e2e8f0' }}>
+            {sistema}
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                {['Atividade', 'Insumo / Peça', 'Cód. Peça', 'Intervalo', 'Pág.'].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 11, borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {tarefas.map((t, i) => {
+                const h = findHoras(t)
+                return (
+                  <tr key={i} style={{ borderBottom: '1px solid #f9fafb' }}>
+                    <td style={{ padding: '9px 12px', color: '#1e293b' }}>{t.tarefa}</td>
+                    <td style={{ padding: '9px 12px', color: '#374151' }}>{t.insumo || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+                    <td style={{ padding: '9px 12px' }}>
+                      {t.codigo_peca
+                        ? <span style={{ fontFamily: 'monospace', fontSize: 11, padding: '2px 7px', borderRadius: 5, background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0' }}>{t.codigo_peca}</span>
+                        : <span style={{ color: '#cbd5e1' }}>—</span>}
+                    </td>
+                    <td style={{ padding: '9px 12px' }}>
+                      {h !== null && <span style={{ padding: '2px 8px', borderRadius: 20, background: `${corIntervalo(h)}18`, color: corIntervalo(h), fontSize: 11, fontWeight: 700 }}>{h === -1 ? 'Conf.Nec.' : h === 0 ? 'Amac.' : `${h}h`}</span>}
+                    </td>
+                    <td style={{ padding: '9px 12px', fontSize: 11, color: '#94a3b8' }}>{t.pagina_fonte || '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Tab: Fluidos / Lubrificantes ────────────────────────────────────────────
+function TabPFDFluidos({ fluidosUnicos, intervalos }) {
+  if (fluidosUnicos.length === 0) return (
+    <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+      <BeakerIcon style={{ width: 36, height: 36, margin: '0 auto 10px', opacity: 0.3 }} />
+      <p style={{ margin: 0 }}>Nenhum fluido ou lubrificante identificado.</p>
+    </div>
+  )
+
+  return (
+    <div>
+      <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+        {fluidosUnicos.length} fluidos/lubrificantes únicos identificados.
+      </p>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead>
+          <tr style={{ background: '#f8fafc' }}>
+            {['Insumo / Lubrificante', 'Sistema', 'Tipo', 'Especificação', 'Qtd', 'Aparece em'].map(h => (
+              <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 11, borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {fluidosUnicos.map((t, i) => {
+            const horasAparece = intervalos
+              .filter(iv => iv.tarefas.some(tk => normTarefa(tk).insumo === t.insumo))
+              .map(iv => iv.horas)
+            return (
+              <tr key={i} style={{ borderBottom: '1px solid #f9fafb' }}>
+                <td style={{ padding: '10px 14px', fontWeight: 600, color: '#1e293b' }}>{t.insumo}</td>
+                <td style={{ padding: '10px 14px', color: '#475569' }}>{t.sistema || '—'}</td>
+                <td style={{ padding: '10px 14px' }}>
+                  <span style={{ padding: '2px 8px', borderRadius: 5, fontSize: 11, fontWeight: 600, background: t.tipo === 'lubrificacao' ? '#dcfce7' : '#ede9fe', color: t.tipo === 'lubrificacao' ? '#166534' : '#7c3aed' }}>
+                    {t.tipo === 'lubrificacao' ? 'Lubrificação' : 'Substituição'}
+                  </span>
+                </td>
+                <td style={{ padding: '10px 14px', fontSize: 12, color: '#475569' }}>{t.especificacao || '—'}</td>
+                <td style={{ padding: '10px 14px', fontSize: 12, color: '#475569' }}>{t.quantidade || '—'}</td>
+                <td style={{ padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {horasAparece.map(h => (
+                      <span key={h} style={{ padding: '1px 6px', borderRadius: 10, background: `${corIntervalo(h)}18`, color: corIntervalo(h), fontSize: 10, fontWeight: 700 }}>
+                        {h === -1 ? 'CN' : h === 0 ? 'Amac.' : `${h}h`}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+              </tr>
             )
           })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ─── Tab: Frota ──────────────────────────────────────────────────────────────
+function TabPFDFrota({ frotaVinculada, frota, navigate, fabricante, modelo }) {
+  return (
+    <div>
+      {frotaVinculada.length === 0 ? (
+        <div>
+          <div style={{ textAlign: 'center', padding: '24px 0 16px', color: '#9ca3af' }}>
+            <TruckIcon style={{ width: 36, height: 36, margin: '0 auto 10px', opacity: 0.3 }} />
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#64748b' }}>Nenhum equipamento correspondente na frota</p>
+            <p style={{ margin: '4px 0 0', fontSize: 12 }}>Cadastre equipamentos {fabricante} {modelo} em Cadastros → Equipamentos</p>
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 8 }}>
+            <button onClick={() => navigate('/manutencao/cadastros/equipamentos')}
+              style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+              Ir para Cadastros
+            </button>
+          </div>
+          {frota.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>
+                Frota cadastrada ({frota.length} total — nenhum com {fabricante} / {modelo}):
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {frota.slice(0, 12).map(eq => (
+                  <span key={eq.id} style={{ padding: '4px 10px', borderRadius: 20, background: '#f1f5f9', color: '#475569', fontSize: 12 }}>
+                    {eq.nome} · {eq.codigo || eq.modelo || eq.tipo}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div>
+          <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>
+            {frotaVinculada.length} equipamento{frotaVinculada.length > 1 ? 's' : ''} correspondente{frotaVinculada.length > 1 ? 's' : ''} na frota. Este plano se aplica a eles.
+          </p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                {['Equipamento', 'Código', 'Fabricante / Modelo', 'Horímetro', 'Status', ''].map(h => (
+                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 11, borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {frotaVinculada.map(eq => (
+                <tr key={eq.id} style={{ borderBottom: '1px solid #f9fafb' }}>
+                  <td style={{ padding: '10px 14px', fontWeight: 600, color: '#1e293b' }}>{eq.nome}</td>
+                  <td style={{ padding: '10px 14px' }}>
+                    {eq.codigo
+                      ? <span style={{ fontFamily: 'monospace', fontSize: 11, padding: '2px 7px', borderRadius: 5, background: '#f1f5f9', color: '#334155' }}>{eq.codigo}</span>
+                      : <span style={{ color: '#cbd5e1' }}>—</span>}
+                  </td>
+                  <td style={{ padding: '10px 14px', color: '#475569', fontSize: 12 }}>{eq.fabricante} {eq.modelo}</td>
+                  <td style={{ padding: '10px 14px', color: '#374151', fontSize: 12 }}>
+                    {eq.horimetro_atual ? `${Number(eq.horimetro_atual).toLocaleString('pt-BR')} h` : '—'}
+                  </td>
+                  <td style={{ padding: '10px 14px' }}>
+                    <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: eq.ativo ? '#dcfce7' : '#f1f5f9', color: eq.ativo ? '#166534' : '#6b7280' }}>
+                      {eq.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 14px' }}>
+                    <button onClick={() => navigate('/manutencao/operacoes/os')}
+                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#475569', cursor: 'pointer', fontSize: 11 }}>
+                      Gerar OS
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
   )
 }
+
 
 function IntervaloDetalhe({ iv, surface, border }) {
   const cor = corIntervalo(iv.horas)
@@ -855,15 +1221,6 @@ function IntervaloDetalhe({ iv, surface, border }) {
           </table>
         </div>
       )}
-    </div>
-  )
-}
-
-function Stat({ label, value, color }) {
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: 24, fontWeight: 800, color }}>{value ?? '—'}</div>
-      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{label}</div>
     </div>
   )
 }

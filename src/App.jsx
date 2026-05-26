@@ -46,6 +46,10 @@ import RefeicaoConfirmarRestaurante from './pages/RefeicaoConfirmarRestaurante'
 import RefeicaoValidar from './pages/RefeicaoValidar'
 import Refeicoes from './pages/Refeicoes'
 import LiderEpi from './pages/LiderEpi'
+import LiderCadastros from './pages/LiderCadastros'
+import LiderDashboard from './pages/LiderDashboard'
+import LiderTurnos from './pages/LiderTurnos'
+import LiderApontamentos from './pages/LiderApontamentos'
 import ManutencaoDashboard from './pages/ManutencaoDashboard'
 import ManutencaoOS from './pages/ManutencaoOS'
 import ManutencaoPreventiva from './pages/ManutencaoPreventiva'
@@ -525,8 +529,15 @@ export default function App() {
                   <Route path="/refeicoes/relatorios/rel-restaurante" element={<Refeicoes />} />
                   <Route path="/refeicoes/relatorios/rel-cdc" element={<Refeicoes />} />
                   <Route path="/refeicoes/relatorios/rel-divergencias" element={<Refeicoes />} />
+                  <Route path="/lider" element={<Navigate to="/lider/dashboard" replace />} />
+                  <Route path="/lider/dashboard" element={<LiderDashboard />} />
+                  <Route path="/lider/turnos" element={<LiderTurnos />} />
+                  <Route path="/lider/apontamentos" element={<LiderApontamentos />} />
                   <Route path="/lider/epi/solicitacoes" element={<LiderEpi />} />
                   <Route path="/lider/epi/catalogo" element={<LiderEpi />} />
+                  <Route path="/lider/epc/catalogo" element={<LiderEpi />} />
+                  <Route path="/lider/cadastros" element={<LiderCadastros />} />
+                  <Route path="/lider/cadastros/:aba" element={<LiderCadastros />} />
                   <Route path="/manutencao" element={<Navigate to="/manutencao/dashboard" replace />} />
                   <Route path="/manutencao/dashboard" element={<ManutencaoDashboard />} />
                   <Route path="/manutencao/operacoes/os" element={<ManutencaoOS />} />

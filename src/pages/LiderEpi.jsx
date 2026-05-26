@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import {
   PlusIcon, PencilIcon, XMarkIcon,
   CheckCircleIcon, ClockIcon, XCircleIcon, ShieldCheckIcon,
+  MagnifyingGlassIcon, UserIcon,
 } from '@heroicons/react/24/outline'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -96,15 +97,16 @@ export default function LiderEpi() {
 // SEÇÃO — SOLICITAÇÕES
 // ═══════════════════════════════════════════════════════════════════════════════
 function SecaoSolicitacoes({ workspaceId }) {
-  const [rows,          setRows]          = useState([])
-  const [loading,       setLoading]       = useState(true)
-  const [filtroStatus,  setFiltroStatus]  = useState('pendente')
-  const [filtroEquipe,  setFiltroEquipe]  = useState('')
-  const [equipes,       setEquipes]       = useState([])
-  const [modalFoto,     setModalFoto]     = useState(null)
-  const [modalReprovar, setModalReprovar] = useState(null)
-  const [motivoReprov,  setMotivoReprov]  = useState('')
-  const [saving,        setSaving]        = useState(false)
+  const [rows,              setRows]              = useState([])
+  const [loading,           setLoading]           = useState(true)
+  const [filtroStatus,      setFiltroStatus]      = useState('pendente')
+  const [filtroEquipe,      setFiltroEquipe]      = useState('')
+  const [buscaColaborador,  setBuscaColaborador]  = useState('')
+  const [equipes,           setEquipes]           = useState([])
+  const [modalFoto,         setModalFoto]         = useState(null)
+  const [modalReprovar,     setModalReprovar]     = useState(null)
+  const [motivoReprov,      setMotivoReprov]      = useState('')
+  const [saving,            setSaving]            = useState(false)
 
   const carregar = useCallback(async () => {
     if (!workspaceId) return
@@ -180,6 +182,10 @@ function SecaoSolicitacoes({ workspaceId }) {
   const contadores = { pendente: 0, aprovado: 0, reprovado: 0, entregue: 0 }
   rows.forEach(r => { if (contadores[r.status] !== undefined) contadores[r.status]++ })
 
+  const rowsFiltrados = buscaColaborador.trim()
+    ? rows.filter(r => r.colaborador_nome?.toLowerCase().includes(buscaColaborador.toLowerCase().trim()))
+    : rows
+
   return (
     <div>
       {/* ── Filtros ─────────────────────────────────────────────────────── */}
@@ -222,6 +228,23 @@ function SecaoSolicitacoes({ workspaceId }) {
           <option value="">Todas as equipes</option>
           {equipes.map(e => <option key={e.id} value={e.nome}>{e.nome}</option>)}
         </select>
+
+        {/* Busca por colaborador */}
+        <div style={{ position: 'relative' }}>
+          <UserIcon style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', width: 13, height: 13, color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+          <input
+            className="input"
+            value={buscaColaborador}
+            onChange={e => setBuscaColaborador(e.target.value)}
+            placeholder="Buscar colaborador…"
+            style={{ paddingLeft: 28, width: 180, fontSize: 12 }}
+          />
+          {buscaColaborador && (
+            <button onClick={() => setBuscaColaborador('')} style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 0, display: 'flex' }}>
+              <XMarkIcon style={{ width: 13, height: 13 }} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Conteúdo ────────────────────────────────────────────────────── */}
@@ -229,10 +252,12 @@ function SecaoSolicitacoes({ workspaceId }) {
         <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
         </div>
-      ) : rows.length === 0 ? (
+      ) : rowsFiltrados.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-secondary)' }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>🦺</div>
-          <p style={{ fontSize: 13 }}>Nenhuma solicitação de EPI encontrada</p>
+          <p style={{ fontSize: 13 }}>
+            {buscaColaborador.trim() ? `Nenhum colaborador encontrado para "${buscaColaborador.trim()}"` : 'Nenhuma solicitação de EPI encontrada'}
+          </p>
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -248,7 +273,7 @@ function SecaoSolicitacoes({ workspaceId }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, i) => {
+                {rowsFiltrados.map((row, i) => {
                   const turno = row.lider_turnos
                   return (
                     <tr key={row.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
@@ -358,12 +383,14 @@ function SecaoSolicitacoes({ workspaceId }) {
 // SEÇÃO — CATÁLOGO DE EPIs (Individual — por colaborador)
 // ═══════════════════════════════════════════════════════════════════════════════
 function SecaoCatalogoEPI({ workspaceId }) {
-  const [epis,    setEpis]    = useState([])
-  const [loading, setLoading] = useState(true)
-  const [modal,   setModal]   = useState(null) // null | 'novo' | {id, nome, ca}
-  const [nome,    setNome]    = useState('')
-  const [ca,      setCa]      = useState('')
-  const [saving,  setSaving]  = useState(false)
+  const [epis,       setEpis]       = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [modal,      setModal]      = useState(null) // null | 'novo' | {id, nome, ca}
+  const [nome,       setNome]       = useState('')
+  const [ca,         setCa]         = useState('')
+  const [saving,     setSaving]     = useState(false)
+  const [busca,      setBusca]      = useState('')
+  const [dropOpen,   setDropOpen]   = useState(false)
 
   const carregar = useCallback(async () => {
     if (!workspaceId) return
@@ -399,6 +426,9 @@ function SecaoCatalogoEPI({ workspaceId }) {
   }
 
   const ativos = epis.filter(e => e.ativo).length
+  const episFiltrados = busca.trim()
+    ? epis.filter(e => e.nome.toLowerCase().includes(busca.toLowerCase().trim()) || (e.ca ?? '').includes(busca.trim()))
+    : epis
 
   return (
     <div>
@@ -422,30 +452,91 @@ function SecaoCatalogoEPI({ workspaceId }) {
           <p style={{ fontSize: 13 }}>Nenhum EPI cadastrado ainda</p>
         </div>
       ) : (
-        <>
-          {epis.map(epi => (
-            <div key={epi.id} className="card" style={{ padding: '10px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, opacity: epi.ativo ? 1 : 0.55 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{epi.nome}</span>
-                {epi.ca
-                  ? <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 8 }}>CA {epi.ca}</span>
-                  : <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 8, fontStyle: 'italic' }}>Sem CA</span>}
-                {!epi.ativo && <span className="badge badge-danger" style={{ fontSize: 10, marginLeft: 6 }}>Inativo</span>}
-              </div>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={() => abrirEditar(epi)} style={{ background: 'rgba(99,102,241,0.12)', border: 'none', color: '#818cf8', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}>
-                  <PencilIcon style={{ width: 13, height: 13 }} />
-                </button>
-                <button
-                  onClick={() => toggleAtivo(epi)}
-                  style={{ background: epi.ativo ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.12)', border: 'none', color: epi.ativo ? '#f87171' : '#34d399', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
-                >
-                  {epi.ativo ? 'Desativar' : 'Reativar'}
-                </button>
-              </div>
+        <div>
+          {/* ── Campo de busca / autocomplete ─────────────────────── */}
+          <div style={{ position: 'relative', marginBottom: 4 }}>
+            <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+            <input
+              className="input"
+              value={busca}
+              onChange={e => { setBusca(e.target.value); setDropOpen(true) }}
+              onFocus={() => setDropOpen(true)}
+              onBlur={() => setTimeout(() => setDropOpen(false), 150)}
+              placeholder="Localizar EPI por nome ou CA…"
+              style={{ paddingLeft: 32, fontSize: 13 }}
+              autoComplete="off"
+            />
+            {busca && (
+              <button
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { setBusca(''); setDropOpen(true) }}
+                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 0, display: 'flex' }}
+              >
+                <XMarkIcon style={{ width: 14, height: 14 }} />
+              </button>
+            )}
+          </div>
+
+          {/* ── Dropdown de resultados ─────────────────────────────── */}
+          {dropOpen && (
+            <div
+              className="card"
+              style={{ padding: 0, overflow: 'hidden', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.25)', maxHeight: 360, overflowY: 'auto' }}
+              onMouseDown={e => e.preventDefault()}
+            >
+              {episFiltrados.length === 0 ? (
+                <div style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
+                  Nenhum EPI encontrado para &ldquo;{busca}&rdquo;
+                </div>
+              ) : (
+                episFiltrados.map((epi, i) => (
+                  <div
+                    key={epi.id}
+                    style={{
+                      padding: '10px 14px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                      borderBottom: i < episFiltrados.length - 1 ? '1px solid var(--border)' : 'none',
+                      opacity: epi.ativo ? 1 : 0.55,
+                      background: 'transparent',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{epi.nome}</span>
+                      {epi.ca
+                        ? <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 8 }}>CA {epi.ca}</span>
+                        : <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 8, fontStyle: 'italic' }}>Sem CA</span>}
+                      {!epi.ativo && <span className="badge badge-danger" style={{ fontSize: 10, marginLeft: 6 }}>Inativo</span>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                      <button
+                        onClick={() => { abrirEditar(epi); setDropOpen(false) }}
+                        style={{ background: 'rgba(99,102,241,0.12)', border: 'none', color: '#818cf8', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}
+                      >
+                        <PencilIcon style={{ width: 13, height: 13 }} />
+                      </button>
+                      <button
+                        onClick={() => toggleAtivo(epi)}
+                        style={{ background: epi.ativo ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.12)', border: 'none', color: epi.ativo ? '#f87171' : '#34d399', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+                      >
+                        {epi.ativo ? 'Desativar' : 'Reativar'}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-          ))}
-        </>
+          )}
+
+          {/* ── Legenda quando dropdown fechado ───────────────────── */}
+          {!dropOpen && !busca && (
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
+              {ativos} EPI{ativos !== 1 ? 's' : ''} ativo{ativos !== 1 ? 's' : ''} · clique no campo para listar todos
+            </p>
+          )}
+        </div>
       )}
 
       {modal && (

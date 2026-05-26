@@ -112,8 +112,13 @@ const navGroups = [
   {
     title: 'SmartLíder',
     items: [
-      { to: '/lider/epi/solicitacoes', icon: ShieldCheckIcon, label: 'Solicitações EPI', moduleKey: null },
-      { to: '/lider/epi/catalogo',     icon: TableCellsIcon,  label: 'Catálogo EPI',   moduleKey: null },
+      { to: '/lider/dashboard',        icon: ChartBarIcon,               label: 'Dashboard',           moduleKey: null },
+      { to: '/lider/turnos',           icon: CalendarDaysIcon,            label: 'Turnos',              moduleKey: null },
+      { to: '/lider/apontamentos',     icon: ClipboardDocumentListIcon,   label: 'Apontamentos',        moduleKey: null },
+      { to: '/lider/cadastros',        icon: UsersIcon,                   label: 'Cadastros',           moduleKey: null },
+      { to: '/lider/epi/solicitacoes', icon: ShieldCheckIcon,             label: 'Solicitações EPI',    moduleKey: null },
+      { to: '/lider/epi/catalogo',     icon: TableCellsIcon,              label: 'Catálogo EPI',        moduleKey: null },
+      { to: '/lider/epc/catalogo',     icon: WrenchScrewdriverIcon,       label: 'Catálogo EPC',        moduleKey: null },
     ],
   },
   {
