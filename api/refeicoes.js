@@ -820,5 +820,121 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true, mensagem: 'Pedido reaberto para correção! 🔄' })
   }
 
+  // ── POST: notify-mobile ────────────────────────────────────────────────────
+  // Chamado pelo app SmartLíder após criar o pedido direto no Supabase.
+  // Envia WhatsApp ao supervisor + confirmação ao líder + timeline + Flow Engine.
+  if (req.method === 'POST' && action === 'notify-mobile') {
+    const { id } = req.body || {}
+    if (!id) return res.status(400).json({ error: 'id da solicitação obrigatório' })
+
+    const { data: sol } = await db
+      .from('refei_solicitacoes')
+      .select('*, refei_restaurantes(nome, valor_refeicao, valor_cafe)')
+      .eq('id', id)
+      .maybeSingle()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+
+    const { data: itens } = await db
+      .from('refei_itens')
+      .select('colaborador_nome, refeicao, cafe, extra, justificativa')
+      .eq('solicitacao_id', id)
+
+    const rest       = sol.refei_restaurantes
+    const totalRef   = sol.total_refeicoes  ?? 0
+    const totalCafe  = sol.total_cafes      ?? 0
+    const valorTotal = sol.valor_total      ?? 0
+
+    // Timeline
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'pedido_criado',     descricao: `Pedido ${sol.numero_pedido} criado por ${sol.lider_nome || 'líder'}`, ator: sol.lider_nome, atorTipo: 'lider' })
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_aprovacao', descricao: 'Enviado para aprovação do supervisor',                                  ator: sol.lider_nome, atorTipo: 'lider' })
+
+    // WhatsApp → supervisor
+    const supervisorTel = sol.supervisor_telefone
+    if (supervisorTel) {
+      const { data: equipeData } = await db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle()
+      const itensNormais = (itens || []).filter(i => !i.extra && (i.refeicao || i.cafe))
+      const itensExtras  = (itens || []).filter(i =>  i.extra && (i.refeicao || i.cafe))
+
+      const linhasColab  = itensNormais.map(i => `• ${i.colaborador_nome} — ${[i.refeicao ? '🍽️' : '', i.cafe ? '☕' : ''].filter(Boolean).join(' ')}`)
+      const linhasExtras = itensExtras.map( i => `⚠️ ${i.colaborador_nome} — ${[i.refeicao ? '🍽️' : '', i.cafe ? '☕' : ''].filter(Boolean).join(' ')} — "${i.justificativa}"`)
+
+      const msgSup = [
+        `🍽️ *Solicitação de Refeição — ${sol.numero_pedido}*`,
+        `Equipe: ${equipeData?.nome || '—'}`,
+        `Solicitante: ${sol.lider_nome || '—'}`,
+        `📅 Data: ${fmtData(sol.data_refeicao)}`,
+        `🏪 Restaurante: ${rest?.nome || '—'}`,
+        ``,
+        `👥 *Colaboradores (${linhasColab.length}):*`,
+        ...linhasColab,
+        ...(linhasExtras.length > 0 ? [``, `⚠️ *Extras (${linhasExtras.length}) — com justificativa:*`, ...linhasExtras] : []),
+        ``,
+        `🍽️ ${totalRef} refeição(ões)  ·  ☕ ${totalCafe} café(s)  ·  *${fmtBRL(valorTotal)}*`,
+        ``,
+        `👇 Toque para aprovar ou reprovar (sem logar):`,
+        `${APP_URL}/ar/${sol.token_aprovacao}`,
+        ``,
+        `Responda *SIM* para aprovar ou *NÃO* para reprovar.`,
+      ].join('\n')
+      await sendWA(supervisorTel, msgSup)
+    }
+
+    // WhatsApp → líder (confirmação)
+    if (sol.lider_telefone) {
+      const msgLider = [
+        `✅ *Pedido ${sol.numero_pedido} enviado!*`,
+        `Data: ${fmtData(sol.data_refeicao)}`,
+        `Restaurante: ${rest?.nome || '—'}`,
+        `${totalRef} refeição(ões)` + (totalCafe > 0 ? ` · ${totalCafe} café(s)` : ''),
+        `*Total: ${fmtBRL(valorTotal)}*`,
+        ``,
+        `Aguardando aprovação do supervisor.`,
+      ].join('\n')
+      await sendWA(sol.lider_telefone, msgLider)
+    }
+
+    // Flow Engine auto-start
+    try {
+      const { data: flowDef } = await db
+        .from('flow_definitions')
+        .select('id')
+        .eq('workspace_id', sol.workspace_id)
+        .eq('modulo', 'refeicoes')
+        .eq('ativo', true)
+        .maybeSingle()
+
+      if (flowDef) {
+        const startResult = await handleStart(db, {
+          definition_id:  flowDef.id,
+          entidade_tipo:  'refei_solicitacoes',
+          entidade_id:    sol.id,
+          workspace_id:   sol.workspace_id,
+          dados_contexto: { valor_total: valorTotal, numero_pedido: sol.numero_pedido },
+        })
+        if (startResult.status === 201) {
+          const { data: acaoEnviar } = await db
+            .from('flow_actions')
+            .select('id')
+            .eq('step_id', startResult.body.current_step.id)
+            .eq('nome', 'enviar')
+            .maybeSingle()
+          if (acaoEnviar) {
+            await handleExecute(db, {
+              instance_id:   startResult.body.instance_id,
+              acao_id:       acaoEnviar.id,
+              executado_por: null,
+              dados:         {},
+              origem:        'sistema',
+            })
+          }
+        }
+      }
+    } catch (flowErr) {
+      console.error('[refeicoes] notify-mobile flow error:', flowErr?.message)
+    }
+
+    return res.status(200).json({ ok: true })
+  }
+
   return res.status(404).json({ error: 'Endpoint não encontrado' })
 }
