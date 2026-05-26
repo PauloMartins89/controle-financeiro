@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Dividi Aí</string>
-    <string name="title_activity_main">Dividi Aí</string>
+    <string name="app_name">SmartPro</string>
+    <string name="title_activity_main">SmartPro</string>
     <string name="package_name">com.paulo_martins.controlefinanceiros</string>
     <string name="custom_url_scheme">com.paulo_martins.controlefinanceiros</string>
 </resources>

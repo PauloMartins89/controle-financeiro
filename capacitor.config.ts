@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.paulo_martins.controlefinanceiros',
-  appName: 'Dividi Aí',
+  appName: 'SmartPro',
   webDir: 'dist',
   android: {
     buildOptions: {
