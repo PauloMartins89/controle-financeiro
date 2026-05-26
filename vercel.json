@@ -38,11 +38,13 @@
       "schedule": "0 11 * * 1-6"
     }
   ],
+  "redirects": [
+    { "source": "/download", "destination": "/download.html", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/ar/:token", "destination": "/aprovar.html?token=:token" },
     { "source": "/limpar", "destination": "/limpar.html" },
-    { "source": "/download", "destination": "/download.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
