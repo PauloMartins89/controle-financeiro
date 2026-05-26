@@ -57,3 +57,14 @@ jobs:
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
           echo "APK gerado: $(du -sh $APK | cut -f1)"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: SmartPro APK
+          body: APK gerado automaticamente pelo GitHub Actions.
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
