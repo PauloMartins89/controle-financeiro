@@ -42,6 +42,7 @@
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/ar/:token", "destination": "/aprovar.html?token=:token" },
     { "source": "/limpar", "destination": "/limpar.html" },
+    { "source": "/download", "destination": "/download.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
