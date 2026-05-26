@@ -1329,9 +1329,9 @@ function SecaoDashboard({ sols, onNav }) {
     const pendentes   = ativos.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status))
     const aprovSts    = ativos.filter(s => s.status === 'aprovado')
     const emPreparo   = ativos.filter(s => ['confirmado_restaurante', 'enviado_restaurante', 'em_acompanhamento'].includes(s.status))
-    const entregues   = ativos.filter(s => s.status === 'entregue')
+    const entregues   = ativos.filter(s => ['entregue', 'finalizado'].includes(s.status))
     const divergencias = ativos.filter(s => ['aguardando_validacao', 'finalizado_com_ocorrencia'].includes(s.status))
-    const aguardEnt   = ativos.filter(s => ['aprovado', 'confirmado_restaurante', 'enviado_restaurante', 'em_acompanhamento'].includes(s.status))
+    const aguardEnt   = ativos.filter(s => ['aprovado', 'consolidado', 'confirmado_restaurante', 'enviado_restaurante', 'em_acompanhamento'].includes(s.status))
 
     const hojeSols  = ativos.filter(s => s.data_refeicao === hoje)
     const ontemSols = ativos.filter(s => s.data_refeicao === ontem)
@@ -2123,7 +2123,7 @@ function SecaoFechamentos({ workspaceId, ownerId }) {
     const ultimo = new Date(ano, mes, 0).getDate()
     const fim    = `${ano}-${String(mes).padStart(2, '0')}-${ultimo}`
     setGerando(true)
-    const { data: ss, error } = await supabase.from('refei_solicitacoes').select('total_refeicoes,total_cafes,valor_total').eq('workspace_id', workspaceId).in('status', ['aprovado', 'entregue']).gte('data_refeicao', inicio).lte('data_refeicao', fim)
+    const { data: ss, error } = await supabase.from('refei_solicitacoes').select('total_refeicoes,total_cafes,valor_total').eq('workspace_id', workspaceId).in('status', ['aprovado','confirmado_restaurante','consolidado','enviado_restaurante','em_acompanhamento','aguardando_validacao','entregue','finalizado','finalizado_com_ocorrencia','faturado','enviado_faturamento']).gte('data_refeicao', inicio).lte('data_refeicao', fim)
     if (error) { toast.error(error.message); setGerando(false); return }
     const total_solicitacoes = (ss || []).length
     const total_refeicoes    = (ss || []).reduce((a, s) => a + (s.total_refeicoes || 0), 0)
@@ -2188,7 +2188,7 @@ function SecaoRelatorios({ sub, sols }) {
   const [dtFim,    setDtFim]    = useState('')
 
   const base = useMemo(() => {
-    let list = sols.filter(s => s.status !== 'rascunho')
+    let list = sols.filter(s => s.status !== 'rascunho' && s.status !== 'reprovado')
     if (dtInicio) list = list.filter(s => s.data_refeicao >= dtInicio)
     if (dtFim)    list = list.filter(s => s.data_refeicao <= dtFim)
     return list

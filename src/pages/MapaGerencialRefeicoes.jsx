@@ -73,8 +73,8 @@ function deriveCellStatus(entries) {
   const statuses = entries.map(e => STATUS_SOL[e.status] || 'pendente')
   if (statuses.includes('divergencia'))                           return 'divergencia'
   if (statuses.includes('faturado'))                             return 'faturado'
-  if (statuses.every(s => s === 'aprovado' || s === 'entregue')) return 'aprovado'
   if (statuses.every(s => s === 'entregue'))                     return 'entregue'
+  if (statuses.every(s => s === 'aprovado' || s === 'entregue')) return 'aprovado'
   if (statuses.includes('pendente'))                             return 'pendente'
   return 'parcial'
 }
