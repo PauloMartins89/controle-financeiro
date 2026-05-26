@@ -849,7 +849,16 @@ export default async function handler(req, res) {
     await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_aprovacao', descricao: 'Enviado para aprovação do supervisor',                                  ator: sol.lider_nome, atorTipo: 'lider' })
 
     // WhatsApp → supervisor
-    const supervisorTel = sol.supervisor_telefone
+    // Se o pedido não tem supervisor_telefone, buscar da equipe diretamente
+    let supervisorTel = sol.supervisor_telefone
+    if (!supervisorTel && sol.equipe_id) {
+      const { data: eq } = await db.from('refei_equipes').select('supervisor_telefone').eq('id', sol.equipe_id).maybeSingle()
+      supervisorTel = eq?.supervisor_telefone || null
+      // Atualiza o pedido para futuras consultas
+      if (supervisorTel) {
+        await db.from('refei_solicitacoes').update({ supervisor_telefone: supervisorTel }).eq('id', sol.id)
+      }
+    }
     if (supervisorTel) {
       const { data: equipeData } = await db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle()
       const itensNormais = (itens || []).filter(i => !i.extra && (i.refeicao || i.cafe))
