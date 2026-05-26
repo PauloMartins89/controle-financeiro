@@ -43,7 +43,7 @@ async function obterPdfBuffer({ modo, storage_path, url_pdf, pdf_base64, publica
 async function extrairPlano({ providerUsado, pdfBuffer, modeloEquip, fabricanteEquip, edicao, idioma, L }) {
   if (providerUsado === 'openai') {
     L('provider=openai → extraindo texto com pdf-parse (único pass 1-200)...')
-    return extrairComOpenAIProvider({
+    const openaiResult = await extrairComOpenAIProvider({
       pdfBuffer,
       modeloEquip,
       fabricanteEquip,
@@ -53,10 +53,14 @@ async function extrairPlano({ providerUsado, pdfBuffer, modeloEquip, fabricanteE
       L,
       label: 'OpenAI',
     })
+    return {
+      ...openaiResult,
+      meta: { provider: 'openai', modelo_ai: 'gpt-4o-mini', modo_pdf: 'pdf-parse' },
+    }
   }
 
   try {
-    const resultado = await extrairComGemini({
+    const geminiResult = await extrairComGemini({
       pdfBuffer,
       modelo: modeloEquip,
       fabricante: fabricanteEquip,
@@ -64,13 +68,14 @@ async function extrairPlano({ providerUsado, pdfBuffer, modeloEquip, fabricanteE
       geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       L,
     })
+    const { resultado, meta } = geminiResult
     L(`Gemini: ${resultado.intervalos?.length || 0} intervalos extraídos`)
-    return { resultado, paginasUsadas: null }
+    return { resultado, paginasUsadas: null, meta }
   } catch (geminiErr) {
     L(`⚠️ Gemini falhou: ${geminiErr.message}`)
     if (!openaiApiKey) throw geminiErr
     L('Tentando fallback OpenAI + pdf-parse...')
-    return extrairComOpenAIProvider({
+    const fallbackResult = await extrairComOpenAIProvider({
       pdfBuffer,
       modeloEquip,
       fabricanteEquip,
@@ -80,7 +85,30 @@ async function extrairPlano({ providerUsado, pdfBuffer, modeloEquip, fabricanteE
       L,
       label: 'fallback OpenAI',
     })
+    return {
+      ...fallbackResult,
+      meta: { provider: 'openai', modelo_ai: 'gpt-4o-mini', modo_pdf: 'pdf-parse', fallback_de: 'gemini' },
+    }
   }
+}
+
+function criarPreviewPlano(intervalos) {
+  return (intervalos || []).map(iv => {
+    const paginas = (iv.tarefas || [])
+      .map(t => t.pagina_fonte)
+      .filter(p => p !== null && p !== undefined && p !== '')
+    const paginaInicio = paginas.length ? paginas[0] : null
+    const paginaFim = paginas.length ? paginas[paginas.length - 1] : null
+
+    return {
+      h: iv.intervalo_horas,
+      titulo: iv.titulo_intervalo,
+      status_extracao: iv.status_extracao || 'ok',
+      total_tarefas: iv.tarefas?.length || 0,
+      pagina_inicio: paginaInicio,
+      pagina_fim: paginaFim,
+    }
+  })
 }
 
 async function criarOuPrepararPublicacao({ sb, publicacao_id, payload, L }) {
@@ -121,8 +149,21 @@ async function criarOuPrepararPublicacao({ sb, publicacao_id, payload, L }) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const log = []
-  const L = (msg) => { log.push(`[${new Date().toISOString().slice(11, 23)}] ${msg}`); console.log('[pfd]', msg) }
+  const inicioProcessamento = Date.now()
+  const logTexto = []
+  const logEtapas = []
+  const L = (msg) => { logTexto.push(`[${new Date().toISOString().slice(11, 23)}] ${msg}`); console.log('[pfd]', msg) }
+  const medirEtapa = async (etapa, fn) => {
+    const inicio = Date.now()
+    try {
+      const data = await fn()
+      logEtapas.push({ etapa, status: 'ok', tempo_ms: Date.now() - inicio })
+      return data
+    } catch (err) {
+      logEtapas.push({ etapa, status: 'erro', tempo_ms: Date.now() - inicio, erro: err.message })
+      throw err
+    }
+  }
 
   const payload = req.body || {}
   const {
@@ -135,9 +176,9 @@ export default async function handler(req, res) {
   L(`request: modo=${modo}, provider=${providerUsado}, workspace=${workspace_id}`)
 
   if (!modo || !['url', 'upload', 'storage'].includes(modo)) {
-    return res.status(400).json({ error: 'Parâmetro modo inválido. Use: url | storage | upload', log })
+    return res.status(400).json({ error: 'Parâmetro modo inválido. Use: url | storage | upload', log: logEtapas, log_texto: logTexto })
   }
-  if (!workspace_id) return res.status(400).json({ error: 'workspace_id obrigatório', log })
+  if (!workspace_id) return res.status(400).json({ error: 'workspace_id obrigatório', log: logEtapas, log_texto: logTexto })
 
   const sb = getSupabase()
   let publicacao_id = pubIdRecebido
@@ -146,13 +187,13 @@ export default async function handler(req, res) {
     publicacao_id = await criarOuPrepararPublicacao({ sb, publicacao_id, payload, L })
 
     const { data: publicacao } = await sb.from('pfd_publicacoes').select('*').eq('id', publicacao_id).single()
-    const pdfBuffer = await obterPdfBuffer({ modo, storage_path, url_pdf, pdf_base64, publicacao, L, sb })
+    const pdfBuffer = await medirEtapa('download_pdf', () => obterPdfBuffer({ modo, storage_path, url_pdf, pdf_base64, publicacao, L, sb }))
     L(`PDF obtido: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`)
 
     const modeloEquip = publicacao?.modelo || modelo || ''
     const fabricanteEquip = publicacao?.fabricante || fabricante || 'John Deere'
 
-    const { resultado, paginasUsadas } = await extrairPlano({
+    const { resultado, paginasUsadas, meta } = await medirEtapa(providerUsado === 'openai' ? 'openai_extract' : 'gemini_extract', () => extrairPlano({
       providerUsado,
       pdfBuffer,
       modeloEquip,
@@ -160,9 +201,9 @@ export default async function handler(req, res) {
       edicao,
       idioma,
       L,
-    })
+    }))
 
-    const validacao = validarExtracao(resultado)
+    const validacao = await medirEtapa('validacao', async () => validarExtracao(resultado))
     resultado.alertas = validacao.alertas
     L(`validação: status=${validacao.statusGeral}, intervalos=${validacao.totalIntervalos} (${validacao.intervalosOk} ok), tarefas=${validacao.totalTarefas}`)
     if (validacao.temFalhaCritica) L('⚠️ FALHA EM INTERVALO CRÍTICO — salvo com alertas')
@@ -208,15 +249,25 @@ export default async function handler(req, res) {
     return res.json({
       ok: true,
       plano_id: planoSalvo.id,
-      provider: providerUsado,
+      publicacao_id,
+      provider: meta?.provider || providerUsado,
+      modelo_ai: meta?.modelo_ai || null,
+      modo_pdf: meta?.modo_pdf || null,
       status_extracao: validacao.statusGeral,
       total_intervalos: validacao.totalIntervalos,
       total_tarefas: validacao.totalTarefas,
       intervalos_ok: validacao.intervalosOk,
+      intervalos_condicionais: validacao.intervalosCondicionais,
+      intervalos_falha: validacao.intervalosFalha,
+      tem_falha_critica: validacao.temFalhaCritica,
+      intervalos_criticos_falhando: validacao.intervalosCriticosFalhando,
       alertas: validacao.alertas,
       equipamento: resultado.equipamento,
       modelo_detectado: modeloDetectado || null,
-      log,
+      plano_preview: criarPreviewPlano(resultado.intervalos),
+      log: logEtapas,
+      log_texto: logTexto,
+      tempo_processamento_ms: Date.now() - inicioProcessamento,
     })
   } catch (err) {
     L(`❌ ERRO: ${err.message}`)
@@ -231,6 +282,11 @@ export default async function handler(req, res) {
         .update({ status: 'erro', erro_msg: errMsg, updated_at: new Date().toISOString() })
         .eq('id', publicacao_id)
     }
-    return res.status(500).json({ error: errMsg, log })
+    return res.status(500).json({
+      error: errMsg,
+      log: logEtapas,
+      log_texto: logTexto,
+      tempo_processamento_ms: Date.now() - inicioProcessamento,
+    })
   }
 }

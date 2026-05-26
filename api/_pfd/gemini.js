@@ -26,7 +26,7 @@ export async function extrairComGemini({ pdfBuffer, modelo, fabricante, geminiAp
   L(`Gemini model: ${geminiModel}`)
 
   const prompt = buildGeminiPrompt(modelo, fabricante)
-  const pdfPart = await prepararPdfPart({ pdfBuffer, geminiApiKey, fabricante, modelo, mbSize, L })
+  const { pdfPart, modoPdf } = await prepararPdfPart({ pdfBuffer, geminiApiKey, fabricante, modelo, mbSize, L })
 
   L('Enviando PDF + prompt ao Gemini...')
   const result = await model.generateContent([pdfPart, { text: prompt }])
@@ -54,13 +54,23 @@ export async function extrairComGemini({ pdfBuffer, modelo, fabricante, geminiAp
 
   const expanded = expandGeminiCompact(parsed)
   L(`Gemini extraiu: ${expanded.intervalos.length} intervalos, ${expanded.intervalos.reduce((a, iv) => a + iv.tarefas.length, 0)} tarefas`)
-  return expanded
+  return {
+    resultado: expanded,
+    meta: {
+      provider: 'gemini',
+      modelo_ai: geminiModel,
+      modo_pdf: modoPdf,
+    },
+  }
 }
 
 async function prepararPdfPart({ pdfBuffer, geminiApiKey, fabricante, modelo, mbSize, L }) {
   if (pdfBuffer.length <= GEMINI_INLINE_LIMIT) {
     L('Modo: inline data')
-    return { inlineData: { mimeType: 'application/pdf', data: pdfBuffer.toString('base64') } }
+    return {
+      pdfPart: { inlineData: { mimeType: 'application/pdf', data: pdfBuffer.toString('base64') } },
+      modoPdf: 'inlineData',
+    }
   }
 
   L(`PDF ${mbSize} MB > 18 MB — usando Gemini File API`)
@@ -89,7 +99,10 @@ async function prepararPdfPart({ pdfBuffer, geminiApiKey, fabricante, modelo, mb
       throw new Error(`Gemini File API: estado inesperado ${file.state}`)
     }
 
-    return { fileData: { mimeType: 'application/pdf', fileUri: file.uri } }
+    return {
+      pdfPart: { fileData: { mimeType: 'application/pdf', fileUri: file.uri } },
+      modoPdf: 'fileData',
+    }
   } finally {
     try { fs.unlinkSync(tmpPath) } catch (unlinkErr) {
       if (unlinkErr?.code !== 'ENOENT') L(`Aviso: não foi possível remover arquivo temporário: ${unlinkErr.message}`)

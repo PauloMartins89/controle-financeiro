@@ -20,15 +20,32 @@ export function validarExtracao(resultado) {
   const temFalhaCritica = intervalos.some(iv =>
     INTERVALOS_CRITICOS.includes(iv.intervalo_horas) && iv.status_extracao === 'falha_extracao'
   )
+  const intervalosCriticosFalhando = intervalos
+    .filter(iv => INTERVALOS_CRITICOS.includes(iv.intervalo_horas) && iv.status_extracao === 'falha_extracao')
+    .map(iv => iv.intervalo_horas)
 
   const totalIntervalos = intervalos.length
   const totalTarefas = intervalos.reduce((acc, iv) => acc + (iv.tarefas?.length || 0), 0)
   const intervalosOk = intervalos.filter(iv => iv.status_extracao === 'ok').length
+  const intervalosFalha = intervalos.filter(iv => iv.status_extracao === 'falha_extracao').length
+  const intervalosCondicionais = intervalos.filter(iv =>
+    (iv.tarefas || []).some(t => t.condicional || t.aplicabilidade)
+  ).length
   const statusGeral = totalIntervalos === 0
     ? 'falha'
     : intervalosOk === totalIntervalos
       ? 'completo'
       : intervalosOk > 0 ? 'parcial' : 'falha'
 
-  return { alertas, temFalhaCritica, statusGeral, totalIntervalos, totalTarefas, intervalosOk }
+  return {
+    alertas,
+    temFalhaCritica,
+    intervalosCriticosFalhando,
+    statusGeral,
+    totalIntervalos,
+    totalTarefas,
+    intervalosOk,
+    intervalosFalha,
+    intervalosCondicionais,
+  }
 }
