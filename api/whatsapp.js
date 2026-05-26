@@ -1,15 +1,13 @@
 ﻿import Groq from 'groq-sdk'
 import { createClient } from '@supabase/supabase-js'
 import { runOCR } from './_ocr.js'
-import { handleAgendaWA } from './_agenda-wa.js'
-import { rotearMensagem } from './_wa-router.js'
 import ws from 'ws'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
 const GH_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions'
 const GH_MODEL = 'gpt-4o-mini'
-const APP_URL = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://smartpro.app.br')
+const APP_URL = process.env.APP_URL || 'https://dividiai.app.br'
 
 function getDb() {
   return createClient(
@@ -197,6 +195,8 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body
+    // DEBUG TEMPORÁRIO — loga tipo e campos recebidos do Z-API
+    console.log('[whatsapp] body.type=', body?.type, 'fromMe=', body?.fromMe, 'keys=', Object.keys(body || {}).join(','))
     // Z-API: ignora tudo exceto mensagens recebidas de terceiros
     if (body?.fromMe) return res.status(200).end()
     // Aceita ReceivedCallback e outros tipos que Z-API Multi Device possa enviar
@@ -229,26 +229,6 @@ export default async function handler(req, res) {
     }
 
     const from = message.from
-
-    // ── Roteamento inteligente: agenda vs refeição vs financeiro ─────────────
-    if (from) {
-      const dbAg = getDb()
-      if (dbAg) {
-        const fromNorm = from.replace(/\D/g, '')
-        const sem55    = fromNorm.replace(/^55/, '')
-        const com9     = sem55.length === 10 ? sem55.slice(0,2) + '9' + sem55.slice(2) : sem55
-        const sem9     = sem55.length === 11 && sem55[2] === '9' ? sem55.slice(0,2) + sem55.slice(3) : sem55
-        const variants  = [...new Set([fromNorm, sem55, '55'+sem55, '55'+com9, com9, '55'+sem9, sem9].filter(Boolean))]
-        const rota = await rotearMensagem(body, from, variants, dbAg)
-          .catch(e => { console.error('[whatsapp] router error:', e.message); return null })
-        if (rota === 'agenda') {
-          const consumed = await handleAgendaWA(body, from, variants, sendWA, dbAg)
-            .catch(e => { console.error('[whatsapp] agenda handler error:', e.message); return false })
-          if (consumed) return res.status(200).json({ ok: true, agenda: true })
-        }
-      }
-    }
-
     const today = new Date().toISOString().slice(0, 10)
     let text = ''
     let textoOriginal = ''
@@ -310,94 +290,6 @@ export default async function handler(req, res) {
           comprovanteUrl = urlData?.publicUrl || null
         }
       } catch (_) {}
-
-      // ── Boletim de Máquinas: verifica se é colaborador de campo ────────────
-      {
-        const dbBol = getDb()
-        if (dbBol) {
-          const fromNorm = from.replace(/\D/g, '')
-          const sem55    = fromNorm.replace(/^55/, '')
-          const com9     = sem55.length === 10 ? sem55.slice(0,2) + '9' + sem55.slice(2) : sem55
-          const sem9     = sem55.length === 11 && sem55[2] === '9' ? sem55.slice(0,2) + sem55.slice(3) : sem55
-          const bolVariants = [...new Set([fromNorm, sem55, '55'+sem55, '55'+com9, com9, '55'+sem9, sem9].filter(Boolean))]
-          console.log('[whatsapp/boletim] phoneVariants tentados:', bolVariants)
-
-          let colaboradorBol = null
-          for (const v of bolVariants) {
-            const { data, error } = await dbBol
-              .from('maquinas_colaboradores')
-              .select('id, workspace_id, maquinas_frentes(id, nome, workspace_id, maquinas_boletim_tipos(id, nome, campos_json, imagem_url))')
-              .eq('telefone_wa', v)
-              .eq('ativo', true)
-              .limit(1)
-              .maybeSingle()
-            console.log(`[whatsapp/boletim] variante "${v}":`, data ? `ENCONTRADO id=${data.id}` : 'não encontrado', error ? `erro: ${error.message}` : '')
-            if (data) { colaboradorBol = data; break }
-          }
-
-          if (colaboradorBol) {
-            const frente      = colaboradorBol.maquinas_frentes
-            const workspaceId = frente?.workspace_id || colaboradorBol.workspace_id
-
-            await sendWA(from, '📋 Boletim recebido! Estamos processando. Você será avisado em instantes.')
-
-            let imagemUrl = ''
-            try {
-              const imgBuf = Buffer.from(base64, 'base64')
-              const now = new Date()
-              const storagePath = `maquinas/boletins/${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${Date.now()}_${from}.jpg`
-              const { error: upErr } = await dbBol.storage
-                .from('maquinas')
-                .upload(storagePath, imgBuf, { contentType: 'image/jpeg', upsert: false })
-              if (!upErr) {
-                const { data: pub } = dbBol.storage.from('maquinas').getPublicUrl(storagePath)
-                imagemUrl = pub?.publicUrl || ''
-              } else {
-                console.error('[whatsapp/boletim] storage error:', upErr.message)
-              }
-            } catch (e) {
-              console.error('[whatsapp/boletim] storage exception:', e.message)
-            }
-
-            const { count } = await dbBol
-              .from('maquinas_boletins')
-              .select('*', { count: 'exact', head: true })
-              .eq('workspace_id', workspaceId)
-            const numero = `BOL-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(6, '0')}`
-
-            const { data: bolRecord, error: bolErr } = await dbBol
-              .from('maquinas_boletins')
-              .insert({
-                workspace_id:    workspaceId,
-                colaborador_id:  colaboradorBol.id,
-                boletim_tipo_id: frente?.maquinas_boletim_tipos?.id || null,
-                wa_from:         from,
-                imagem_url:      imagemUrl || 'pending',
-                numero,
-                status:          'recebido',
-              })
-              .select('id')
-              .single()
-
-            if (!bolErr && bolRecord?.id) {
-              try {
-                await fetch(`${APP_URL}/api/ocr-boletim-maquina`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ boletimId: bolRecord.id }),
-                })
-              } catch (e) {
-                console.error('[whatsapp/boletim] ocr trigger:', e.message)
-              }
-            } else if (bolErr) {
-              console.error('[whatsapp/boletim] insert error:', bolErr.message)
-            }
-
-            return res.status(200).json({ ok: true, boletim: true, numero })
-          }
-        }
-      }
-      // ── fim boletim de máquinas ─────────────────────────────────────────────
 
       // ── PASSO 1: classificação inteligente — identifica o tipo de documento ──
       // runOCR conhece DIÁRIO DO MOTORISTA, formulários Casagrande, e também

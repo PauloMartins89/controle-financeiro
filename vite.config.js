@@ -13,19 +13,7 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/version\.json/, /^\/limpar/, /^\/ag\//, /^\/ar\//, /^\/rc\//, /^\/vr\//],
-        runtimeCaching: [
-          {
-            urlPattern: /\/version\.json/,
-            handler: 'NetworkOnly',
-          },
-          {
-            urlPattern: /\/limpar/,
-            handler: 'NetworkOnly',
-          },
-        ],
       },
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
@@ -53,8 +41,4 @@ export default defineConfig({
       },
     }),
   ],
-  test: {
-    fileParallelism: false,
-    testTimeout: 20000,
-  },
 })

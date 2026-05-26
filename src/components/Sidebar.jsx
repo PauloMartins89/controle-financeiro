@@ -110,6 +110,13 @@ const navGroups = [
     ],
   },
   {
+    title: 'SmartLíder',
+    items: [
+      { to: '/lider/epi/solicitacoes', icon: ShieldCheckIcon, label: 'Solicitações EPI', moduleKey: null },
+      { to: '/lider/epi/catalogo',     icon: TableCellsIcon,  label: 'Catálogo EPI',   moduleKey: null },
+    ],
+  },
+  {
     title: 'Manutenção',
     items: [
       { to: '/manutencao/dashboard',              icon: ChartBarIcon,               label: 'Dashboard',         moduleKey: 'manutencao' },

@@ -52,55 +52,6 @@ serve(async (req) => {
       })
     }
 
-    // ── Modo: busca contatos LinkedIn de uma empresa ──────────────────────
-    if (body.mode === 'linkedin_search') {
-      const nomeEmpresa = (body.empresa || '').trim()
-      if (!nomeEmpresa) {
-        return new Response(JSON.stringify({ error: 'empresa é obrigatória' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
-
-      const q = `site:linkedin.com/in "${nomeEmpresa}" (diretor OR gerente OR CEO OR sócio OR fundador OR presidente OR comprador OR superintendente)`
-      const sr = await fetch('https://google.serper.dev/search', {
-        method: 'POST',
-        headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q, gl: 'br', hl: 'pt-br', num: 10 }),
-        signal: AbortSignal.timeout(8000),
-      })
-      if (!sr.ok) throw new Error(`Serper error ${sr.status}`)
-      const sd = await sr.json()
-
-      type OrgResult = { title?: string; link?: string; snippet?: string }
-      const contatos = ((sd.organic || []) as OrgResult[])
-        .filter(r => r.link?.includes('linkedin.com/in/'))
-        .map(r => {
-          // Title format examples:
-          // "João Silva - Diretor Comercial - Empresa X | LinkedIn"
-          // "Maria Santos · Gerente de Compras | LinkedIn"
-          const titleClean = (r.title || '').replace(/\s*\|\s*LinkedIn\s*$/, '').trim()
-          const parts = titleClean.split(/\s+[-·]\s+/)
-          const nome = parts[0]?.trim() || ''
-          const cargo = parts[1]?.trim() || ''
-          // Extract city from snippet if present
-          const cidadeMatch = (r.snippet || '').match(/([A-ZÀ-Ú][a-zà-ú]+(?:\s[A-ZÀ-Ú][a-zà-ú]+)*),\s*([A-Z]{2})/)
-          return {
-            nome,
-            cargo,
-            linkedin: r.link || '',
-            email: '',
-            telefone: '',
-            cidade: cidadeMatch ? `${cidadeMatch[1]}, ${cidadeMatch[2]}` : '',
-            foto: '',
-          }
-        })
-        .filter(c => c.nome && c.linkedin)
-
-      return new Response(JSON.stringify({ contatos }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
     // ── Modo padrão: busca por região (Google Maps) ───────────────────────
     const { query, cidade, uf } = body
 

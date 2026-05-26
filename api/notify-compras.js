@@ -15,21 +15,17 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import ws from 'ws'
-
-const APP_URL = process.env.APP_URL || APP_URL
 
 function getDb() {
   return createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY,
-    { realtime: { params: { log_level: 'disabled' }, transport: ws }, global: {} }
+    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
   )
 }
 
 async function sendWA(to, text) {
   const phone = to.replace(/\D/g, '')
-  if (!phone) return { ok: false, error: 'phone vazio' }
+  if (!phone) return false
   try {
     const res = await fetch(
       `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`,
@@ -42,10 +38,9 @@ async function sendWA(to, text) {
         body: JSON.stringify({ phone, message: text }),
       }
     )
-    const body = await res.json().catch(() => ({}))
-    return { ok: res.ok, status: res.status, body }
-  } catch (e) {
-    return { ok: false, error: e?.message }
+    return res.ok
+  } catch {
+    return false
   }
 }
 
@@ -64,7 +59,7 @@ const MENSAGENS = {
     (sol.requisitante_nome ? `👤 Solicitante: ${sol.requisitante_nome}\n` : '') +
     `⚡ Urgência: ${{ baixa: 'Baixa', media: 'Média', alta: '🔴 ALTA' }[sol.urgencia] || sol.urgencia}\n\n` +
     `� *Toque para aprovar/recusar (sem precisar de login):*\n` +
-    `${APP_URL}/aprovar/${sol.token_aprovador}`,
+    `https://dividiai.app.br/aprovar/${sol.token_aprovador}`,
 
   aprovado: (sol) =>
     `✅ *Compra Aprovada!*\n\n` +
@@ -72,20 +67,20 @@ const MENSAGENS = {
     (sol.valor_aprovado ? `💰 Valor aprovado: ${fmtCurrency(sol.valor_aprovado)}\n` : '') +
     (sol.fornecedor_vencedor ? `🏪 Fornecedor: ${sol.fornecedor_vencedor}\n` : sol.fornecedor ? `🏪 Fornecedor: ${sol.fornecedor}\n` : '') +
     (sol.observacao_aprovador ? `📝 Observação: "${sol.observacao_aprovador}"\n` : '') +
-    `\n👉 Realize a compra e confirme em: ${APP_URL}/compras`,
+    `\n👉 Realize a compra e confirme em: https://dividiai.app.br/compras`,
 
   recusado: (sol) =>
     `❌ *Compra Recusada*\n\n` +
     `📋 *${sol.titulo}*\n` +
     (sol.justificativa_recusa ? `📝 Motivo: "${sol.justificativa_recusa}"\n` : '') +
-    `\nCaso necessário, crie uma nova solicitação com os ajustes: ${APP_URL}/compras`,
+    `\nCaso necessário, crie uma nova solicitação com os ajustes: https://dividiai.app.br/compras`,
 
   leilao_aberto: (sol) =>
     `🏷 *Leilão de Preços Aberto!*\n\n` +
     `📋 *${sol.titulo}*\n` +
     (sol.quantidade ? `📦 Qtd: ${sol.quantidade}\n` : '') +
     (sol.prazo_cotacao ? `⏱ Prazo para cotar: ${new Date(sol.prazo_cotacao).toLocaleDateString('pt-BR')}\n` : '') +
-    `\nFornecedores foram convidados a enviar cotações. Acompanhe em: ${APP_URL}/compras/aprovar`,
+    `\nFornecedores foram convidados a enviar cotações. Acompanhe em: https://dividiai.app.br/compras/aprovar`,
 
   compra_paga: (sol) =>
     `💰 *Compra Concluída e Paga!*\n\n` +
@@ -93,7 +88,7 @@ const MENSAGENS = {
     (sol.valor_aprovado ? `💵 Valor pago: ${fmtCurrency(sol.valor_aprovado)}\n` : '') +
     (sol.fornecedor_vencedor || sol.fornecedor ? `🏪 Fornecedor: ${sol.fornecedor_vencedor || sol.fornecedor}\n` : '') +
     (sol.economia > 0 ? `💚 Economia: ${fmtCurrency(sol.economia)} abaixo do orçamento\n` : '') +
-    `\nComprovante registrado em: ${APP_URL}/compras`,
+    `\nComprovante registrado em: https://dividiai.app.br/compras`,
 }
 
 export default async function handler(req, res) {
@@ -101,9 +96,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { solicitacaoId, evento, destinos, telefone: telTeste, mensagem: msgDireta, pdfUrl, pdfBase64, pdfNome } = req.body || {}
+  const { solicitacaoId, evento, destinos, telefone: telTeste } = req.body || {}
 
-  if (!solicitacaoId && evento !== '_teste' && evento !== '_direto') {
+  if (!solicitacaoId && evento !== '_teste') {
     return res.status(400).json({ error: 'solicitacaoId e evento são obrigatórios' })
   }
 
@@ -111,22 +106,18 @@ export default async function handler(req, res) {
   if (evento === '_teste') {
     const tel = (telTeste || '').replace(/\D/g, '')
     if (!tel) return res.status(400).json({ error: 'telefone obrigatório para teste' })
-    const result = await sendWA(tel,
+    const ok = await sendWA(tel,
       `✅ *Teste — Notificações de Compras*\n\nEste número está configurado como aprovador de compras no DividiAí.\n\nVocê receberá avisos automáticos a cada nova solicitação. 🛒`
     )
-    const ok = result.ok
-    return res.status(200).json({ ok, sent: ok ? 1 : 0, debug: ok ? undefined : result })
+    return res.status(200).json({ ok, sent: ok ? 1 : 0 })
   }
 
-  // Envio livre — telefone + mensagem + PDF opcional (usado em Contas a Pagar, etc.)
-  if (evento === '_direto') {
-    const tel = (telTeste || '').replace(/\D/g, '')
-    if (!tel)       return res.status(400).json({ error: 'telefone obrigatório' })
-    if (!msgDireta) return res.status(400).json({ error: 'mensagem obrigatória' })
-    if (tel.length < 10) return res.status(400).json({ error: 'Número inválido' })
+  if (!evento) {
+    return res.status(400).json({ error: 'evento é obrigatório' })
+  }
 
-    const result = await sendWA(tel, msgDireta)
-    return res.status(result.ok ? 200 : 502).json({ ok: result.ok, sent: result.ok ? 1 : 0 })
+  if (!MENSAGENS[evento]) {
+    return res.status(400).json({ error: `Evento desconhecido: ${evento}` })
   }
 
   const db = getDb()
@@ -179,14 +170,15 @@ export default async function handler(req, res) {
 
   // Envia para cada destinatário
   for (const tel of telefones) {
-    const result = await sendWA(tel, mensagem)
-    resultados.push({ tel, ok: result.ok })
+    const ok = await sendWA(tel, mensagem)
+    resultados.push({ tel, ok })
 
+    // Registra log em mensagens_whatsapp (se tabela existir)
     try {
       await db.from('mensagens_whatsapp').insert({
         telefone: tel,
         mensagem: mensagem,
-        status: result.ok ? 'enviado' : 'erro',
+        status: ok ? 'enviado' : 'erro',
         modulo: 'compras',
         referencia_id: solicitacaoId,
       })

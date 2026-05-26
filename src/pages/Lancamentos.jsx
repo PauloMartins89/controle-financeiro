@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
-import { useCadastros } from './Cadastros'
 import {
   PlusIcon, DocumentArrowUpIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XCircleIcon, ClockIcon, PencilIcon,
@@ -147,7 +146,7 @@ function TipoChip({ tipo }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Formulário de Transporte — DIÁRIO DO MOTORISTA (Casagrande)
 // ─────────────────────────────────────────────────────────────────────────────
-function FormTransporte({ dados, onChange, cadastros = {} }) {
+function FormTransporte({ dados, onChange }) {
   const set = (k, v) => onChange({ ...dados, [k]: v })
   const kmRows = (dados.km_rows && dados.km_rows.length === 8) ? dados.km_rows : mergeKmRows(dados.km_rows)
 
@@ -176,28 +175,18 @@ function FormTransporte({ dados, onChange, cadastros = {} }) {
     />
   )
 
-  const fieldInp = (label, key, opts = {}) => {
-    const listId = opts.listKey ? `ac-${opts.listKey}` : null
-    const suggestions = opts.listKey ? (cadastros[opts.listKey] || []) : []
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</label>
-        <input
-          type={opts.type || 'text'}
-          placeholder={opts.placeholder || ''}
-          value={dados[key] ?? ''}
-          list={listId}
-          onChange={e => set(key, e.target.value)}
-          style={{ padding: '8px 10px', borderRadius: 7, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' }}
-        />
-        {listId && suggestions.length > 0 && (
-          <datalist id={listId}>
-            {suggestions.map((s, i) => <option key={i} value={s} />)}
-          </datalist>
-        )}
-      </div>
-    )
-  }
+  const fieldInp = (label, key, opts = {}) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</label>
+      <input
+        type={opts.type || 'text'}
+        placeholder={opts.placeholder || ''}
+        value={dados[key] ?? ''}
+        onChange={e => set(key, e.target.value)}
+        style={{ padding: '8px 10px', borderRadius: 7, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+      />
+    </div>
+  )
 
   return (
     <div>
@@ -220,23 +209,23 @@ function FormTransporte({ dados, onChange, cadastros = {} }) {
 
       {/* Empresa / Setor */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 10 }}>
-        {fieldInp('Empresa', 'empresa', { listKey: 'clientes' })}
+        {fieldInp('Empresa', 'empresa')}
         {fieldInp('Setor', 'setor')}
       </div>
       {/* Cliente / Tipo Atendimento / Módulo */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-        {fieldInp('Cliente', 'cliente', { listKey: 'clientes' })}
+        {fieldInp('Cliente', 'cliente')}
         {fieldInp('Tipo Atend.', 'tipo_atendimento', { placeholder: 'PLATAFORMA' })}
         {fieldInp('Módulo', 'modulo')}
       </div>
       {/* Solicitante / CC */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 10 }}>
-        {fieldInp('Solicitante', 'solicitante', { listKey: 'solicitantes' })}
+        {fieldInp('Solicitante', 'solicitante')}
         {fieldInp('CC', 'cc')}
       </div>
       {/* Condutor / Tipo Material / KM Inicial / KM Final */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-        {fieldInp('Condutor', 'condutor', { listKey: 'condutores' })}
+        {fieldInp('Condutor', 'condutor')}
         {fieldInp('Tipo Material', 'tipo_material')}
         {fieldInp('KM Inicial', 'km_inicial', { type: 'number' })}
         {fieldInp('KM Final', 'km_final', { type: 'number' })}
@@ -368,9 +357,6 @@ function FormTransporte({ dados, onChange, cadastros = {} }) {
 // Modal principal — cria / edita lançamento
 // ─────────────────────────────────────────────────────────────────────────────
 function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
-  const { currentUser } = useStore()
-  const ownerId = currentUser?.owner_id || currentUser?.id
-  const cadastros = useCadastros(ownerId)
   const [tipoForm, setTipoForm] = useState(item?.tipo_formulario || 'padrao')
   const [form, setForm] = useState({
     tipo: 'receita',
@@ -640,7 +626,7 @@ function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
                 </select>
               </div>
             </div>
-            <FormTransporte dados={dadosExtras} onChange={setDadosExtras} cadastros={cadastros} />
+            <FormTransporte dados={dadosExtras} onChange={setDadosExtras} />
             <div style={{ marginTop: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>OBSERVAÇÕES</label>
               <textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} placeholder="Observações adicionais..." value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
@@ -843,9 +829,6 @@ function RotaModal({ lancamento, onClose }) {
 // Modal de Digitalização
 // ─────────────────────────────────────────────────────────────────────────────
 function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
-  const { currentUser } = useStore()
-  const ownerId = currentUser?.owner_id || currentUser?.id
-  const cadastros = useCadastros(ownerId)
   const [step, setStep]               = useState('upload')
   const [imgFile, setImgFile]         = useState(null)
   const [imgPreview, setImgPreview]   = useState(null)
@@ -1054,7 +1037,7 @@ function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
 
             {/* Formulário de transporte */}
             {detectedType === 'transporte' && (
-              <FormTransporte dados={dadosExtras} onChange={setDadosExtras} cadastros={cadastros} />
+              <FormTransporte dados={dadosExtras} onChange={setDadosExtras} />
             )}
 
             {/* Formulário padrão */}
@@ -1153,10 +1136,9 @@ function WhatsAppPanel({ workspaceId }) {
     if (!supabase) return
     setLoading(true)
     const { data } = await supabase
-      .from('cadastros_condutores')
-      .select('id, nome, telefone, ativo_whatsapp, ativo, created_at')
+      .from('whatsapp_config')
+      .select('*')
       .eq('workspace_id', workspaceId)
-      .eq('ativo_whatsapp', true)
       .order('created_at', { ascending: false })
     setMotoristas(data || [])
     setLoading(false)
@@ -1169,13 +1151,10 @@ function WhatsAppPanel({ workspaceId }) {
     if (phone.length < 10) { toast.error('Número inválido — use somente dígitos (ex: 5567999990000)'); return }
     if (!form.nome_motorista.trim()) { toast.error('Informe o nome do motorista'); return }
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    const { error } = await supabase.from('cadastros_condutores').insert({
+    const { error } = await supabase.from('whatsapp_config').insert({
       workspace_id:   workspaceId,
-      owner_id:       user?.id,
-      nome:           form.nome_motorista.trim(),
-      telefone:       phone,
-      ativo_whatsapp: true,
+      phone_number:   phone,
+      nome_motorista: form.nome_motorista.trim(),
       ativo:          true,
     })
     if (error) {
@@ -1188,19 +1167,19 @@ function WhatsAppPanel({ workspaceId }) {
     setSaving(false)
   }
 
-  async function handleToggle(id, ativo_whatsapp) {
-    await supabase.from('cadastros_condutores').update({ ativo_whatsapp }).eq('id', id)
-    setMotoristas(prev => prev.map(m => m.id === id ? { ...m, ativo_whatsapp } : m))
+  async function handleToggle(id, ativo) {
+    await supabase.from('whatsapp_config').update({ ativo }).eq('id', id)
+    setMotoristas(prev => prev.map(m => m.id === id ? { ...m, ativo } : m))
   }
 
   async function handleRemove(id) {
     if (!window.confirm('Remover este motorista?')) return
-    await supabase.from('cadastros_condutores').update({ ativo_whatsapp: false }).eq('id', id)
+    await supabase.from('whatsapp_config').delete().eq('id', id)
     setMotoristas(prev => prev.filter(m => m.id !== id))
     toast.success('Removido')
   }
 
-  const webhookUrl = `${window.location.origin}/api/webhook-whatsapp`
+  const webhookUrl = `https://dividiai.app.br/api/webhook-whatsapp`
   const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
 
   return (
@@ -1260,19 +1239,19 @@ function WhatsAppPanel({ workspaceId }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {motoristas.map(m => (
-            <div key={m.id} style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: `1px solid ${m.ativo_whatsapp ? 'rgba(37,211,102,0.2)' : 'var(--border)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: m.ativo_whatsapp ? 'rgba(37,211,102,0.12)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <PhoneIcon style={{ width: 17, height: 17, color: m.ativo_whatsapp ? '#25d366' : 'var(--text-secondary)' }} />
+            <div key={m.id} style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: `1px solid ${m.ativo ? 'rgba(37,211,102,0.2)' : 'var(--border)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: m.ativo ? 'rgba(37,211,102,0.12)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <PhoneIcon style={{ width: 17, height: 17, color: m.ativo ? '#25d366' : 'var(--text-secondary)' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{m.nome}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>+{m.telefone}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{m.nome_motorista}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>+{m.phone_number}</div>
               </div>
-              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: m.ativo_whatsapp ? 'rgba(37,211,102,0.1)' : 'rgba(255,255,255,0.05)', color: m.ativo_whatsapp ? '#25d366' : 'var(--text-secondary)' }}>
-                {m.ativo_whatsapp ? 'Ativo' : 'Inativo'}
+              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: m.ativo ? 'rgba(37,211,102,0.1)' : 'rgba(255,255,255,0.05)', color: m.ativo ? '#25d366' : 'var(--text-secondary)' }}>
+                {m.ativo ? 'Ativo' : 'Inativo'}
               </span>
-              <button onClick={() => handleToggle(m.id, !m.ativo_whatsapp)} style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12 }}>
-                {m.ativo_whatsapp ? 'Desativar' : 'Ativar'}
+              <button onClick={() => handleToggle(m.id, !m.ativo)} style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12 }}>
+                {m.ativo ? 'Desativar' : 'Ativar'}
               </button>
               <button onClick={() => handleRemove(m.id)} style={{ padding: '5px 10px', borderRadius: 7, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', cursor: 'pointer', fontSize: 12 }}>
                 <TrashIcon style={{ width: 14, height: 14 }} />
@@ -1469,8 +1448,6 @@ const FIELD_LABELS = {
   placa: 'Placa',
   km_asfalto: 'KM Asfalto',
   km_terra: 'KM Terra',
-  condutor: 'Motorista',
-  data_boletim: 'Data Boletim',
 }
 
 function EditFieldModal({ editState, onSave, onCancel, saving }) {
@@ -1519,7 +1496,7 @@ function EditFieldModal({ editState, onSave, onCancel, saving }) {
           <div style={{ fontSize: 10, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Novo valor</div>
           <input
             ref={inputRef}
-            type={field === 'valor' ? 'number' : (field === 'data' || field === 'data_boletim') ? 'date' : 'text'}
+            type={field === 'valor' ? 'number' : field === 'data' ? 'date' : 'text'}
             value={val}
             onChange={e => setVal(e.target.value)}
             onKeyDown={handleKey}
@@ -1666,10 +1643,6 @@ export default function Lancamentos() {
           valorFinal = parseFloat(value.replace(',', '.')) || 0
         }
         payload = { [field]: valorFinal, updated_at: new Date().toISOString() }
-      } else if (field === 'data_boletim') {
-        // Salva como dados_extras.data (data do boletim/diário)
-        const extras = { ...(lancamento.dados_extras || {}), data: valorFinal }
-        payload = { dados_extras: extras, updated_at: new Date().toISOString() }
       } else if (field === 'km_asfalto' || field === 'km_terra') {
         // Ajusta km_rows: coloca todo o valor no primeiro trecho do tipo, zera os demais
         const tipoKm = field === 'km_asfalto' ? 'ASFALTO' : 'TERRA'
@@ -1697,7 +1670,6 @@ export default function Lancamentos() {
       setLancamentos(prev => prev.map(l => {
         if (l.id !== id) return l
         if (ROOT_FIELDS.has(field)) return { ...l, [field]: valorFinal }
-        if (field === 'data_boletim') return { ...l, dados_extras: { ...(l.dados_extras || {}), data: valorFinal } }
         if (field === 'km_asfalto' || field === 'km_terra') {
           return { ...l, dados_extras: payload.dados_extras }
         }
@@ -1882,95 +1854,39 @@ export default function Lancamentos() {
     toast.success(`${selecionados.length} lançamento(s) exportado(s) para Excel.`)
   }
 
-  async function exportPDF() {
+  function exportPDF() {
     const selecionados = filtered.filter(l => selectedIds.has(l.id))
     if (!selecionados.length) { toast('Selecione ao menos um lançamento.'); return }
 
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
     const PW = doc.internal.pageSize.getWidth()
     const PH = doc.internal.pageSize.getHeight()
-    const now      = new Date()
-    const geradoEm = now.toLocaleString('pt-BR')
-    const dataArq  = now.toISOString().slice(0, 10)
-    const dataFooter = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`
+    const geradoEm = new Date().toLocaleString('pt-BR')
+    const dataArq  = new Date().toISOString().slice(0, 10)
 
     // ── Paleta verde corporativo ──────────────────────────────────────────────
     const VERDE_ESCURO  = [26, 92, 56]
+    const VERDE_MEDIO   = [5, 150, 105]
     const BRANCO        = [255, 255, 255]
     const CINZA_TEXTO   = [45, 55, 45]
-    const CINZA_LEVE    = [244, 249, 246]
-
-    // ── Carrega logo ─────────────────────────────────────────────────────────
-    let logoBase64 = null
-    try {
-      const res  = await fetch('/CASAGRANDELOGO.png')
-      const blob = await res.blob()
-      logoBase64 = await new Promise(resolve => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result)
-        reader.readAsDataURL(blob)
-      })
-    } catch (_) {}
+    const CINZA_LEVE    = [240, 247, 243]
 
     // ── Header/footer ─────────────────────────────────────────────────────────
     const addHeaderFooter = (pageNum, totalPages) => {
-      // Fundo branco do cabeçalho
-      doc.setFillColor(255, 255, 255)
-      doc.rect(0, 0, PW, 72, 'F')
-
-      // Logo (canto esquerdo)
-      if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 8, 148, 50)
-
-      // Linha vertical separadora
-      doc.setDrawColor(200, 215, 205)
-      doc.setLineWidth(0.7)
-      doc.line(172, 10, 172, 62)
-
-      // Título principal
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(20)
-      doc.setTextColor(...VERDE_ESCURO)
-      doc.text('RELATÓRIO DE LANÇAMENTOS', 184, 32)
-
-      // Pequeno ícone calendário (desenhado com primitivas PDF)
-      const ix = 184, iy = 42
-      doc.setFillColor(...VERDE_ESCURO)
-      doc.roundedRect(ix, iy, 7.5, 6.5, 0.8, 0.8, 'F')
-      doc.setFillColor(255, 255, 255)
-      doc.rect(ix + 0.8, iy + 2.2, 5.9, 3.5, 'F')
-      doc.setDrawColor(180, 210, 195)
-      doc.setLineWidth(0.4)
-      doc.line(ix + 3.55, iy + 2.2, ix + 3.55, iy + 5.7)
-      doc.line(ix + 0.8,  iy + 3.9, ix + 6.7,  iy + 3.9)
-
-      // Data / total de registros
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7.5)
-      doc.setTextColor(100, 120, 110)
-      doc.text(`Gerado em: ${geradoEm}   |   Total de registros: ${selecionados.length}`, ix + 10, 50)
-
-      // Dividi Aí — canto direito
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.setTextColor(30, 30, 30)
-      doc.text('Dividi Aí', PW - 16, 26, { align: 'right' })
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7)
-      doc.setTextColor(130, 140, 135)
-      doc.text('Sistema de Controle Financeiro', PW - 16, 40, { align: 'right' })
-
-      // Barra verde separadora inferior do cabeçalho
-      doc.setFillColor(...VERDE_ESCURO)
-      doc.rect(0, 67, PW, 5, 'F')
-
-      // Rodapé strip
-      doc.setFillColor(...VERDE_ESCURO)
-      doc.rect(0, PH - 22, PW, 22, 'F')
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7.5)
-      doc.setTextColor(...BRANCO)
-      doc.text(`Página ${pageNum} de ${totalPages}   |   Confidencial - uso interno`, PW / 2, PH - 7, { align: 'center' })
-      doc.text(dataFooter, PW - 16, PH - 7, { align: 'right' })
+      doc.setFillColor(...VERDE_ESCURO); doc.rect(0, 0, PW, 52, 'F')
+      doc.setFillColor(...VERDE_MEDIO);  doc.rect(0, 52, PW, 6, 'F')
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...BRANCO)
+      doc.text('RELATÓRIO DE LANÇAMENTOS', 36, 24)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(180, 220, 195)
+      doc.text(`Gerado em: ${geradoEm}   |   Total de registros: ${selecionados.length}`, 36, 38)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...BRANCO)
+      doc.text('Dividi Aí', PW - 36, 24, { align: 'right' })
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(180, 220, 195)
+      doc.text('Sistema de Controle Financeiro', PW - 36, 36, { align: 'right' })
+      doc.setFillColor(...VERDE_ESCURO); doc.rect(0, PH - 24, PW, 24, 'F')
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...BRANCO)
+      doc.text(`Página ${pageNum} de ${totalPages}   |   Confidencial — uso interno`, PW / 2, PH - 8, { align: 'center' })
+      doc.text(dataArq, PW - 36, PH - 8, { align: 'right' })
     }
 
     // ── Define todas as colunas possíveis ─────────────────────────────────────
@@ -1987,63 +1903,28 @@ export default function Lancamentos() {
       { key: 'km_asf',      label: 'KM ASF',     width: 44,  halign: 'right',  getValue: l => { const km = calcKmTotais(l.dados_extras||{}); return km.asfalto > 0 ? km.asfalto.toLocaleString('pt-BR') : '' } },
       { key: 'km_ter',      label: 'KM TER',     width: 44,  halign: 'right',  getValue: l => { const km = calcKmTotais(l.dados_extras||{}); return km.terra > 0 ? km.terra.toLocaleString('pt-BR') : '' } },
       { key: 'km_tot',      label: 'KM TOTAL',   width: 48,  halign: 'right',  bold: true, getValue: l => { const km = calcKmTotais(l.dados_extras||{}); return km.total > 0 ? km.total.toLocaleString('pt-BR') : '' } },
-      { key: 'pedagio',     label: 'PEDÁGIO',    width: 56,  halign: 'right',  getValue: l => {
-          const isTransport = !!(l.dados_extras?.condutor || l.dados_extras?.placa)
-          if (isTransport) return fmtCurrency(l.dados_extras?.pedagio ?? 0)
-          return l.dados_extras?.pedagio != null && l.dados_extras?.pedagio !== '' ? fmtCurrency(l.dados_extras.pedagio) : ''
-        } },
-      { key: 'pernoite',    label: 'PERNOITE',   width: 56,  halign: 'right',  getValue: l => {
-          const isTransport = !!(l.dados_extras?.condutor || l.dados_extras?.placa)
-          if (isTransport) return fmtCurrency(l.dados_extras?.pernoite ?? 0)
-          return l.dados_extras?.pernoite != null && l.dados_extras?.pernoite !== '' ? fmtCurrency(l.dados_extras.pernoite) : ''
-        } },
-      { key: 'refeicao',    label: 'REFEIÇÃO',   width: 56,  halign: 'right',  getValue: l => {
-          const isTransport = !!(l.dados_extras?.condutor || l.dados_extras?.placa)
-          if (isTransport) return fmtCurrency(l.dados_extras?.refeicao ?? 0)
-          return l.dados_extras?.refeicao != null && l.dados_extras?.refeicao !== '' ? fmtCurrency(l.dados_extras.refeicao) : ''
-        } },
-      { key: 'outros',      label: 'OUTROS',     width: 56,  halign: 'right',  getValue: l => l.dados_extras?.outros_adicionais != null && l.dados_extras?.outros_adicionais !== '' ? fmtCurrency(l.dados_extras.outros_adicionais) : '' },
-      { key: 'desconto',    label: 'DESCONTO',   width: 56,  halign: 'right',  getValue: l => l.dados_extras?.desconto != null && l.dados_extras?.desconto !== '' ? fmtCurrency(l.dados_extras.desconto) : '' },
+      { key: 'pedagio',     label: 'PEDÁGIO',    width: 52,  halign: 'right',  getValue: l => l.dados_extras?.pedagio != null && l.dados_extras?.pedagio !== '' ? fmtCurrency(l.dados_extras.pedagio) : '' },
+      { key: 'pernoite',    label: 'PERNOITE',   width: 52,  halign: 'right',  getValue: l => l.dados_extras?.pernoite != null && l.dados_extras?.pernoite !== '' ? fmtCurrency(l.dados_extras.pernoite) : '' },
+      { key: 'refeicao',    label: 'REFEIÇÃO',   width: 52,  halign: 'right',  getValue: l => l.dados_extras?.refeicao != null && l.dados_extras?.refeicao !== '' ? fmtCurrency(l.dados_extras.refeicao) : '' },
+      { key: 'outros',      label: 'OUTROS',     width: 52,  halign: 'right',  getValue: l => l.dados_extras?.outros_adicionais != null && l.dados_extras?.outros_adicionais !== '' ? fmtCurrency(l.dados_extras.outros_adicionais) : '' },
+      { key: 'desconto',    label: 'DESCONTO',   width: 52,  halign: 'right',  getValue: l => l.dados_extras?.desconto != null && l.dados_extras?.desconto !== '' ? fmtCurrency(l.dados_extras.desconto) : '' },
       { key: 'valor',       label: 'VALOR',      width: 64,  halign: 'right',  bold: true, green: true, getValue: l => fmtCurrency(l.valor) },
       { key: 'status',      label: 'STATUS',     width: 56,  halign: 'center', getValue: l => STATUS_CONF[l.status]?.label || l.status || '' },
       { key: 'obs',         label: 'OBSERVAÇÕES',width: 90,  halign: 'left',   getValue: l => (l.observacoes || l.dados_extras?.observacao || '').slice(0, 80) },
     ]
 
     // ── Filtra apenas colunas que têm ao menos 1 valor preenchido ─────────────
-    // Colunas fixas que sempre aparecem em lançamentos de transporte
-    const TRANSPORT_ALWAYS = new Set(['pedagio'])
-    const hasTransport = selecionados.some(l => l.dados_extras?.condutor || l.dados_extras?.placa)
-    const activeCols = ALL_COLS.filter(col => {
-      if (hasTransport && TRANSPORT_ALWAYS.has(col.key)) return true
-      return selecionados.some(l => { const v = col.getValue(l); return v !== '' && v !== '—' && v != null })
-    })
-
-    // ── Mapa de cores por status (RGB) ────────────────────────────────────────
-    const STATUS_COLORS_PDF = {
-      rascunho:             [148, 163, 184],
-      aguardando_aprovacao: [180, 110, 10],
-      aprovado:             [16, 120, 70],
-      devolvido:            [200, 80, 20],
-      corrigido:            [80, 80, 200],
-      reprovado:            [180, 40, 40],
-      cancelado:            [100, 116, 139],
-      faturado:             [100, 60, 180],
-      pendente:             [180, 110, 10],
-      rejeitado:            [180, 40, 40],
-    }
-    const statusColIdx = activeCols.findIndex(c => c.key === 'status')
+    const activeCols = ALL_COLS.filter(col =>
+      selecionados.some(l => { const v = col.getValue(l); return v !== '' && v !== '—' && v != null })
+    )
 
     // ── Monta linhas com apenas as colunas ativas ─────────────────────────────
     const rows = selecionados.map(l =>
-      activeCols.map((col, ci) => {
+      activeCols.map(col => {
         const v = col.getValue(l) || '—'
         const s = { halign: col.halign, fontSize: 7.5 }
         if (col.bold) s.fontStyle = 'bold'
         if (col.green) { s.fontStyle = 'bold'; s.textColor = [5, 120, 60] }
-        if (ci === statusColIdx) {
-          s.fontStyle = 'bold'
-          s.textColor = STATUS_COLORS_PDF[l.status] || [100, 100, 100]
-        }
         return { content: v, styles: s }
       })
     )
@@ -2053,18 +1934,15 @@ export default function Lancamentos() {
     const totalKmAsf = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).asfalto||0), 0)
     const totalKmTer = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).terra||0), 0)
     const totalKmTot = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).total||0), 0)
-    const totalPedagio = selecionados.reduce((s, l) => s + (parseFloat(l.dados_extras?.pedagio) || 0), 0)
     const TOTAL_MAP = {
       km_asf: totalKmAsf > 0 ? totalKmAsf.toLocaleString('pt-BR') : '',
       km_ter: totalKmTer > 0 ? totalKmTer.toLocaleString('pt-BR') : '',
       km_tot: totalKmTot > 0 ? totalKmTot.toLocaleString('pt-BR') : '',
-      pedagio: hasTransport ? fmtCurrency(totalPedagio) : '',
-      valor:   fmtCurrency(totalValor),
+      valor:  fmtCurrency(totalValor),
     }
     const totalRowData = activeCols.map((col, ci) => {
       const v = TOTAL_MAP[col.key] || (ci === 0 ? 'TOTAIS' : '')
-      const textClr = col.key === 'valor' ? [134, 255, 178] : col.key === 'pedagio' ? [200, 240, 215] : BRANCO
-      return { content: v, styles: { halign: col.halign, fontStyle: 'bold', fillColor: VERDE_ESCURO, textColor: textClr } }
+      return { content: v, styles: { halign: col.halign, fontStyle: 'bold', fillColor: VERDE_ESCURO, textColor: col.key === 'valor' ? [134, 255, 178] : BRANCO } }
     })
 
     // ── columnStyles dinâmico ─────────────────────────────────────────────────
@@ -2075,10 +1953,10 @@ export default function Lancamentos() {
     autoTable(doc, {
       head: [activeCols.map(c => c.label)],
       body: [...rows, totalRowData],
-      startY: 84,
-      margin: { left: 20, right: 20, bottom: 30 },
-      styles: { fontSize: 7.5, cellPadding: { top: 5, right: 4, bottom: 5, left: 4 }, textColor: CINZA_TEXTO, lineColor: [210, 228, 218], lineWidth: 0.3, overflow: 'ellipsize' },
-      headStyles: { fillColor: VERDE_ESCURO, textColor: BRANCO, fontStyle: 'bold', fontSize: 7.5, halign: 'center', minCellHeight: 24 },
+      startY: 70,
+      margin: { left: 28, right: 28, bottom: 36 },
+      styles: { fontSize: 7.5, cellPadding: { top: 5, right: 4, bottom: 5, left: 4 }, textColor: CINZA_TEXTO, lineColor: [200, 220, 210], lineWidth: 0.3, overflow: 'ellipsize' },
+      headStyles: { fillColor: VERDE_MEDIO, textColor: BRANCO, fontStyle: 'bold', fontSize: 7.5, halign: 'center', minCellHeight: 20 },
       alternateRowStyles: { fillColor: CINZA_LEVE },
       columnStyles,
       didDrawPage: (data) => { addHeaderFooter(data.pageNumber, doc.internal.getNumberOfPages()) },
@@ -2090,17 +1968,16 @@ export default function Lancamentos() {
 
     // ── Bloco de assinatura ───────────────────────────────────────────────────
     const lastY = doc.lastAutoTable?.finalY || 200
-    if (lastY + 80 < PH - 30) {
-      const sigY = lastY + 36
-      doc.setDrawColor(...VERDE_ESCURO); doc.setLineWidth(0.5)
-      doc.line(24, sigY, 210, sigY)
-      doc.line(PW - 210, sigY, PW - 24, sigY)
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...CINZA_TEXTO)
-      doc.text('Responsável pela emissão', 24, sigY + 12)
-      doc.text('De acordo — Cliente', PW - 24, sigY + 12, { align: 'right' })
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(150, 160, 155)
-      doc.text('Data: ___/___/______', 24, sigY + 24)
-      doc.text('Data: ___/___/______', PW - 24, sigY + 24, { align: 'right' })
+    if (lastY + 80 < PH - 40) {
+      doc.setDrawColor(...VERDE_MEDIO); doc.setLineWidth(0.5)
+      doc.line(28, lastY + 40, 200, lastY + 40)
+      doc.line(PW - 28, lastY + 40, PW - 200, lastY + 40)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...CINZA_TEXTO)
+      doc.text('Responsável pela emissão', 28, lastY + 52)
+      doc.text('De acordo — Cliente', PW - 28, lastY + 52, { align: 'right' })
+      doc.setFontSize(6.5); doc.setTextColor(130, 150, 140)
+      doc.text('Data: ___/___/______', 28, lastY + 64)
+      doc.text('Data: ___/___/______', PW - 28, lastY + 64, { align: 'right' })
     }
 
     doc.save(`lancamentos_${dataArq}.pdf`)
@@ -2203,10 +2080,7 @@ export default function Lancamentos() {
     else if (sortKey === 'status')  { va = a.status || '';                        vb = b.status || '' }
     else if (sortKey === 'kmAsf')   { va = calcKmTotais(d).asfalto;               vb = calcKmTotais(e).asfalto }
     else if (sortKey === 'kmTer')   { va = calcKmTotais(d).terra;                 vb = calcKmTotais(e).terra }
-    else if (sortKey === 'kmTotal')      { va = calcKmTotais(d).total;                             vb = calcKmTotais(e).total }
-    else if (sortKey === 'processadoEm')  { va = a.created_at || '';                                vb = b.created_at || '' }
-    else if (sortKey === 'motorista')     { va = (d.condutor || d.motorista || d.nome_motorista_cadastro || '').toLowerCase(); vb = (e.condutor || e.motorista || e.nome_motorista_cadastro || '').toLowerCase() }
-    else if (sortKey === 'dataBoletim')   { va = d.data || '';                                       vb = e.data || '' }
+    else if (sortKey === 'kmTotal') { va = calcKmTotais(d).total;                 vb = calcKmTotais(e).total }
     else { va = ''; vb = '' }
     if (va < vb) return sortDir === 'asc' ? -1 : 1
     if (va > vb) return sortDir === 'asc' ? 1 : -1
@@ -2366,11 +2240,7 @@ export default function Lancamentos() {
                       style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#818cf8' }}
                     />
                   </th>
-                  <th style={{ padding: '10px 12px', width: 40, textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: 0.5 }}>#</th>
                   <ColHead colKey="data" label="DATA" />
-                  <ColHead colKey="processadoEm" label="PROCESSADO EM" />
-                  <ColHead colKey="motorista" label="MOTORISTA" />
-                  <ColHead colKey="dataBoletim" label="DATA BOLETIM" />
                   <ColHead colKey="numDm" label="Nº DM" />
                   <ColHead colKey="cliente" label="CLIENTE / DESCRIÇÃO" />
                   <ColHead colKey="origem" label="ORIGEM" />
@@ -2385,7 +2255,7 @@ export default function Lancamentos() {
                 </tr>
               </thead>
               <tbody>
-                {sortedFiltered.map((l, rowIdx) => {
+                {sortedFiltered.map(l => {
                   const isTransporte = (l.tipo_formulario || 'padrao') === 'transporte'
                   const d = l.dados_extras || {}
                   const km = isTransporte ? calcKmTotais(d) : null
@@ -2417,38 +2287,9 @@ export default function Lancamentos() {
                           style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#818cf8' }}
                         />
                       </td>
-                      {/* # */}
-                      <td style={{ padding: '10px 12px', textAlign: 'center', width: 40, color: 'var(--text-secondary)', fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-                        {rowIdx + 1}
-                      </td>
                       {/* DATA */}
                       {EDITABLE_TD('data', l.data, (
                         <span style={{ padding: '10px 12px', display: 'block', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 12 }}>{fmtDate(l.data)}</span>
-                      ))}
-                      {/* PROCESSADO EM */}
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 11 }}>
-                        {l.created_at ? (() => {
-                          const dt = new Date(l.created_at)
-                          return (
-                            <span title={dt.toLocaleString('pt-BR')}>
-                              {dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                              {' '}
-                              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                            </span>
-                          )
-                        })() : '—'}
-                      </td>
-                      {/* MOTORISTA */}
-                      {EDITABLE_TD('condutor', d.condutor || d.motorista || '', (
-                        <span style={{ padding: '10px 12px', display: 'block', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, fontSize: 12, color: isTransporte ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                          {d.condutor || d.motorista || d.nome_motorista_cadastro || '—'}
-                        </span>
-                      ))}
-                      {/* DATA BOLETIM */}
-                      {EDITABLE_TD('data_boletim', d.data || '', (
-                        <span style={{ padding: '10px 12px', display: 'block', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 12 }}>
-                          {isTransporte && d.data ? fmtDate(d.data) : '—'}
-                        </span>
                       ))}
                       {/* Nº DM */}
                       {EDITABLE_TD('numero_diario', d.numero_diario, (

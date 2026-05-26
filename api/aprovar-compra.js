@@ -14,41 +14,18 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import ws from 'ws'
 
 function getDb() {
   return createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY,
-    { realtime: { params: { log_level: 'disabled' }, transport: ws }, global: {} }
+    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY
   )
-}
-
-async function sendWA(to, text) {
-  const phone = String(to).replace(/\D/g, '')
-  if (!phone) return false
-  try {
-    const res = await fetch(
-      `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
-        },
-        body: JSON.stringify({ phone, message: text }),
-      }
-    )
-    return res.ok
-  } catch {
-    return false
-  }
 }
 
 function notifyCompras(evento, solicitacaoId) {
   const base = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : APP_URL
+    : 'https://dividiai.app.br'
   fetch(`${base}/api/notify-compras`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

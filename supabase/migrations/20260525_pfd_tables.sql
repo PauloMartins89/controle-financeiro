@@ -48,19 +48,24 @@ CREATE TABLE IF NOT EXISTS pfd_planos (
   revisado_em     timestamptz
 );
 
+-- Grants
+GRANT ALL ON pfd_publicacoes TO authenticated;
+GRANT ALL ON pfd_planos      TO authenticated;
+
 -- RLS
 ALTER TABLE pfd_publicacoes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pfd_planos      ENABLE ROW LEVEL SECURITY;
 
+-- my_workspace_ids() é SECURITY DEFINER — evita recursão RLS ao consultar workspace_members
 CREATE POLICY "pfd_publicacoes_workspace" ON pfd_publicacoes
-  USING (workspace_id IN (
-    SELECT workspace_id FROM workspace_users WHERE user_id = auth.uid()
-  ));
+  FOR ALL TO authenticated
+  USING     (workspace_id IN (SELECT my_workspace_ids()))
+  WITH CHECK (workspace_id IN (SELECT my_workspace_ids()));
 
 CREATE POLICY "pfd_planos_workspace" ON pfd_planos
-  USING (workspace_id IN (
-    SELECT workspace_id FROM workspace_users WHERE user_id = auth.uid()
-  ));
+  FOR ALL TO authenticated
+  USING     (workspace_id IN (SELECT my_workspace_ids()))
+  WITH CHECK (workspace_id IN (SELECT my_workspace_ids()));
 
 -- Índices
 CREATE INDEX IF NOT EXISTS idx_pfd_pub_workspace  ON pfd_publicacoes(workspace_id);
