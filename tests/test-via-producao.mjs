@@ -133,7 +133,10 @@ async function main() {
 
   if (apiResp.log_texto) {
     console.log('\n  Log da API:')
-    console.log(apiResp.log_texto.split('\n').map(l => `  ${l}`).join('\n'))
+    const linhas = Array.isArray(apiResp.log_texto)
+      ? apiResp.log_texto
+      : String(apiResp.log_texto).split('\n')
+    linhas.forEach(l => console.log(`  ${l}`))
   } else if (apiResp.log) {
     console.log('\n  Log da API:')
     apiResp.log.forEach(l => console.log(`  ${typeof l === 'object' ? (l.msg || l.message || JSON.stringify(l)) : l}`))
