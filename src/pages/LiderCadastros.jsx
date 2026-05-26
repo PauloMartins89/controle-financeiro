@@ -6,11 +6,14 @@ import { toast } from 'react-hot-toast'
 import {
   PlusIcon, PencilIcon, TrashIcon, XMarkIcon,
   MagnifyingGlassIcon, ArrowPathIcon,
-  UsersIcon, WrenchScrewdriverIcon, BeakerIcon, CubeIcon, ShieldCheckIcon,
+  UsersIcon, UserGroupIcon, WrenchScrewdriverIcon, BeakerIcon, CubeIcon, ShieldCheckIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 const ABAS = [
+  { key: 'frentes',       label: 'Frentes',       icon: MapPinIcon },
+  { key: 'equipes',       label: 'Equipes',       icon: UserGroupIcon },
   { key: 'colaboradores', label: 'Colaboradores', icon: UsersIcon },
   { key: 'maquinas',      label: 'Máquinas',      icon: WrenchScrewdriverIcon },
   { key: 'implementos',   label: 'Implementos',   icon: BeakerIcon },
@@ -147,15 +150,18 @@ function Select({ value, onChange, options }) {
 // ════════════════════════════════════════════════════════════════════════════════
 export default function LiderCadastros() {
   const { workspaceId } = useStore()
-  const [aba, setAba] = useState('colaboradores')
+  const [aba, setAba] = useState('frentes')
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editId,    setEditId]    = useState(null)
   const [equipes,   setEquipes]   = useState([])
+  const [frentesOpts, setFrentesOpts] = useState([])
 
   // ── dados ──
+  const [frentes,       setFrentes]   = useState([])
+  const [equipesData,   setEquipesData] = useState([])
   const [colaboradores, setColabs]    = useState([])
   const [maquinas,      setMaquinas]  = useState([])
   const [implementos,   setImpls]     = useState([])
@@ -163,18 +169,29 @@ export default function LiderCadastros() {
   const [epis,          setEpis]      = useState([])
 
   // ── forms ──
-  const [fColab, setFColab] = useState({ nome: '', matricula: '', cargo: 'Operador', equipe_id: '', ativo: true })
-  const [fMaq,   setFMaq]   = useState({ nome: '', codigo: '', tipo: 'Trator', modelo: '', ativo: true })
-  const [fImpl,  setFImpl]  = useState({ nome: '', codigo: '', modelo: '', largura_m: '', volume_recomendado_lha: '', ativo: true })
-  const [fProd,  setFProd]  = useState({ nome: '', tipo: 'Herbicida', unidade: 'L', ativo: true })
-  const [fEpi,   setFEpi]   = useState({ nome: '', categoria: 'Proteção da Cabeça', ca: '', vida_util_meses: '', ativo: true })
+  const [fFrente, setFFrente] = useState({ nome: '', codigo: '', ativo: true })
+  const [fEquipe, setFEquipe] = useState({ nome: '', codigo: '', frente_id: '', lider_nome: '', lider_email: '', ativo: true })
+  const [fColab,  setFColab]  = useState({ nome: '', matricula: '', cargo: 'Operador', equipe_id: '', ativo: true })
+  const [fMaq,    setFMaq]    = useState({ nome: '', codigo: '', tipo: 'Trator', modelo: '', ativo: true })
+  const [fImpl,   setFImpl]   = useState({ nome: '', codigo: '', modelo: '', largura_m: '', volume_recomendado_lha: '', ativo: true })
+  const [fProd,   setFProd]   = useState({ nome: '', tipo: 'Herbicida', unidade: 'L', ativo: true })
+  const [fEpi,    setFEpi]    = useState({ nome: '', categoria: 'Proteção da Cabeça', ca: '', vida_util_meses: '', ativo: true })
 
   useEffect(() => { if (workspaceId) init() }, [workspaceId, aba]) // eslint-disable-line
 
   async function init() {
     setLoading(true)
     const wid = workspaceId
-    if (aba === 'colaboradores') {
+    // Sempre carrega frentes para usar nos selects de equipes/colaboradores
+    const { data: frentesAll } = await supabase.from('lider_frentes').select('id, nome').eq('workspace_id', wid).eq('ativo', true).order('nome')
+    setFrentesOpts(frentesAll || [])
+    if (aba === 'frentes') {
+      const { data } = await supabase.from('lider_frentes').select('*').eq('workspace_id', wid).order('nome')
+      setFrentes(data || [])
+    } else if (aba === 'equipes') {
+      const { data } = await supabase.from('lider_equipes').select('*, lider_frentes(nome)').eq('workspace_id', wid).order('nome')
+      setEquipesData(data || [])
+    } else if (aba === 'colaboradores') {
       const [rC, rE] = await Promise.all([
         supabase.from('lider_colaboradores').select('*, lider_equipes(nome)').eq('workspace_id', wid).order('nome'),
         supabase.from('lider_equipes').select('id, nome').eq('workspace_id', wid).order('nome'),
@@ -200,6 +217,8 @@ export default function LiderCadastros() {
   // ── abrir modal ──────────────────────────────────────────────────────────────
   function abrirNovo() {
     setEditId(null)
+    if (aba === 'frentes')       setFFrente({ nome: '', codigo: '', ativo: true })
+    if (aba === 'equipes')       setFEquipe({ nome: '', codigo: '', frente_id: frentesOpts[0]?.id ?? '', lider_nome: '', lider_email: '', ativo: true })
     if (aba === 'colaboradores') setFColab({ nome: '', matricula: '', cargo: 'Operador', equipe_id: equipes[0]?.id ?? '', ativo: true })
     if (aba === 'maquinas')      setFMaq({ nome: '', codigo: '', tipo: 'Trator', modelo: '', ativo: true })
     if (aba === 'implementos')   setFImpl({ nome: '', codigo: '', modelo: '', largura_m: '', volume_recomendado_lha: '', ativo: true })
@@ -210,6 +229,8 @@ export default function LiderCadastros() {
 
   function abrirEditar(item) {
     setEditId(item.id)
+    if (aba === 'frentes')       setFFrente({ nome: item.nome, codigo: item.codigo ?? '', ativo: item.ativo })
+    if (aba === 'equipes')       setFEquipe({ nome: item.nome, codigo: item.codigo ?? '', frente_id: item.frente_id ?? '', lider_nome: item.lider_nome ?? '', lider_email: item.lider_email ?? '', ativo: item.ativo })
     if (aba === 'colaboradores') setFColab({ nome: item.nome, matricula: item.matricula ?? '', cargo: item.cargo ?? 'Operador', equipe_id: item.equipe_id ?? '', ativo: item.ativo })
     if (aba === 'maquinas')      setFMaq({ nome: item.nome, codigo: item.codigo ?? '', tipo: item.tipo ?? 'Trator', modelo: item.modelo ?? '', ativo: item.ativo })
     if (aba === 'implementos')   setFImpl({ nome: item.nome, codigo: item.codigo ?? '', modelo: item.modelo ?? '', largura_m: item.largura_m ?? '', volume_recomendado_lha: item.volume_recomendado_lha ?? '', ativo: item.ativo })
@@ -222,11 +243,13 @@ export default function LiderCadastros() {
   async function salvar() {
     const wid = workspaceId
     let table, payload
-    if (aba === 'colaboradores') { table = 'lider_colaboradores'; payload = { ...fColab, workspace_id: wid } }
-    if (aba === 'maquinas')      { table = 'lider_maquinas';      payload = { ...fMaq, workspace_id: wid } }
-    if (aba === 'implementos')   { table = 'lider_implementos';   payload = { ...fImpl, workspace_id: wid } }
-    if (aba === 'produtos')      { table = 'lider_produtos';      payload = { ...fProd, workspace_id: wid } }
-    if (aba === 'epis')          { table = 'lider_epis';          payload = { ...fEpi, workspace_id: wid, vida_util_meses: fEpi.vida_util_meses ? parseInt(fEpi.vida_util_meses) : null } }
+    if (aba === 'frentes')       { table = 'lider_frentes';       payload = { ...fFrente, workspace_id: wid } }
+    if (aba === 'equipes')       { table = 'lider_equipes';       payload = { ...fEquipe, workspace_id: wid, frente_id: fEquipe.frente_id || null } }
+    if (aba === 'colaboradores') { table = 'lider_colaboradores'; payload = { ...fColab,  workspace_id: wid, equipe_id: fColab.equipe_id || null } }
+    if (aba === 'maquinas')      { table = 'lider_maquinas';      payload = { ...fMaq,    workspace_id: wid } }
+    if (aba === 'implementos')   { table = 'lider_implementos';   payload = { ...fImpl,   workspace_id: wid } }
+    if (aba === 'produtos')      { table = 'lider_produtos';      payload = { ...fProd,   workspace_id: wid } }
+    if (aba === 'epis')          { table = 'lider_epis';          payload = { ...fEpi,    workspace_id: wid, vida_util_meses: fEpi.vida_util_meses ? parseInt(fEpi.vida_util_meses) : null } }
     if (!payload.nome?.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
     const { error } = editId
@@ -243,7 +266,7 @@ export default function LiderCadastros() {
   async function toggleAtivo(table, id, atual) {
     const { error } = await supabase.from(table).update({ ativo: !atual }).eq('id', id)
     if (error) toast.error(error.message)
-    else { toast.success(!atual ? 'Ativado' : 'Inativado'); init() }
+    else { toast.success(!atual ? 'Ativado' : 'Inativado'); await init() }
   }
 
   // ── excluir ──────────────────────────────────────────────────────────────────
@@ -260,6 +283,40 @@ export default function LiderCadastros() {
   // ── renderizar lista ─────────────────────────────────────────────────────────
   function renderLista() {
     if (loading) return <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 40 }}>Carregando…</p>
+
+    if (aba === 'frentes') {
+      const list = filtrar(frentes)
+      return list.length === 0 ? empty() : list.map(f => (
+        <Row key={f.id} ativo={f.ativo}
+          onEdit={() => abrirEditar(f)}
+          onToggle={() => toggleAtivo('lider_frentes', f.id, f.ativo)}
+          onDel={() => excluir('lider_frentes', f.id, f.nome)}>
+          <div>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{f.nome}</span>
+            {f.codigo && <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 8 }}>{f.codigo}</span>}
+          </div>
+        </Row>
+      ))
+    }
+
+    if (aba === 'equipes') {
+      const list = filtrar(equipesData)
+      return list.length === 0 ? empty() : list.map(e => (
+        <Row key={e.id} ativo={e.ativo}
+          onEdit={() => abrirEditar(e)}
+          onToggle={() => toggleAtivo('lider_equipes', e.id, e.ativo)}
+          onDel={() => excluir('lider_equipes', e.id, e.nome)}>
+          <div>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{e.nome}</span>
+            {e.codigo && <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 8 }}>{e.codigo}</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+            {e.lider_frentes && <Badge text={e.lider_frentes.nome} />}
+            {e.lider_nome && <Badge text={'Líder: ' + e.lider_nome} />}
+          </div>
+        </Row>
+      ))
+    }
 
     if (aba === 'colaboradores') {
       const list = filtrar(colaboradores)
@@ -371,6 +428,8 @@ export default function LiderCadastros() {
 
   // ── contagem ─────────────────────────────────────────────────────────────────
   const totais = {
+    frentes:       frentes.filter(r => r.ativo).length,
+    equipes:       equipesData.filter(r => r.ativo).length,
     colaboradores: colaboradores.filter(r => r.ativo).length,
     maquinas:      maquinas.filter(r => r.ativo).length,
     implementos:   implementos.filter(r => r.ativo).length,
@@ -380,7 +439,7 @@ export default function LiderCadastros() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Header titulo="SmartLíder — Cadastros" subtitulo="Gerencie colaboradores, máquinas, implementos e produtos" />
+      <Header title="SmartLíder — Cadastros" subtitle="Gerencie frentes, equipes, colaboradores, máquinas, implementos e produtos" />
 
       <div style={{ padding: '24px 32px', maxWidth: 900, margin: '0 auto' }}>
 
@@ -392,7 +451,7 @@ export default function LiderCadastros() {
         </div>
 
         {/* Cards rápidos */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 14, marginBottom: 24 }}>
           {ABAS.map(a => {
             const Icon = a.icon
             const n = totais[a.key]
@@ -438,6 +497,55 @@ export default function LiderCadastros() {
       </div>
 
       {/* ── Modal Colaborador ──────────────────────────────────────────────── */}
+      {/* ── Modal Frente ─────────────────────────────────────────────────── */}
+      {showModal && aba === 'frentes' && (
+        <Modal title={editId ? 'Editar Frente' : 'Nova Frente'} onClose={() => setShowModal(false)} onSave={salvar} saving={saving}>
+          <Field label="Nome *">
+            <input style={inp} value={fFrente.nome} onChange={e => setFFrente(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Frente 07" />
+          </Field>
+          <Field label="Código">
+            <input style={inp} value={fFrente.codigo} onChange={e => setFFrente(p => ({ ...p, codigo: e.target.value }))} placeholder="Ex: F07" />
+          </Field>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            <input type="checkbox" checked={fFrente.ativo} onChange={e => setFFrente(p => ({ ...p, ativo: e.target.checked }))} />
+            Ativo
+          </label>
+        </Modal>
+      )}
+
+      {/* ── Modal Equipe ─────────────────────────────────────────────────── */}
+      {showModal && aba === 'equipes' && (
+        <Modal title={editId ? 'Editar Equipe' : 'Nova Equipe'} onClose={() => setShowModal(false)} onSave={salvar} saving={saving}>
+          <Field label="Nome *">
+            <input style={inp} value={fEquipe.nome} onChange={e => setFEquipe(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Equipe 005" />
+          </Field>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Código">
+              <input style={inp} value={fEquipe.codigo} onChange={e => setFEquipe(p => ({ ...p, codigo: e.target.value }))} placeholder="Ex: EQ-005" />
+            </Field>
+            <Field label="Frente">
+              <Select
+                value={fEquipe.frente_id}
+                onChange={v => setFEquipe(p => ({ ...p, frente_id: v }))}
+                options={[{ value: '', label: '— Sem frente —' }, ...frentesOpts.map(f => ({ value: f.id, label: f.nome }))]}
+              />
+            </Field>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Nome do Líder">
+              <input style={inp} value={fEquipe.lider_nome} onChange={e => setFEquipe(p => ({ ...p, lider_nome: e.target.value }))} placeholder="Nome completo" />
+            </Field>
+            <Field label="E-mail do Líder">
+              <input style={inp} type="email" value={fEquipe.lider_email} onChange={e => setFEquipe(p => ({ ...p, lider_email: e.target.value }))} placeholder="email@empresa.com" />
+            </Field>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            <input type="checkbox" checked={fEquipe.ativo} onChange={e => setFEquipe(p => ({ ...p, ativo: e.target.checked }))} />
+            Ativo
+          </label>
+        </Modal>
+      )}
+
       {showModal && aba === 'colaboradores' && (
         <Modal title={editId ? 'Editar Colaborador' : 'Novo Colaborador'} onClose={() => setShowModal(false)} onSave={salvar} saving={saving}>
           <Field label="Nome *">
