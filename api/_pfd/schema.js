@@ -17,6 +17,8 @@ export function expandGeminiCompact(compact) {
     intervalos: compact.iv.map(iv => ({
       intervalo_horas:  iv.h ?? 0,
       titulo_intervalo: iv.n || `A cada ${iv.h} horas`,
+      pagina_inicio:    iv.pgi || iv.pg_inicio || null,
+      pagina_fim:       iv.pgf || iv.pg_fim || null,
       periodicidade:    iv.u || 'recorrente',
       tarefas: (iv.tv || []).map(t => ({
         sistema:             t.s   || '',
@@ -83,6 +85,8 @@ export function legadoParaNovoSchema(extracaoRaw, fabricanteEquip, modeloEquip, 
     intervalos: mesclarIntervalos([extracaoRaw]).map(iv => ({
       intervalo_horas: iv.horas,
       titulo_intervalo: iv.nome || `A cada ${iv.horas} horas`,
+      pagina_inicio: null,
+      pagina_fim: null,
       periodicidade: (iv.horas === 0 || iv.horas === 600) ? 'uma_vez' : 'recorrente',
       tarefas: (iv.tarefas || []).map(t => ({
         sistema:             t.sistema     || '',

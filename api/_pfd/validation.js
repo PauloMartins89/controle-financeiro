@@ -28,12 +28,13 @@ export function validarExtracao(resultado) {
   const totalTarefas = intervalos.reduce((acc, iv) => acc + (iv.tarefas?.length || 0), 0)
   const intervalosOk = intervalos.filter(iv => iv.status_extracao === 'ok').length
   const intervalosFalha = intervalos.filter(iv => iv.status_extracao === 'falha_extracao').length
+  const intervalosNaoEncontrados = intervalos.filter(iv => iv.status_extracao === 'intervalo_nao_encontrado').length
   const intervalosCondicionais = intervalos.filter(iv =>
     (iv.tarefas || []).some(t => t.condicional || t.aplicabilidade)
   ).length
   const statusGeral = totalIntervalos === 0
     ? 'falha'
-    : intervalosOk === totalIntervalos
+    : intervalosFalha === 0
       ? 'completo'
       : intervalosOk > 0 ? 'parcial' : 'falha'
 
@@ -46,6 +47,7 @@ export function validarExtracao(resultado) {
     totalTarefas,
     intervalosOk,
     intervalosFalha,
+    intervalosNaoEncontrados,
     intervalosCondicionais,
   }
 }

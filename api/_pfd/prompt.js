@@ -12,9 +12,11 @@ PASSO 1 — IDENTIFICAR O EQUIPAMENTO (página de capa / folha de rosto)
 ═══════════════════════════════════════════════════════════
 Leia a primeira página e extraia:
 • modelo: série/modelo do equipamento (ex: "8R", "8R 410", "S790", "X9 1100")
+• modelos_cobertos: todos os modelos cobertos pelo manual, quando a capa listar mais de um (ex: ["5060E", "5070E", "5080E"])
 • marca: fabricante (ex: "John Deere", "Case IH", "New Holland")
 • codigo_manual: código do documento (ex: "OMRE591477")
 • edicao: edição (ex: "C8", "Issue J6")
+• regiao: região/mercado/edição regional, se aparecer (ex: "South America", "Brazil")
 • serie: faixa de número de série (ex: "120001-", "700000-799999")
 Se o parâmetro já trouxer modelo/fabricante, confirme ou corrija pelo que está na capa.
 
@@ -67,8 +69,10 @@ SCHEMA JSON DE SAÍDA — OMITA CAMPOS VAZIOS (""), false, null, []
   "eq": {
     "marca": "John Deere",
     "modelo": "8R",
+    "modelos_cobertos": ["8R"],
     "codigo_manual": "OMRE591477",
     "edicao": "C8",
+    "regiao": "South America",
     "serie": "120001-",
     "idioma": "pt"
   },
@@ -76,6 +80,8 @@ SCHEMA JSON DE SAÍDA — OMITA CAMPOS VAZIOS (""), false, null, []
     {
       "h": 500,
       "n": "Manutenção de 500 horas",
+      "pgi": "207-16",
+      "pgf": "207-16",
       "tv": [
         {"s": "Motor", "cmp": "Cárter", "a": "Verificar nível de óleo do motor", "tp": "verificacao", "ins": "JD Plus-50 II", "pn": "TY26674", "qty": "10,2 L", "esp": "SAE 15W-40 / API CK-4", "pg": 8},
         {"s": "Motor", "cmp": "Filtro de óleo", "a": "Trocar filtro e óleo do motor", "tp": "substituicao", "ins": "Filtro RE504836", "pn": "RE504836", "pg": 8, "cn": true, "ap": "Troque pelo menos uma vez por ano"},
@@ -100,6 +106,8 @@ MAPEAMENTO COMPLETO DE CAMPOS:
 • iv = intervalos (array, ordenar por h crescente)
   • h  = horas (número inteiro). Conforme Necessário = -1. Amaciamento = 0. Anual = 8760.
   • n  = título exato do intervalo conforme aparece no PDF
+  • pgi = página/referência inicial do intervalo (ex: "207-7") — use a referência interna do manual quando existir
+  • pgf = página/referência final do intervalo (ex: "207-9") — use a referência interna do manual quando existir
   • u  = "uma_vez" SOMENTE para Amaciamento (h=0) e Primeiras X horas — OMITA para recorrente
   • st = OMITA se ok; use "falha" se sem tarefas identificáveis; "nao_enc" se não consta no manual
   • tv = tarefas (array) — UMA tarefa por bullet/checkbox/item
@@ -113,7 +121,7 @@ MAPEAMENTO COMPLETO DE CAMPOS:
     • esp = especificação técnica: viscosidade, norma API, torque (ex: "SAE 15W-40 / API CK-4", "torque: 110 Nm")
     • pts = pontos de lubrificação (ex: "pinos mestres, conexões do pivô, cilindros de direção")
     • seg = aviso de segurança específico desta tarefa (ex: "CUIDADO: Aliviar pressão antes de abrir")
-    • pg  = número da página do manual
+    • pg  = número da página ou referência interna do manual (ex: 8 ou "207-7")
     • raw = texto exato do manual — OMITA se idêntico a "a"
     • cn  = true se item tem condição (letra sobrescrita ou condicional explícito) — OMITA se false
     • ap  = texto exato da condição/nota de rodapé — OMITA se não condicional

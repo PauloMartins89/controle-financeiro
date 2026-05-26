@@ -97,8 +97,8 @@ function criarPreviewPlano(intervalos) {
     const paginas = (iv.tarefas || [])
       .map(t => t.pagina_fonte)
       .filter(p => p !== null && p !== undefined && p !== '')
-    const paginaInicio = paginas.length ? paginas[0] : null
-    const paginaFim = paginas.length ? paginas[paginas.length - 1] : null
+    const paginaInicio = iv.pagina_inicio || (paginas.length ? paginas[0] : null)
+    const paginaFim = iv.pagina_fim || (paginas.length ? paginas[paginas.length - 1] : null)
 
     return {
       h: iv.intervalo_horas,
@@ -109,6 +109,20 @@ function criarPreviewPlano(intervalos) {
       pagina_fim: paginaFim,
     }
   })
+}
+
+function normalizarEquipamentoResposta(equipamento, { publicacao, payload }) {
+  return {
+    marca: equipamento?.marca || publicacao?.fabricante || payload.fabricante || 'John Deere',
+    modelo: equipamento?.modelo || publicacao?.modelo || payload.modelo || '',
+    modelos_cobertos: Array.isArray(equipamento?.modelos_cobertos) ? equipamento.modelos_cobertos : [],
+    codigo_manual: equipamento?.codigo_manual || equipamento?.manual || publicacao?.codigo_pub || payload.codigo_pub || '',
+    manual: equipamento?.manual || equipamento?.codigo_manual || publicacao?.codigo_pub || payload.codigo_pub || '',
+    edicao: equipamento?.edicao || publicacao?.edicao || payload.edicao || '',
+    idioma: equipamento?.idioma || publicacao?.idioma || payload.idioma || 'pt',
+    regiao: equipamento?.regiao || publicacao?.edicao || payload.edicao || '',
+    serie: equipamento?.serie || publicacao?.serie_inicio || payload.serie_inicio || '',
+  }
 }
 
 async function criarOuPrepararPublicacao({ sb, publicacao_id, payload, L }) {
@@ -208,6 +222,8 @@ export default async function handler(req, res) {
     L(`validação: status=${validacao.statusGeral}, intervalos=${validacao.totalIntervalos} (${validacao.intervalosOk} ok), tarefas=${validacao.totalTarefas}`)
     if (validacao.temFalhaCritica) L('⚠️ FALHA EM INTERVALO CRÍTICO — salvo com alertas')
 
+    resultado.equipamento = normalizarEquipamentoResposta(resultado.equipamento, { publicacao, payload })
+
     const modeloDetectado = resultado.equipamento?.modelo || ''
     const marcaDetectada = resultado.equipamento?.marca || ''
     const edicaoDetectada = resultado.equipamento?.edicao || ''
@@ -259,6 +275,7 @@ export default async function handler(req, res) {
       intervalos_ok: validacao.intervalosOk,
       intervalos_condicionais: validacao.intervalosCondicionais,
       intervalos_falha: validacao.intervalosFalha,
+      intervalos_nao_encontrados: validacao.intervalosNaoEncontrados,
       tem_falha_critica: validacao.temFalhaCritica,
       intervalos_criticos_falhando: validacao.intervalosCriticosFalhando,
       alertas: validacao.alertas,
