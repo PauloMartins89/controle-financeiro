@@ -119,21 +119,24 @@ async function main() {
     er(`API retornou erro: ${apiResp.error || JSON.stringify(apiResp)}`)
     if (apiResp.log) {
       console.log('\n  Log da API:')
-      apiResp.log.forEach(l => console.log(`  ${l}`))
+      apiResp.log.forEach(l => console.log(`  ${typeof l === 'object' ? (l.msg || l.message || JSON.stringify(l)) : l}`))
     }
     process.exit(1)
   }
 
   ok(`Status extração: ${apiResp.status_extracao}`)
-  ok(`Provider usado: ${apiResp.provider}`)
+  ok(`Provider usado: ${apiResp.provider || apiResp.modelo_ai}`)
   ok(`Total intervalos: ${apiResp.total_intervalos}`)
   ok(`Total tarefas: ${apiResp.total_tarefas}`)
   ok(`Intervalos ok: ${apiResp.intervalos_ok}`)
   ok(`Plano ID: ${apiResp.plano_id}`)
 
-  if (apiResp.log) {
+  if (apiResp.log_texto) {
     console.log('\n  Log da API:')
-    apiResp.log.forEach(l => console.log(`  ${l}`))
+    console.log(apiResp.log_texto.split('\n').map(l => `  ${l}`).join('\n'))
+  } else if (apiResp.log) {
+    console.log('\n  Log da API:')
+    apiResp.log.forEach(l => console.log(`  ${typeof l === 'object' ? (l.msg || l.message || JSON.stringify(l)) : l}`))
   }
 
   if (apiResp.alertas?.length > 0) {
