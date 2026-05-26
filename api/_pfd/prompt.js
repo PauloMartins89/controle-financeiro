@@ -71,8 +71,8 @@ Leia ESSA seção e use as informações para preencher "ins" e "qty" em cada ta
 Regras:
 • Para tarefas de TROCA DE ÓLEO: preencha "ins" com o tipo de óleo (ex: "JD Plus-50 II", "Hy-Gard") e "qty" com a capacidade (ex: "10,2 L")
 • Para tarefas de LUBRIFICAÇÃO: preencha "ins" com o tipo de graxa ou fluido (ex: "JD Grease SD Polyurea", "Pasta multiusos")
-• Para tarefas de TROCA DE FILTRO: preencha "pn" com o número de peça do filtro, se mencionado
-• Para tarefas de VERIFICAÇÃO ou LIMPEZA que não envolvem fluidos: deixe "ins" vazio (omitir)
+• Para tarefas de SUBSTITUIÇÃO (filtros, peças, termoválvulas, separadores, etc.): SEMPRE preencha "ins" com o NOME da peça sendo substituída (ex: "Filtro de ar primário", "Filtro de combustível em linha", "Termoválvula do motor", "Filtro de ar fresco da cabine"). Se o número de peça estiver disponível, preencha também "pn".
+• Para tarefas de VERIFICAÇÃO ou LIMPEZA que não envolvem fluidos nem peças: deixe "ins" vazio (omitir)
 • "esp" = especificação técnica do fluido quando mencionada (ex: "SAE 15W-40 / API CK-4", "ISO VG 46")
 Se o lubrificante não for explicitamente mencionado mas for óbvio pelo contexto (ex: "Troque o óleo do motor"), infira o lubrificante padrão do fabricante para aquele componente.
 
