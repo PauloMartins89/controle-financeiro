@@ -1303,6 +1303,7 @@ function DonutChart({ segments, emptyColor = '#E5EAF2', centerColor = '#1A2332',
 
 function SecaoDashboard({ sols, onNav }) {
   const [dateFilter, setDateFilter] = useState('')
+  const [kpiDetalhe, setKpiDetalhe]   = useState(null)
   const [isDark, setIsDark] = useState(() => document.documentElement.getAttribute('data-theme') !== 'light')
   useEffect(() => {
     const obs = new MutationObserver(() => setIsDark(document.documentElement.getAttribute('data-theme') !== 'light'))
@@ -1363,15 +1364,15 @@ function SecaoDashboard({ sols, onNav }) {
     const hojePedCaf = hojeSols.filter(s => (s.total_cafes || 0) > 0).length
 
     const kpis = [
-      { icon: '🍽️', label: 'Refeições hoje', val: hojePedRef, isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem', footer: `Mês: ${refMes} refeições`, secondary: hojeRef, secondaryLabel: 'refeições hoje' },
-      { icon: '☕',  label: 'Cafés hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `Mês: ${cafMes} cafés`,    secondary: hojeCaf, secondaryLabel: 'cafés hoje' },
-      { icon: '⏳',  label: 'Aguardando Aprovação', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ✓', ref: sum(pendentes, 'total_refeicoes'), caf: sum(pendentes, 'total_cafes') },
-      { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues`, ref: sum(aprovSts, 'total_refeicoes'), caf: sum(aprovSts, 'total_cafes') },
-      { icon: '❌',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos últimos 7 dias` : 'Nenhuma reprovação', ref: sum(reprovados, 'total_refeicoes'), caf: sum(reprovados, 'total_cafes') },
-      { icon: '🚚',  label: 'Aguardando Entrega',    val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje`, ref: sum(aguardEnt, 'total_refeicoes'), caf: sum(aguardEnt, 'total_cafes') },
-      { icon: '⚠️',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência', ref: sum(divergencias, 'total_refeicoes'), caf: sum(divergencias, 'total_cafes') },
-      { icon: '💰',  label: 'Custo previsto dia',  val: fmtBRL(hojeCusto), isText: true,  color: '#14B8A6', var: null, varLabel: null, footer: `${hojeRef + hojeCaf} itens previstos` },
-      { icon: '📊',  label: 'Custo no mês',        val: fmtBRL(valorMes),  isText: true,  color: '#6366f1', var: fv(valorMes, valorMAnt), varLabel: 'vs mês ant.', footer: valorMAnt > 0 ? `Ant.: ${fmtBRL(valorMAnt)}` : 'Sem comparativo' },
+      { icon: '🍽️', label: 'Refeições hoje', val: hojePedRef, isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem', footer: `Mês: ${refMes} refeições`, secondary: hojeRef, secondaryLabel: 'refeições hoje', items: hojeSols.filter(s => (s.total_refeicoes || 0) > 0) },
+      { icon: '☕',  label: 'Cafés hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `Mês: ${cafMes} cafés`,    secondary: hojeCaf, secondaryLabel: 'cafés hoje', items: hojeSols.filter(s => (s.total_cafes || 0) > 0) },
+      { icon: '⏳',  label: 'Aguardando Aprovação', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ✓', ref: sum(pendentes, 'total_refeicoes'), caf: sum(pendentes, 'total_cafes'), items: pendentes },
+      { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues`, ref: sum(aprovSts, 'total_refeicoes'), caf: sum(aprovSts, 'total_cafes'), items: aprovSts },
+      { icon: '❌',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos últimos 7 dias` : 'Nenhuma reprovação', ref: sum(reprovados, 'total_refeicoes'), caf: sum(reprovados, 'total_cafes'), items: reprovados },
+      { icon: '🚚',  label: 'Aguardando Entrega',    val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje`, ref: sum(aguardEnt, 'total_refeicoes'), caf: sum(aguardEnt, 'total_cafes'), items: aguardEnt },
+      { icon: '⚠️',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência', ref: sum(divergencias, 'total_refeicoes'), caf: sum(divergencias, 'total_cafes'), items: divergencias },
+      { icon: '💰',  label: 'Custo previsto dia',  val: fmtBRL(hojeCusto), isText: true,  color: '#14B8A6', var: null, varLabel: null, footer: `${hojeRef + hojeCaf} itens previstos`, items: hojeSols },
+      { icon: '📊',  label: 'Custo no mês',        val: fmtBRL(valorMes),  isText: true,  color: '#6366f1', var: fv(valorMes, valorMAnt), varLabel: 'vs mês ant.', footer: valorMAnt > 0 ? `Ant.: ${fmtBRL(valorMAnt)}` : 'Sem comparativo', items: mesSols },
     ]
 
     const chartRef7 = last7.map(d => sum(ativos.filter(s => s.data_refeicao === d), 'total_refeicoes'))
@@ -1537,7 +1538,7 @@ function SecaoDashboard({ sols, onNav }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 14 }}>
           {dash.kpis.map((k, i) => {
             if (k.secondary !== undefined) return (
-              <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+              <div key={i} onClick={() => k.items?.length && setKpiDetalhe(k)} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: k.items?.length ? 'pointer' : 'default', transition: 'box-shadow 0.15s' }} onMouseEnter={e => { if (k.items?.length) e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.12)' }} onMouseLeave={e => e.currentTarget.style.boxShadow = SHADOW}>
                 {/* accent top bar */}
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
                 {/* soft gradient wash */}
@@ -1571,7 +1572,7 @@ function SecaoDashboard({ sols, onNav }) {
               </div>
             )
             return (
-              <div key={i} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+              <div key={i} onClick={() => k.items?.length && setKpiDetalhe(k)} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: k.items?.length ? 'pointer' : 'default', transition: 'box-shadow 0.15s' }} onMouseEnter={e => { if (k.items?.length) e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.12)' }} onMouseLeave={e => e.currentTarget.style.boxShadow = SHADOW}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1.5, maxWidth: '72%' }}>{k.label}</span>
@@ -1793,6 +1794,44 @@ function SecaoDashboard({ sols, onNav }) {
         )}
 
       </div>
+
+      {kpiDetalhe && (
+        <Modal title={`${kpiDetalhe.icon} ${kpiDetalhe.label} — ${kpiDetalhe.items.length} pedido${kpiDetalhe.items.length !== 1 ? 's' : ''}`} onClose={() => setKpiDetalhe(null)} maxWidth={920}>
+          <div style={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto' }}>
+            {kpiDetalhe.items.length === 0
+              ? <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>Nenhum item para exibir</p>
+              : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-primary)', zIndex: 1 }}>
+                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                      {['Pedido', 'Líder', 'Equipe', 'Data Refeição', 'Ref.', 'Café', 'Valor', 'Status'].map(h => (
+                        <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kpiDetalhe.items.map((s, idx) => {
+                      const cfg = STATUS[s.status] || STATUS.rascunho
+                      return (
+                        <tr key={s.id} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)') }}>
+                          <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{s.numero_pedido || '—'}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--text-primary)' }}>{s.lider_nome || '—'}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>{s.refei_equipes?.nome || '—'}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtData(s.data_refeicao)}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-primary)' }}>{s.total_refeicoes || 0}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-primary)' }}>{s.total_cafes || 0}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#10b981', whiteSpace: 'nowrap' }}>{fmtBRL(s.valor_total || 0)}</td>
+                          <td style={{ padding: '8px 10px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, background: cfg.bg, color: cfg.color, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{cfg.label}</span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+            }
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
@@ -1910,7 +1949,8 @@ function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
 function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useFlowEngine }) {
   const [busca,        setBusca]        = useState('')
   const [filtroStatus, setFiltroStatus] = useState('todos')
-  const [filtroData,   setFiltroData]   = useState('')
+  const [filtroDataInicio, setFiltroDataInicio] = useState('')
+  const [filtroDataFim,   setFiltroDataFim]   = useState('')
   const [collapsed,    setCollapsed]    = useState({})
   const [detailSol,    setDetailSol]    = useState(null)
   const [sendingLembrete, setSendingLembrete] = useState(null)
@@ -1925,7 +1965,8 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
         list = list.filter(s => s.status === filtroStatus)
       }
     }
-    if (filtroData)               list = list.filter(s => s.data_refeicao === filtroData)
+    if (filtroDataInicio)          list = list.filter(s => s.data_refeicao >= filtroDataInicio)
+    if (filtroDataFim)             list = list.filter(s => s.data_refeicao <= filtroDataFim)
     if (busca.trim()) {
       const q = busca.toLowerCase()
       list = list.filter(s =>
@@ -1937,7 +1978,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
       )
     }
     return list
-  }, [sols, filtroStatus, filtroData, busca])
+  }, [sols, filtroStatus, filtroDataInicio, filtroDataFim, busca])
 
   const grupos = useMemo(() => {
     const map = {}
@@ -1970,8 +2011,14 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
           <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: 'var(--text-secondary)' }} />
           <input className="input" style={{ paddingLeft: 32, fontSize: 13 }} placeholder="Buscar pedido, equipe, líder..." value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
-        <input type="date" className="input" style={{ width: 160, fontSize: 13 }} value={filtroData} onChange={e => setFiltroData(e.target.value)} title="Filtrar por data de refeição" />
-        {filtroData && <button onClick={() => setFiltroData('')} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px 10px', fontSize: 11, fontWeight: 600 }}>Limpar data</button>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <input type="date" className="input" style={{ width: 150, fontSize: 13 }} value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} title="Data inicial" />
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>até</span>
+          <input type="date" className="input" style={{ width: 150, fontSize: 13 }} value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} title="Data final" />
+          {(filtroDataInicio || filtroDataFim) && (
+            <button onClick={() => { setFiltroDataInicio(''); setFiltroDataFim('') }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px 10px', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>Limpar datas</button>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {FILTROS.map(s => {
             const cfg = STATUS[s]; const isAll = s === 'todos'; const active = filtroStatus === s
