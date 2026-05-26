@@ -65,8 +65,8 @@ async function handleLembretes(db, res) {
     const saldo = saldos.find(s => s.id === canal.pessoa_id)
     if (!saldo || Math.abs(saldo.saldo) < 0.01) continue
     const msg = saldo.saldo < 0
-      ? `👋 *Lembrete semanal — Dividi Aí*\n\nVocê ainda deve *${formatBRL(Math.abs(saldo.saldo))}*.\n\nQuer acertar? Me avise aqui ou acesse ${APP_URL} 😊`
-      : `👋 *Lembrete semanal — Dividi Aí*\n\nVocê tem *${formatBRL(saldo.saldo)}* a receber.\n\nAcesse ${APP_URL} para ver os detalhes. 💰`
+      ? `👋 *Lembrete semanal — SmartPro*\n\nVocê ainda deve *${formatBRL(Math.abs(saldo.saldo))}*.\n\nQuer acertar? Me avise aqui ou acesse ${APP_URL} 😊`
+      : `👋 *Lembrete semanal — SmartPro*\n\nVocê tem *${formatBRL(saldo.saldo)}* a receber.\n\nAcesse ${APP_URL} para ver os detalhes. 💰`
     await sendWA(canal.telefone, msg)
     sent++
   }

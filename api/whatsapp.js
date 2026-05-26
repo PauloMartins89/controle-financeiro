@@ -507,7 +507,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      await sendWA(from, `Olá! 👋 Seu número não está vinculado ao Dividi Aí.\n\nAcesse *${APP_URL}* → Admin para cadastrar.`)
+      await sendWA(from, `Olá! 👋 Seu número não está vinculado ao SmartPro.\n\nAcesse *${APP_URL}* → Admin para cadastrar.`)
       return res.status(200).end()
     }
 

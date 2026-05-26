@@ -101,8 +101,8 @@ export default function Planos() {
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <img src="/logo.png" alt="Dividi Aí" className="app-logo-light" style={{ height: 128, objectFit: 'contain', marginBottom: 12 }} />
-          <img src="/logo-dark.png" alt="Dividi Aí" className="app-logo-dark" style={{ height: 128, objectFit: 'contain', marginBottom: 12 }} />
+          <img src="/logo.png" alt="SmartPro" className="app-logo-light" style={{ height: 128, objectFit: 'contain', marginBottom: 12 }} />
+          <img src="/logo-dark.png" alt="SmartPro" className="app-logo-dark" style={{ height: 128, objectFit: 'contain', marginBottom: 12 }} />
           <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: 6 }}>
             Controle financeiro inteligente com IA via WhatsApp
           </p>

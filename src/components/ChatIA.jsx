@@ -4,7 +4,7 @@ import { SparklesIcon as SparklesSolid } from '@heroicons/react/24/solid'
 import useStore from '../store/useStore'
 import { chatWithAI, buildContext } from '../lib/ai'
 
-const WELCOME = 'Oi! 👋 Sou a Livia, sua assistente financeira do Dividi Aí!\n\nPode me perguntar qualquer coisa sobre seus gastos ou pedir pra eu lançar uma despesa. Exemplos:\n• "Quanto gastei essa semana?"\n• "Quem me deve mais?"\n• "Lança 50 reais de Uber hoje"'
+const WELCOME = 'Oi! 👋 Sou a Livia, sua assistente financeira do SmartPro!\n\nPode me perguntar qualquer coisa sobre seus gastos ou pedir pra eu lançar uma despesa. Exemplos:\n• "Quanto gastei essa semana?"\n• "Quem me deve mais?"\n• "Lança 50 reais de Uber hoje"'
 
 const DAILY_LIMIT = 30
 const WELCOME_MSG = { role: 'assistant', text: WELCOME, type: 'text' }

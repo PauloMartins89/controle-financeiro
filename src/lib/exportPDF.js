@@ -19,7 +19,7 @@ export function exportarBalancoPDF({ expenses, people, groups, mes }) {
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(18)
   doc.setFont('helvetica', 'bold')
-  doc.text('Dividi Aí', 14, 12)
+  doc.text('SmartPro', 14, 12)
   doc.setFontSize(11)
   doc.setFont('helvetica', 'normal')
   doc.text(`Balanço Mensal — ${mesLabel}`, 14, 21)
@@ -120,7 +120,7 @@ export function exportarBalancoPDF({ expenses, people, groups, mes }) {
     doc.setPage(i)
     doc.setFontSize(8)
     doc.setTextColor(150)
-    doc.text(`Dividi Aí · Gerado em ${now.toLocaleDateString('pt-BR')} · Página ${i}/${pageCount}`, 14, 290)
+    doc.text(`SmartPro · Gerado em ${now.toLocaleDateString('pt-BR')} · Página ${i}/${pageCount}`, 14, 290)
   }
 
   doc.save(`balanco-${mesStr}.pdf`)

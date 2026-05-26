@@ -154,7 +154,7 @@ export default function WelcomeDashboard({ hasPeople, hasExpenses, hasShared }) 
             fontSize: 30, boxShadow: '0 8px 24px rgba(99,102,241,0.3)',
           }}>💸</div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px' }}>
-            Bem-vindo ao Dividi Aí
+            Bem-vindo ao SmartPro
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: '0 0 24px', lineHeight: 1.6, maxWidth: 500, marginLeft: 'auto', marginRight: 'auto' }}>
             Importe sua fatura, marque quem participou de cada gasto e veja automaticamente quem deve o quê.
@@ -264,7 +264,7 @@ export default function WelcomeDashboard({ hasPeople, hasExpenses, hasShared }) 
         {/* Casos de uso */}
         <div style={{ textAlign: 'center' }}>
           <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 14, letterSpacing: '-0.01em' }}>
-            Para quem é o Dividi Aí?
+            Para quem é o SmartPro?
           </h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
             {[

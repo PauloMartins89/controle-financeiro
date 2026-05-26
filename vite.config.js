@@ -17,8 +17,8 @@ export default defineConfig({
       },
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
-        name: 'Dividi Aí — Controle Financeiro',
-        short_name: 'Dividi Aí',
+        name: 'SmartPro — Controle Financeiro',
+        short_name: 'SmartPro',
         description: 'Controle Financeiro Inteligente',
         theme_color: '#0f172a',
         background_color: '#0f172a',

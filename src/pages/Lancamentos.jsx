@@ -1880,7 +1880,7 @@ export default function Lancamentos() {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(180, 220, 195)
       doc.text(`Gerado em: ${geradoEm}   |   Total de registros: ${selecionados.length}`, 36, 38)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...BRANCO)
-      doc.text('Dividi Aí', PW - 36, 24, { align: 'right' })
+      doc.text('SmartPro', PW - 36, 24, { align: 'right' })
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(180, 220, 195)
       doc.text('Sistema de Controle Financeiro', PW - 36, 36, { align: 'right' })
       doc.setFillColor(...VERDE_ESCURO); doc.rect(0, PH - 24, PW, 24, 'F')
