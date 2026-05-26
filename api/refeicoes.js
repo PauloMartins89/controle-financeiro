@@ -150,13 +150,12 @@ export default async function handler(req, res) {
     const valorTotal = (totalRef * valorRef) + (totalCafe * valorCafe)
 
     // Número sequencial do pedido por workspace
-    const { count } = await db
-      .from('refei_solicitacoes')
-      .select('id', { count: 'exact', head: true })
-      .eq('workspace_id', sol.workspace_id)
-      .neq('status', 'rascunho')
     const year = new Date().getFullYear()
-    const numeroPedido = `REF-${year}-${String((count || 0) + 1).padStart(6, '0')}`
+    const { data: nextNum } = await db.rpc('get_next_refei_number', {
+      p_workspace_id: sol.workspace_id,
+      p_ano: year,
+    })
+    const numeroPedido = `REF-${year}-${String(nextNum || 1).padStart(6, '0')}`
 
     // Atualiza solicitação — apenas campos garantidos pelo schema base
     const { error: updErr } = await db.from('refei_solicitacoes').update({
