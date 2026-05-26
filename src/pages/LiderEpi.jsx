@@ -75,15 +75,18 @@ function Modal({ title, onClose, children, maxWidth = 520 }) {
 export default function LiderEpi() {
   const location    = useLocation()
   const workspaceId = useStore(s => s.workspaceId)
-  const secao       = location.pathname.includes('catalogo') ? 'catalogo' : 'solicitacoes'
+  const path = location.pathname
+  const secao = path.includes('/epc/') ? 'catalogo-epc'
+              : path.includes('/epi/catalogo') ? 'catalogo-epi'
+              : 'solicitacoes'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="🦺 Controle de EPIs" subtitle="Solicitações e catálogo de equipamentos de proteção individual" />
+      <Header title="🦺 Controle de EPIs / EPCs" subtitle="Solicitações, catálogo individual e coletivo" />
       <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
-        {secao === 'solicitacoes'
-          ? <SecaoSolicitacoes workspaceId={workspaceId} />
-          : <SecaoCatalogo     workspaceId={workspaceId} />}
+        {secao === 'solicitacoes' && <SecaoSolicitacoes workspaceId={workspaceId} />}
+        {secao === 'catalogo-epi' && <SecaoCatalogoEPI  workspaceId={workspaceId} />}
+        {secao === 'catalogo-epc' && <SecaoCatalogoEPC  workspaceId={workspaceId} />}
       </div>
     </div>
   )
@@ -352,9 +355,9 @@ function SecaoSolicitacoes({ workspaceId }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SEÇÃO — CATÁLOGO DE EPIs
+// SEÇÃO — CATÁLOGO DE EPIs (Individual — por colaborador)
 // ═══════════════════════════════════════════════════════════════════════════════
-function SecaoCatalogo({ workspaceId }) {
+function SecaoCatalogoEPI({ workspaceId }) {
   const [epis,    setEpis]    = useState([])
   const [loading, setLoading] = useState(true)
   const [modal,   setModal]   = useState(null) // null | 'novo' | {id, nome, ca}
@@ -455,6 +458,147 @@ function SecaoCatalogo({ workspaceId }) {
             <div>
               <label style={lbl}>CA (Certificado de Aprovação)</label>
               <input className="input" value={ca} onChange={e => setCa(e.target.value)} placeholder="Ex: 12345" />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+            <button onClick={() => setModal(null)} className="btn-ghost" style={{ fontSize: 13, padding: '8px 16px' }}>Cancelar</button>
+            <button onClick={salvar} disabled={saving} className="btn-primary" style={{ fontSize: 13, padding: '8px 16px' }}>
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEÇÃO — CATÁLOGO DE EPCs (Coletivo — por módulo / frente de trabalho)
+// ═══════════════════════════════════════════════════════════════════════════════
+function SecaoCatalogoEPC({ workspaceId }) {
+  const [epcs,     setEpcs]    = useState([])
+  const [loading,  setLoading] = useState(true)
+  const [modal,    setModal]   = useState(null) // null | 'novo' | {id,...}
+  const [nome,     setNome]    = useState('')
+  const [ca,       setCa]      = useState('')
+  const [frente,   setFrente]  = useState('')
+  const [frentes,  setFrente2] = useState([])
+  const [saving,   setSaving]  = useState(false)
+
+  const carregar = useCallback(async () => {
+    if (!workspaceId) return
+    setLoading(true)
+    const { data } = await supabase.from('lider_epcs').select('id, nome, ca, frente_nome, ativo, created_at').eq('workspace_id', workspaceId).order('nome')
+    setEpcs(data ?? [])
+    setLoading(false)
+  }, [workspaceId])
+
+  useEffect(() => { carregar() }, [carregar])
+
+  useEffect(() => {
+    if (!workspaceId) return
+    supabase.from('lider_frentes').select('id, nome').eq('workspace_id', workspaceId).eq('ativo', true).order('nome')
+      .then(({ data }) => setFrente2(data ?? []))
+  }, [workspaceId])
+
+  function abrirNovo()      { setNome(''); setCa(''); setFrente(''); setModal('novo') }
+  function abrirEditar(e)   { setNome(e.nome); setCa(e.ca ?? ''); setFrente(e.frente_nome ?? ''); setModal(e) }
+
+  async function salvar() {
+    if (!nome.trim()) { toast.error('Nome obrigatório'); return }
+    setSaving(true)
+    const payload = { nome: nome.trim(), ca: ca.trim() || null, frente_nome: frente || null }
+    const { error } = modal === 'novo'
+      ? await supabase.from('lider_epcs').insert({ ...payload, workspace_id: workspaceId })
+      : await supabase.from('lider_epcs').update(payload).eq('id', modal.id)
+    setSaving(false)
+    if (error) { toast.error(error.message); return }
+    toast.success(modal === 'novo' ? 'EPC cadastrado' : 'EPC atualizado')
+    setModal(null); carregar()
+  }
+
+  async function toggleAtivo(epc) {
+    const { error } = await supabase.from('lider_epcs').update({ ativo: !epc.ativo }).eq('id', epc.id)
+    if (error) { toast.error(error.message); return }
+    toast.success(epc.ativo ? 'EPC desativado' : 'EPC reativado')
+    carregar()
+  }
+
+  const ativos = epcs.filter(e => e.ativo).length
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Catálogo de EPCs</span>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 8 }}>Equipamento de Proteção Coletiva · por módulo</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 10 }}>{ativos} ativo{ativos !== 1 ? 's' : ''}</span>
+        </div>
+        <button onClick={abrirNovo} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <PlusIcon style={{ width: 14, height: 14 }} /> Novo EPC
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+        </div>
+      ) : epcs.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>🏗️</div>
+          <p style={{ fontSize: 13 }}>Nenhum EPC cadastrado ainda</p>
+        </div>
+      ) : (
+        <>
+          {epcs.map(epc => (
+            <div key={epc.id} className="card" style={{ padding: '10px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, opacity: epc.ativo ? 1 : 0.55 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{epc.nome}</span>
+                {epc.ca
+                  ? <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 8 }}>CA {epc.ca}</span>
+                  : <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 8, fontStyle: 'italic' }}>Sem CA</span>}
+                {!epc.ativo && <span className="badge badge-danger" style={{ fontSize: 10, marginLeft: 6 }}>Inativo</span>}
+                {epc.frente_nome && (
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 10 }}>📍 {epc.frente_nome}</span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button onClick={() => abrirEditar(epc)} style={{ background: 'rgba(99,102,241,0.12)', border: 'none', color: '#818cf8', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}>
+                  <PencilIcon style={{ width: 13, height: 13 }} />
+                </button>
+                <button
+                  onClick={() => toggleAtivo(epc)}
+                  style={{ background: epc.ativo ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.12)', border: 'none', color: epc.ativo ? '#f87171' : '#34d399', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
+                >
+                  {epc.ativo ? 'Desativar' : 'Reativar'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      {modal && (
+        <Modal title={modal === 'novo' ? 'Novo EPC' : `Editar: ${modal.nome}`} onClose={() => setModal(null)} maxWidth={420}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={lbl}>Nome *</label>
+              <input className="input" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Sinalização de segurança" />
+            </div>
+            <div>
+              <label style={lbl}>CA (Certificado de Aprovação)</label>
+              <input className="input" value={ca} onChange={e => setCa(e.target.value)} placeholder="Ex: 12345" />
+            </div>
+            <div>
+              <label style={lbl}>Módulo / Frente de trabalho</label>
+              {frentes.length > 0 ? (
+                <select className="input" value={frente} onChange={e => setFrente(e.target.value)}>
+                  <option value="">— Sem módulo específico —</option>
+                  {frentes.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                </select>
+              ) : (
+                <input className="input" value={frente} onChange={e => setFrente(e.target.value)} placeholder="Ex: Frente 07" />
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
