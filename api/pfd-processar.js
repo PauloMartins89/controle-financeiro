@@ -227,9 +227,9 @@ async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
     model: geminiModel,
     generationConfig: {
       responseMimeType: 'application/json',
-      maxOutputTokens: 40960, // 40K: thinking (8K) + JSON de saída (32K)
+      maxOutputTokens: 65536, // máximo do Gemini 2.5-flash: thinking (até 16K) + JSON de saída (49K+)
       temperature: 0,
-      thinkingConfig: { thinkingBudget: 8192 }, // melhora extração de tabelas complexas
+      thinkingConfig: { thinkingBudget: 10000 }, // cap de thinking para garantir ~55K de output
     },
   })
   L(`Gemini model: ${geminiModel}`)
@@ -276,17 +276,36 @@ async function extrairComGemini(pdfBuffer, modelo, fabricante, L) {
     }
   }
 
-  L('Enviando PDF + prompt ao Gemini 1.5 Flash...')
+  L('Enviando PDF + prompt ao Gemini...')
   const result = await model.generateContent([pdfPart, { text: prompt }])
 
   // Loga uso de tokens para diagnóstico
   const usage = result.response.usageMetadata
-  if (usage) L(`Gemini tokens: entrada=${usage.promptTokenCount}, saída=${usage.candidatesTokenCount}, total=${usage.totalTokenCount}`)
+  if (usage) {
+    const thinkingTokens = usage.thoughtsTokenCount || 0
+    const outputTokens   = usage.candidatesTokenCount || 0
+    L(`Gemini tokens: entrada=${usage.promptTokenCount}, thinking=${thinkingTokens}, saída=${outputTokens}, total=${usage.totalTokenCount}`)
+    if (outputTokens >= 60000) L('⚠️ AVISO: saída próxima do limite máximo — possível truncamento')
+  }
 
   const text = result.response.text()
   L(`Gemini respondeu: ${text.length} chars`)
 
-  const parsed = JSON.parse(text)
+  // Verifica truncamento: JSON truncado começa com { mas não fecha
+  let parsed
+  try {
+    parsed = JSON.parse(text)
+  } catch (parseErr) {
+    L(`⚠️ JSON inválido (${parseErr.message}) — ${text.length} chars recebidos. Verificar limites de token.`)
+    // Tenta extrair o que veio antes do truncamento
+    const match = text.match(/"iv"\s*:\s*(\[[\s\S]*)/)
+    if (match) {
+      L('Tentando recuperação parcial do JSON...')
+      // Não conseguimos recuperar de forma confiável — joga o erro
+    }
+    throw new Error(`Resposta Gemini truncada (JSON inválido): ${parseErr.message}. Chars recebidos: ${text.length}. Tokens de saída: ${usage?.candidatesTokenCount || '?'}`)
+  }
+
   const expanded = expandGeminiCompact(parsed)
   L(`Gemini extraiu: ${expanded.intervalos.length} intervalos, ${expanded.intervalos.reduce((a, iv) => a + iv.tarefas.length, 0)} tarefas`)
   return expanded
