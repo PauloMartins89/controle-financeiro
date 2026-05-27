@@ -1,0 +1,135 @@
+import { useState, useEffect } from 'react'
+import Header from '../components/Header'
+import { supabase } from '../lib/supabase'
+import useStore from '../store/useStore'
+import { toast } from 'react-hot-toast'
+import { Badge, StatusChip, KpiCard, Toolbar, DataTable, TR, Modal, Field, Sel, inp } from './LiderCadastroShared'
+
+export default function LiderCadastroEquipes() {
+  const { workspaceId } = useStore()
+  const [records,   setRecords]   = useState([])
+  const [frentes,   setFrentes]   = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [saving,    setSaving]    = useState(false)
+  const [busca,     setBusca]     = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [editId,    setEditId]    = useState(null)
+  const [form,      setForm]      = useState({ nome: '', codigo: '', frente_id: '', lider_nome: '', lider_email: '', ativo: true })
+
+  useEffect(() => { if (workspaceId) load() }, [workspaceId]) // eslint-disable-line
+
+  async function load() {
+    setLoading(true)
+    const [r1, r2] = await Promise.all([
+      supabase.from('lider_equipes').select('*, lider_frentes(nome)').eq('workspace_id', workspaceId).order('nome'),
+      supabase.from('lider_frentes').select('id, nome').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
+    ])
+    setRecords(r1.data || [])
+    setFrentes(r2.data || [])
+    setLoading(false)
+  }
+
+  function openNew() {
+    setEditId(null)
+    setForm({ nome: '', codigo: '', frente_id: frentes[0]?.id ?? '', lider_nome: '', lider_email: '', ativo: true })
+    setShowModal(true)
+  }
+
+  function openEdit(r) {
+    setEditId(r.id)
+    setForm({ nome: r.nome, codigo: r.codigo ?? '', frente_id: r.frente_id ?? '', lider_nome: r.lider_nome ?? '', lider_email: r.lider_email ?? '', ativo: r.ativo })
+    setShowModal(true)
+  }
+
+  async function save() {
+    if (!form.nome.trim()) { toast.error('Nome obrigatório'); return }
+    setSaving(true)
+    const payload = { ...form, workspace_id: workspaceId, frente_id: form.frente_id || null }
+    const { error } = editId
+      ? await supabase.from('lider_equipes').update(payload).eq('id', editId)
+      : await supabase.from('lider_equipes').insert(payload)
+    setSaving(false)
+    if (error) { toast.error(error.message); return }
+    toast.success(editId ? 'Atualizado!' : 'Equipe cadastrada!')
+    setShowModal(false); load()
+  }
+
+  async function toggleAtivo(id, atual) {
+    const { error } = await supabase.from('lider_equipes').update({ ativo: !atual }).eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success(!atual ? 'Ativado' : 'Inativado'); load() }
+  }
+
+  async function excluir(id, nome) {
+    if (!window.confirm(`Excluir equipe "${nome}"? Esta ação não pode ser desfeita.`)) return
+    const { error } = await supabase.from('lider_equipes').delete().eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success('Excluído'); load() }
+  }
+
+  const filtrados  = records.filter(r => r.nome?.toLowerCase().includes(busca.toLowerCase()))
+  const ativos     = records.filter(r => r.ativo).length
+  const comLider   = records.filter(r => r.lider_nome).length
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <Header title="Equipes" subtitle="Cadastro de equipes de campo vinculadas às frentes operacionais" />
+
+      <div style={{ padding: '24px 32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <KpiCard label="Total de Equipes"  value={records.length}                     icon="👥" color="#3b82f6" />
+          <KpiCard label="Equipes Ativas"    value={ativos}                             icon="✅" color="#10b981" />
+          <KpiCard label="Com Líder"         value={comLider}                           icon="👤" color="#8b5cf6" />
+          <KpiCard label="Inativas"          value={records.filter(r => !r.ativo).length} icon="⏸" color="#6b7280" />
+        </div>
+
+        <Toolbar busca={busca} setBusca={setBusca} onRefresh={load} onNovo={openNew} placeholder="Buscar equipes…" />
+
+        <DataTable cols={['Equipe', 'Código', 'Frente', 'Líder', 'Status']} loading={loading} isEmpty={filtrados.length === 0}>
+          {filtrados.map(r => (
+            <TR key={r.id} ativo={r.ativo}
+              onEdit={() => openEdit(r)}
+              onToggle={() => toggleAtivo(r.id, r.ativo)}
+              onDel={() => excluir(r.id, r.nome)}
+              cells={[
+                <strong key="n">{r.nome}</strong>,
+                r.codigo ? <Badge text={r.codigo} /> : '—',
+                r.lider_frentes ? <Badge text={r.lider_frentes.nome} /> : '—',
+                r.lider_nome || '—',
+                <StatusChip key="s" ativo={r.ativo} />,
+              ]}
+            />
+          ))}
+        </DataTable>
+      </div>
+
+      {showModal && (
+        <Modal title={editId ? 'Editar Equipe' : 'Nova Equipe'} onClose={() => setShowModal(false)} onSave={save} saving={saving}>
+          <Field label="Nome *">
+            <input style={inp} value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Equipe 005" />
+          </Field>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Código">
+              <input style={inp} value={form.codigo} onChange={e => setForm(p => ({ ...p, codigo: e.target.value }))} placeholder="Ex: EQ-005" />
+            </Field>
+            <Field label="Frente">
+              <Sel value={form.frente_id} onChange={v => setForm(p => ({ ...p, frente_id: v }))}
+                options={[{ value: '', label: '— Sem frente —' }, ...frentes.map(f => ({ value: f.id, label: f.nome }))]} />
+            </Field>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Field label="Nome do Líder">
+              <input style={inp} value={form.lider_nome} onChange={e => setForm(p => ({ ...p, lider_nome: e.target.value }))} placeholder="Nome completo" />
+            </Field>
+            <Field label="E-mail do Líder">
+              <input style={inp} type="email" value={form.lider_email} onChange={e => setForm(p => ({ ...p, lider_email: e.target.value }))} placeholder="email@empresa.com" />
+            </Field>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            <input type="checkbox" checked={form.ativo} onChange={e => setForm(p => ({ ...p, ativo: e.target.checked }))} /> Ativo
+          </label>
+        </Modal>
+      )}
+    </div>
+  )
+}
