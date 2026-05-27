@@ -74,9 +74,11 @@ export default async function handler(req, res) {
     }
 
     const caption = `Lote *"${cliente || 'Lote'}"* — aprovação:\n${link}`
-    const fileName = pdfNome || `lote-${(cliente || 'lote').replace(/[^a-z0-9]/gi, '_')}.pdf`
+    // fileName SEM extensão — Z-API adiciona .pdf automaticamente no endpoint /send-document/pdf
+    const fileName = (pdfNome || `lote-${(cliente || 'lote').replace(/[^a-z0-9]/gi, '_')}.pdf`)
+      .replace(/\.pdf$/i, '')
 
-    const docRes = await fetch(`${zapiBase()}/send-document/document`, {
+    const docRes = await fetch(`${zapiBase()}/send-document/pdf`, {
       method: 'POST',
       headers: zapiHeaders(),
       body: JSON.stringify({ phone, document: documentUrl, fileName, caption }),
