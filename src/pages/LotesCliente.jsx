@@ -65,7 +65,7 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
     // Carrega rascunhos
     supabase
       .from('lancamentos')
-      .select('id, data, descricao, valor, dados_extras, status, lote_cliente_id')
+      .select('id, data, descricao, valor, dados_extras, status, lote_cliente_id, cliente')
       .eq('status', 'rascunho')
       .is('lote_cliente_id', null)
       .order('data', { ascending: false })
@@ -135,18 +135,13 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
     const nomeUsar = clienteNome.trim() || clienteSearch.trim()
     if (!nomeUsar) { toast.error('Informe o cliente.'); return }
     if (selected.size === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
-    // Verifica se há lançamentos com clientes divergentes do lote
+    // Verifica se há lançamentos com clientes diferentes entre si
     const selecionados = rascunhos.filter(r => selected.has(r.id))
-    const nomesClientes = [...new Set(
-      selecionados.map(r => (r.dados_extras?.cliente || r.dados_extras?.empresa || '').trim().toLowerCase()).filter(Boolean)
+    const nomesUnicos = [...new Set(
+      selecionados.map(r => (r.cliente || '').trim().toLowerCase()).filter(Boolean)
     )]
-    const nomeLoteLower = nomeUsar.trim().toLowerCase()
-    const divergentes = selecionados.filter(r => {
-      const c = (r.dados_extras?.cliente || r.dados_extras?.empresa || '').trim().toLowerCase()
-      return c && c !== nomeLoteLower
-    })
-    if (divergentes.length > 0) {
-      const nomesDiv = [...new Set(divergentes.map(r => r.dados_extras?.cliente || r.dados_extras?.empresa || ''))]
+    if (nomesUnicos.length > 1) {
+      const nomesDiv = [...new Set(selecionados.map(r => r.cliente || '').filter(Boolean))]
       setClientesDivergentes(nomesDiv)
       setConfirmDivModal(true)
       return
