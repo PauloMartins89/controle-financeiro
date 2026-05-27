@@ -329,6 +329,10 @@ export default async function handler(req, res) {
           const { data: cond } = await getDb().from('cadastros_condutores')
             .select('workspace_id').eq('telefone', v).eq('ativo_whatsapp', true).eq('ativo', true).maybeSingle()
           if (cond?.workspace_id) { _condutorEncontrado = true; break }
+          // Fallback: whatsapp_config (fonte legada)
+          const { data: wcFallback } = await getDb().from('whatsapp_config')
+            .select('workspace_id').eq('phone_number', v).eq('ativo', true).maybeSingle()
+          if (wcFallback?.workspace_id) { _condutorEncontrado = true; break }
         }
         console.log('[WA] condutor encontrado:', _condutorEncontrado)
         if (_condutorEncontrado) {
