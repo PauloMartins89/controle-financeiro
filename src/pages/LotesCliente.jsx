@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
 import { formatCurrency, formatDate } from '../lib/utils'
+import { buildLotePDFDoc } from '../lib/exportPDF'
 import {
   CheckCircleIcon, XCircleIcon, ClockIcon, PaperAirplaneIcon,
   ChevronDownIcon, ChevronUpIcon, PhotoIcon, DocumentTextIcon,
@@ -551,7 +550,7 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
       // Lançamentos do lote (para gerar PDF/CSV)
       const { data: lancs } = await supabase
         .from('lancamentos')
-        .select('id, data, descricao, valor, status')
+        .select('id, data, descricao, valor, status, categoria')
         .eq('lote_cliente_id', lote.id)
         .order('data')
       setLancamentos(lancs || [])
@@ -627,65 +626,9 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
     onSent()
   }
 
-  // ── Gera doc jsPDF do lote ────────────────────────────────────────────────
+  // ── Gera doc jsPDF do lote (reutiliza modelo de exportPDF.js) ──────────────
   function buildPDFDoc() {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const total = lancamentos.reduce((s, l) => s + (parseFloat(l.valor) || 0), 0)
-    // Header
-    doc.setFillColor(79, 70, 229)
-    doc.rect(0, 0, 210, 28, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(18)
-    doc.setFont('helvetica', 'bold')
-    doc.text('SmartPro', 14, 12)
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.text(`Lote de Aprovação — ${lote.cliente}`, 14, 21)
-    doc.setTextColor(0, 0, 0)
-    // Resumo
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'bold')
-    doc.text('Resumo', 14, 36)
-    autoTable(doc, {
-      startY: 39,
-      head: [],
-      body: [
-        ['Cliente', lote.cliente],
-        ['Lote', lote.nome || '—'],
-        ['Total de itens', String(lancamentos.length)],
-        ['Valor total', formatCurrency(total)],
-        ['Gerado em', new Date().toLocaleDateString('pt-BR')],
-      ],
-      styles: { fontSize: 10, cellPadding: 3 },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
-      theme: 'plain',
-      margin: { left: 14 },
-    })
-    // Tabela
-    const startY = doc.lastAutoTable.finalY + 8
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.text('Lançamentos', 14, startY)
-    autoTable(doc, {
-      startY: startY + 3,
-      head: [['Data', 'Descrição', 'Valor', 'Status']],
-      body: lancamentos.map(l => [formatDate(l.data), l.descricao || '—', formatCurrency(l.valor), l.status || '—']),
-      styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [245, 245, 250] },
-      columnStyles: { 2: { halign: 'right' } },
-      margin: { left: 14 },
-    })
-    // Rodapé
-    const pages = doc.internal.getNumberOfPages()
-    for (let i = 1; i <= pages; i++) {
-      doc.setPage(i)
-      doc.setFontSize(8)
-      doc.setTextColor(150)
-      if (link) doc.text(`Aprovação: ${link}`, 14, 287)
-      doc.text(`Página ${i}/${pages}`, 196, 287, { align: 'right' })
-    }
-    return doc
+    return buildLotePDFDoc({ lancamentos, lote, link })
   }
 
   function gerarCSV() {

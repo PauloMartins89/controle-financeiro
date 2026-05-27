@@ -126,6 +126,120 @@ export function exportarBalancoPDF({ expenses, people, groups, mes }) {
   doc.save(`balanco-${mesStr}.pdf`)
 }
 
+// ─── Lote de Aprovação ao Cliente ─────────────────────────────────────────────
+// Retorna o doc jsPDF (sem salvar) — use .save() para download ou
+// .output('datauristring').split(',')[1] para base64 (WA/email).
+export function buildLotePDFDoc({ lancamentos = [], lote, link }) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const now = new Date()
+  const total = lancamentos.reduce((s, l) => s + (parseFloat(l.valor) || 0), 0)
+
+  // ── Cabeçalho ─────────────────────────────────────────────────────────────
+  doc.setFillColor(99, 102, 241)
+  doc.rect(0, 0, 210, 28, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFontSize(18)
+  doc.setFont('helvetica', 'bold')
+  doc.text('SmartPro', 14, 12)
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'normal')
+  doc.text(`Lote de Aprovação — ${lote.cliente}`, 14, 21)
+  doc.setTextColor(0, 0, 0)
+
+  // ── Resumo ─────────────────────────────────────────────────────────────────
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Resumo', 14, 36)
+  doc.setFont('helvetica', 'normal')
+
+  autoTable(doc, {
+    startY: 39,
+    head: [],
+    body: [
+      ['Cliente', lote.cliente],
+      ['Lote', lote.nome || '—'],
+      ['Total de itens', String(lancamentos.length)],
+      ['Valor total', formatCurrency(total)],
+      ['Gerado em', now.toLocaleDateString('pt-BR')],
+    ],
+    styles: { fontSize: 10, cellPadding: 3 },
+    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+    theme: 'plain',
+    margin: { left: 14 },
+  })
+
+  // ── Por Categoria ──────────────────────────────────────────────────────────
+  const porCat = {}
+  lancamentos.forEach(l => {
+    const cat = l.categoria || 'Outros'
+    porCat[cat] = (porCat[cat] || 0) + (parseFloat(l.valor) || 0)
+  })
+  const catRows = Object.entries(porCat).sort((a, b) => b[1] - a[1]).map(([cat, val]) => [cat, formatCurrency(val)])
+
+  if (catRows.length > 0) {
+    const afterResumo = doc.lastAutoTable.finalY + 8
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('Por Categoria', 14, afterResumo)
+
+    autoTable(doc, {
+      startY: afterResumo + 3,
+      head: [['Categoria', 'Total']],
+      body: catRows,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 250] },
+      margin: { left: 14 },
+      tableWidth: 90,
+    })
+  }
+
+  // ── Detalhamento ───────────────────────────────────────────────────────────
+  const rows = lancamentos
+    .sort((a, b) => (a.data || '').localeCompare(b.data || ''))
+    .map(l => [
+      formatDate(l.data),
+      l.descricao || '—',
+      l.categoria || 'Outros',
+      formatCurrency(l.valor),
+      l.status || '—',
+    ])
+
+  const afterCat = doc.lastAutoTable.finalY + 8
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.text('Detalhamento', 14, afterCat)
+
+  autoTable(doc, {
+    startY: afterCat + 3,
+    head: [['Data', 'Descrição', 'Categoria', 'Valor', 'Status']],
+    body: rows,
+    styles: { fontSize: 8, cellPadding: 2.5, overflow: 'linebreak' },
+    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245, 245, 250] },
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 68 },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 28, halign: 'right' },
+      4: { cellWidth: 25 },
+    },
+    margin: { left: 14 },
+  })
+
+  // ── Rodapé ─────────────────────────────────────────────────────────────────
+  const pageCount = doc.getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    doc.setFontSize(8)
+    doc.setTextColor(150)
+    if (link) doc.text(`Aprovação: ${link}`, 14, 290)
+    doc.text(`SmartPro · Gerado em ${now.toLocaleDateString('pt-BR')} · Página ${i}/${pageCount}`, 196, 290, { align: 'right' })
+  }
+
+  return doc
+}
+
 // ─── Exportar Requisição de Compra (estilo documento oficial) ─────────────────
 export async function exportarRequisicaoPDF({ solicitacao, itens = [] }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
