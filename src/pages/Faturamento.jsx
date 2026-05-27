@@ -731,6 +731,7 @@ export default function Faturamento() {
   const [viewMode, setViewMode]             = useState('por_item') // 'por_item' | 'por_lote'
   const [aprovandoLote, setAprovandoLote]   = useState(null) // lote_id sendo aprovado
   const [gerarLotesModal, setGerarLotesModal] = useState(false)
+  const [downloadingPDFMap, setDownloadingPDFMap] = useState({})
 
   useEffect(() => {
     supabase?.auth.getUser().then(({ data }) => setUserId(data?.user?.id || null))
@@ -879,6 +880,31 @@ export default function Faturamento() {
       toast.error('Erro: ' + e.message)
     } finally {
       setAprovandoLote(null)
+    }
+  }
+
+  async function handleDownloadLotePDF(lote, itens) {
+    setDownloadingPDFMap(prev => ({ ...prev, [lote.id]: true }))
+    try {
+      let assinaturaBase64 = null
+      if (lote.assinatura_url) {
+        try {
+          const r = await fetch(lote.assinatura_url)
+          const blob = await r.blob()
+          assinaturaBase64 = await new Promise(res => { const fr = new FileReader(); fr.onloadend = () => res(fr.result); fr.readAsDataURL(blob) })
+        } catch (_) {}
+      }
+      const link = lote.token_acesso ? `${window.location.origin}/lote/${lote.token_acesso}` : null
+      const doc = buildLotePDFDoc({ lancamentos: itens, lote, link, assinaturaBase64, aprovadoEm: lote.aprovado_em || null, aprovadorNome: lote.confirmado_por || null })
+      const url = URL.createObjectURL(doc.output('blob'))
+      const a = document.createElement('a')
+      a.href = url; a.download = `lote-${(lote.cliente || 'lote').replace(/[^a-z0-9]/gi, '_')}-assinado.pdf`; a.target = '_blank'
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
+    } catch (e) {
+      toast.error('Erro ao gerar PDF')
+    } finally {
+      setDownloadingPDFMap(prev => ({ ...prev, [lote.id]: false }))
     }
   }
 
@@ -1035,35 +1061,13 @@ export default function Faturamento() {
                             Faturar ({aprovados.length}) · {fmtCurrency(totalAprov)}
                           </button>
                         )}
-                        {lote.status === 'aprovado_cliente' && (() => {
-                          const [dlPDF, setDlPDF] = useState(false)
-                          async function downloadPDF() {
-                            setDlPDF(true)
-                            try {
-                              let assinaturaBase64 = null
-                              if (lote.assinatura_url) {
-                                try {
-                                  const r = await fetch(lote.assinatura_url)
-                                  const blob = await r.blob()
-                                  assinaturaBase64 = await new Promise(res => { const fr = new FileReader(); fr.onloadend = () => res(fr.result); fr.readAsDataURL(blob) })
-                                } catch (_) {}
-                              }
-                              const link = lote.token_acesso ? `${window.location.origin}/lote/${lote.token_acesso}` : null
-                              const doc = buildLotePDFDoc({ lancamentos: itens, lote, link, assinaturaBase64, aprovadoEm: lote.aprovado_em || null, aprovadorNome: lote.confirmado_por || null })
-                              const url = URL.createObjectURL(doc.output('blob'))
-                              const a = document.createElement('a'); a.href = url; a.download = `lote-${lote.cliente.replace(/[^a-z0-9]/gi,'_')}-assinado.pdf`; a.target = '_blank'
-                              document.body.appendChild(a); a.click(); document.body.removeChild(a)
-                              setTimeout(() => URL.revokeObjectURL(url), 10000)
-                            } catch(e) { toast.error('Erro ao gerar PDF') } finally { setDlPDF(false) }
-                          }
-                          return (
-                            <button onClick={downloadPDF} disabled={dlPDF} title="Baixar PDF assinado"
-                              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#818cf8', cursor: dlPDF ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, opacity: dlPDF ? 0.6 : 1 }}>
-                              <ArrowDownTrayIcon style={{ width: 15, height: 15 }} />
-                              {dlPDF ? '...' : 'PDF'}
-                            </button>
-                          )
-                        })()}
+                        {lote.status === 'aprovado_cliente' && (
+                          <button onClick={() => handleDownloadLotePDF(lote, itens)} disabled={!!downloadingPDFMap[lote.id]} title="Baixar PDF assinado"
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#818cf8', cursor: downloadingPDFMap[lote.id] ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, opacity: downloadingPDFMap[lote.id] ? 0.6 : 1 }}>
+                            <ArrowDownTrayIcon style={{ width: 15, height: 15 }} />
+                            {downloadingPDFMap[lote.id] ? '...' : 'PDF'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
