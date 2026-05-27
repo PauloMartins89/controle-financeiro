@@ -321,13 +321,16 @@ export default async function handler(req, res) {
         const _norm = from.replace(/\D/g, '')
         const _sem55 = _norm.replace(/^55/, '')
         const _com9 = _sem55.length === 10 ? _sem55.slice(0, 2) + '9' + _sem55.slice(2) : _sem55
-        const _variantsEarly = [...new Set([_norm, _sem55, '55' + _sem55, _com9, '55' + _com9])]
+        const _sem9  = _sem55.length === 11 && _sem55[2] === '9' ? _sem55.slice(0, 2) + _sem55.slice(3) : _sem55
+        const _variantsEarly = [...new Set([_norm, _sem55, '55' + _sem55, _com9, '55' + _com9, _sem9, '55' + _sem9])]
         let _condutorEncontrado = false
+        console.log('[WA] condutor fallback variants:', _variantsEarly)
         for (const v of _variantsEarly) {
           const { data: cond } = await getDb().from('cadastros_condutores')
             .select('workspace_id').eq('telefone', v).eq('ativo_whatsapp', true).eq('ativo', true).maybeSingle()
           if (cond?.workspace_id) { _condutorEncontrado = true; break }
         }
+        console.log('[WA] condutor encontrado:', _condutorEncontrado)
         if (_condutorEncontrado) {
           try {
             const ocrForcado = await runOCR(base64, { forceTransporte: true })
