@@ -650,7 +650,16 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
   }
 
   function handleDownloadPDF() {
-    buildPDFDoc().save(`lote-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}.pdf`)
+    const blob = buildPDFDoc().output('blob')
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `lote-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}.pdf`
+    a.target = '_blank'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
   }
 
   async function handleEmailComAnexo() {
