@@ -65,7 +65,7 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
     // Carrega rascunhos
     supabase
       .from('lancamentos')
-      .select('id, data, descricao, valor, dados_extras, status, lote_cliente_id, cliente')
+      .select('id, data, descricao, valor, dados_extras, status, lote_cliente_id')
       .eq('status', 'rascunho')
       .is('lote_cliente_id', null)
       .order('data', { ascending: false })
@@ -135,13 +135,14 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
     const nomeUsar = clienteNome.trim() || clienteSearch.trim()
     if (!nomeUsar) { toast.error('Informe o cliente.'); return }
     if (selected.size === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
-    // Verifica se há lançamentos com clientes diferentes entre si
+    // Verifica se há lançamentos com clientes diferentes entre si (mesma lógica da coluna CLIENTE/DESCRIÇÃO)
     const selecionados = rascunhos.filter(r => selected.has(r.id))
-    const nomesUnicos = [...new Set(
-      selecionados.map(r => (r.cliente || '').trim().toLowerCase()).filter(Boolean)
-    )]
+    const getNomeCliente = r => (r.dados_extras?.cliente || r.dados_extras?.empresa || r.descricao || '').trim().toLowerCase()
+    const nomesUnicos = [...new Set(selecionados.map(getNomeCliente).filter(Boolean))]
     if (nomesUnicos.length > 1) {
-      const nomesDiv = [...new Set(selecionados.map(r => r.cliente || '').filter(Boolean))]
+      const nomesDiv = [...new Set(
+        selecionados.map(r => r.dados_extras?.cliente || r.dados_extras?.empresa || r.descricao || '').filter(Boolean)
+      )]
       setClientesDivergentes(nomesDiv)
       setConfirmDivModal(true)
       return
