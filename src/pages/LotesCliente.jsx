@@ -9,7 +9,7 @@ import {
   CheckCircleIcon, XCircleIcon, ClockIcon, PaperAirplaneIcon,
   ChevronDownIcon, ChevronUpIcon, PhotoIcon, DocumentTextIcon,
   ArrowPathIcon, PlusIcon, XMarkIcon, UserGroupIcon,
-  ArrowUpTrayIcon, BanknotesIcon, LinkIcon,
+  ArrowUpTrayIcon, BanknotesIcon, LinkIcon, ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Status ────────────────────────────────────────────────────────────────────
@@ -853,6 +853,55 @@ function LoteCard({ lote, onRefresh }) {
   const [enviarModal, setEnviarModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [sigModal, setSigModal] = useState(false)
+  const [downloadingPDF, setDownloadingPDF] = useState(false)
+
+  async function handleDownloadPDFAssinado(e) {
+    e.stopPropagation()
+    setDownloadingPDF(true)
+    try {
+      let lancs = lancamentos
+      if (lancs.length === 0) {
+        const { data } = await supabase
+          .from('lancamentos')
+          .select('id, data, descricao, valor, status, dados_extras, observacoes')
+          .eq('lote_cliente_id', lote.id)
+          .order('data')
+        lancs = data || []
+        setLancamentos(lancs)
+      }
+      let assinaturaBase64 = null
+      if (lote.assinatura_url) {
+        try {
+          const r = await fetch(lote.assinatura_url)
+          const blob = await r.blob()
+          assinaturaBase64 = await new Promise(resolve => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result)
+            reader.readAsDataURL(blob)
+          })
+        } catch (_) {}
+      }
+      const link = lote.token_acesso ? `${window.location.origin}/lote/${lote.token_acesso}` : null
+      const doc = buildLotePDFDoc({
+        lancamentos: lancs, lote, link,
+        assinaturaBase64,
+        aprovadoEm: lote.aprovado_em || null,
+        aprovadorNome: lote.confirmado_por || lote.aprovador_nome || null,
+      })
+      const blob = doc.output('blob')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `lote-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}${lote.assinatura_url ? '-assinado' : ''}.pdf`
+      a.target = '_blank'
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
+    } catch (err) {
+      toast.error('Erro ao gerar PDF: ' + err.message)
+    } finally {
+      setDownloadingPDF(false)
+    }
+  }
 
   async function loadLancamentos() {
     if (lancamentos.length > 0) { setExpanded(e => !e); return }
@@ -926,6 +975,24 @@ function LoteCard({ lote, onRefresh }) {
               <button title="Ver comprovante" onClick={() => window.open(lote.comprovante_url, '_blank')}
                 style={{ padding: '6px 10px', borderRadius: 7, background: 'rgba(99,102,241,0.1)', border: 'none', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700 }}>
                 <PhotoIcon style={{ width: 14, height: 14 }} /> Comprovante
+              </button>
+            )}
+            {lote.status === 'aprovado_cliente' && (
+              <button
+                onClick={handleDownloadPDFAssinado}
+                disabled={downloadingPDF}
+                title={lote.assinatura_url ? 'Baixar PDF com assinatura digital' : 'Baixar PDF do lote'}
+                style={{
+                  padding: '6px 12px', borderRadius: 7,
+                  background: lote.assinatura_url ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.08)',
+                  border: `1px solid ${lote.assinatura_url ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.2)'}`,
+                  cursor: downloadingPDF ? 'not-allowed' : 'pointer',
+                  color: '#818cf8', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700,
+                  opacity: downloadingPDF ? 0.6 : 1,
+                }}
+              >
+                <ArrowDownTrayIcon style={{ width: 14, height: 14 }} />
+                {downloadingPDF ? '...' : lote.assinatura_url ? 'PDF Assinado' : 'PDF'}
               </button>
             )}
             {lote.status === 'rascunho' && (
