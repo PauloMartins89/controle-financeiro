@@ -27,7 +27,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { token, acao, obs, confirmadoPor } = req.body || {}
+  const { token, acao, obs, confirmadoPor, assinatura } = req.body || {}
 
   if (!token || !acao) {
     return res.status(400).json({ error: 'token e acao são obrigatórios' })
@@ -53,9 +53,30 @@ export default async function handler(req, res) {
   }
 
   if (acao === 'aprovar') {
+    // Upload da assinatura PNG para Supabase Storage
+    let assinaturaUrl = null
+    if (assinatura) {
+      try {
+        const buf = Buffer.from(assinatura, 'base64')
+        const key = `assinaturas/${lote.id}.png`
+        const { data: uploaded } = await db.storage
+          .from('comprovantes')
+          .upload(key, buf, { contentType: 'image/png', upsert: true })
+        if (uploaded) {
+          const { data: urlData } = db.storage.from('comprovantes').getPublicUrl(key)
+          assinaturaUrl = urlData?.publicUrl || null
+        }
+      } catch (_) {}
+    }
+
     const { error: e1 } = await db
       .from('lotes_cliente')
-      .update({ status: 'aprovado_cliente', confirmado_por: confirmadoPor || null, updated_at: new Date().toISOString() })
+      .update({
+        status: 'aprovado_cliente',
+        confirmado_por: confirmadoPor || null,
+        assinatura_url: assinaturaUrl,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', lote.id)
     if (e1) return res.status(500).json({ error: e1.message })
 

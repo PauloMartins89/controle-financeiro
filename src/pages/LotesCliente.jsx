@@ -57,8 +57,8 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
 
   useEffect(() => {
     if (!supabase) return
-    // Carrega clientes cadastrados
-    supabase.from('cadastros_clientes').select('id, nome').eq('workspace_id', workspaceId).order('nome')
+    // Carrega clientes cadastrados (inclui aprovador N1 para salvar no lote)
+    supabase.from('cadastros_clientes').select('id, nome, aprovador_n1_nome').eq('workspace_id', workspaceId).order('nome')
       .then(({ data }) => setClientes(data || []))
     // Carrega rascunhos
     supabase
@@ -95,12 +95,15 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
     if (selected.size === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
     setSaving(true)
     try {
+      // Busca aprovador N1 do cliente selecionado
+      const clienteSelecionado = clientes.find(c => c.id === clienteId || c.nome === nomeUsar)
       const payload = {
         workspace_id: workspaceId,
         cliente: nomeUsar,
         observacoes: obs.trim() || null,
         created_by: userId,
         status: 'rascunho',
+        aprovador_nome: clienteSelecionado?.aprovador_n1_nome || null,
       }
       if (clienteId) payload.cliente_id = clienteId
 
