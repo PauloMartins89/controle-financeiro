@@ -2526,6 +2526,23 @@ export default function Lancamentos() {
                 <button onClick={() => setCriarLoteModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><XMarkIcon style={{ width: 20, height: 20 }} /></button>
               </div>
               <div style={{ padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Aviso inline: clientes distintos nos lançamentos selecionados */}
+                {(() => {
+                  const getNome = l => l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao || ''
+                  const nomesDistintos = [...new Set(selecionados.map(getNome).filter(Boolean))]
+                  if (nomesDistintos.length <= 1) return null
+                  return (
+                    <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', marginBottom: 4 }}>Clientes diferentes nos lançamentos selecionados</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          {nomesDistintos.join(' · ')}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
                 <div>
                   <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700 }}>CLIENTE *</label>
                   <input value={criarLoteCliente} onChange={e => setCriarLoteCliente(e.target.value)} placeholder="Nome do cliente" autoFocus
