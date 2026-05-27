@@ -272,17 +272,17 @@ export function buildLotePDFDoc({ lancamentos = [], lote, link, assinaturaBase64
       // Imagem da assinatura acima da linha
       try {
         const imgData = assinaturaBase64.startsWith('data:') ? assinaturaBase64 : `data:image/png;base64,${assinaturaBase64}`
-        doc.addImage(imgData, 'PNG', PW - 202, baseY + 2, 170, 34)
+        doc.addImage(imgData, 'PNG', PW - 202, baseY - 2, 170, 42)
       } catch (_) {}
-      doc.line(PW - 28, baseY + 40, PW - 202, baseY + 40)
+      doc.line(PW - 28, baseY + 43, PW - 202, baseY + 43)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...CINZA_TEXTO)
-      doc.text(aprovadorNome || 'De acordo — Cliente', PW - 28, baseY + 50, { align: 'right' })
+      doc.text(aprovadorNome || 'De acordo — Cliente', PW - 28, baseY + 53, { align: 'right' })
       // Carimbo digital
       const fmtAprovado = aprovadoEm
         ? new Date(aprovadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         : ''
       doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(80, 130, 100)
-      doc.text(`Assinado digitalmente em ${fmtAprovado}`, PW - 28, baseY + 60, { align: 'right' })
+      doc.text(`Assinado digitalmente em ${fmtAprovado}`, PW - 28, baseY + 62, { align: 'right' })
     } else {
       doc.line(PW - 28, baseY + 40, PW - 210, baseY + 40)
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...CINZA_TEXTO)

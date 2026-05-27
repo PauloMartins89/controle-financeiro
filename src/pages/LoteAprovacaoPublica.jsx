@@ -132,10 +132,17 @@ export default function LoteAprovacaoPublica() {
     if (!drawing.current) return
     const pos = getPos(e)
     const ctx = canvasRef.current.getContext('2d')
-    ctx.lineWidth = 2.8
-    ctx.strokeStyle = '#1a2e4a'
+    // Pressão simulada: movimento rápido = traço fino, lento = traço grosso
+    const dx = pos.x - lastPos.current.x
+    const dy = pos.y - lastPos.current.y
+    const speed = Math.sqrt(dx * dx + dy * dy)
+    const width = Math.max(1.2, Math.min(5.5, 5.5 - speed * 0.07))
+    ctx.lineWidth = width
+    ctx.strokeStyle = '#0d1117'
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
+    ctx.shadowColor = 'rgba(0,0,0,0.25)'
+    ctx.shadowBlur = 1
     ctx.lineTo(pos.x, pos.y)
     ctx.stroke()
     ctx.beginPath()
