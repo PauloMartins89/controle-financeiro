@@ -1592,6 +1592,8 @@ export default function Lancamentos() {
   const [criarLoteModal, setCriarLoteModal] = useState(false)
   const [criarLoteCliente, setCriarLoteCliente] = useState('')
   const [criarLoteSaving, setCriarLoteSaving] = useState(false)
+  const [criarLoteDivModal, setCriarLoteDivModal] = useState(false)
+  const [criarLoteDivNomes, setCriarLoteDivNomes] = useState([])
   const [loteConflito, setLoteConflito] = useState(null) // itens com lote já atribuído
   const [colFilters, setColFilters] = useState({ data: '', numDm: '', cliente: '', placa: '', origem: '', destino: '', status: '' })
   const [activeColFilter, setActiveColFilter] = useState(null)
@@ -2482,9 +2484,20 @@ export default function Lancamentos() {
         const fmtCurr = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
         const total = selecionados.reduce((s, l) => s + (l.valor || 0), 0)
 
-        async function confirmarLote() {
+        async function confirmarLote(forcar = false) {
           if (!criarLoteCliente.trim()) { toast.error('Informe o nome do cliente.'); return }
           if (selecionados.length === 0) { toast.error('Nenhum lançamento selecionado.'); return }
+          // Verifica divergência de clientes entre os lançamentos
+          if (!forcar) {
+            const getNome = l => (l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao || '').trim().toLowerCase()
+            const nomesUnicos = [...new Set(selecionados.map(getNome).filter(Boolean))]
+            if (nomesUnicos.length > 1) {
+              const nomesDiv = [...new Set(selecionados.map(l => l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao || '').filter(Boolean))]
+              setCriarLoteDivNomes(nomesDiv)
+              setCriarLoteDivModal(true)
+              return
+            }
+          }
           setCriarLoteSaving(true)
           try {
             const { data: lote, error: errL } = await supabase
@@ -2527,6 +2540,67 @@ export default function Lancamentos() {
                 <button onClick={() => setCriarLoteModal(false)} style={{ padding: '9px 18px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14 }}>Cancelar</button>
                 <button onClick={confirmarLote} disabled={criarLoteSaving || !criarLoteCliente.trim()} style={{ padding: '9px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#6366f1,#818cf8)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, opacity: (criarLoteSaving || !criarLoteCliente.trim()) ? 0.6 : 1 }}>
                   {criarLoteSaving ? 'Criando...' : 'Criar Lote'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Clientes divergentes (Lançamentos) */}
+      {criarLoteDivModal && (() => {
+        const selecionados = filtered.filter(l => selectedIds.has(l.id))
+        async function executarForcar() {
+          setCriarLoteDivModal(false)
+          setCriarLoteSaving(true)
+          try {
+            const { data: lote, error: errL } = await supabase
+              .from('lotes_cliente')
+              .insert({ workspace_id: workspaceId, cliente: criarLoteCliente.trim(), created_by: userId, status: 'rascunho' })
+              .select('id').single()
+            if (errL) throw errL
+            const { error: errUp } = await supabase.from('lancamentos').update({ lote_cliente_id: lote.id }).in('id', selecionados.map(l => l.id))
+            if (errUp) throw errUp
+            toast.success(`Lote criado com ${selecionados.length} lançamento(s).`)
+            setCriarLoteModal(false)
+            setSelectedIds(new Set())
+            loadData()
+          } catch (e) { toast.error('Erro: ' + e.message) }
+          finally { setCriarLoteSaving(false) }
+        }
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 500, border: '1px solid rgba(245,158,11,0.4)', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
+              <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(245,158,11,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⚠️</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 16, color: '#f59e0b' }}>Atenção — Clientes Diferentes</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Verificação de consistência do lote</div>
+                </div>
+              </div>
+              <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                  Os lançamentos selecionados pertencem a clientes <strong>diferentes</strong>:
+                </p>
+                <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {criarLoteDivNomes.map((c, i) => (
+                    <div key={i} style={{ fontSize: 13, color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ opacity: 0.7 }}>•</span> {c}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                  <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: 5, fontSize: 12 }}>📋 Nota Fiscal e Validade Documental</strong>
+                  Em conformidade com a legislação fiscal brasileira (Lei nº 8.846/94 e Decreto nº 3.000/99), documentos de prestação de serviços devem identificar de forma clara o tomador do serviço. A consolidação de lançamentos de diferentes clientes em um único lote pode prejudicar a rastreabilidade fiscal, dificultar auditorias e comprometer a validade jurídica do comprovante emitido. Recomenda-se fortemente criar lotes individuais por cliente.
+                </div>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+                  Deseja prosseguir e criar o lote sob o cliente <strong style={{ color: 'var(--text-primary)' }}>{criarLoteCliente}</strong>?
+                </p>
+              </div>
+              <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button onClick={() => setCriarLoteDivModal(false)} style={{ padding: '9px 20px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Cancelar</button>
+                <button onClick={executarForcar} disabled={criarLoteSaving} style={{ padding: '9px 22px', borderRadius: 8, background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.5)', color: '#f59e0b', cursor: 'pointer', fontSize: 14, fontWeight: 800, opacity: criarLoteSaving ? 0.7 : 1 }}>
+                  {criarLoteSaving ? 'Criando...' : 'Sim, criar assim mesmo'}
                 </button>
               </div>
             </div>
