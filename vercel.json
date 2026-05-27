@@ -44,6 +44,7 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/ar/:token", "destination": "/aprovar.html?token=:token" },
+    { "source": "/ag/:token", "destination": "/agendar.html" },
     { "source": "/limpar", "destination": "/limpar.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
