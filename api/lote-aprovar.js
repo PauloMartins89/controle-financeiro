@@ -55,6 +55,8 @@ export default async function handler(req, res) {
   if (acao === 'aprovar') {
     // Upload da assinatura PNG para Supabase Storage
     let assinaturaUrl = null
+    let aprovadoEm = new Date().toISOString()
+
     if (assinatura) {
       try {
         const buf = Buffer.from(assinatura, 'base64')
@@ -69,7 +71,6 @@ export default async function handler(req, res) {
       } catch (_) {}
     }
 
-    const aprovadoEm = new Date().toISOString()
     const { error: e1 } = await db
       .from('lotes_cliente')
       .update({
@@ -88,6 +89,8 @@ export default async function handler(req, res) {
       .update({ status: 'aguardando_aprovacao' })
       .eq('lote_cliente_id', lote.id)
       .in('status', ['rascunho', 'em_revisao'])
+
+    return res.status(200).json({ ok: true, assinaturaUrl, aprovadoEm })
   } else {
     const { error: e1 } = await db
       .from('lotes_cliente')
@@ -106,7 +109,7 @@ export default async function handler(req, res) {
       .update({ status: 'rascunho' })
       .eq('lote_cliente_id', lote.id)
       .eq('status', 'aguardando_aprovacao')
-  }
 
-  return res.status(200).json({ ok: true, assinaturaUrl: assinaturaUrl || null, aprovadoEm: acao === 'aprovar' ? new Date().toISOString() : null })
+    return res.status(200).json({ ok: true })
+  }
 }
