@@ -89,6 +89,7 @@ async function parseAgendamento(texto) {
           `Tipos de serviço válidos: ${TIPOS_SERVICO.join(', ')}`,
           `Ao interpretar datas: "amanhã" = ${new Date(Date.now() + 86400000).toISOString().slice(0, 10)}, "depois de amanhã" = ${new Date(Date.now() + 172800000).toISOString().slice(0, 10)}.`,
           `Formato data_servico: YYYY-MM-DD. Formato horario_servico: HH:MM ou null.`,
+          `Para cliente_nome: extraia o nome da empresa ou pessoa que está contratando/solicitando o serviço. Atenção — se a atividade mencionar uma empresa (ex: "da Suzano", "na Petrobras", "para a Vale"), extraia esse nome como cliente_nome. Empresas geralmente aparecem como nomes próprios capitalizados, siglas ou mencionadas após preposições como "da", "na", "para", "da empresa".`,
           `Se algum campo não for mencionado, use null.`,
         ].join('\n'),
       },
