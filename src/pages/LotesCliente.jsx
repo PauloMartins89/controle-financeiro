@@ -550,7 +550,7 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
       // Lançamentos do lote (para gerar PDF/CSV)
       const { data: lancs } = await supabase
         .from('lancamentos')
-        .select('id, data, descricao, valor, status, categoria')
+        .select('id, data, descricao, valor, status, categoria, observacoes, dados_extras')
         .eq('lote_cliente_id', lote.id)
         .order('data')
       setLancamentos(lancs || [])
