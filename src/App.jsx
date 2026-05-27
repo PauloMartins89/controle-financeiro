@@ -40,13 +40,20 @@ import ComprasRelEconomia from './pages/ComprasRelEconomia'
 import ComprasRelFornecedor from './pages/ComprasRelFornecedor'
 import CotacaoPublica from './pages/CotacaoPublica'
 import AprovarPublica from './pages/AprovarPublica'
+import LoteAprovacaoPublica from './pages/LoteAprovacaoPublica'
 import RefeicaoPublica from './pages/RefeicaoPublica'
 import RefeicaoAprovar from './pages/RefeicaoAprovar'
 import RefeicaoConfirmarRestaurante from './pages/RefeicaoConfirmarRestaurante'
 import RefeicaoValidar from './pages/RefeicaoValidar'
 import Refeicoes from './pages/Refeicoes'
 import LiderEpi from './pages/LiderEpi'
-import LiderCadastros from './pages/LiderCadastros'
+import LiderCadastroFrentes from './pages/LiderCadastroFrentes'
+import LiderCadastroEquipes from './pages/LiderCadastroEquipes'
+import LiderCadastroColaboradores from './pages/LiderCadastroColaboradores'
+import LiderCadastroMaquinas from './pages/LiderCadastroMaquinas'
+import LiderCadastroImplementos from './pages/LiderCadastroImplementos'
+import LiderCadastroProdutos from './pages/LiderCadastroProdutos'
+import LiderCadastroEpis from './pages/LiderCadastroEpis'
 import LiderDashboard from './pages/LiderDashboard'
 import LiderTurnos from './pages/LiderTurnos'
 import LiderApontamentos from './pages/LiderApontamentos'
@@ -56,6 +63,10 @@ import ManutencaoPreventiva from './pages/ManutencaoPreventiva'
 import ManutencaoEquipamentos from './pages/ManutencaoEquipamentos'
 import ManutencaoAPIPlanos from './pages/ManutencaoAPIPlanos'
 import ManutencaoPlanosPFD from './pages/ManutencaoPlanosPFD'
+import AgendaServicos from './pages/AgendaServicos'
+import MapaApontamentoMaquina from './pages/MapaApontamentoMaquina'
+import MaquinasDashboard from './pages/MaquinasDashboard'
+import BoletinsPendencias from './pages/BoletinsPendencias'
 import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
@@ -448,6 +459,7 @@ export default function App() {
         <Route path="/planos" element={<Planos />} />
         <Route path="/cotacao/:token" element={<CotacaoPublica />} />
         <Route path="/aprovar/:token" element={<AprovarPublica />} />
+        <Route path="/lote/:token" element={<LoteAprovacaoPublica />} />
         <Route path="/refeicao/:token" element={<RefeicaoPublica />} />
         <Route path="/refeicao/validar/:token" element={<RefeicaoValidar />} />
         <Route path="/ar/:token" element={<RefeicaoAprovar />} />
@@ -536,8 +548,14 @@ export default function App() {
                   <Route path="/lider/epi/solicitacoes" element={<LiderEpi />} />
                   <Route path="/lider/epi/catalogo" element={<LiderEpi />} />
                   <Route path="/lider/epc/catalogo" element={<LiderEpi />} />
-                  <Route path="/lider/cadastros" element={<LiderCadastros />} />
-                  <Route path="/lider/cadastros/:aba" element={<LiderCadastros />} />
+                  <Route path="/lider/cadastros" element={<Navigate to="/lider/cadastros/frentes" replace />} />
+                  <Route path="/lider/cadastros/frentes" element={<LiderCadastroFrentes />} />
+                  <Route path="/lider/cadastros/equipes" element={<LiderCadastroEquipes />} />
+                  <Route path="/lider/cadastros/colaboradores" element={<LiderCadastroColaboradores />} />
+                  <Route path="/lider/cadastros/maquinas" element={<LiderCadastroMaquinas />} />
+                  <Route path="/lider/cadastros/implementos" element={<LiderCadastroImplementos />} />
+                  <Route path="/lider/cadastros/produtos" element={<LiderCadastroProdutos />} />
+                  <Route path="/lider/cadastros/epis" element={<LiderCadastroEpis />} />
                   <Route path="/manutencao" element={<Navigate to="/manutencao/dashboard" replace />} />
                   <Route path="/manutencao/dashboard" element={<ManutencaoDashboard />} />
                   <Route path="/manutencao/operacoes/os" element={<ManutencaoOS />} />
@@ -546,6 +564,10 @@ export default function App() {
                   <Route path="/manutencao/cadastros/tecnicos" element={<ManutencaoEquipamentos />} />
                   <Route path="/manutencao/api-planos" element={<ManutencaoAPIPlanos />} />
                   <Route path="/manutencao/planos-pfd" element={<ManutencaoPlanosPFD />} />
+                  <Route path="/agenda-servicos" element={<AgendaServicos />} />
+                  <Route path="/mapa-maquina" element={<MapaApontamentoMaquina />} />
+                  <Route path="/maquinas/dashboard" element={<MaquinasDashboard />} />
+                  <Route path="/maquinas/pendencias" element={<BoletinsPendencias />} />
                 </Routes>
               </main>
             </div>

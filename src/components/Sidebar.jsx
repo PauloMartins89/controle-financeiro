@@ -139,10 +139,19 @@ const navGroups = [
     ],
   },
   {
-    title: 'Agenda',
+    title: 'Máquinas',
+    items: [
+      { to: '/mapa-maquina',            icon: TableCellsIcon,           label: 'Mapa de Apontamento',     moduleKey: 'lancamentos' },
+      { to: '/maquinas/dashboard',      icon: ChartBarIcon,             label: 'Dashboard & Relatórios',  moduleKey: 'lancamentos' },
+      { to: '/maquinas/pendencias',     icon: ExclamationTriangleIcon,  label: 'Pendências',              moduleKey: 'lancamentos' },
+      { to: '/cadastros?aba=maquinas',  icon: WrenchScrewdriverIcon,    label: 'Cadastros',               moduleKey: 'lancamentos' },
+    ],
+  },
+  {
+    title: 'Agendamentos',
     defaultOpen: true,
     items: [
-      { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agenda de Serviços', moduleKey: null },
+      { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agendamentos', moduleKey: null },
     ],
   },
   {
