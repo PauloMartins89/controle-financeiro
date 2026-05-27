@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
+import { formatCurrency, formatDate } from '../lib/utils'
 import {
   CheckCircleIcon, XCircleIcon, ClockIcon, PaperAirplaneIcon,
   ChevronDownIcon, ChevronUpIcon, PhotoIcon, DocumentTextIcon,
@@ -504,9 +507,11 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
   const [aprovadorNome, setAprovadorNome] = useState('')
   const [cadastroEncontrado, setCadastroEncontrado] = useState(false)
   const [token, setToken] = useState(lote.token_acesso || null)
+  const [lancamentos, setLancamentos] = useState([])
   const [copied, setCopied] = useState(false)
   const [saving, setSaving] = useState(false)
   const [sending, setSending] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   const link = token ? `${window.location.origin}/lote/${token}` : null
 
@@ -542,6 +547,14 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
         if (em)  setEmail(em)
         if (nom) setAprovadorNome(nom)
       }
+
+      // Lançamentos do lote (para gerar PDF/CSV)
+      const { data: lancs } = await supabase
+        .from('lancamentos')
+        .select('id, data, descricao, valor, status')
+        .eq('lote_cliente_id', lote.id)
+        .order('data')
+      setLancamentos(lancs || [])
     }
     init()
   }, [])
@@ -610,6 +623,120 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
     setSaving(false)
     toast.success('Lote enviado ao cliente!')
     onSent()
+  }
+
+  // ── Gera doc jsPDF do lote ────────────────────────────────────────────────
+  function buildPDFDoc() {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const total = lancamentos.reduce((s, l) => s + (parseFloat(l.valor) || 0), 0)
+    // Header
+    doc.setFillColor(79, 70, 229)
+    doc.rect(0, 0, 210, 28, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.text('SmartPro', 14, 12)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Lote de Aprovação — ${lote.cliente}`, 14, 21)
+    doc.setTextColor(0, 0, 0)
+    // Resumo
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Resumo', 14, 36)
+    autoTable(doc, {
+      startY: 39,
+      head: [],
+      body: [
+        ['Cliente', lote.cliente],
+        ['Lote', lote.nome || '—'],
+        ['Total de itens', String(lancamentos.length)],
+        ['Valor total', formatCurrency(total)],
+        ['Gerado em', new Date().toLocaleDateString('pt-BR')],
+      ],
+      styles: { fontSize: 10, cellPadding: 3 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
+      theme: 'plain',
+      margin: { left: 14 },
+    })
+    // Tabela
+    const startY = doc.lastAutoTable.finalY + 8
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text('Lançamentos', 14, startY)
+    autoTable(doc, {
+      startY: startY + 3,
+      head: [['Data', 'Descrição', 'Valor', 'Status']],
+      body: lancamentos.map(l => [formatDate(l.data), l.descricao || '—', formatCurrency(l.valor), l.status || '—']),
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 250] },
+      columnStyles: { 2: { halign: 'right' } },
+      margin: { left: 14 },
+    })
+    // Rodapé
+    const pages = doc.internal.getNumberOfPages()
+    for (let i = 1; i <= pages; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(150)
+      if (link) doc.text(`Aprovação: ${link}`, 14, 287)
+      doc.text(`Página ${i}/${pages}`, 196, 287, { align: 'right' })
+    }
+    return doc
+  }
+
+  function gerarCSV() {
+    const header = 'Data,Descrição,Valor,Status'
+    const rows = lancamentos.map(l =>
+      [formatDate(l.data), `"${(l.descricao || '').replace(/"/g, '""')}"`, formatCurrency(l.valor), l.status || ''].join(',')
+    )
+    return [header, ...rows].join('\n')
+  }
+
+  function handleDownloadCSV() {
+    const blob = new Blob([gerarCSV()], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `lote-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleDownloadPDF() {
+    buildPDFDoc().save(`lote-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}.pdf`)
+  }
+
+  async function handleEmailComAnexo() {
+    if (!email.trim() || !link) return
+    setSendingEmail(true)
+    try {
+      const pdfBase64 = buildPDFDoc().output('datauristring').split(',')[1]
+      const csvContent = gerarCSV()
+      const res = await fetch('/api/lote-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          toEmail: email.trim(),
+          toNome: aprovadorNome,
+          remetente: remetente.trim(),
+          link,
+          loteCliente: lote.cliente,
+          loteNome: lote.nome || '',
+          pdfBase64,
+          csvContent,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erro ao enviar email')
+      toast.success('E-mail enviado com PDF e CSV em anexo!')
+      onSent()
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setSendingEmail(false)
+    }
   }
 
   return (
@@ -697,6 +824,21 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
             )}
           </div>
 
+          {/* Downloads CSV / PDF */}
+          {lancamentos.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>ANEXOS:</span>
+              <button onClick={handleDownloadCSV}
+                style={{ padding: '6px 13px', borderRadius: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', cursor: 'pointer', color: '#10b981', fontSize: 12, fontWeight: 700 }}>
+                📥 CSV
+              </button>
+              <button onClick={handleDownloadPDF}
+                style={{ padding: '6px 13px', borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', cursor: 'pointer', color: '#818cf8', fontSize: 12, fontWeight: 700 }}>
+                📥 PDF
+              </button>
+            </div>
+          )}
+
           {/* Botões WA / Email */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             <button onClick={handleWA} disabled={!link || !telefone.replace(/\D/g, '').length || sending}
@@ -704,9 +846,9 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
               {sending ? 'Enviando...' : 'WhatsApp N1'}
             </button>
-            <button onClick={handleEmail} disabled={!link || !email.trim()}
-              style={{ flex: 1, padding: '10px', borderRadius: 9, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: '#818cf8', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: (!link || !email.trim()) ? 0.45 : 1 }}>
-              ✉ E-mail N1
+            <button onClick={handleEmailComAnexo} disabled={!link || !email.trim() || sendingEmail}
+              style={{ flex: 1, padding: '10px', borderRadius: 9, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: '#818cf8', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: (!link || !email.trim() || sendingEmail) ? 0.45 : 1 }}>
+              {sendingEmail ? '⏳ Enviando...' : '✉ E-mail + PDF'}
             </button>
           </div>
 
