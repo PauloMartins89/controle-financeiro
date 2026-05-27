@@ -657,6 +657,11 @@ function LoteCard({ lote, onRefresh }) {
               <span>{lote.qtd_lancamentos || 0} lançamento(s)</span>
               <span style={{ fontWeight: 700, color: '#10b981' }}>{fmtCurrency(lote.total_valor || 0)}</span>
               <span>Criado {fmtDatetime(lote.created_at)}</span>
+              {lote.confirmado_por && (
+                <span style={{ color: lote.status === 'aprovado_cliente' ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+                  {lote.status === 'aprovado_cliente' ? '✓' : '✕'} Confirmado por: {lote.confirmado_por}
+                </span>
+              )}
             </div>
           </div>
 

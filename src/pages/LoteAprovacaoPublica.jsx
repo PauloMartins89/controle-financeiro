@@ -69,6 +69,7 @@ export default function LoteAprovacaoPublica() {
   const [error, setError] = useState(null)
   const [acao, setAcao] = useState(null) // 'aprovar' | 'recusar'
   const [obs, setObs] = useState('')
+  const [confirmadoPor, setConfirmadoPor] = useState('')
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(null)
 
@@ -109,7 +110,7 @@ export default function LoteAprovacaoPublica() {
       const res = await fetch('/api/lote-aprovar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, acao, obs }),
+        body: JSON.stringify({ token, acao, obs, confirmadoPor: confirmadoPor.trim() || null }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Erro ao processar')
@@ -270,8 +271,22 @@ export default function LoteAprovacaoPublica() {
         ) : (
           <div style={s.card}>
             <div style={{ padding: '20px 24px' }}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ ...s.label, display: 'block', marginBottom: 6 }}>SEU NOME OU E-MAIL (opcional)</label>
+                <input
+                  type="text"
+                  value={confirmadoPor}
+                  onChange={e => setConfirmadoPor(e.target.value)}
+                  placeholder="Ex: João Silva ou joao@empresa.com"
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: 10,
+                    background: '#0f172a', border: '1px solid #334155',
+                    color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
               {acao === 'recusar' && (
-                <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 14 }}>
                   <label style={{ ...s.label, display: 'block', marginBottom: 6 }}>MOTIVO DA RECUSA *</label>
                   <textarea
                     value={obs}
