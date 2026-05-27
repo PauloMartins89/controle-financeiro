@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
+import { buildLotePDFDoc } from '../lib/exportPDF'
 import {
   CheckCircleIcon, XCircleIcon, ClockIcon, TruckIcon,
   DocumentTextIcon, ChevronDownIcon, MagnifyingGlassIcon,
@@ -10,6 +11,7 @@ import {
   NoSymbolIcon, BanknotesIcon, XMarkIcon, MapPinIcon,
   PhoneIcon, SparklesIcon, PencilIcon, PaperAirplaneIcon,
   DocumentArrowUpIcon, UserGroupIcon, ExclamationTriangleIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 
 async function registrarEvento({ lancamentoId, tipo, statusDe = null, statusPara = null, descricao = null, usuarioId = null, usuarioNome = null, dados = {} }) {
@@ -748,7 +750,7 @@ export default function Faturamento() {
     // Carrega info dos lotes vinculados
     const loteIds = [...new Set(items.map(l => l.lote_cliente_id).filter(Boolean))]
     if (loteIds.length > 0) {
-      supabase.from('lotes_cliente').select('id, cliente, status').in('id', loteIds)
+      supabase.from('lotes_cliente').select('id, cliente, status, confirmado_por, assinatura_url, aprovado_em, token_acesso').in('id', loteIds)
         .then(({ data: ld }) => {
           const m = {}
           ;(ld || []).forEach(lt => { m[lt.id] = lt })
@@ -1033,9 +1035,61 @@ export default function Faturamento() {
                             Faturar ({aprovados.length}) · {fmtCurrency(totalAprov)}
                           </button>
                         )}
+                        {lote.status === 'aprovado_cliente' && (() => {
+                          const [dlPDF, setDlPDF] = useState(false)
+                          async function downloadPDF() {
+                            setDlPDF(true)
+                            try {
+                              let assinaturaBase64 = null
+                              if (lote.assinatura_url) {
+                                try {
+                                  const r = await fetch(lote.assinatura_url)
+                                  const blob = await r.blob()
+                                  assinaturaBase64 = await new Promise(res => { const fr = new FileReader(); fr.onloadend = () => res(fr.result); fr.readAsDataURL(blob) })
+                                } catch (_) {}
+                              }
+                              const link = lote.token_acesso ? `${window.location.origin}/lote/${lote.token_acesso}` : null
+                              const doc = buildLotePDFDoc({ lancamentos: itens, lote, link, assinaturaBase64, aprovadoEm: lote.aprovado_em || null, aprovadorNome: lote.confirmado_por || null })
+                              const url = URL.createObjectURL(doc.output('blob'))
+                              const a = document.createElement('a'); a.href = url; a.download = `lote-${lote.cliente.replace(/[^a-z0-9]/gi,'_')}-assinado.pdf`; a.target = '_blank'
+                              document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                              setTimeout(() => URL.revokeObjectURL(url), 10000)
+                            } catch(e) { toast.error('Erro ao gerar PDF') } finally { setDlPDF(false) }
+                          }
+                          return (
+                            <button onClick={downloadPDF} disabled={dlPDF} title="Baixar PDF assinado"
+                              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#818cf8', cursor: dlPDF ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, opacity: dlPDF ? 0.6 : 1 }}>
+                              <ArrowDownTrayIcon style={{ width: 15, height: 15 }} />
+                              {dlPDF ? '...' : 'PDF'}
+                            </button>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>
+                  {/* Bloco: aprovação pelo cliente */}
+                  {lote.status === 'aprovado_cliente' && lote.aprovado_em && (
+                    <div style={{ margin: '0 20px 12px', borderRadius: 10, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.25)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 200 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 15 }}>✅</div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: '#10b981', letterSpacing: 0.3 }}>APROVADO PELO CLIENTE</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600, marginTop: 1 }}>
+                            {lote.confirmado_por || '—'}
+                            <span style={{ fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 8 }}>
+                              {new Date(lote.aprovado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {lote.assinatura_url && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700 }}>ASSINATURA</span>
+                          <img src={lote.assinatura_url} alt="Assinatura digital" style={{ height: 36, maxWidth: 120, objectFit: 'contain', borderRadius: 4, background: '#fff', padding: 3, border: '1px solid rgba(16,185,129,0.3)' }} />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* Itens do lote */}
                   <div>
                     {itens.map((l, i) => {
