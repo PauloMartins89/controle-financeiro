@@ -140,6 +140,7 @@ const navGroups = [
   },
   {
     title: 'Agenda',
+    defaultOpen: true,
     items: [
       { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agenda de Serviços', moduleKey: null },
     ],
@@ -205,8 +206,8 @@ export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation()
   const [openGroups, setOpenGroups] = useState(() => {
     const open = {}
-    navGroups.forEach(({ title, items }) => {
-      open[title] = items.some(item =>
+    navGroups.forEach(({ title, items, defaultOpen }) => {
+      open[title] = defaultOpen || items.some(item =>
         item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
       )
     })
