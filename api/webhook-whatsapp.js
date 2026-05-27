@@ -1,6 +1,8 @@
 ﻿import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
 import { runOCR } from './_ocr.js'
+import { rotearMensagem } from './_wa-router.js'
+import { handleAgendaWA } from './_agenda-wa.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Webhook Z-API — recebe mensagem do WhatsApp
@@ -403,6 +405,22 @@ export default async function handler(req, res) {
             }
           }
           return res.status(200).json({ ok: true, leader: true })
+        }
+      }
+    }
+
+    // ── Agenda: roteamento inteligente para áudio/texto de gestores ──────────
+    if (fromPhone && (msgType === 'audio' || msgType === 'ptt' || msgType === 'chat' || msgType === 'text')) {
+      const supabaseAgenda = getSupabase()
+      if (supabaseAgenda) {
+        try {
+          const destino = await rotearMensagem(body, fromPhone, phoneVariants, supabaseAgenda)
+          if (destino === 'agenda') {
+            await handleAgendaWA(body, fromPhone, phoneVariants, zapiSendText, supabaseAgenda)
+            return res.status(200).json({ ok: true, routed: 'agenda' })
+          }
+        } catch (e) {
+          console.error('[webhook-wa] agenda routing error:', e.message)
         }
       }
     }
