@@ -42,7 +42,11 @@ function fmtDatetime(ts) {
 
 // ── Modal: Criar Lote ─────────────────────────────────────────────────────────
 function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
-  const [cliente, setCliente] = useState('')
+  const [clienteId, setClienteId] = useState('')
+  const [clienteNome, setClienteNome] = useState('')
+  const [clienteSearch, setClienteSearch] = useState('')
+  const [clientes, setClientes] = useState([])
+  const [showDrop, setShowDrop] = useState(false)
   const [obs, setObs] = useState('')
   const [rascunhos, setRascunhos] = useState([])
   const [selected, setSelected] = useState(new Set())
@@ -51,6 +55,10 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
 
   useEffect(() => {
     if (!supabase) return
+    // Carrega clientes cadastrados
+    supabase.from('cadastros_clientes').select('id, nome').eq('workspace_id', workspaceId).order('nome')
+      .then(({ data }) => setClientes(data || []))
+    // Carrega rascunhos
     supabase
       .from('lancamentos')
       .select('id, data, descricao, valor, dados_extras, status, lote_cliente_id')
@@ -59,6 +67,17 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
       .order('data', { ascending: false })
       .then(({ data }) => { setRascunhos(data || []); setLoading(false) })
   }, [])
+
+  const clientesFiltrados = clienteSearch.trim()
+    ? clientes.filter(c => c.nome.toLowerCase().includes(clienteSearch.toLowerCase()))
+    : clientes
+
+  function selecionarCliente(c) {
+    setClienteId(c.id)
+    setClienteNome(c.nome)
+    setClienteSearch(c.nome)
+    setShowDrop(false)
+  }
 
   function toggle(id) {
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -69,13 +88,23 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
   }
 
   async function handleSave() {
-    if (!cliente.trim()) { toast.error('Informe o nome do cliente.'); return }
+    const nomeUsar = clienteNome.trim() || clienteSearch.trim()
+    if (!nomeUsar) { toast.error('Informe o cliente.'); return }
     if (selected.size === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
     setSaving(true)
     try {
+      const payload = {
+        workspace_id: workspaceId,
+        cliente: nomeUsar,
+        observacoes: obs.trim() || null,
+        created_by: userId,
+        status: 'rascunho',
+      }
+      if (clienteId) payload.cliente_id = clienteId
+
       const { data: lote, error: errLote } = await supabase
         .from('lotes_cliente')
-        .insert({ workspace_id: workspaceId, cliente: cliente.trim(), observacoes: obs.trim() || null, created_by: userId, status: 'rascunho' })
+        .insert(payload)
         .select('id')
         .single()
       if (errLote) throw errLote
@@ -105,10 +134,34 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
         </div>
 
         <div style={{ padding: '16px 22px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div>
+          <div style={{ position: 'relative' }}>
             <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700 }}>CLIENTE *</label>
-            <input value={cliente} onChange={e => setCliente(e.target.value)} placeholder="Nome do cliente"
-              style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+            <input
+              value={clienteSearch}
+              onChange={e => { setClienteSearch(e.target.value); setClienteId(''); setClienteNome(''); setShowDrop(true) }}
+              onFocus={() => setShowDrop(true)}
+              onBlur={() => setTimeout(() => setShowDrop(false), 180)}
+              placeholder="Buscar cliente cadastrado..."
+              style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: `1px solid ${clienteId ? 'rgba(99,102,241,0.5)' : 'var(--border)'}`, color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+            />
+            {clienteId && <span style={{ position: 'absolute', right: 12, top: 32, fontSize: 12, color: '#818cf8', fontWeight: 700 }}>✓</span>}
+            {showDrop && clientesFiltrados.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', maxHeight: 180, overflowY: 'auto', marginTop: 2 }}>
+                {clientesFiltrados.map(c => (
+                  <div key={c.id} onMouseDown={() => selecionarCliente(c)}
+                    style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.08)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    {c.nome}
+                  </div>
+                ))}
+              </div>
+            )}
+            {showDrop && clienteSearch.trim() && clientesFiltrados.length === 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                Nenhum cliente encontrado — será criado como texto livre
+              </div>
+            )}
           </div>
           <div>
             <label style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 700 }}>OBSERVAÇÕES</label>
@@ -165,7 +218,7 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14 }}>Cancelar</button>
-            <button onClick={handleSave} disabled={saving || selected.size === 0 || !cliente.trim()} style={{ padding: '9px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#059669,#10b981)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, opacity: (saving || selected.size === 0 || !cliente.trim()) ? 0.6 : 1 }}>
+            <button onClick={handleSave} disabled={saving || selected.size === 0 || !(clienteNome.trim() || clienteSearch.trim())} style={{ padding: '9px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#059669,#10b981)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, opacity: (saving || selected.size === 0 || !(clienteNome.trim() || clienteSearch.trim())) ? 0.6 : 1 }}>
               {saving ? 'Criando...' : 'Criar Lote'}
             </button>
           </div>
@@ -441,9 +494,14 @@ function GerarLotesModal({ lancamentos, workspaceId, userId, onClose, onSaved })
 }
 
 // ── Modal: Enviar ao Cliente via WA / Email ──────────────────────────────────
+const LS_REMETENTE = 'smartpro_email_remetente'
+
 function EnviarModal({ lote, workspaceId, onClose, onSent }) {
   const [telefone, setTelefone] = useState('')
   const [email, setEmail] = useState('')
+  const [remetente, setRemetente]     = useState(() => localStorage.getItem(LS_REMETENTE) || '')
+  const [remetenteLocked, setRemetenteLocked] = useState(() => !!localStorage.getItem(LS_REMETENTE))
+  const [aprovadorNome, setAprovadorNome] = useState('')
   const [cadastroEncontrado, setCadastroEncontrado] = useState(false)
   const [token, setToken] = useState(lote.token_acesso || null)
   const [copied, setCopied] = useState(false)
@@ -462,23 +520,50 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
         setToken(t)
       }
 
-      // Busca contato no cadastro de clientes
-      const { data } = await supabase
+      // Busca aprovador N1 do cadastro de clientes (por cliente_id ou nome)
+      const query = supabase
         .from('cadastros_clientes')
-        .select('telefone, email')
-        .ilike('nome', `%${lote.cliente}%`)
+        .select('telefone, email, aprovador_n1_nome, aprovador_n1_wa, aprovador_n1_email')
         .eq('workspace_id', workspaceId)
         .limit(1)
         .maybeSingle()
 
+      const { data } = lote.cliente_id
+        ? await query.eq('id', lote.cliente_id)
+        : await query.ilike('nome', `%${lote.cliente}%`)
+
       if (data) {
         setCadastroEncontrado(true)
-        if (data.telefone) setTelefone(data.telefone)
-        if (data.email) setEmail(data.email)
+        // Prioriza dados do aprovador N1, cai para contato geral
+        const wa  = data.aprovador_n1_wa    || data.telefone || ''
+        const em  = data.aprovador_n1_email || data.email    || ''
+        const nom = data.aprovador_n1_nome  || ''
+        if (wa)  setTelefone(wa)
+        if (em)  setEmail(em)
+        if (nom) setAprovadorNome(nom)
       }
     }
     init()
   }, [])
+
+  function toggleLock() {
+    if (remetenteLocked) {
+      localStorage.removeItem(LS_REMETENTE)
+      setRemetenteLocked(false)
+    } else {
+      if (remetente.trim()) {
+        localStorage.setItem(LS_REMETENTE, remetente.trim())
+        setRemetenteLocked(true)
+      }
+    }
+  }
+
+  function handleRemetenteChange(v) {
+    setRemetente(v)
+    if (remetenteLocked) {
+      localStorage.setItem(LS_REMETENTE, v)
+    }
+  }
 
   function handleCopy() {
     if (!link) return
@@ -509,8 +594,9 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
 
   function handleEmail() {
     const subject = encodeURIComponent(`Aprovação de Lote — ${lote.cliente}`)
+    const assinatura = remetente.trim() ? `\n\nAtenciosamente,\n${remetente.trim()}` : '\n\nAtenciosamente.'
     const body = encodeURIComponent(
-      `Olá!\n\nSegue o link para aprovação do lote:\n${link}\n\nPor favor, acesse e confirme o De Acordo.\n\nAtenciosamente.`
+      `Olá${aprovadorNome ? `, ${aprovadorNome}` : ''}!\n\nSegue o link para aprovação do lote de lançamentos:\n${link}\n\nPor favor, acesse e confirme o De Acordo.${assinatura}`
     )
     window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank')
   }
@@ -558,38 +644,69 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
             </div>
           </div>
 
-          {/* Contato */}
+          {/* Aprovador N1 */}
+          {cadastroEncontrado && aprovadorNome && (
+            <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', fontSize: 12 }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Aprovador N1 Lançamentos: </span>
+              <strong style={{ color: 'var(--text-primary)' }}>{aprovadorNome}</strong>
+            </div>
+          )}
+          {cadastroEncontrado && !aprovadorNome && (
+            <div style={{ marginBottom: 12, padding: '7px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', fontSize: 11, color: 'var(--text-secondary)' }}>
+              ✓ Dados preenchidos do cadastro de clientes
+            </div>
+          )}
+
+          {/* Contato do aprovador N1 */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>WHATSAPP</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>WHATSAPP — N1</label>
               <input value={telefone} onChange={e => setTelefone(e.target.value)}
                 placeholder="(99) 99999-9999"
                 style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
             </div>
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>E-MAIL</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>E-MAIL — N1</label>
               <input value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="email@cliente.com" type="email"
                 style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
             </div>
           </div>
 
-          {cadastroEncontrado && (
-            <div style={{ marginBottom: 14, padding: '7px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', fontSize: 11, color: 'var(--text-secondary)' }}>
-              ✓ Dados preenchidos automaticamente do cadastro de clientes
+          {/* Remetente com cadeado */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>SEU E-MAIL (REMETENTE)</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <input
+                value={remetente}
+                onChange={e => handleRemetenteChange(e.target.value)}
+                placeholder="seu@email.com"
+                type="email"
+                disabled={remetenteLocked}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: 8, background: remetenteLocked ? 'var(--bg-primary)' : 'var(--bg-primary)', border: `1px solid ${remetenteLocked ? 'rgba(16,185,129,0.4)' : 'var(--border)'}`, color: 'var(--text-primary)', fontSize: 13, outline: 'none', opacity: remetenteLocked ? 0.85 : 1 }}
+              />
+              <button
+                onClick={toggleLock}
+                title={remetenteLocked ? 'Clique para editar o remetente' : 'Clique para salvar e travar o remetente'}
+                style={{ padding: '9px 13px', borderRadius: 8, background: remetenteLocked ? 'rgba(16,185,129,0.12)' : 'var(--bg-primary)', border: `1px solid ${remetenteLocked ? 'rgba(16,185,129,0.4)' : 'var(--border)'}`, cursor: 'pointer', color: remetenteLocked ? '#10b981' : 'var(--text-secondary)', fontSize: 16, lineHeight: 1 }}>
+                {remetenteLocked ? '🔒' : '🔓'}
+              </button>
             </div>
-          )}
+            {!remetenteLocked && remetente.trim() && (
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Clique no cadeado para salvar e não pedir novamente</div>
+            )}
+          </div>
 
           {/* Botões WA / Email */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             <button onClick={handleWA} disabled={!link || !telefone.replace(/\D/g, '').length || sending}
               style={{ flex: 1, padding: '10px', borderRadius: 9, background: '#25D366', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: (!link || !telefone.replace(/\D/g, '').length || sending) ? 0.65 : 1 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-              {sending ? 'Enviando...' : 'WhatsApp'}
+              {sending ? 'Enviando...' : 'WhatsApp N1'}
             </button>
             <button onClick={handleEmail} disabled={!link || !email.trim()}
               style={{ flex: 1, padding: '10px', borderRadius: 9, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: '#818cf8', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: (!link || !email.trim()) ? 0.45 : 1 }}>
-              ✉ E-mail
+              ✉ E-mail N1
             </button>
           </div>
 

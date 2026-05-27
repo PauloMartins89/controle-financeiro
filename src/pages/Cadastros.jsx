@@ -25,10 +25,22 @@ const TABS_CONFIG = {
       { key: 'nome',        label: 'Nome',        required: true,  span: 2 },
       { key: 'razao_social',label: 'Razão Social', span: 2 },
       { key: 'cnpj',        label: 'CNPJ' },
-      { key: 'contato',     label: 'Contato' },
+      { key: 'contato',     label: 'Contato Geral' },
       { key: 'telefone',    label: 'Telefone' },
       { key: 'email',       label: 'E-mail', type: 'email' },
       { key: 'observacoes', label: 'Observações', span: 2, multiline: true },
+      { key: '_sep1', divider: 'Aprovador Nível 1 — Lançamentos', span: 2 },
+      { key: 'aprovador_n1_nome',  label: 'Nome' },
+      { key: 'aprovador_n1_wa',    label: 'WhatsApp' },
+      { key: 'aprovador_n1_email', label: 'E-mail', type: 'email' },
+      { key: '_sep2', divider: 'Aprovador Nível 2 — Faturamento', span: 2 },
+      { key: 'aprovador_n2_nome',  label: 'Nome' },
+      { key: 'aprovador_n2_wa',    label: 'WhatsApp' },
+      { key: 'aprovador_n2_email', label: 'E-mail', type: 'email' },
+      { key: '_sep3', divider: 'Aprovador Nível 3 — Financeiro', span: 2 },
+      { key: 'aprovador_n3_nome',  label: 'Nome' },
+      { key: 'aprovador_n3_wa',    label: 'WhatsApp' },
+      { key: 'aprovador_n3_email', label: 'E-mail', type: 'email' },
     ],
     importCols: ['nome','razao_social','cnpj','contato','telefone','email','observacoes'],
   },
@@ -97,14 +109,14 @@ const labelStyle = {
 // Modal add/editar
 // ─────────────────────────────────────────────────────────────────────────────
 function CadastroModal({ config, item, ownerId, onClose, onSave }) {
-  const emptyForm = () => Object.fromEntries(config.fields.map(f => [f.key, '']))
+  const emptyForm = () => Object.fromEntries(config.fields.filter(f => !f.divider).map(f => [f.key, '']))
   const [form, setForm] = useState(item ? { ...item } : emptyForm())
   const [saving, setSaving] = useState(false)
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
 
   async function handleSave() {
-    const req = config.fields.filter(f => f.required)
+    const req = config.fields.filter(f => f.required && !f.divider)
     for (const f of req) {
       if (!form[f.key]?.trim()) { toast.error(`Campo "${f.label}" é obrigatório`); return }
     }
@@ -138,6 +150,11 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
         {/* Fields */}
         <div style={{ padding: '18px 22px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {config.fields.map(f => (
+            f.divider ? (
+              <div key={f.key} style={{ gridColumn: 'span 2', margin: '8px 0 4px', paddingBottom: 6, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 0.8 }}>{f.divider}</span>
+              </div>
+            ) : (
             <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: f.span === 2 ? 'span 2' : 'span 1' }}>
               <label style={labelStyle}>{f.label}{f.required ? ' *' : ''}</label>
               {f.multiline ? (
@@ -157,6 +174,7 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
                 />
               )}
             </div>
+            )
           ))}
         </div>
 
