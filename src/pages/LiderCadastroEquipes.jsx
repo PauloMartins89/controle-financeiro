@@ -7,44 +7,61 @@ import { Badge, StatusChip, KpiCard, Toolbar, DataTable, TR, Modal, Field, Sel, 
 
 export default function LiderCadastroEquipes() {
   const { workspaceId } = useStore()
-  const [records,   setRecords]   = useState([])
-  const [frentes,   setFrentes]   = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [saving,    setSaving]    = useState(false)
-  const [busca,     setBusca]     = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [editId,    setEditId]    = useState(null)
-  const [form,      setForm]      = useState({ nome: '', codigo: '', frente_id: '', lider_nome: '', lider_email: '', ativo: true })
+  const [records,     setRecords]     = useState([])
+  const [frentes,     setFrentes]     = useState([])
+  const [liderUsers,  setLiderUsers]  = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [saving,      setSaving]      = useState(false)
+  const [busca,       setBusca]       = useState('')
+  const [showModal,   setShowModal]   = useState(false)
+  const [editId,      setEditId]      = useState(null)
+  const [form,        setForm]        = useState({ nome: '', codigo: '', frente_id: '', lider_id: '', lider_nome: '', lider_email: '', ativo: true })
 
   useEffect(() => { if (workspaceId) load() }, [workspaceId]) // eslint-disable-line
 
   async function load() {
     setLoading(true)
-    const [r1, r2] = await Promise.all([
+    const { data: { session } } = await supabase.auth.getSession()
+    const [r1, r2, r3] = await Promise.all([
       supabase.from('lider_equipes').select('*, lider_frentes(nome)').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('lider_frentes').select('id, nome').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
+      fetch('/api/lider-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ action: 'listar-usuarios', workspace_id: workspaceId }),
+      }).then(r => r.json()).catch(() => ({ usuarios: [] })),
     ])
     setRecords(r1.data || [])
     setFrentes(r2.data || [])
+    setLiderUsers(r3.usuarios || [])
     setLoading(false)
   }
 
   function openNew() {
     setEditId(null)
-    setForm({ nome: '', codigo: '', frente_id: frentes[0]?.id ?? '', lider_nome: '', lider_email: '', ativo: true })
+    setForm({ nome: '', codigo: '', frente_id: frentes[0]?.id ?? '', lider_id: '', lider_nome: '', lider_email: '', ativo: true })
     setShowModal(true)
   }
 
   function openEdit(r) {
     setEditId(r.id)
-    setForm({ nome: r.nome, codigo: r.codigo ?? '', frente_id: r.frente_id ?? '', lider_nome: r.lider_nome ?? '', lider_email: r.lider_email ?? '', ativo: r.ativo })
+    setForm({ nome: r.nome, codigo: r.codigo ?? '', frente_id: r.frente_id ?? '', lider_id: r.lider_id ?? '', lider_nome: r.lider_nome ?? '', lider_email: r.lider_email ?? '', ativo: r.ativo })
     setShowModal(true)
+  }
+
+  function handleSelectLider(userId) {
+    if (!userId) {
+      setForm(p => ({ ...p, lider_id: '', lider_nome: '', lider_email: '' }))
+      return
+    }
+    const u = liderUsers.find(u => u.id === userId)
+    if (u) setForm(p => ({ ...p, lider_id: u.id, lider_nome: u.nome || u.matricula, lider_email: u.email }))
   }
 
   async function save() {
     if (!form.nome.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
-    const payload = { ...form, workspace_id: workspaceId, frente_id: form.frente_id || null }
+    const payload = { ...form, workspace_id: workspaceId, frente_id: form.frente_id || null, lider_id: form.lider_id || null }
     const { error } = editId
       ? await supabase.from('lider_equipes').update(payload).eq('id', editId)
       : await supabase.from('lider_equipes').insert(payload)
@@ -69,7 +86,7 @@ export default function LiderCadastroEquipes() {
 
   const filtrados  = records.filter(r => r.nome?.toLowerCase().includes(busca.toLowerCase()))
   const ativos     = records.filter(r => r.ativo).length
-  const comLider   = records.filter(r => r.lider_nome).length
+  const comLider   = records.filter(r => r.lider_id || r.lider_nome).length
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -95,7 +112,7 @@ export default function LiderCadastroEquipes() {
                 <strong key="n">{r.nome}</strong>,
                 r.codigo ? <Badge text={r.codigo} /> : '—',
                 r.lider_frentes ? <Badge text={r.lider_frentes.nome} /> : '—',
-                r.lider_nome || '—',
+                r.lider_nome || (r.lider_email ? r.lider_email.split('@')[0] : '—'),
                 <StatusChip key="s" ativo={r.ativo} />,
               ]}
             />
@@ -117,14 +134,21 @@ export default function LiderCadastroEquipes() {
                 options={[{ value: '', label: '— Sem frente —' }, ...frentes.map(f => ({ value: f.id, label: f.nome }))]} />
             </Field>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Field label="Nome do Líder">
-              <input style={inp} value={form.lider_nome} onChange={e => setForm(p => ({ ...p, lider_nome: e.target.value }))} placeholder="Nome completo" />
-            </Field>
-            <Field label="E-mail do Líder">
-              <input style={inp} type="email" value={form.lider_email} onChange={e => setForm(p => ({ ...p, lider_email: e.target.value }))} placeholder="email@empresa.com" />
-            </Field>
-          </div>
+          <Field label="Líder (usuário do app)">
+            <Sel
+              value={form.lider_id}
+              onChange={handleSelectLider}
+              options={[
+                { value: '', label: '— Sem líder —' },
+                ...liderUsers.map(u => ({ value: u.id, label: `${u.matricula} · ${u.nome || u.email}` }))
+              ]}
+            />
+            {form.lider_email && (
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                {form.lider_email}
+              </div>
+            )}
+          </Field>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             <input type="checkbox" checked={form.ativo} onChange={e => setForm(p => ({ ...p, ativo: e.target.checked }))} /> Ativo
           </label>
