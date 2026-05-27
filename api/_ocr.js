@@ -71,7 +71,8 @@ export async function runOCR(imageBase64, { forceTransporte = false } = {}) {
     })
 
     const raw = extractRes.choices[0]?.message?.content?.trim() || ''
-    const match = raw.match(/\{[\s\S]*\}/)
+    const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim()
+    const match = cleaned.match(/\{[\s\S]*\}/)
     if (!match) throw new Error(`runOCR transporte: JSON nao encontrado. raw=${raw.slice(0, 200)}`)
     const json = JSON.parse(match[0])
 
@@ -100,12 +101,14 @@ export async function runOCR(imageBase64, { forceTransporte = false } = {}) {
         },
       ],
     }],
-    max_tokens: 300,
+    max_tokens: 600,
     temperature: 0,
   })
 
   const raw = extractRes.choices[0]?.message?.content?.trim() || ''
-  const match = raw.match(/\{[\s\S]*\}/)
+  // Remove cercas markdown (```json ... ```) e tenta extrair o JSON
+  const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim()
+  const match = cleaned.match(/\{[\s\S]*\}/)
   if (!match) throw new Error(`runOCR padrao: JSON nao encontrado. raw=${raw.slice(0, 200)}`)
   const json = JSON.parse(match[0])
 
