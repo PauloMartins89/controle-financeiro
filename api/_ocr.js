@@ -24,7 +24,7 @@ async function groqWithRetry(groq, params, maxAttempts = 3) {
   throw lastErr
 }
 
-export async function runOCR(imageBase64) {
+export async function runOCR(imageBase64, { forceTransporte = false } = {}) {
   const hoje = new Date().toISOString().slice(0, 10)
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
   const imgUrl = `data:image/jpeg;base64,${imageBase64}`
@@ -47,7 +47,7 @@ export async function runOCR(imageBase64) {
   })
   const tipoRaw = classifyRes.choices[0]?.message?.content?.trim().toLowerCase() || ''
   // Aceita qualquer resposta que contenha "transporte" — protege contra verbosidade do modelo
-  const isTransporte = tipoRaw.includes('transporte')
+  const isTransporte = forceTransporte || tipoRaw.includes('transporte')
 
   // ── PASSO 2A: Extração completa do diário ────────────────────────────────────
   if (isTransporte) {

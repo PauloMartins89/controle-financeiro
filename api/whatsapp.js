@@ -315,6 +315,31 @@ export default async function handler(req, res) {
         textoOriginal = '[formulário: diário do motorista]'
 
       } else {
+        // ── Fallback: motorista cadastrado → força extração de transporte ────
+        // Se o modelo errou a classificação mas o número é de um condutor ativo,
+        // reexecuta o runOCR forçando a extração de transporte.
+        const _norm = from.replace(/\D/g, '')
+        const _sem55 = _norm.replace(/^55/, '')
+        const _com9 = _sem55.length === 10 ? _sem55.slice(0, 2) + '9' + _sem55.slice(2) : _sem55
+        const _variantsEarly = [...new Set([_norm, _sem55, '55' + _sem55, _com9, '55' + _com9])]
+        let _condutorEncontrado = false
+        for (const v of _variantsEarly) {
+          const { data: cond } = await db.from('cadastros_condutores')
+            .select('workspace_id').eq('telefone', v).eq('ativo_whatsapp', true).eq('ativo', true).maybeSingle()
+          if (cond?.workspace_id) { _condutorEncontrado = true; break }
+        }
+        if (_condutorEncontrado) {
+          try {
+            const ocrForcado = await runOCR(base64, { forceTransporte: true })
+            formularioTransporte = ocrForcado
+            text = '[imagem-transporte]'
+            textoOriginal = '[formulário: diário do motorista - forçado]'
+          } catch (errForce) {
+            console.error('[WA] runOCR forceTransporte erro:', errForce?.message || errForce)
+            await sendWA(from, '❌ Não consegui processar a imagem. Tente uma foto mais nítida.')
+            return res.status(200).end()
+          }
+        } else {
         // ── PASSO 2: comprovante/despesa — OCR rico com NF-e, CNPJ, litros ──
         const visionResult = await groq.chat.completions.create({
           model: 'meta-llama/llama-4-scout-17b-16e-instruct',
@@ -391,6 +416,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
         text = '[imagem]'
         textoOriginal = `[imagem${caption ? ': ' + caption : ''}]`
+        } // fecha else (não é condutor)
       }
 
     } else {
