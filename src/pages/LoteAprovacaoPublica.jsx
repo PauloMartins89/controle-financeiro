@@ -132,8 +132,8 @@ export default function LoteAprovacaoPublica() {
     if (!drawing.current) return
     const pos = getPos(e)
     const ctx = canvasRef.current.getContext('2d')
-    ctx.lineWidth = 2.5
-    ctx.strokeStyle = '#e2e8f0'
+    ctx.lineWidth = 2.8
+    ctx.strokeStyle = '#1a2e4a'
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.lineTo(pos.x, pos.y)
