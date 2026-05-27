@@ -54,6 +54,8 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
   const [selected, setSelected] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [confirmDivModal, setConfirmDivModal] = useState(false)
+  const [clientesDivergentes, setClientesDivergentes] = useState([])
 
   useEffect(() => {
     if (!supabase) return
@@ -89,11 +91,10 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
     else setSelected(new Set(rascunhos.map(r => r.id)))
   }
 
-  async function handleSave() {
+  async function executarSave() {
     const nomeUsar = clienteNome.trim() || clienteSearch.trim()
-    if (!nomeUsar) { toast.error('Informe o cliente.'); return }
-    if (selected.size === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
     setSaving(true)
+    setConfirmDivModal(false)
     try {
       // Busca aprovador N1 do cliente selecionado
       const clienteSelecionado = clientes.find(c => c.id === clienteId || c.nome === nomeUsar)
@@ -130,7 +131,31 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
     }
   }
 
+  async function handleSave() {
+    const nomeUsar = clienteNome.trim() || clienteSearch.trim()
+    if (!nomeUsar) { toast.error('Informe o cliente.'); return }
+    if (selected.size === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
+    // Verifica se há lançamentos com clientes divergentes do lote
+    const selecionados = rascunhos.filter(r => selected.has(r.id))
+    const nomesClientes = [...new Set(
+      selecionados.map(r => (r.dados_extras?.cliente || r.dados_extras?.empresa || '').trim().toLowerCase()).filter(Boolean)
+    )]
+    const nomeLoteLower = nomeUsar.trim().toLowerCase()
+    const divergentes = selecionados.filter(r => {
+      const c = (r.dados_extras?.cliente || r.dados_extras?.empresa || '').trim().toLowerCase()
+      return c && c !== nomeLoteLower
+    })
+    if (divergentes.length > 0) {
+      const nomesDiv = [...new Set(divergentes.map(r => r.dados_extras?.cliente || r.dados_extras?.empresa || ''))]
+      setClientesDivergentes(nomesDiv)
+      setConfirmDivModal(true)
+      return
+    }
+    await executarSave()
+  }
+
   return (
+    <>
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
         <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -230,6 +255,55 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
         </div>
       </div>
     </div>
+
+    {/* Modal: Clientes divergentes */}
+    {confirmDivModal && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 500, border: '1px solid rgba(245,158,11,0.4)', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
+          {/* Header */}
+          <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(245,158,11,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⚠️</div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: '#f59e0b' }}>Atenção — Clientes Diferentes</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Verificação de consistência do lote</div>
+            </div>
+          </div>
+          {/* Corpo */}
+          <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>
+              Um ou mais lançamentos selecionados pertencem a clientes <strong>diferentes</strong> do cliente informado no lote:
+            </p>
+            <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {clientesDivergentes.map((c, i) => (
+                <div key={i} style={{ fontSize: 13, color: '#f59e0b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ opacity: 0.7 }}>•</span> {c}
+                </div>
+              ))}
+            </div>
+            {/* Contexto legal */}
+            <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 10, padding: '12px 14px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+              <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: 5, fontSize: 12 }}>📋 Nota Fiscal e Validade Documental</strong>
+              Em conformidade com a legislação fiscal brasileira (Lei nº 8.846/94 e Decreto nº 3.000/99), documentos de prestação de serviços devem identificar de forma clara o tomador do serviço. A consolidação de lançamentos de diferentes clientes em um único lote pode prejudicar a rastreabilidade fiscal, dificultar auditorias e comprometer a validade jurídica do comprovante emitido. Recomenda-se fortemente criar lotes individuais por cliente.
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+              Deseja prosseguir mesmo assim e criar o lote unificado sob o cliente <strong style={{ color: 'var(--text-primary)' }}>{clienteNome || clienteSearch}</strong>?
+            </p>
+          </div>
+          {/* Ações */}
+          <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button onClick={() => setConfirmDivModal(false)}
+              style={{ padding: '9px 20px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+              Cancelar
+            </button>
+            <button onClick={executarSave} disabled={saving}
+              style={{ padding: '9px 22px', borderRadius: 8, background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.5)', color: '#f59e0b', cursor: 'pointer', fontSize: 14, fontWeight: 800, opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Criando...' : 'Sim, criar assim mesmo'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   )
 }
 
