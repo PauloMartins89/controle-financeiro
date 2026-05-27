@@ -38,14 +38,15 @@ export async function runOCR(imageBase64) {
         { type: 'image_url', image_url: { url: imgUrl } },
         {
           type: 'text',
-          text: `Analise esta imagem. É um formulário de "DIÁRIO DO MOTORISTA" (formulário de transporte com tabela de KM ASFALTO/TERRA, campo PLACA, logotipo Casagrande)?\nSe sim, responda exatamente: transporte\nSe não (nota fiscal, comprovante, recibo, etc), responda exatamente: padrao`,
+          text: `Analise esta imagem. Ela é um formulário "DIÁRIO DO MOTORISTA"?\nIndícios: tabela com colunas KM/ASFALTO/TERRA, campo PLACA, campo CONDUTOR, logotipo Casagrande, título "DIÁRIO DO MOTORISTA".\nResponda SOMENTE uma palavra: transporte (se for diário do motorista) ou padrao (qualquer outra coisa).`,
         },
       ],
     }],
-    max_tokens: 10,
+    max_tokens: 20,
     temperature: 0,
   })
   const tipoRaw = classifyRes.choices[0]?.message?.content?.trim().toLowerCase() || ''
+  // Aceita qualquer resposta que contenha "transporte" — protege contra verbosidade do modelo
   const isTransporte = tipoRaw.includes('transporte')
 
   // ── PASSO 2A: Extração completa do diário ────────────────────────────────────

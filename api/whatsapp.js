@@ -295,10 +295,17 @@ export default async function handler(req, res) {
       // runOCR conhece DIÁRIO DO MOTORISTA, formulários Casagrande, e também
       // despesas genéricas. Roda primeiro para decidir o fluxo correto.
       let ocrClassificacao = null
+      let ocrFalhou = false
       try {
         ocrClassificacao = await runOCR(base64)
       } catch (ocrErr) {
         console.error('[WA] runOCR erro:', ocrErr?.message || ocrErr)
+        ocrFalhou = true
+      }
+
+      if (ocrFalhou) {
+        await sendWA(from, '❌ Não consegui processar a imagem agora. Tente novamente em alguns instantes.')
+        return res.status(200).end()
       }
 
       if (ocrClassificacao?.tipo_formulario === 'transporte') {
@@ -507,8 +514,14 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      await sendWA(from, `Olá! 👋 Seu número não está vinculado ao SmartPro.\n\nAcesse *${APP_URL}* → Admin para cadastrar.`)
-      return res.status(200).end()
+      // Se é formulário de transporte (Diário do Motorista), processa mesmo sem canal
+      // O bloco de transporte usa cadastros_condutores para o workspace — não depende de canal
+      if (formularioTransporte) {
+        canal = { id: null, sessao_pendente: null, pessoa_id: null }
+      } else {
+        await sendWA(from, `Olá! 👋 Seu número não está vinculado ao SmartPro.\n\nAcesse *${APP_URL}* → Admin para cadastrar.`)
+        return res.status(200).end()
+      }
     }
 
     // owner_id real: busca da pessoa vinculada ao canal (fonte de verdade)
