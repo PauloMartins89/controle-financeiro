@@ -188,7 +188,12 @@ export default function LoteAprovacaoPublica() {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Erro ao processar')
-      setDone(acao)
+      setDone({
+        acao,
+        sig: acao === 'aprovar' ? canvasRef.current?.toDataURL('image/png') : null,
+        aprovadoEm: json.aprovadoEm || new Date().toISOString(),
+        aprovadorNome: lote.aprovador_nome || null,
+      })
     } catch (e) {
       toast.error(e.message)
     } finally {
@@ -219,22 +224,74 @@ export default function LoteAprovacaoPublica() {
   }
 
   if (done) {
-    const isAprovado = done === 'aprovar'
+    const isAprovado = done.acao === 'aprovar'
+    const fmtAprovado = done.aprovadoEm
+      ? new Date(done.aprovadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : ''
     return (
-      <div style={{ ...s.body, alignItems: 'center', justifyContent: 'center' }}>
+      <div style={s.body}>
         <Toaster position="top-center" />
-        <div style={{ textAlign: 'center', maxWidth: 400 }}>
-          {isAprovado
-            ? <CheckCircleIcon style={{ width: 64, height: 64, color: '#10b981', margin: '0 auto 16px' }} />
-            : <XCircleIcon style={{ width: 64, height: 64, color: '#ef4444', margin: '0 auto 16px' }} />
-          }
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', marginBottom: 8 }}>
-            {isAprovado ? 'De Acordo confirmado!' : 'Lote recusado.'}
-          </div>
-          <div style={{ fontSize: 14, color: '#94a3b8' }}>
-            {isAprovado
-              ? 'Obrigado pela confirmação. Seu retorno foi registrado.'
-              : 'Seu retorno foi registrado. Em breve entraremos em contato.'}
+        <div style={{ ...s.wrap }}>
+          <div style={s.card}>
+            <div style={{ padding: '28px 24px', textAlign: 'center' }}>
+              {isAprovado
+                ? <CheckCircleIcon style={{ width: 52, height: 52, color: '#10b981', margin: '0 auto 14px' }} />
+                : <XCircleIcon style={{ width: 52, height: 52, color: '#ef4444', margin: '0 auto 14px' }} />
+              }
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9', marginBottom: 6 }}>
+                {isAprovado ? 'De Acordo confirmado!' : 'Lote recusado.'}
+              </div>
+              <div style={{ fontSize: 13, color: '#94a3b8' }}>
+                {isAprovado
+                  ? 'Sua aprovação foi registrada com sucesso.'
+                  : 'Seu retorno foi registrado. Em breve entraremos em contato.'}
+              </div>
+            </div>
+
+            {isAprovado && (
+              <>
+                {/* Bloco dados da aprovação */}
+                <div style={{ borderTop: '1px solid #334155', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {done.aprovadorNome && (
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: 0.8, minWidth: 90 }}>APROVADO POR</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{done.aprovadorNome}</span>
+                    </div>
+                  )}
+                  {fmtAprovado && (
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: 0.8, minWidth: 90 }}>DATA / HORA</span>
+                      <span style={{ fontSize: 14, color: '#cbd5e1' }}>{fmtAprovado}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Preview da assinatura */}
+                {done.sig && (
+                  <div style={{ borderTop: '1px solid #334155', padding: '16px 24px' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', letterSpacing: 0.8, marginBottom: 10 }}>ASSINATURA REGISTRADA</div>
+                    <div style={{ background: '#0f172a', borderRadius: 10, border: '1px solid #334155', overflow: 'hidden' }}>
+                      <img src={done.sig} alt="Assinatura" style={{ width: '100%', display: 'block' }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Selos de validação */}
+                <div style={{ borderTop: '1px solid #334155', padding: '14px 24px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircleIcon style={{ width: 14, height: 14 }} />
+                    Assinatura digital registrada no sistema
+                  </div>
+                  <div style={{ fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircleIcon style={{ width: 14, height: 14 }} />
+                    PDF do lote incluirá esta assinatura
+                  </div>
+                  <div style={{ fontSize: 10, color: '#475569', marginTop: 4 }}>
+                    Este comprovante pode ser impresso via botão de impressão do seu navegador.
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

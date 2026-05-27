@@ -131,7 +131,7 @@ export function exportarBalancoPDF({ expenses, people, groups, mes }) {
 // .output('datauristring').split(',')[1] para base64 (WA/email).
 // Usa o mesmo motor visual de Lancamentos.jsx: paisagem, verde corporativo,
 // colunas dinâmicas (só exibe o que tiver dado) e bloco de assinatura.
-export function buildLotePDFDoc({ lancamentos = [], lote, link }) {
+export function buildLotePDFDoc({ lancamentos = [], lote, link, assinaturaBase64 = null, aprovadoEm = null, aprovadorNome = null }) {
   const doc      = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
   const PW       = doc.internal.pageSize.getWidth()
   const PH       = doc.internal.pageSize.getHeight()
@@ -255,16 +255,41 @@ export function buildLotePDFDoc({ lancamentos = [], lote, link }) {
 
   // ── Bloco de assinatura "De acordo" ───────────────────────────────────────
   const lastY = doc.lastAutoTable?.finalY || 200
-  if (lastY + 80 < PH - 40) {
+  const sigH  = assinaturaBase64 ? 36 : 0
+  if (lastY + 80 + sigH < PH - 40) {
+    const baseY = lastY + 20
     doc.setDrawColor(...VERDE_MEDIO); doc.setLineWidth(0.5)
-    doc.line(28, lastY + 40, 200, lastY + 40)
-    doc.line(PW - 28, lastY + 40, PW - 200, lastY + 40)
+
+    // Lado esquerdo — emissão (sem alteração)
+    doc.line(28, baseY + 40, 210, baseY + 40)
     doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...CINZA_TEXTO)
-    doc.text('Responsável pela emissão', 28, lastY + 52)
-    doc.text('De acordo — Cliente', PW - 28, lastY + 52, { align: 'right' })
+    doc.text('Responsável pela emissão', 28, baseY + 50)
     doc.setFontSize(6.5); doc.setTextColor(130, 150, 140)
-    doc.text('Data: ___/___/______', 28, lastY + 64)
-    doc.text('Data: ___/___/______', PW - 28, lastY + 64, { align: 'right' })
+    doc.text('Data: ___/___/______', 28, baseY + 60)
+
+    // Lado direito — cliente
+    if (assinaturaBase64) {
+      // Imagem da assinatura acima da linha
+      try {
+        const imgData = assinaturaBase64.startsWith('data:') ? assinaturaBase64 : `data:image/png;base64,${assinaturaBase64}`
+        doc.addImage(imgData, 'PNG', PW - 202, baseY + 2, 170, 34)
+      } catch (_) {}
+      doc.line(PW - 28, baseY + 40, PW - 202, baseY + 40)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...CINZA_TEXTO)
+      doc.text(aprovadorNome || 'De acordo — Cliente', PW - 28, baseY + 50, { align: 'right' })
+      // Carimbo digital
+      const fmtAprovado = aprovadoEm
+        ? new Date(aprovadoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : ''
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6); doc.setTextColor(80, 130, 100)
+      doc.text(`Assinado digitalmente em ${fmtAprovado}`, PW - 28, baseY + 60, { align: 'right' })
+    } else {
+      doc.line(PW - 28, baseY + 40, PW - 210, baseY + 40)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...CINZA_TEXTO)
+      doc.text('De acordo — Cliente', PW - 28, baseY + 50, { align: 'right' })
+      doc.setFontSize(6.5); doc.setTextColor(130, 150, 140)
+      doc.text('Data: ___/___/______', PW - 28, baseY + 60, { align: 'right' })
+    }
   }
 
   return doc

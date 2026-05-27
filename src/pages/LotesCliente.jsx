@@ -591,7 +591,7 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
     if (!telefone.replace(/\D/g, '').length || !link) return
     setSending(true)
     try {
-      const pdfBase64 = lancamentos.length > 0 ? buildPDFDoc().output('datauristring').split(',')[1] : undefined
+      const pdfBase64 = lancamentos.length > 0 ? (await buildPDFDoc()).output('datauristring').split(',')[1] : undefined
       const pdfNome = `lote-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}.pdf`
       const res = await fetch('/api/wa-lote', {
         method: 'POST',
@@ -630,8 +630,25 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
   }
 
   // ── Gera doc jsPDF do lote (reutiliza modelo de exportPDF.js) ──────────────
-  function buildPDFDoc() {
-    return buildLotePDFDoc({ lancamentos, lote, link })
+  async function buildPDFDoc() {
+    let assinaturaBase64 = null
+    if (lote.assinatura_url) {
+      try {
+        const res = await fetch(lote.assinatura_url)
+        const blob = await res.blob()
+        assinaturaBase64 = await new Promise(resolve => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result)
+          reader.readAsDataURL(blob)
+        })
+      } catch (_) {}
+    }
+    return buildLotePDFDoc({
+      lancamentos, lote, link,
+      assinaturaBase64,
+      aprovadoEm: lote.aprovado_em || null,
+      aprovadorNome: lote.confirmado_por || lote.aprovador_nome || null,
+    })
   }
 
   function gerarCSV() {
@@ -652,8 +669,8 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
     URL.revokeObjectURL(url)
   }
 
-  function handleDownloadPDF() {
-    const blob = buildPDFDoc().output('blob')
+  async function handleDownloadPDF() {
+    const blob = (await buildPDFDoc()).output('blob')
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -669,7 +686,7 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
     if (!email.trim() || !link) return
     setSendingEmail(true)
     try {
-      const pdfBase64 = buildPDFDoc().output('datauristring').split(',')[1]
+      const pdfBase64 = (await buildPDFDoc()).output('datauristring').split(',')[1]
       const csvContent = gerarCSV()
       const res = await fetch('/api/lote-email', {
         method: 'POST',
@@ -835,6 +852,7 @@ function LoteCard({ lote, onRefresh }) {
   const [deAcordoModal, setDeAcordoModal] = useState(false)
   const [enviarModal, setEnviarModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [sigModal, setSigModal] = useState(false)
 
   async function loadLancamentos() {
     if (lancamentos.length > 0) { setExpanded(e => !e); return }
@@ -890,6 +908,14 @@ function LoteCard({ lote, onRefresh }) {
                 <span style={{ color: lote.status === 'aprovado_cliente' ? '#10b981' : '#ef4444', fontWeight: 600 }}>
                   {lote.status === 'aprovado_cliente' ? '✓' : '✕'} Confirmado por: {lote.confirmado_por}
                 </span>
+              )}
+              {lote.assinatura_url && lote.status === 'aprovado_cliente' && (
+                <button
+                  onClick={e => { e.stopPropagation(); setSigModal(true) }}
+                  style={{ padding: '2px 8px', borderRadius: 20, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#10b981', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                >
+                  ✎ Assinado digitalmente
+                </button>
               )}
             </div>
           </div>
@@ -997,6 +1023,39 @@ function LoteCard({ lote, onRefresh }) {
           onClose={() => setEnviarModal(false)}
           onSent={() => { setEnviarModal(false); onRefresh() }}
         />
+      )}
+      {sigModal && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setSigModal(false)}
+        >
+          <div
+            style={{ background: '#1e293b', borderRadius: 16, border: '1px solid #334155', padding: 24, maxWidth: 480, width: '100%' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ fontWeight: 800, fontSize: 15, color: '#f1f5f9' }}>Assinatura Digital</div>
+              <button onClick={() => setSigModal(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18 }}>✕</button>
+            </div>
+            <div style={{ background: '#0f172a', borderRadius: 10, border: '1px solid #334155', overflow: 'hidden', marginBottom: 14 }}>
+              <img src={lote.assinatura_url} alt="Assinatura" style={{ width: '100%', display: 'block' }} />
+            </div>
+            {lote.confirmado_por && (
+              <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>
+                <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>APROVADO POR </span>{lote.confirmado_por}
+              </div>
+            )}
+            {lote.aprovado_em && (
+              <div style={{ fontSize: 13, color: '#94a3b8' }}>
+                <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>DATA/HORA </span>
+                {new Date(lote.aprovado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+            <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(16,185,129,0.08)', borderRadius: 8, border: '1px solid rgba(16,185,129,0.2)', fontSize: 12, color: '#10b981' }}>
+              ✓ Assinatura digital registrada — o PDF baixado inclui esta assinatura
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

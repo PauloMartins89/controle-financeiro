@@ -69,13 +69,15 @@ export default async function handler(req, res) {
       } catch (_) {}
     }
 
+    const aprovadoEm = new Date().toISOString()
     const { error: e1 } = await db
       .from('lotes_cliente')
       .update({
         status: 'aprovado_cliente',
         confirmado_por: confirmadoPor || null,
         assinatura_url: assinaturaUrl,
-        updated_at: new Date().toISOString(),
+        aprovado_em: aprovadoEm,
+        updated_at: aprovadoEm,
       })
       .eq('id', lote.id)
     if (e1) return res.status(500).json({ error: e1.message })
@@ -106,5 +108,5 @@ export default async function handler(req, res) {
       .eq('status', 'aguardando_aprovacao')
   }
 
-  return res.status(200).json({ ok: true })
+  return res.status(200).json({ ok: true, assinaturaUrl: assinaturaUrl || null, aprovadoEm: acao === 'aprovar' ? new Date().toISOString() : null })
 }
