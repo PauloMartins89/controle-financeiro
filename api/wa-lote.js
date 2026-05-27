@@ -51,15 +51,35 @@ export default async function handler(req, res) {
   }
 
   if (pdfBase64) {
-    // ── Envia PDF como documento com legenda ──────────────────────────────
+    // ── Upload PDF no Supabase Storage → URL pública → Z-API ─────────────
+    // Usar URL em vez de base64 garante MIME type application/pdf correto
+    // e o iPhone/WhatsApp reconhece como PDF (não .document)
+    const db = getDb()
+    const pdfBuffer = Buffer.from(pdfBase64, 'base64')
+    const storageKey = `lotes/${Date.now()}_${phone}.pdf`
+
+    const { data: uploaded, error: uploadErr } = await db.storage
+      .from('comprovantes')
+      .upload(storageKey, pdfBuffer, { contentType: 'application/pdf', upsert: false })
+
+    let documentUrl = null
+    if (!uploadErr && uploaded) {
+      const { data: urlData } = db.storage.from('comprovantes').getPublicUrl(uploaded.path)
+      documentUrl = urlData?.publicUrl || null
+    }
+
+    if (!documentUrl) {
+      // fallback: envia data URI se upload falhar
+      documentUrl = `data:application/pdf;base64,${pdfBase64}`
+    }
+
     const caption = `Lote *"${cliente || 'Lote'}"* — aprovação:\n${link}`
     const fileName = pdfNome || `lote-${(cliente || 'lote').replace(/[^a-z0-9]/gi, '_')}.pdf`
-    const document = `data:application/pdf;base64,${pdfBase64}`
 
     const docRes = await fetch(`${zapiBase()}/send-document/document`, {
       method: 'POST',
       headers: zapiHeaders(),
-      body: JSON.stringify({ phone, document, fileName, caption }),
+      body: JSON.stringify({ phone, document: documentUrl, fileName, caption }),
     })
 
     if (!docRes.ok) {
