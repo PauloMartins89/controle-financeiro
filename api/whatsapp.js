@@ -291,63 +291,58 @@ export default async function handler(req, res) {
         }
       } catch (_) {}
 
-      // ── PASSO 1: classificação inteligente — identifica o tipo de documento ──
-      // runOCR conhece DIÁRIO DO MOTORISTA, formulários Casagrande, e também
-      // despesas genéricas. Roda primeiro para decidir o fluxo correto.
-      let ocrClassificacao = null
-      let ocrFalhou = false
-      try {
-        ocrClassificacao = await runOCR(base64)
-      } catch (ocrErr) {
-        console.error('[WA] runOCR erro:', ocrErr?.message || ocrErr)
-        ocrFalhou = true
+      // ── Check de condutor antecipado — se for condutor, pula classificação ──
+      const _norm = from.replace(/\D/g, '')
+      const _sem55 = _norm.replace(/^55/, '')
+      const _com9 = _sem55.length === 10 ? _sem55.slice(0, 2) + '9' + _sem55.slice(2) : _sem55
+      const _sem9  = _sem55.length === 11 && _sem55[2] === '9' ? _sem55.slice(0, 2) + _sem55.slice(3) : _sem55
+      const _variantsEarly = [...new Set([_norm, _sem55, '55' + _sem55, _com9, '55' + _com9, _sem9, '55' + _sem9])]
+      let _condutorEncontrado = false
+      console.log('[WA] condutor check variants:', _variantsEarly)
+      for (const v of _variantsEarly) {
+        const { data: cond } = await getDb().from('cadastros_condutores')
+          .select('workspace_id').eq('telefone', v).eq('ativo_whatsapp', true).eq('ativo', true).maybeSingle()
+        if (cond?.workspace_id) { _condutorEncontrado = true; break }
+        const { data: wcFallback } = await getDb().from('whatsapp_config')
+          .select('workspace_id').eq('phone_number', v).eq('ativo', true).maybeSingle()
+        if (wcFallback?.workspace_id) { _condutorEncontrado = true; break }
       }
+      console.log('[WA] condutor encontrado:', _condutorEncontrado)
 
-      if (ocrFalhou) {
-        await sendWA(from, '❌ Não consegui processar a imagem agora. Tente novamente em alguns instantes.')
-        return res.status(200).end()
-      }
-
-      if (ocrClassificacao?.tipo_formulario === 'transporte') {
-        // ── Formulário de transporte (DIÁRIO DO MOTORISTA) ──────────────────
-        formularioTransporte = ocrClassificacao
-        text = '[imagem-transporte]'
-        textoOriginal = '[formulário: diário do motorista]'
+      if (_condutorEncontrado) {
+        // Condutor cadastrado → força extração de transporte, pula Passo 1
+        try {
+          formularioTransporte = await runOCR(base64, { forceTransporte: true })
+          text = '[imagem-transporte]'
+          textoOriginal = '[formulário: diário do motorista]'
+        } catch (errForce) {
+          console.error('[WA] runOCR forceTransporte erro:', errForce?.message || errForce)
+          await sendWA(from, '❌ Não consegui processar a imagem. Tente uma foto mais nítida.')
+          return res.status(200).end()
+        }
 
       } else {
-        // ── Fallback: motorista cadastrado → força extração de transporte ────
-        // Se o modelo errou a classificação mas o número é de um condutor ativo,
-        // reexecuta o runOCR forçando a extração de transporte.
-        const _norm = from.replace(/\D/g, '')
-        const _sem55 = _norm.replace(/^55/, '')
-        const _com9 = _sem55.length === 10 ? _sem55.slice(0, 2) + '9' + _sem55.slice(2) : _sem55
-        const _sem9  = _sem55.length === 11 && _sem55[2] === '9' ? _sem55.slice(0, 2) + _sem55.slice(3) : _sem55
-        const _variantsEarly = [...new Set([_norm, _sem55, '55' + _sem55, _com9, '55' + _com9, _sem9, '55' + _sem9])]
-        let _condutorEncontrado = false
-        console.log('[WA] condutor fallback variants:', _variantsEarly)
-        for (const v of _variantsEarly) {
-          const { data: cond } = await getDb().from('cadastros_condutores')
-            .select('workspace_id').eq('telefone', v).eq('ativo_whatsapp', true).eq('ativo', true).maybeSingle()
-          if (cond?.workspace_id) { _condutorEncontrado = true; break }
-          // Fallback: whatsapp_config (fonte legada)
-          const { data: wcFallback } = await getDb().from('whatsapp_config')
-            .select('workspace_id').eq('phone_number', v).eq('ativo', true).maybeSingle()
-          if (wcFallback?.workspace_id) { _condutorEncontrado = true; break }
+        // Não é condutor → PASSO 1: classificação inteligente
+        let ocrClassificacao = null
+        let ocrFalhou = false
+        try {
+          ocrClassificacao = await runOCR(base64)
+        } catch (ocrErr) {
+          console.error('[WA] runOCR erro:', ocrErr?.message || ocrErr)
+          ocrFalhou = true
         }
-        console.log('[WA] condutor encontrado:', _condutorEncontrado)
-        if (_condutorEncontrado) {
-          try {
-            const ocrForcado = await runOCR(base64, { forceTransporte: true })
-            formularioTransporte = ocrForcado
-            text = '[imagem-transporte]'
-            textoOriginal = '[formulário: diário do motorista - forçado]'
-          } catch (errForce) {
-            console.error('[WA] runOCR forceTransporte erro:', errForce?.message || errForce)
-            await sendWA(from, '❌ Não consegui processar a imagem. Tente uma foto mais nítida.')
-            return res.status(200).end()
-          }
+
+        if (ocrFalhou) {
+          await sendWA(from, '❌ Não consegui processar a imagem agora. Tente novamente em alguns instantes.')
+          return res.status(200).end()
+        }
+
+        if (ocrClassificacao?.tipo_formulario === 'transporte') {
+          formularioTransporte = ocrClassificacao
+          text = '[imagem-transporte]'
+          textoOriginal = '[formulário: diário do motorista]'
         } else {
-        // ── PASSO 2: comprovante/despesa — OCR rico com NF-e, CNPJ, litros ──
+          // ── PASSO 2: comprovante/despesa — OCR rico com NF-e, CNPJ, litros ──
         const visionResult = await groq.chat.completions.create({
           model: 'meta-llama/llama-4-scout-17b-16e-instruct',
           messages: [{
@@ -423,8 +418,8 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
         text = '[imagem]'
         textoOriginal = `[imagem${caption ? ': ' + caption : ''}]`
+        } // fecha else (Passo 2: não é transporte)
         } // fecha else (não é condutor)
-      }
 
     } else {
       text = message.text.body.trim()
