@@ -324,7 +324,7 @@ export default async function handler(req, res) {
         const _variantsEarly = [...new Set([_norm, _sem55, '55' + _sem55, _com9, '55' + _com9])]
         let _condutorEncontrado = false
         for (const v of _variantsEarly) {
-          const { data: cond } = await db.from('cadastros_condutores')
+          const { data: cond } = await getDb().from('cadastros_condutores')
             .select('workspace_id').eq('telefone', v).eq('ativo_whatsapp', true).eq('ativo', true).maybeSingle()
           if (cond?.workspace_id) { _condutorEncontrado = true; break }
         }
