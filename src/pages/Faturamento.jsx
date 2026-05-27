@@ -732,6 +732,11 @@ export default function Faturamento() {
   const [aprovandoLote, setAprovandoLote]   = useState(null) // lote_id sendo aprovado
   const [gerarLotesModal, setGerarLotesModal] = useState(false)
   const [downloadingPDFMap, setDownloadingPDFMap] = useState({})
+  const [sortField, setSortField]         = useState('data')
+  const [sortDir, setSortDir]             = useState('desc')
+  const [searchLote, setSearchLote]       = useState('')
+  const [sortLoteField, setSortLoteField] = useState('cliente')
+  const [sortLoteDir, setSortLoteDir]     = useState('asc')
 
   useEffect(() => {
     supabase?.auth.getUser().then(({ data }) => setUserId(data?.user?.id || null))
@@ -854,7 +859,21 @@ export default function Faturamento() {
       }
       mapa[l.lote_cliente_id].itens.push(l)
     })
-    return Object.values(mapa).sort((a, b) => a.lote.cliente.localeCompare(b.lote.cliente))
+    let grupos = Object.values(mapa)
+    if (searchLote.trim()) {
+      const q = searchLote.trim().toLowerCase()
+      grupos = grupos.filter(g => g.lote.cliente?.toLowerCase().includes(q))
+    }
+    grupos.sort((a, b) => {
+      const dir = sortLoteDir === 'asc' ? 1 : -1
+      switch (sortLoteField) {
+        case 'total':  return dir * (a.itens.reduce((s, l) => s + (l.valor||0), 0) - b.itens.reduce((s, l) => s + (l.valor||0), 0))
+        case 'itens':  return dir * (a.itens.length - b.itens.length)
+        case 'status': return dir * (a.lote.status||'').localeCompare(b.lote.status||'')
+        default:       return dir * (a.lote.cliente||'').localeCompare(b.lote.cliente||'')
+      }
+    })
+    return grupos
   })()
 
   async function handleAprovarLote(loteId) {
@@ -938,6 +957,25 @@ export default function Faturamento() {
     return true
   })
 
+  const sortedItems = [...filtered].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1
+    switch (sortField) {
+      case 'valor':   return dir * ((a.valor||0) - (b.valor||0))
+      case 'status':  return dir * (a.status||'').localeCompare(b.status||'')
+      case 'cliente': {
+        const da = a.dados_extras||{}, db = b.dados_extras||{}
+        const av = (da.cliente||da.empresa||a.descricao||'').toLowerCase()
+        const bv = (db.cliente||db.empresa||b.descricao||'').toLowerCase()
+        return dir * av.localeCompare(bv)
+      }
+      default: {
+        const av = a.data||'', bv = b.data||''
+        const c = av.localeCompare(bv)
+        return c !== 0 ? dir * c : dir * ((a.created_at||'') < (b.created_at||'') ? -1 : 1)
+      }
+    }
+  })
+
   // ── Totais (do conjunto completo, não filtrado) ───────────────────────────
   const qtdRevisao    = lancamentos.filter(l => isPendingReview(l.status)).length
   const totalRevisao  = lancamentos.filter(l => isPendingReview(l.status)).reduce((s, l) => s + (l.valor || 0), 0)
@@ -989,6 +1027,26 @@ export default function Faturamento() {
         {/* ── View Por Lote ───────────────────────────────────────────────── */}
         {viewMode === 'por_lote' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* ── Busca e ordenação ── */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', flex: 1, minWidth: 180 }}>
+                <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+                <input value={searchLote} onChange={e => setSearchLote(e.target.value)} placeholder="Buscar cliente..."
+                  style={{ width: '100%', padding: '8px 12px 8px 32px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <select value={sortLoteField} onChange={e => setSortLoteField(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}>
+                <option value="cliente">Cliente</option>
+                <option value="total">Valor total</option>
+                <option value="itens">Qtd. itens</option>
+                <option value="status">Status</option>
+              </select>
+              <button onClick={() => setSortLoteDir(d => d === 'asc' ? 'desc' : 'asc')}
+                title={sortLoteDir === 'asc' ? 'Crescente — clique para inverter' : 'Decrescente — clique para inverter'}
+                style={{ padding: '8px 14px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: '#818cf8', cursor: 'pointer', fontSize: 15, fontWeight: 800 }}>
+                {sortLoteDir === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
             {aprovadosSemLote.length > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 13, color: '#818cf8' }}>
@@ -1205,13 +1263,26 @@ export default function Faturamento() {
                       style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#8b5cf6' }}
                     />
                   </th>
-                  {['DATA', 'Nº DM', 'CLIENTE / DESCRIÇÃO', 'ORIGEM', 'DESTINO', 'PLACA', 'KM ASF', 'KM TER', 'KM TOTAL', 'VALOR', 'STATUS', 'AÇÕES'].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', textAlign: (h === 'VALOR' || h === 'KM ASF' || h === 'KM TER' || h === 'KM TOTAL') ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
+                  {[
+                    { h: 'DATA', field: 'data' }, { h: 'Nº DM', field: null }, { h: 'CLIENTE / DESCRIÇÃO', field: 'cliente' },
+                    { h: 'ORIGEM', field: null }, { h: 'DESTINO', field: null }, { h: 'PLACA', field: null },
+                    { h: 'KM ASF', field: null }, { h: 'KM TER', field: null }, { h: 'KM TOTAL', field: null },
+                    { h: 'VALOR', field: 'valor' }, { h: 'STATUS', field: 'status' }, { h: 'AÇÕES', field: null },
+                  ].map(({ h, field }) => {
+                    const RIGHT = ['VALOR', 'KM ASF', 'KM TER', 'KM TOTAL']
+                    const active = field && sortField === field
+                    return (
+                      <th key={h}
+                        onClick={field ? () => { if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortField(field); setSortDir('desc') } } : undefined}
+                        style={{ padding: '10px 12px', textAlign: RIGHT.includes(h) ? 'right' : 'left', fontSize: 11, fontWeight: 700, color: active ? '#818cf8' : 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap', cursor: field ? 'pointer' : 'default', userSelect: 'none' }}>
+                        {h}{active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : (field ? ' ↕' : '')}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(l => {
+                {sortedItems.map(l => {
                   const isTransporte = (l.tipo_formulario || 'padrao') === 'transporte'
                   const d = l.dados_extras || {}
                   const km = isTransporte ? calcKmTotais(d) : null
