@@ -2,6 +2,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { runOCR } from './_ocr.js'
 import ws from 'ws'
+import { rotearMensagem } from './_wa-router.js'
+import { handleAgendaWA } from './_agenda-wa.js'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
@@ -452,6 +454,20 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       '55' + sem9,
       sem9,
     ])]
+
+    // ── Agenda: roteamento inteligente (áudio/texto de gestores) ────────────
+    if (message.type === 'audio' || message.type === 'text') {
+      try {
+        const destino = await rotearMensagem(body, from, fromVariants, db)
+        if (destino === 'agenda') {
+          await handleAgendaWA(body, from, fromVariants, (phone, msg) => sendWA(phone, msg), db)
+          return res.status(200).end()
+        }
+      } catch (e) {
+        console.error('[WA] agenda routing error:', e.message)
+      }
+    }
+
     let canal = null
     for (const v of [...new Set(fromVariants)]) {
       const { data } = await db.from('canais_mensagem').select('*').eq('telefone', v).maybeSingle()
