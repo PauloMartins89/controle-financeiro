@@ -9,7 +9,7 @@ import {
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
   TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon, BeakerIcon, DevicePhoneMobileIcon,
-  WrenchScrewdriverIcon, ExclamationTriangleIcon,
+  WrenchScrewdriverIcon, ExclamationTriangleIcon, MapPinIcon, CubeIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -112,13 +112,19 @@ const navGroups = [
   {
     title: 'SmartLíder',
     items: [
-      { to: '/lider/dashboard',        icon: ChartBarIcon,               label: 'Dashboard',           moduleKey: null },
-      { to: '/lider/turnos',           icon: CalendarDaysIcon,            label: 'Turnos',              moduleKey: null },
-      { to: '/lider/apontamentos',     icon: ClipboardDocumentListIcon,   label: 'Apontamentos',        moduleKey: null },
-      { to: '/lider/cadastros',        icon: UsersIcon,                   label: 'Cadastros',           moduleKey: null },
-      { to: '/lider/epi/solicitacoes', icon: ShieldCheckIcon,             label: 'Solicitações EPI',    moduleKey: null },
-      { to: '/lider/epi/catalogo',     icon: TableCellsIcon,              label: 'Catálogo EPI',        moduleKey: null },
-      { to: '/lider/epc/catalogo',     icon: WrenchScrewdriverIcon,       label: 'Catálogo EPC',        moduleKey: null },
+      { to: '/lider/dashboard',                   icon: ChartBarIcon,              label: 'Dashboard',           moduleKey: null },
+      { to: '/lider/turnos',                       icon: CalendarDaysIcon,           label: 'Turnos',              moduleKey: null },
+      { to: '/lider/apontamentos',                 icon: ClipboardDocumentListIcon,  label: 'Apontamentos',        moduleKey: null },
+      { to: '/lider/cadastros/frentes',            icon: MapPinIcon,                 label: 'Frentes',             moduleKey: null },
+      { to: '/lider/cadastros/equipes',            icon: UserGroupIcon,              label: 'Equipes',             moduleKey: null },
+      { to: '/lider/cadastros/colaboradores',      icon: UsersIcon,                  label: 'Colaboradores',       moduleKey: null },
+      { to: '/lider/cadastros/maquinas',           icon: WrenchScrewdriverIcon,      label: 'Máquinas',            moduleKey: null },
+      { to: '/lider/cadastros/implementos',        icon: BeakerIcon,                 label: 'Implementos',         moduleKey: null },
+      { to: '/lider/cadastros/produtos',           icon: CubeIcon,                   label: 'Produtos',            moduleKey: null },
+      { to: '/lider/cadastros/epis',               icon: ShieldCheckIcon,            label: 'EPIs',                moduleKey: null },
+      { to: '/lider/epi/solicitacoes',             icon: ShieldCheckIcon,            label: 'Solicitações EPI',    moduleKey: null },
+      { to: '/lider/epi/catalogo',                 icon: TableCellsIcon,             label: 'Catálogo EPI',        moduleKey: null },
+      { to: '/lider/epc/catalogo',                 icon: WrenchScrewdriverIcon,      label: 'Catálogo EPC',        moduleKey: null },
     ],
   },
   {
@@ -130,6 +136,12 @@ const navGroups = [
       { to: '/manutencao/cadastros/equipamentos', icon: WrenchScrewdriverIcon,      label: 'Equipamentos',      moduleKey: 'manutencao' },
       { to: '/manutencao/api-planos',             icon: BeakerIcon,                 label: 'Planos API',        moduleKey: 'manutencao' },
       { to: '/manutencao/planos-pfd',             icon: DocumentTextIcon,           label: 'Planos PFD',        moduleKey: 'manutencao' },
+    ],
+  },
+  {
+    title: 'Agenda',
+    items: [
+      { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agenda de Serviços', moduleKey: null },
     ],
   },
   {
