@@ -29,25 +29,28 @@ export async function runOCR(imageBase64, { forceTransporte = false } = {}) {
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
   const imgUrl = `data:image/jpeg;base64,${imageBase64}`
 
-  // ── PASSO 1: Classificação rápida (resposta mínima, sem risco de truncamento) ──
-  const classifyRes = await groqWithRetry(groq, {
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'image_url', image_url: { url: imgUrl } },
-        {
-          type: 'text',
-          text: `Analise esta imagem. Ela é um formulário "DIÁRIO DO MOTORISTA"?\nIndícios: tabela com colunas KM/ASFALTO/TERRA, campo PLACA, campo CONDUTOR, logotipo Casagrande, título "DIÁRIO DO MOTORISTA".\nResponda SOMENTE uma palavra: transporte (se for diário do motorista) ou padrao (qualquer outra coisa).`,
-        },
-      ],
-    }],
-    max_tokens: 20,
-    temperature: 0,
-  })
-  const tipoRaw = classifyRes.choices[0]?.message?.content?.trim().toLowerCase() || ''
-  // Aceita qualquer resposta que contenha "transporte" — protege contra verbosidade do modelo
-  const isTransporte = forceTransporte || tipoRaw.includes('transporte')
+  // ── PASSO 1: Classificação rápida — pulada se forceTransporte=true ───────────
+  let isTransporte = forceTransporte
+  if (!forceTransporte) {
+    const classifyRes = await groqWithRetry(groq, {
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: imgUrl } },
+          {
+            type: 'text',
+            text: `Analise esta imagem. Ela é um formulário "DIÁRIO DO MOTORISTA"?\nIndícios: tabela com colunas KM/ASFALTO/TERRA, campo PLACA, campo CONDUTOR, logotipo Casagrande, título "DIÁRIO DO MOTORISTA".\nResponda SOMENTE uma palavra: transporte (se for diário do motorista) ou padrao (qualquer outra coisa).`,
+          },
+        ],
+      }],
+      max_tokens: 20,
+      temperature: 0,
+    })
+    const tipoRaw = classifyRes.choices[0]?.message?.content?.trim().toLowerCase() || ''
+    // Aceita qualquer resposta que contenha "transporte" — protege contra verbosidade do modelo
+    isTransporte = tipoRaw.includes('transporte')
+  }
 
   // ── PASSO 2A: Extração completa do diário ────────────────────────────────────
   if (isTransporte) {
