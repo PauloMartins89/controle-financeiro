@@ -3,7 +3,10 @@
  *
  * Envia mensagem de aprovação de lote via Z-API (sem abrir WhatsApp pessoal).
  *
- * Body: { telefone, cliente, link, loteId? }
+ * Body: { telefone, cliente, link, loteId?, pdfBase64?, pdfNome? }
+ *
+ * Se pdfBase64 for informado, envia o PDF como documento com o link como legenda.
+ * Caso contrário, envia somente a mensagem de texto.
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -15,6 +18,17 @@ function getDb() {
   )
 }
 
+function zapiHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+  }
+}
+
+function zapiBase() {
+  return `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}`
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -22,7 +36,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { telefone, cliente, link, loteId } = req.body || {}
+  const { telefone, cliente, link, loteId, pdfBase64, pdfNome } = req.body || {}
 
   if (!telefone || !link) {
     return res.status(400).json({ error: 'telefone e link são obrigatórios' })
@@ -36,23 +50,38 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Telefone inválido' })
   }
 
-  const msg = `Olá! Segue o link para aprovação do lote *"${cliente || 'Lote'}"*:\n\n${link}\n\nPor favor, acesse e confirme o De Acordo.`
+  if (pdfBase64) {
+    // ── Envia PDF como documento com legenda ──────────────────────────────
+    const caption = `Lote *"${cliente || 'Lote'}"* — aprovação:\n${link}`
+    const fileName = pdfNome || `lote-${(cliente || 'lote').replace(/[^a-z0-9]/gi, '_')}.pdf`
+    const document = `data:application/pdf;base64,${pdfBase64}`
 
-  const zapiUrl = `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`
+    const docRes = await fetch(`${zapiBase()}/send-document/document`, {
+      method: 'POST',
+      headers: zapiHeaders(),
+      body: JSON.stringify({ phone, document, fileName, caption }),
+    })
 
-  const zapiRes = await fetch(zapiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
-    },
-    body: JSON.stringify({ phone, message: msg }),
-  })
+    if (!docRes.ok) {
+      const errText = await docRes.text().catch(() => '')
+      console.error('[wa-lote] Z-API send-document erro:', docRes.status, errText)
+      return res.status(502).json({ error: `Falha ao enviar PDF WhatsApp (${docRes.status})` })
+    }
+  } else {
+    // ── Envia somente texto ───────────────────────────────────────────────
+    const msg = `Olá! Segue o link para aprovação do lote *"${cliente || 'Lote'}"*:\n\n${link}\n\nPor favor, acesse e confirme o De Acordo.`
 
-  if (!zapiRes.ok) {
-    const errText = await zapiRes.text().catch(() => '')
-    console.error('[wa-lote] Z-API erro:', zapiRes.status, errText)
-    return res.status(502).json({ error: `Falha ao enviar WhatsApp (${zapiRes.status})` })
+    const textRes = await fetch(`${zapiBase()}/send-text`, {
+      method: 'POST',
+      headers: zapiHeaders(),
+      body: JSON.stringify({ phone, message: msg }),
+    })
+
+    if (!textRes.ok) {
+      const errText = await textRes.text().catch(() => '')
+      console.error('[wa-lote] Z-API send-text erro:', textRes.status, errText)
+      return res.status(502).json({ error: `Falha ao enviar WhatsApp (${textRes.status})` })
+    }
   }
 
   // Atualiza status do lote para enviado_cliente
