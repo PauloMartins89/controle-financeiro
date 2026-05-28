@@ -209,10 +209,10 @@ export default function SmartLiderAdmin() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20, alignItems: 'start' }}>
 
           {/* ── Coluna esquerda: seletor de workspace ── */}
-          <div style={{ background: S.card, borderRadius: 12, border: `1px solid ${S.border}`, boxShadow: S.shadow, overflow: 'hidden' }}>
+          <div style={{ background: S.card, borderRadius: 12, border: `1px solid ${S.border}`, boxShadow: S.shadow, overflow: 'hidden', position: 'sticky', top: 80, maxHeight: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '14px 16px', borderBottom: `1px solid ${S.border}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <BuildingOffice2Icon style={{ width: 16, height: 16, color: S.primary }} />
@@ -231,6 +231,7 @@ export default function SmartLiderAdmin() {
               </div>
             </div>
 
+            <div style={{ overflowY: 'auto', flex: 1 }}>
             {loadingWs
               ? <div style={{ padding: 24, textAlign: 'center', color: S.textSub, fontSize: 13 }}>Carregando…</div>
               : wsFiltrados.map(ws => (
@@ -256,6 +257,7 @@ export default function SmartLiderAdmin() {
                 </button>
               ))
             }
+            </div>
           </div>
 
           {/* ── Coluna direita: usuários ── */}
@@ -313,7 +315,7 @@ export default function SmartLiderAdmin() {
                   <div style={{ background: S.card, borderRadius: 12, border: `1px solid ${S.border}`, boxShadow: S.shadow, overflow: 'hidden' }}>
                     {/* Cabeçalho tabela */}
                     <div style={{
-                      display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px',
+                      display: 'grid', gridTemplateColumns: '2fr 2fr 110px 90px',
                       padding: '10px 16px', background: S.pageBg,
                       borderBottom: `1px solid ${S.border}`,
                     }}>
@@ -347,18 +349,18 @@ export default function SmartLiderAdmin() {
                           <div
                             key={u.id}
                             style={{
-                              display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px',
+                              display: 'grid', gridTemplateColumns: '2fr 2fr 110px 90px',
                               padding: '12px 16px', borderBottom: `1px solid ${S.border}`,
                               alignItems: 'center',
                             }}
                           >
                             {/* Matrícula / email */}
-                            <div>
+                            <div style={{ minWidth: 0 }}>
                               <Badge>{u.matricula}</Badge>
-                              <div style={{ fontSize: 11, color: S.textSub, marginTop: 3 }}>{u.email}</div>
+                              <div style={{ fontSize: 11, color: S.textSub, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
                             </div>
                             {/* Nome */}
-                            <div style={{ fontSize: 13, color: S.text }}>{u.nome || '—'}</div>
+                            <div style={{ fontSize: 13, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{u.nome || '—'}</div>
                             {/* Data */}
                             <div style={{ fontSize: 12, color: S.textSub }}>{fmtDate(u.created_at)}</div>
                             {/* Ações */}
