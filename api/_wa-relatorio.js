@@ -20,7 +20,8 @@
 import Groq from 'groq-sdk'
 import PDFDocument from 'pdfkit'
 import { gerarDashboardPDF } from './_pdf/index.js'
-import { buildDashboardFinanceiro } from './_pdf/modulos/financeiro.js'
+import { buildDashboardFinanceiro }  from './_pdf/modulos/financeiro.js'
+import { buildDashboardFaturamento } from './_pdf/modulos/faturamento.js'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const APP_URL = process.env.APP_URL || 'https://smartpro.app.br'
@@ -482,8 +483,9 @@ async function construirDashboard(modulo, workspaceId, filtros, supabase, empres
     case 'financeiro':
     case 'lancamentos':   // dashboard de lancamentos = financeiro
       return buildDashboardFinanceiro(workspaceId, filtros, supabase, empresa)
-    // Próximos módulos entram aqui:
     case 'faturamento':
+      return buildDashboardFaturamento(workspaceId, filtros, supabase, empresa)
+    // Próximos módulos entram aqui:
     case 'compras':
     case 'refeicoes':
     case 'efetivo':
