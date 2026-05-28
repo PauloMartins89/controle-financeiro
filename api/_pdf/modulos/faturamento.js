@@ -13,7 +13,8 @@ import { fmtBRL, fmtData, COR } from '../layout.js'
 import { PALETA } from '../charts.js'
 
 export async function buildDashboardFaturamento(workspaceId, filtros, supabase, empresa) {
-  const { data_inicio, data_fim, cliente } = filtros
+  const { data_inicio, data_fim, cliente, formato } = filtros
+  const isLista = formato === 'lista' || formato === 'tabela'
 
   // 1) TODOS os pagamentos do workspace (KPIs precisam bater com a tela "Contas a Receber",
   //    que não filtra por data).
@@ -68,7 +69,8 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
   const dataBarras = meses.map(m => Number(porMes[m].toFixed(2)))
 
   // ── Tabela: lançamentos DO PERÍODO solicitado ───────────────────────────
-  const linhas = noPeriodo.slice(0, 25).map(p => ({
+  const cap = isLista ? 200 : 25
+  const linhas = noPeriodo.slice(0, cap).map(p => ({
     data:     fmtData(p.data_pagamento),
     nf:       p.numero_nf || '—',
     desc:     p.descricao || '—',
@@ -80,7 +82,7 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
   }))
 
   return {
-    titulo:    'Relatório de Faturamento',
+    titulo:    isLista ? 'Lista — Faturamento' : 'Relatório de Faturamento',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
     kpis: [
@@ -89,13 +91,13 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
       { label: 'Já Recebido',       value: fmtBRL(totalRecebido), color: COR.success, sub: `${recebidos.length} confirmado(s)` },
       { label: 'Faturado Este Mês', value: fmtBRL(totalMes),      color: COR.info },
     ],
-    pizza: pizzaData.length ? {
+    pizza: !isLista && pizzaData.length ? {
       titulo: 'Distribuição por status',
       labels: pizzaData.map(x => x.label),
       data:   pizzaData.map(x => Number(x.value.toFixed(2))),
       colors: pizzaData.map(x => x.color),
     } : null,
-    barras: meses.length ? {
+    barras: !isLista && meses.length ? {
       titulo: 'Faturamento por mês (últimos 12)',
       labels: labelsBarras,
       data:   dataBarras,

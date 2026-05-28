@@ -15,7 +15,8 @@ const STATUS_EM_PREPARO = ['confirmado_restaurante', 'enviado_restaurante', 'em_
 const STATUS_ENTREGUES = ['entregue', 'finalizado']
 
 export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, empresa) {
-  const { data_inicio, data_fim } = filtros
+  const { data_inicio, data_fim, formato } = filtros
+  const isLista = formato === 'lista' || formato === 'tabela'
 
   const { data, error } = await supabase
     .from('refei_solicitacoes')
@@ -67,8 +68,28 @@ export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, em
   const labelsBarras = dias.map(d => fmtData(d).slice(0, 5))
   const dataBarras   = dias.map(d => porDia[d])
 
+  // ── Tabela do período (modo lista exibe até 200) ────────────────────
+  const STATUS_LABEL_REF = {
+    pendente: 'AG. APROV.', aguardando_aprovacao: 'AG. APROV.',
+    aprovado: 'APROVADO', consolidado: 'CONSOLIDADO',
+    enviado_restaurante: 'NO RESTAURANTE', confirmado_restaurante: 'CONFIRMADO',
+    em_acompanhamento: 'EM ACOMP.',
+    entregue: 'ENTREGUE', finalizado: 'FINALIZADO',
+    aguardando_validacao: 'AG. VALID.', finalizado_com_ocorrencia: 'OCORRÊNCIA',
+  }
+  const cap = isLista ? 200 : 25
+  const linhasTab = noPeriodo.slice(0, cap).map(s => ({
+    data:       fmtData(s.data_refeicao),
+    equipe:     s.equipe_nome || '—',
+    restaurante:s.restaurante_nome || '—',
+    ref:        s.total_refeicoes ?? 0,
+    caf:        s.total_cafes ?? 0,
+    valor:      fmtBRL(s.valor_total),
+    status:     STATUS_LABEL_REF[s.status] || String(s.status || '—').toUpperCase(),
+  }))
+
   return {
-    titulo:    'Relatório de Refeições',
+    titulo:    isLista ? 'Lista — Refeições' : 'Relatório de Refeições',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
     empresa,
     kpis: [
@@ -77,18 +98,31 @@ export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, em
       { label: 'Aguardando Aprov.',value: fmtNumero(pendentes.length),color: pendentes.length ? COR.danger : COR.success, sub: `Aprovadas: ${aprovados.length}` },
       { label: 'Entregues',        value: fmtNumero(entregues.length),color: COR.success, sub: `Em preparo: ${emPreparo.length}` },
     ],
-    pizza: topRest.length ? {
+    pizza: !isLista && topRest.length ? {
       titulo: 'Custo por restaurante (período)',
       labels: topRest.map(([k]) => k),
       data:   topRest.map(([, v]) => Number(v.toFixed(2))),
       colors: topRest.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: dias.length ? {
+    barras: !isLista && dias.length ? {
       titulo: `Refeições por dia (período)`,
       labels: labelsBarras,
       data:   dataBarras,
       color:  COR.primary,
       label:  'qtd',
+    } : null,
+    tabela: linhasTab.length ? {
+      titulo: `Solicitações do período (${noPeriodo.length})`,
+      colunas: [
+        { key: 'data',       label: 'Data',       width: 55 },
+        { key: 'equipe',     label: 'Equipe',     width: 110 },
+        { key: 'restaurante',label: 'Restaurante',width: 110 },
+        { key: 'ref',        label: 'Ref',        width: 35, align: 'center' },
+        { key: 'caf',        label: 'Café',       width: 35, align: 'center' },
+        { key: 'valor',      label: 'Valor',      width: 70, align: 'right' },
+        { key: 'status',     label: 'Status',     width: 90, align: 'center' },
+      ],
+      linhas: linhasTab,
     } : null,
   }
 }

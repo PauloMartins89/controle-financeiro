@@ -23,7 +23,8 @@ const STATUS_LABEL = {
 }
 
 export async function buildDashboardCompras(workspaceId, filtros, supabase, empresa) {
-  const { data_inicio, data_fim } = filtros
+  const { data_inicio, data_fim, formato } = filtros
+  const isLista = formato === 'lista' || formato === 'tabela'
 
   const { data, error } = await supabase
     .from('solicitacoes_compra')
@@ -72,8 +73,9 @@ export async function buildDashboardCompras(workspaceId, filtros, supabase, empr
   })
   const dataBarras = meses.map(m => Number(porMes[m].toFixed(2)))
 
-  // Tabela: top 25 do período
-  const linhas = noPeriodo.slice(0, 25).map(s => ({
+  // Tabela: até 200 no modo lista, 25 no dashboard
+  const cap = isLista ? 200 : 25
+  const linhas = noPeriodo.slice(0, cap).map(s => ({
     data:       fmtData(String(s.created_at || '').slice(0, 10)),
     titulo:     s.titulo || s.descricao || '—',
     fornecedor: s.fornecedor_vencedor || '—',
@@ -82,7 +84,7 @@ export async function buildDashboardCompras(workspaceId, filtros, supabase, empr
   }))
 
   return {
-    titulo:    'Relatório de Compras',
+    titulo:    isLista ? 'Lista — Compras' : 'Relatório de Compras',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
     empresa,
     kpis: [
@@ -91,13 +93,13 @@ export async function buildDashboardCompras(workspaceId, filtros, supabase, empr
       { label: 'Valor aprovado',     value: fmtBRL(valorAprovado),      color: COR.info,    sub: `${aprovadas.length} concluídas` },
       { label: 'Economia gerada',    value: fmtBRL(economiaTotal),      color: COR.success, sub: `${recusadas.length} recusadas` },
     ],
-    pizza: pizzaArr.length ? {
+    pizza: !isLista && pizzaArr.length ? {
       titulo: 'Distribuição por status',
       labels: pizzaArr.map(([k]) => k),
       data:   pizzaArr.map(([, v]) => v),
       colors: pizzaArr.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: meses.length ? {
+    barras: !isLista && meses.length ? {
       titulo: 'Valor aprovado por mês (últimos 12)',
       labels: labelsBarras,
       data:   dataBarras,

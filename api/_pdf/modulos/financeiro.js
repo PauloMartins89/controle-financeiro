@@ -8,7 +8,8 @@ import { fmtBRL, fmtData, COR } from '../layout.js'
 import { PALETA } from '../charts.js'
 
 export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, empresa) {
-  const { data_inicio, data_fim, cliente, tipo = 'todos' } = filtros
+  const { data_inicio, data_fim, cliente, tipo = 'todos', formato } = filtros
+  const isLista = formato === 'lista' || formato === 'tabela'
 
   // 1) TODOS os lançamentos do workspace (para KPIs globais que batem com a tela)
   let qAll = supabase
@@ -60,8 +61,23 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
   const labelsBarras = dias.map(d => fmtData(d).slice(0, 5))   // dd/mm
   const dataBarras   = dias.map(d => Number((porDia[d].receita - porDia[d].despesa).toFixed(2)))
 
+  // ── Tabela (sempre disponível; mais robusta no modo lista) ──────────────
+  const cap = isLista ? 200 : 25
+  const linhasTab = noPeriodo.slice(0, cap).map(l => ({
+    data:     fmtData(String(l.data).slice(0, 10)),
+    tipo:     l.tipo === 'receita' ? 'ENTRADA' : 'SAÍDA',
+    desc:     (l.descricao || '—').slice(0, 60),
+    categoria:l.categoria || '—',
+    valor:    fmtBRL(l.valor),
+    status:   String(l.status || '—').toUpperCase(),
+    _color: {
+      tipo:   l.tipo === 'receita' ? COR.success : COR.danger,
+      status: String(l.status || '').toLowerCase() === 'pago' ? COR.success : COR.warning,
+    },
+  }))
+
   return {
-    titulo:    'Relatório Financeiro',
+    titulo:    isLista ? 'Lista — Lançamentos Financeiros' : 'Relatório Financeiro',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
     kpis: [
@@ -70,18 +86,30 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
       { label: 'Saldo',     value: fmtBRL(saldo),       color: saldo >= 0 ? COR.info : COR.warning },
       { label: '% Pago',    value: pctPago + '%',       color: COR.primary, sub: `${pagos.length} de ${todos.length}` },
     ],
-    pizza: topCat.length ? {
+    pizza: !isLista && topCat.length ? {
       titulo: 'Top categorias de despesa',
       labels: topCat.map(([k]) => k),
       data:   topCat.map(([, v]) => Number(v.toFixed(2))),
       colors: topCat.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: dias.length ? {
+    barras: !isLista && dias.length ? {
       titulo: `Saldo diário no período (${noPeriodo.length} registros)`,
       labels: labelsBarras,
       data:   dataBarras,
       color:  COR.primary,
       label:  'R$',
+    } : null,
+    tabela: linhasTab.length ? {
+      titulo: `Lançamentos do período (${noPeriodo.length})`,
+      colunas: [
+        { key: 'data',     label: 'Data',      width: 55 },
+        { key: 'tipo',     label: 'Tipo',      width: 55, align: 'center' },
+        { key: 'desc',     label: 'Descrição', width: 200 },
+        { key: 'categoria',label: 'Categoria', width: 85 },
+        { key: 'valor',    label: 'Valor',     width: 70, align: 'right' },
+        { key: 'status',   label: 'Status',    width: 55, align: 'center' },
+      ],
+      linhas: linhasTab,
     } : null,
   }
 }

@@ -5,23 +5,29 @@ import assert from 'node:assert/strict'
 // Como detectarPedidoRelatorio() não é exportada, replicamos aqui a lógica idêntica.
 function detectarPedidoRelatorio(texto) {
   const t = String(texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  const GATILHOS = /\b(relatorio|dashboard|resumo|panorama|painel)\b/
-  const EXTRATO  = /\bextrato\b/
+  const GATILHOS = /\b(relatorio|relat|dashboard|resumo|panorama|painel|demonstrativo|relacao|consulta|consultar|me manda|envia|gerar|gera|lista|listagem|listar)\b/
+  const EXTRATO  = /\b(extrato|extratos)\b/
   const MODULOS = [
-    { mod: 'financeiro',  re: /\b(financeiro|financa|financas)\b/ },
-    { mod: 'lancamentos', re: /\b(lancamento|lancamentos|lista)\b/ },
-    { mod: 'faturamento', re: /\b(faturamento|vendas|recebimento|recebimentos)\b/ },
-    { mod: 'compras',     re: /\b(compra|compras|pedido|pedidos|cotacao|cotacoes|fornecedor|fornecedores)\b/ },
-    { mod: 'refeicoes',   re: /\b(refeicao|refeicoes)\b/ },
-    { mod: 'efetivo',     re: /\b(efetivo|colaborador|colaboradores|funcionario|funcionarios)\b/ },
+    { mod: 'financeiro',  re: /\b(financeiro|financeira|financa|financas|caixa|fluxo|fluxo de caixa)\b/ },
+    { mod: 'lancamentos', re: /\b(lancamento|lancamentos|movimento|movimentos|movimentacao|movimentacoes)\b/ },
+    { mod: 'clientes',    re: /\b(cliente|clientes|aprovacao|aprovacoes|aprovar|recebivel|recebiveis|cobranca|cobrancas|pendencia|pendencias|inadimplencia|inadimplente|inadimplentes|devedor|devedores|atraso|atrasado|atrasados|vencido|vencidos)\b/ },
+    { mod: 'faturamento', re: /\b(faturamento|faturado|vendas|venda|recebimento|recebimentos|nota|notas|nfe?s?|contas? a receber)\b/ },
+    { mod: 'compras',     re: /\b(compra|compras|pedido|pedidos|cotacao|cotacoes|fornecedor|fornecedores|aquisicao|aquisicoes|requisicao|requisicoes|contas? a pagar)\b/ },
+    { mod: 'refeicoes',   re: /\b(refeicao|refeicoes|alimentacao|cafe|cafes|almoco|janta|jantar|marmita|marmitas)\b/ },
+    { mod: 'efetivo',     re: /\b(efetivo|colaborador|colaboradores|funcionario|funcionarios|pessoal|equipe|equipes|quadro|rh)\b/ },
   ]
   const temGatilho = GATILHOS.test(t)
   const ehExtrato  = EXTRATO.test(t)
-  if (ehExtrato && !temGatilho) return { modulo: 'lancamentos', formato: 'tabela' }
+  if (ehExtrato && !temGatilho) {
+    const hitMod = MODULOS.find(m => m.re.test(t))
+    if (hitMod) return { modulo: hitMod.mod, formato: 'lista' }
+    return { modulo: 'lancamentos', formato: 'tabela' }
+  }
   if (!temGatilho) return null
   const hit = MODULOS.find(m => m.re.test(t))
   if (!hit) return null
-  const formato = /\b(tabela|extrato|lista|detalhad[oa])\b/.test(t) ? 'tabela' : 'dashboard'
+  const formato = /\b(tabela|extrato|lista|listagem|detalhad[oa]|detalhe|linha a linha|completa|completo|todos|todas)\b/.test(t)
+    ? 'lista' : 'dashboard'
   return { modulo: hit.mod, formato }
 }
 
@@ -46,9 +52,21 @@ const casos = [
   ['dashboard financeiro últimos 30 dias',            { modulo: 'financeiro',  formato: 'dashboard' }, 'dashboard financeiro'],
   ['resumo faturamento abril',                        { modulo: 'faturamento', formato: 'dashboard' }, 'resumo faturamento'],
   ['relatorio efetivo',                               { modulo: 'efetivo',     formato: 'dashboard' }, 'relatório efetivo'],
-  ['relatorio lancamentos detalhado',                 { modulo: 'lancamentos', formato: 'tabela' },    'relatório lançamentos tabela'],
+  ['relatorio lancamentos detalhado',                 { modulo: 'lancamentos', formato: 'lista' },    'relátorio lançamentos lista'],
   ['extrato últimos 30 dias',                         { modulo: 'lancamentos', formato: 'tabela' },    'extrato (atalho)'],
   ['painel compras fornecedor ACME',                  { modulo: 'compras',     formato: 'dashboard' }, 'painel compras'],
+
+  // ── Novas combinações ──────────────────────────────────────────────────
+  ['relatorio cliente',                               { modulo: 'clientes',    formato: 'dashboard' }, 'cliente singular'],
+  ['relatorio aprovacao clientes',                    { modulo: 'clientes',    formato: 'dashboard' }, 'aprovação clientes'],
+  ['extrato clientes',                                { modulo: 'clientes',    formato: 'lista' },     'extrato clientes (gatilho extrato + cliente vence prec)'],
+  ['lista refeicoes',                                 { modulo: 'refeicoes',   formato: 'lista' },     'lista refeições'],
+  ['relacao fornecedores maio',                       { modulo: 'compras',     formato: 'dashboard' }, 'relação fornecedores'],
+  ['demonstrativo fluxo de caixa',                    { modulo: 'financeiro',  formato: 'dashboard' }, 'demonstrativo fluxo'],
+  ['painel inadimplentes',                            { modulo: 'clientes',    formato: 'dashboard' }, 'inadimplentes'],
+  ['relatorio rh',                                    { modulo: 'efetivo',     formato: 'dashboard' }, 'rh -> efetivo'],
+  ['listagem completa compras',                       { modulo: 'compras',     formato: 'lista' },     'listagem completa'],
+  ['me manda o resumo faturamento',                   { modulo: 'faturamento', formato: 'dashboard' }, 'me manda resumo'],
 ]
 
 let fail = 0

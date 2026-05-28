@@ -9,6 +9,8 @@ import { fmtNumero, COR } from '../layout.js'
 import { PALETA } from '../charts.js'
 
 export async function buildDashboardEfetivo(workspaceId, filtros, supabase, empresa) {
+  const { formato } = filtros || {}
+  const isLista = formato === 'lista' || formato === 'tabela'
   const { data } = await supabase
     .from('efetivo')
     .select('id, nome, cargo, ativo, funcao_id, equipe_id, funcoes_efetivo(nome)')
@@ -35,8 +37,19 @@ export async function buildDashboardEfetivo(workspaceId, filtros, supabase, empr
   const topFuncoes = Object.entries(porFuncao).sort((a, b) => b[1] - a[1]).slice(0, 6)
   const topCargos  = Object.entries(porCargo).sort((a, b) => b[1] - a[1]).slice(0, 10)
 
+  // Tabela: no modo lista exibe todos os ativos
+  const linhasTab = isLista
+    ? todos.slice(0, 300).map(e => ({
+        nome:   e.nome || '—',
+        cargo:  e.cargo || '—',
+        funcao: e.funcoes_efetivo?.nome || '—',
+        status: e.ativo ? 'ATIVO' : 'INATIVO',
+        _color: { status: e.ativo ? COR.success : COR.danger },
+      }))
+    : []
+
   return {
-    titulo:    'Relatório de Efetivo',
+    titulo:    isLista ? 'Lista — Efetivo' : 'Relatório de Efetivo',
     subtitulo: `Quadro atual · ${todos.length} colaborador(es) cadastrado(s)`,
     empresa,
     kpis: [
@@ -45,18 +58,28 @@ export async function buildDashboardEfetivo(workspaceId, filtros, supabase, empr
       { label: 'Cargos',          value: fmtNumero(cargosUnicos),    color: COR.info },
       { label: 'Total cadastro',  value: fmtNumero(todos.length),    color: COR.warning },
     ],
-    pizza: topFuncoes.length ? {
+    pizza: !isLista && topFuncoes.length ? {
       titulo: 'Distribuição por função',
       labels: topFuncoes.map(([k]) => k),
       data:   topFuncoes.map(([, v]) => v),
       colors: topFuncoes.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: topCargos.length ? {
+    barras: !isLista && topCargos.length ? {
       titulo: 'Colaboradores por cargo (top 10)',
       labels: topCargos.map(([k]) => k.length > 14 ? k.slice(0, 12) + '…' : k),
       data:   topCargos.map(([, v]) => v),
       color:  COR.primary,
       label:  'qtd',
+    } : null,
+    tabela: linhasTab.length ? {
+      titulo: `Quadro de efetivo (${todos.length})`,
+      colunas: [
+        { key: 'nome',   label: 'Nome',    width: 180 },
+        { key: 'cargo',  label: 'Cargo',   width: 130 },
+        { key: 'funcao', label: 'Função',  width: 130 },
+        { key: 'status', label: 'Status',  width: 75, align: 'center' },
+      ],
+      linhas: linhasTab,
     } : null,
   }
 }

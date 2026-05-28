@@ -25,6 +25,7 @@ import { buildDashboardFaturamento } from './_pdf/modulos/faturamento.js'
 import { buildDashboardRefeicoes }   from './_pdf/modulos/refeicoes.js'
 import { buildDashboardCompras }     from './_pdf/modulos/compras.js'
 import { buildDashboardEfetivo }     from './_pdf/modulos/efetivo.js'
+import { buildDashboardClientes }    from './_pdf/modulos/clientes.js'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const APP_URL = process.env.APP_URL || 'https://smartpro.app.br'
@@ -92,24 +93,27 @@ function detectarPedidoRelatorio(texto) {
     .toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
 
-  const GATILHOS = /\b(relatorio|dashboard|resumo|panorama|painel)\b/
-  const EXTRATO  = /\bextrato\b/
+  const GATILHOS = /\b(relatorio|relat|dashboard|resumo|panorama|painel|demonstrativo|relacao|consulta|consultar|me manda|envia|gerar|gera|lista|listagem|listar)\b/
+  const EXTRATO  = /\b(extrato|extratos)\b/
 
   // Detecta módulo pela palavra-chave
   const MODULOS = [
-    { mod: 'financeiro',  re: /\b(financeiro|financa|financas)\b/ },
-    { mod: 'lancamentos', re: /\b(lancamento|lancamentos|lista)\b/ },
-    { mod: 'faturamento', re: /\b(faturamento|vendas|recebimento|recebimentos)\b/ },
-    { mod: 'compras',     re: /\b(compra|compras|pedido|pedidos|cotacao|cotacoes|fornecedor|fornecedores)\b/ },
-    { mod: 'refeicoes',   re: /\b(refeicao|refeicoes)\b/ },
-    { mod: 'efetivo',     re: /\b(efetivo|colaborador|colaboradores|funcionario|funcionarios)\b/ },
+    { mod: 'financeiro',  re: /\b(financeiro|financeira|financa|financas|caixa|fluxo|fluxo de caixa)\b/ },
+    { mod: 'lancamentos', re: /\b(lancamento|lancamentos|movimento|movimentos|movimentacao|movimentacoes)\b/ },
+    { mod: 'clientes',    re: /\b(cliente|clientes|aprovacao|aprovacoes|aprovar|recebivel|recebiveis|cobranca|cobrancas|pendencia|pendencias|inadimplencia|inadimplente|inadimplentes|devedor|devedores|atraso|atrasado|atrasados|vencido|vencidos)\b/ },
+    { mod: 'faturamento', re: /\b(faturamento|faturado|vendas|venda|recebimento|recebimentos|nota|notas|nfe?s?|contas? a receber)\b/ },
+    { mod: 'compras',     re: /\b(compra|compras|pedido|pedidos|cotacao|cotacoes|fornecedor|fornecedores|aquisicao|aquisicoes|requisicao|requisicoes|contas? a pagar)\b/ },
+    { mod: 'refeicoes',   re: /\b(refeicao|refeicoes|alimentacao|cafe|cafes|almoco|janta|jantar|marmita|marmitas)\b/ },
+    { mod: 'efetivo',     re: /\b(efetivo|colaborador|colaboradores|funcionario|funcionarios|pessoal|equipe|equipes|quadro|rh)\b/ },
   ]
 
   const temGatilho = GATILHOS.test(t)
   const ehExtrato  = EXTRATO.test(t)
 
-  // "extrato" sozinho => relatório de lançamentos em formato tabela
+  // "extrato <modulo>" => lista do módulo; "extrato" sozinho => lançamentos+tabela
   if (ehExtrato && !temGatilho) {
+    const hitMod = MODULOS.find(m => m.re.test(t))
+    if (hitMod) return { modulo: hitMod.mod, formato: 'lista' }
     return { modulo: 'lancamentos', formato: 'tabela' }
   }
 
@@ -120,8 +124,9 @@ function detectarPedidoRelatorio(texto) {
   const hit = MODULOS.find(m => m.re.test(t))
   if (!hit) return null  // ex.: "relatorio" sozinho → ignora, deixa fluxo normal decidir
 
-  // Formato: tabela só quando explicitamente pedida (extrato/detalhado/lista/tabela)
-  const formato = /\b(tabela|extrato|lista|detalhad[oa])\b/.test(t) ? 'tabela' : 'dashboard'
+  // Formato: 'lista' (linha a linha) quando explicitamente pedido; senão 'dashboard'
+  const formato = /\b(tabela|extrato|lista|listagem|detalhad[oa]|detalhe|linha a linha|completa|completo|todos|todas)\b/.test(t)
+    ? 'lista' : 'dashboard'
 
   return { modulo: hit.mod, formato }
 }
@@ -208,10 +213,11 @@ Se não for pedido de relatório, retorne {"eh_relatorio": false}`,
     }
     if (!parsed.data_fim) parsed.data_fim = today
     if (!parsed.tipo || !['entradas', 'saidas', 'todos'].includes(parsed.tipo)) parsed.tipo = 'todos'
-    const MODULOS = ['financeiro','lancamentos','faturamento','compras','refeicoes','efetivo']
+    const MODULOS = ['financeiro','lancamentos','faturamento','clientes','compras','refeicoes','efetivo']
     // Confia no pré-filtro como fonte de verdade do módulo
     if (!parsed.modulo || !MODULOS.includes(parsed.modulo)) parsed.modulo = hint.modulo
-    if (!parsed.formato || !['dashboard','tabela'].includes(parsed.formato)) parsed.formato = hint.formato
+    if (!parsed.formato || !['dashboard','tabela','lista'].includes(parsed.formato)) parsed.formato = hint.formato
+    if (parsed.formato === 'tabela') parsed.formato = 'lista'  // normaliza
     return parsed
   } catch {
     // Falha do Groq → usa o pré-filtro com defaults
@@ -451,20 +457,21 @@ export async function handleRelatorioWA(texto, fromPhone, supabase) {
     const periodoLabel = `${pedido.data_inicio.split('-').reverse().join('/')} a ${pedido.data_fim.split('-').reverse().join('/')}`
 
     if (pedido.modulo === 'lancamentos' && pedido.formato === 'tabela') {
-      // Fluxo legado (tabela) — mantém comportamento original
+      // Fluxo legado (tabela enxuta gerada pelo pdfkit local)
       const lancamentos = await buscarLancamentos(acesso.workspace_id, pedido, supabase)
       pdfBuffer = await gerarPDFBuffer(lancamentos, pedido, nomeEmpresa)
       const tipoLabel = pedido.tipo === 'entradas' ? 'Entradas' : pedido.tipo === 'saidas' ? 'Saídas' : 'Lançamentos'
       caption = `📊 *${tipoLabel}${pedido.cliente ? ' — ' + pedido.cliente : ''}*\n📅 ${periodoLabel}\n📋 ${lancamentos.length} registro(s)`
     } else {
-      // Fluxo dashboard padronizado
+      // Fluxo padronizado (dashboard OU lista)
       const dados = await construirDashboard(pedido.modulo, acesso.workspace_id, pedido, supabase, nomeEmpresa)
       if (!dados) {
         await enviarTextoWA(fromPhone, `🛠️ Relatório de *${pedido.modulo}* ainda em construção. Em breve!`)
         return true
       }
       pdfBuffer = await gerarDashboardPDF(dados)
-      caption = `📊 *${dados.titulo}*\n📅 ${periodoLabel}`
+      const fmtTag = pedido.formato === 'lista' ? '📋' : '📊'
+      caption = `${fmtTag} *${dados.titulo}*\n📅 ${periodoLabel}`
     }
 
     // 5. Upload + envio
@@ -488,6 +495,8 @@ async function construirDashboard(modulo, workspaceId, filtros, supabase, empres
       return buildDashboardFinanceiro(workspaceId, filtros, supabase, empresa)
     case 'faturamento':
       return buildDashboardFaturamento(workspaceId, filtros, supabase, empresa)
+    case 'clientes':
+      return buildDashboardClientes(workspaceId, filtros, supabase, empresa)
     case 'refeicoes':
       return buildDashboardRefeicoes(workspaceId, filtros, supabase, empresa)
     case 'compras':

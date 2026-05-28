@@ -198,29 +198,33 @@ export function renderChartImage(doc, buf, { width = 480, caption } = {}) {
 /**
  * Tabela premium (zebra slate-100 + header indigo soft).
  * colunas: [{ key, label, width, align?, format? }]
+ * Re-renderiza o cabeçalho ao quebrar página.
  */
 export function renderTabela(doc, { colunas, linhas }) {
   const M = 40
-  const rowH = 18
+  const rowH = 16
   const startX = M
   const totalW = doc.page.width - M * 2
 
-  // header
-  doc.roundedRect(startX, doc.y, totalW, rowH, 4).fill(COR.primarySoft)
-  doc.fillColor(COR.primaryDk).font('Helvetica-Bold').fontSize(8.5)
-  let x = startX
-  const headerY = doc.y + 5
-  for (const c of colunas) {
-    doc.text(c.label, x + 6, headerY, { width: c.width - 12, align: c.align || 'left' })
-    x += c.width
+  function drawHeader() {
+    doc.roundedRect(startX, doc.y, totalW, rowH + 2, 4).fill(COR.primarySoft)
+    doc.fillColor(COR.primaryDk).font('Helvetica-Bold').fontSize(8.5)
+    let x = startX
+    const headerY = doc.y + 5
+    for (const c of colunas) {
+      doc.text(c.label, x + 6, headerY, { width: c.width - 12, align: c.align || 'left' })
+      x += c.width
+    }
+    doc.y += rowH + 4
+    doc.font('Helvetica').fontSize(8).fillColor(COR.text)
   }
-  doc.y += rowH + 2
 
-  doc.font('Helvetica').fontSize(8).fillColor(COR.text)
+  drawHeader()
+
   linhas.forEach((linha, i) => {
     if (doc.y > doc.page.height - 60) {
       doc.addPage()
-      doc.fontSize(8).fillColor(COR.text)
+      drawHeader()
     }
     const y = doc.y
     if (i % 2 === 0) {
@@ -232,7 +236,7 @@ export function renderTabela(doc, { colunas, linhas }) {
       doc.fillColor(linha._color?.[c.key] || COR.text).font('Helvetica').fontSize(8).text(
         String(v),
         cx + 6, y + 3,
-        { width: c.width - 12, align: c.align || 'left', ellipsis: true }
+        { width: c.width - 12, align: c.align || 'left', ellipsis: true, lineBreak: false }
       )
       cx += c.width
     }
