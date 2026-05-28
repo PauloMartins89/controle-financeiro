@@ -124,6 +124,7 @@ const navGroups = [
       { to: '/lider/cadastros/epis',               icon: ShieldCheckIcon,            label: 'EPIs',                moduleKey: null },
       { to: '/lider/epi/solicitacoes',             icon: ShieldCheckIcon,            label: 'Solicitações EPI',    moduleKey: null },
       { to: '/lider/epi/catalogo',                 icon: TableCellsIcon,             label: 'Catálogo EPI',        moduleKey: null },
+      { to: '/lider/insumo/solicitacoes',          icon: BeakerIcon,                 label: 'Solicitações Insumo', moduleKey: null },
       { to: '/lider/epc/catalogo',                 icon: WrenchScrewdriverIcon,      label: 'Catálogo EPC',        moduleKey: null },
       { to: '/lider/admin',                         icon: ShieldCheckIcon,            label: 'Admin Usuários',      moduleKey: null },
     ],

@@ -47,6 +47,7 @@ import RefeicaoConfirmarRestaurante from './pages/RefeicaoConfirmarRestaurante'
 import RefeicaoValidar from './pages/RefeicaoValidar'
 import Refeicoes from './pages/Refeicoes'
 import LiderEpi from './pages/LiderEpi'
+import LiderInsumo from './pages/LiderInsumo'
 import LiderCadastroFrentes from './pages/LiderCadastroFrentes'
 import LiderCadastroEquipes from './pages/LiderCadastroEquipes'
 import LiderCadastroColaboradores from './pages/LiderCadastroColaboradores'
@@ -549,6 +550,7 @@ export default function App() {
                   <Route path="/lider/apontamentos" element={<LiderApontamentos />} />
                   <Route path="/lider/epi/solicitacoes" element={<LiderEpi />} />
                   <Route path="/lider/epi/catalogo" element={<LiderEpi />} />
+                  <Route path="/lider/insumo/solicitacoes" element={<LiderInsumo />} />
                   <Route path="/lider/epc/catalogo" element={<LiderEpi />} />
                   <Route path="/lider/cadastros" element={<Navigate to="/lider/cadastros/frentes" replace />} />
                   <Route path="/lider/cadastros/frentes" element={<LiderCadastroFrentes />} />
