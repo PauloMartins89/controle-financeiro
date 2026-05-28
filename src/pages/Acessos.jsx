@@ -183,14 +183,19 @@ function AbaMembros({ workspaceId, apiWs }) {
   const carregarMembros = useCallback(async () => {
     if (!workspaceId) return
     setLoading(true)
-    // Busca membros com e-mails via API e perfis via Supabase em paralelo
-    const [apiRes, { data: p }] = await Promise.all([
-      apiWs({ action: 'workspace-members-list' }),
-      supabase.from('perfis').select('id, nome').eq('workspace_id', workspaceId).order('nome'),
-    ])
-    setMembros(apiRes?.members || [])
-    setPerfis(p || [])
-    setLoading(false)
+    try {
+      // Busca membros com e-mails via API e perfis via Supabase em paralelo
+      const [apiRes, { data: p }] = await Promise.all([
+        apiWs({ action: 'workspace-members-list' }),
+        supabase.from('perfis').select('id, nome').eq('workspace_id', workspaceId).order('nome'),
+      ])
+      setMembros(apiRes?.members || [])
+      setPerfis(p || [])
+    } catch (e) {
+      console.error('Erro ao carregar membros:', e)
+    } finally {
+      setLoading(false)
+    }
   }, [workspaceId, apiWs])
 
   useEffect(() => { carregarMembros() }, [carregarMembros])
