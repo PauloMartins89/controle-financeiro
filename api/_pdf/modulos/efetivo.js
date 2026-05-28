@@ -49,43 +49,58 @@ export async function buildDashboardEfetivo(workspaceId, filtros, supabase, empr
     : []
 
   return {
-    titulo:    isLista ? 'Lista — Efetivo' : 'Relatório de Efetivo',
+    titulo:    'RELATÓRIO',
+    modulo:    isLista ? 'EFETIVO — LISTAGEM' : 'EFETIVO',
     subtitulo: `Quadro atual · ${todos.length} colaborador(es) cadastrado(s)`,
     empresa,
-    sumario: isLista ? [] : [
-      `${ativos.length} colaboradores ativos · ${inativos.length} inativos.`,
-      `${funcoesUnicas} funções distintas · ${cargosUnicos} cargos distintos.`,
-      topFuncoes[0] ? `Função mais comum: ${topFuncoes[0][0]} (${topFuncoes[0][1]} pessoas).` : 'Nenhuma função cadastrada.',
-      topCargos[0] ? `Cargo mais comum: ${topCargos[0][0]} (${topCargos[0][1]} pessoas).` : 'Nenhum cargo cadastrado.',
+    meta: {
+      periodo:   'Quadro atual',
+      geradoEm:  new Date().toLocaleString('pt-BR'),
+      geradoPor: typeof empresa === 'string' ? empresa : (empresa?.nome || 'SmartPro'),
+    },
+    visaoGeral: isLista
+      ? `Listagem completa do quadro de efetivo: ${todos.length} colaborador(es) cadastrado(s), ${ativos.length} ativo(s).`
+      : `Quadro de efetivo com ${ativos.length} colaboradores ativos em ${funcoesUnicas} funções e ${cargosUnicos} cargos distintos.`,
+    analise: isLista ? null : [
+      `${ativos.length} colaboradores ativos · ${inativos.length} inativos de ${todos.length} cadastrados.`,
+      `${funcoesUnicas} funções distintas · ${cargosUnicos} cargos distintos no quadro ativo.`,
+      topFuncoes[0] ? `Função mais frequente: ${topFuncoes[0][0]} (${topFuncoes[0][1]} pessoa(s)).` : 'Nenhuma função cadastrada.',
+    ],
+    observacoes: isLista ? null : [
+      topCargos[0] ? `Cargo mais comum: ${topCargos[0][0]} (${topCargos[0][1]} pessoa(s)).` : 'Nenhum cargo cadastrado.',
+      inativos.length ? `${inativos.length} colaborador(es) inativo(s) — revisar cadastro.` : 'Todos os colaboradores estão ativos.',
     ],
     kpis: [
-      { label: 'Ativos',          value: fmtNumero(ativos.length),   color: COR.success, sub: `${inativos.length} inativos` },
-      { label: 'Funções',         value: fmtNumero(funcoesUnicas),   color: COR.primary },
-      { label: 'Cargos',          value: fmtNumero(cargosUnicos),    color: COR.info },
-      { label: 'Total cadastro',  value: fmtNumero(todos.length),    color: COR.warning },
+      { label: 'Colaboradores ativos', value: fmtNumero(ativos.length),   tone: 'success', sub: `${inativos.length} inativos`,     icon: 'check' },
+      { label: 'Total cadastro',       value: fmtNumero(todos.length),    tone: 'info',    sub: `${todos.length} registros`,        icon: 'user' },
+      { label: 'Funções distintas',    value: fmtNumero(funcoesUnicas),   tone: 'warning', sub: 'funções cadastradas',              icon: 'doc' },
+      { label: 'Cargos distintos',     value: fmtNumero(cargosUnicos),    tone: 'purple',  sub: 'cargos cadastrados',               icon: 'chart' },
     ],
     pizza: !isLista && topFuncoes.length ? {
-      titulo: 'Distribuição por função',
+      titulo: 'DISTRIBUIÇÃO POR FUNÇÃO',
       labels: topFuncoes.map(([k]) => k),
       data:   topFuncoes.map(([, v]) => v),
       colors: topFuncoes.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: !isLista && topCargos.length ? {
-      titulo: 'Colaboradores por cargo (top 10)',
-      labels: topCargos.map(([k]) => k.length > 14 ? k.slice(0, 12) + '…' : k),
+    linha: !isLista && topCargos.length ? {
+      titulo: 'COLABORADORES POR CARGO (TOP 10)',
+      labels: topCargos.map(([k]) => k.length > 12 ? k.slice(0, 10) + '…' : k),
       data:   topCargos.map(([, v]) => v),
-      color:  COR.primary,
       label:  'qtd',
     } : null,
     tabela: linhasTab.length ? {
-      titulo: `Quadro de efetivo (${todos.length})`,
+      titulo: `5. DETALHAMENTO — ${todos.length} colaborador(es)`,
       colunas: [
-        { key: 'nome',   label: 'Nome',    width: 180 },
-        { key: 'cargo',  label: 'Cargo',   width: 130 },
-        { key: 'funcao', label: 'Função',  width: 130 },
-        { key: 'status', label: 'Status',  width: 75, align: 'center' },
+        { key: 'nome',   label: 'Nome',   width: 185 },
+        { key: 'cargo',  label: 'Cargo',  width: 130 },
+        { key: 'funcao', label: 'Função', width: 130 },
+        { key: 'status', label: 'Status', width: 79, align: 'center' },
       ],
       linhas: linhasTab,
+      totais: {
+        nome:   'TOTAL',
+        status: `${todos.length} reg.`,
+      },
     } : null,
   }
 }

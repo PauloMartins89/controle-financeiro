@@ -6,20 +6,20 @@
 import { fmtBRL, fmtData, fmtNumero, COR } from '../layout.js'
 import { PALETA } from '../charts.js'
 
-const STATUS_PENDENTES = ['aguardando_aprovacao', 'leilao_aberto', 'leilao_encerrado']
+const STATUS_PENDENTES  = ['aguardando_aprovacao', 'leilao_aberto', 'leilao_encerrado']
 const STATUS_CONCLUIDAS = ['aprovado', 'pedido_emitido', 'recebido', 'pago']
 
 const STATUS_LABEL = {
-  requisicao_nova: 'Requisição',
-  em_cotacao: 'Em cotação',
+  requisicao_nova:      'Requisição',
+  em_cotacao:           'Em cotação',
   aguardando_aprovacao: 'Ag. Aprovação',
-  leilao_aberto: 'Leilão aberto',
-  leilao_encerrado: 'Selecionando',
-  aprovado: 'Aprovado',
-  recusado: 'Recusado',
-  pedido_emitido: 'Pedido emitido',
-  recebido: 'Recebido',
-  pago: 'Pago',
+  leilao_aberto:        'Leilão aberto',
+  leilao_encerrado:     'Selecionando',
+  aprovado:             'Aprovado',
+  recusado:             'Recusado',
+  pedido_emitido:       'Pedido emitido',
+  recebido:             'Recebido',
+  pago:                 'Pago',
 }
 
 export async function buildDashboardCompras(workspaceId, filtros, supabase, empresa) {
@@ -84,44 +84,60 @@ export async function buildDashboardCompras(workspaceId, filtros, supabase, empr
   }))
 
   return {
-    titulo:    isLista ? 'Lista — Compras' : 'Relatório de Compras',
-    subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
+    titulo:    'RELATÓRIO',
+    modulo:    isLista ? 'COMPRAS — LISTAGEM' : 'COMPRAS',
+    subtitulo: `Período de ${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
     empresa,
-    sumario: isLista ? [] : [
+    meta: {
+      periodo:   `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
+      geradoEm:  new Date().toLocaleString('pt-BR'),
+      geradoPor: typeof empresa === 'string' ? empresa : (empresa?.nome || 'SmartPro'),
+    },
+    visaoGeral: isLista
+      ? `Listagem detalhada das solicitações de compra no período. ${noPeriodo.length} solicitação(ões) registrada(s).`
+      : `Panorama de compras: ${todas.length} solicitação(ões) total, ${pendentes.length} aguardando aprovação, valor aprovado de ${fmtBRL(valorAprovado)} com economia de ${fmtBRL(economiaTotal)}.`,
+    analise: isLista ? null : [
       `${todas.length} solicitações registradas — ${noPeriodo.length} no período selecionado.`,
       `${pendentes.length} em aprovação; ${aprovadas.length} concluídas (${recusadas.length} recusadas).`,
-      `Valor aprovado: ${fmtBRL(valorAprovado)} · Economia gerada: ${fmtBRL(economiaTotal)}.`,
       pizzaArr[0] ? `Maior bloco de pedidos: ${pizzaArr[0][0]} (${pizzaArr[0][1]} solicitações).` : 'Sem pedidos registrados.',
     ],
+    observacoes: isLista ? null : [
+      `Valor aprovado: ${fmtBRL(valorAprovado)} — economia gerada: ${fmtBRL(economiaTotal)}.`,
+      aprovadas.length ? `Média por compra aprovada: ${fmtBRL(valorAprovado / aprovadas.length)}.` : 'Nenhuma compra aprovada ainda.',
+    ],
     kpis: [
-      { label: 'Total solicitações', value: fmtNumero(todas.length),    color: COR.primary, sub: `${noPeriodo.length} no período` },
-      { label: 'Em aprovação',       value: fmtNumero(pendentes.length),color: pendentes.length ? COR.warning : COR.success },
-      { label: 'Valor aprovado',     value: fmtBRL(valorAprovado),      color: COR.info,    sub: `${aprovadas.length} concluídas` },
-      { label: 'Economia gerada',    value: fmtBRL(economiaTotal),      color: COR.success, sub: `${recusadas.length} recusadas` },
+      { label: 'Total solicitações', value: fmtNumero(todas.length),     tone: 'info',    sub: `${noPeriodo.length} no período`,   icon: 'doc' },
+      { label: 'Em aprovação',       value: fmtNumero(pendentes.length), tone: pendentes.length ? 'warning' : 'success', sub: `${aprovadas.length} concluídas`, icon: 'clock' },
+      { label: 'Valor aprovado',     value: fmtBRL(valorAprovado),       tone: 'success', sub: `${aprovadas.length} compras`,       icon: 'check' },
+      { label: 'Economia gerada',    value: fmtBRL(economiaTotal),       tone: 'purple',  sub: `${recusadas.length} recusadas`,     icon: 'chart' },
     ],
     pizza: !isLista && pizzaArr.length ? {
-      titulo: 'Distribuição por status',
+      titulo: 'DISTRIBUIÇÃO POR STATUS',
       labels: pizzaArr.map(([k]) => k),
       data:   pizzaArr.map(([, v]) => v),
       colors: pizzaArr.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: !isLista && meses.length ? {
-      titulo: 'Valor aprovado por mês (últimos 12)',
+    linha: !isLista && meses.length ? {
+      titulo: 'VALOR APROVADO POR MÊS',
       labels: labelsBarras,
       data:   dataBarras,
-      color:  COR.primary,
-      label:  'R$',
+      label:  'R$ aprovado',
     } : null,
     tabela: linhas.length ? {
-      titulo: `Solicitações do período (${noPeriodo.length})`,
+      titulo: `5. DETALHAMENTO — ${noPeriodo.length} solicitação(ões)`,
       colunas: [
-        { key: 'data',       label: 'Data',       width: 60 },
-        { key: 'titulo',     label: 'Título',     width: 180 },
-        { key: 'fornecedor', label: 'Fornecedor', width: 110 },
-        { key: 'valor',      label: 'Valor',      width: 80,  align: 'right' },
-        { key: 'status',     label: 'Status',     width: 85,  align: 'center' },
+        { key: 'data',       label: 'Data',       width: 52 },
+        { key: 'titulo',     label: 'Título',     width: 185 },
+        { key: 'fornecedor', label: 'Fornecedor', width: 105 },
+        { key: 'valor',      label: 'Valor',      width: 75,  align: 'right' },
+        { key: 'status',     label: 'Status',     width: 107, align: 'center' },
       ],
       linhas,
+      totais: {
+        titulo: 'TOTAL',
+        valor:  fmtBRL(noPeriodo.reduce((s, x) => s + Number(x.valor_aprovado || x.valor_estimado || 0), 0)),
+        status: `${noPeriodo.length} reg.`,
+      },
     } : null,
   }
 }
