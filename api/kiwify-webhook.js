@@ -16,7 +16,7 @@ function getDb() {
 // Kiwify envia o token no header X-Kiwify-Token ou como query param ?token=
 function verifyToken(req) {
   const secret = process.env.KIWIFY_TOKEN
-  if (!secret) return true // sem token configurado, aceita tudo (configure depois)
+  if (!secret) return false // KIWIFY_TOKEN obrigatório — configure no Vercel
   const header = req.headers['x-kiwify-token'] || req.headers['x-hub-signature']
   const query  = req.query?.token
   return header === secret || query === secret

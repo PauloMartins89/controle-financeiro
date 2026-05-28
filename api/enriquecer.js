@@ -1,12 +1,21 @@
 // api/enriquecer.js — Contact enrichment via Hunter.io (email) + Lusha (phone/email)
 // Tries whichever keys are configured; falls back gracefully.
 
+import { createClient } from '@supabase/supabase-js'
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Origin', process.env.APP_URL || 'https://smartpro.app.br')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  // Verificar JWT do usuário autenticado
+  const token = req.headers.authorization?.replace('Bearer ', '')
+  if (!token) return res.status(401).json({ error: 'Não autenticado' })
+  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+  const { data: { user }, error: authError } = await sb.auth.getUser(token)
+  if (authError || !user) return res.status(401).json({ error: 'Token inválido' })
 
   const HUNTER_KEY = process.env.HUNTER_API_KEY
   const LUSHA_KEY  = process.env.LUSHA_API_KEY
