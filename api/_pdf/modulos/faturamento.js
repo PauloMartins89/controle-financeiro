@@ -16,37 +16,29 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
   const { data_inicio, data_fim, cliente, formato } = filtros
   const isLista = formato === 'lista' || formato === 'tabela'
 
-  // 1) TODOS os pagamentos do workspace (KPIs precisam bater com a tela "Contas a Receber",
-  //    que não filtra por data).
-  let qAll = supabase
+  // Filtra diretamente no banco pelo período solicitado
+  let q = supabase
     .from('pagamentos')
     .select('id, descricao, valor_total, data_pagamento, data_recebimento, numero_nf, status')
     .eq('workspace_id', workspaceId)
+    .gte('data_pagamento', data_inicio)
+    .lte('data_pagamento', data_fim)
     .order('data_pagamento', { ascending: false })
 
-  if (cliente) qAll = qAll.ilike('descricao', `%${cliente}%`)
+  if (cliente) q = q.ilike('descricao', `%${cliente}%`)
 
-  const { data: dataAll, error: errAll } = await qAll.limit(5000)
-  if (errAll) throw new Error('Erro ao buscar pagamentos: ' + errAll.message)
-  const todos = dataAll || []
+  const { data, error } = await q.limit(2000)
+  if (error) throw new Error('Erro ao buscar pagamentos: ' + error.message)
 
-  // 2) Recortes do período (apenas para tabela detalhada)
-  const noPeriodo = todos.filter(p => {
-    const d = p.data_pagamento || ''
-    return d >= data_inicio && d <= data_fim
-  })
+  // Todos os registros já estão no período solicitado
+  const todos     = data || []
+  const noPeriodo = todos
 
-  // ── KPIs globais (espelham a tela /pagamentos) ──────────────────────────
   const recebidos = todos.filter(p => p.status === 'recebido')
   const pendentes = todos.filter(p => p.status !== 'recebido')
   const totalGeral    = todos.reduce((s, p) => s + Number(p.valor_total || 0), 0)
   const totalRecebido = recebidos.reduce((s, p) => s + Number(p.valor_total || 0), 0)
   const totalPendente = pendentes.reduce((s, p) => s + Number(p.valor_total || 0), 0)
-
-  const mesAtual = new Date().toISOString().slice(0, 7)
-  const totalMes = todos
-    .filter(p => String(p.data_pagamento || '').startsWith(mesAtual))
-    .reduce((s, p) => s + Number(p.valor_total || 0), 0)
 
   // ── Pizza: distribuição por status (global) ─────────────────────────────
   const pizzaData = [
@@ -54,9 +46,9 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
     { label: 'Ag. Recebimento', value: totalPendente, color: COR.warning },
   ].filter(x => x.value > 0)
 
-  // ── Barras: faturado por mês (últimos 12 meses, global) ─────────────────
+  // ── Barras: faturado por mês no período ─────────────────────────────────
   const porMes = {}
-  for (const p of todos) {
+  for (const p of noPeriodo) {
     const m = String(p.data_pagamento || '').slice(0, 7)
     if (!m) continue
     porMes[m] = (porMes[m] || 0) + Number(p.valor_total || 0)
@@ -93,21 +85,21 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
     },
     visaoGeral: isLista
       ? `Listagem detalhada de pagamentos no período. ${noPeriodo.length} lançamento(s) encontrados.`
-      : `Espelho de Contas a Receber: ${todos.length} pagamento(s) totalizando ${fmtBRL(totalGeral)}. ${fmtBRL(totalPendente)} ainda aguardando recebimento.`,
+      : `Faturamento do período: ${todos.length} pagamento(s) totalizando ${fmtBRL(totalGeral)}. ${fmtBRL(totalPendente)} ainda aguardando recebimento.`,
     analise: isLista ? null : [
-      `Faturamento total: ${fmtBRL(totalGeral)} em ${todos.length} pagamento(s).`,
+      `Faturamento no período: ${fmtBRL(totalGeral)} em ${todos.length} pagamento(s).`,
       `${fmtBRL(totalPendente)} aguardando recebimento (${pendentes.length} pendentes).`,
       `${fmtBRL(totalRecebido)} já recebidos (${recebidos.length} confirmados).`,
     ],
     observacoes: isLista ? null : [
-      `Este mês: ${fmtBRL(totalMes)} faturados.`,
+      `Período: ${fmtData(data_inicio)} a ${fmtData(data_fim)}.`,
       'Filtre por cliente para análises individualizadas.',
     ],
     kpis: [
-      { label: 'Total Faturado',  value: fmtBRL(totalGeral),    tone: 'info',    sub: `${todos.length} faturamento(s)`,  icon: 'doc' },
+      { label: 'Total no período', value: fmtBRL(totalGeral),    tone: 'info',    sub: `${todos.length} faturamento(s)`,  icon: 'doc' },
       { label: 'Ag. Recebimento', value: fmtBRL(totalPendente), tone: 'warning', sub: `${pendentes.length} pendente(s)`,  icon: 'clock' },
       { label: 'Já Recebido',     value: fmtBRL(totalRecebido), tone: 'success', sub: `${recebidos.length} confirmado(s)`,icon: 'check' },
-      { label: 'Faturado no Mês', value: fmtBRL(totalMes),      tone: 'purple',  icon: 'chart' },
+      { label: 'Faturado no período', value: fmtBRL(totalGeral), tone: 'purple', sub: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`, icon: 'chart' },
     ],
     pizza: !isLista && pizzaData.length ? {
       titulo: 'DISTRIBUIÇÃO POR STATUS',

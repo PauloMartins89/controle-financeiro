@@ -11,27 +11,27 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
   const { data_inicio, data_fim, cliente, tipo = 'todos', formato } = filtros
   const isLista = formato === 'lista' || formato === 'tabela'
 
-  // 1) TODOS os lançamentos do workspace (para KPIs globais que batem com a tela)
-  let qAll = supabase
+  // Filtra diretamente no banco pelo período solicitado
+  let q = supabase
     .from('lancamentos')
     .select('id, tipo, descricao, valor, data, categoria, status')
     .eq('workspace_id', workspaceId)
+    .gte('data', data_inicio)
+    .lte('data', data_fim)
     .order('data', { ascending: false })
 
-  if (tipo === 'entradas') qAll = qAll.eq('tipo', 'receita')
-  if (tipo === 'saidas')   qAll = qAll.eq('tipo', 'despesa')
-  if (cliente)             qAll = qAll.ilike('descricao', `%${cliente}%`)
+  if (tipo === 'entradas') q = q.eq('tipo', 'receita')
+  if (tipo === 'saidas')   q = q.eq('tipo', 'despesa')
+  if (cliente)             q = q.ilike('descricao', `%${cliente}%`)
 
-  const { data, error } = await qAll.limit(5000)
+  const { data, error } = await q.limit(2000)
   if (error) throw new Error('Erro ao buscar lançamentos: ' + error.message)
 
+  // Todos os registros já estão no período solicitado
   const todos     = data || []
-  const noPeriodo = todos.filter(l => {
-    const d = String(l.data || '').slice(0, 10)
-    return d >= data_inicio && d <= data_fim
-  })
+  const noPeriodo = todos
 
-  // ── KPIs globais ─────────────────────────────────────────────────────────
+  // ── KPIs do período ───────────────────────────────────────────────────────
   const receitas = todos.filter(l => l.tipo === 'receita')
   const despesas = todos.filter(l => l.tipo === 'despesa')
   const sumEntradas = receitas.reduce((s, l) => s + Number(l.valor || 0), 0)
@@ -88,14 +88,14 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
     },
     visaoGeral: isLista
       ? `Listagem detalhada dos lançamentos financeiros no período. Total de ${noPeriodo.length} registro(s) entre receitas e despesas.`
-      : `Panorama financeiro do workspace consolidando ${todos.length} lançamento(s). Saldo de ${fmtBRL(saldo)}, com ${pctPago}% dos lançamentos já quitados.`,
+      : `Panorama financeiro do período: ${todos.length} lançamento(s), saldo de ${fmtBRL(saldo)}, ${pctPago}% já quitados.`,
     analise: isLista ? null : [
-      `Saldo do período: ${fmtBRL(saldo)} (${todos.length} lançamentos no total).`,
-      `Entradas somam ${fmtBRL(sumEntradas)} em ${receitas.length} registro(s); saídas, ${fmtBRL(sumSaidas)} em ${despesas.length}.`,
+      `Saldo do período: ${fmtBRL(saldo)} em ${todos.length} lançamento(s).`,
+      `Entradas: ${fmtBRL(sumEntradas)} (${receitas.length} reg.) · Saídas: ${fmtBRL(sumSaidas)} (${despesas.length} reg.).`,
       topCat[0] ? `Maior despesa: ${topCat[0][0]} (${fmtBRL(topCat[0][1])}).` : 'Sem despesas registradas.',
     ],
     observacoes: isLista ? null : [
-      `${pctPago}% dos lançamentos já estão quitados (${pagos.length} de ${todos.length}).`,
+      `${pctPago}% dos lançamentos do período já estão quitados (${pagos.length} de ${todos.length}).`,
       'Para detalhes individuais, solicite o relatório em formato "lista".',
     ],
     kpis: [

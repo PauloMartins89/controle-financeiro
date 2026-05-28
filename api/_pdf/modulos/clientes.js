@@ -24,20 +24,20 @@ export async function buildDashboardClientes(workspaceId, filtros, supabase, emp
     .from('pagamentos')
     .select('id, descricao, valor_total, data_pagamento, data_recebimento, numero_nf, status')
     .eq('workspace_id', workspaceId)
+    .gte('data_pagamento', data_inicio)
+    .lte('data_pagamento', data_fim)
     .order('data_pagamento', { ascending: false })
   if (cliente) q = q.ilike('descricao', `%${cliente}%`)
-  const { data, error } = await q.limit(5000)
+  const { data, error } = await q.limit(2000)
   if (error) throw new Error('Erro ao buscar pagamentos: ' + error.message)
 
-  const todos = data || []
-  const noPeriodo = todos.filter(p => {
-    const d = p.data_pagamento || ''
-    return d >= data_inicio && d <= data_fim
-  })
+  // Todos os registros já estão no período solicitado
+  const todos     = data || []
+  const noPeriodo = todos
 
-  // Agrupa por cliente
+  // Agrupa por cliente no período
   const map = {}
-  for (const p of todos) {
+  for (const p of noPeriodo) {
     const k = extrairCliente(p.descricao)
     if (!map[k]) map[k] = { cliente: k, total: 0, recebido: 0, pendente: 0, qtd: 0, qtdPend: 0 }
     const v = Number(p.valor_total || 0)
@@ -48,16 +48,16 @@ export async function buildDashboardClientes(workspaceId, filtros, supabase, emp
   }
   const clientes = Object.values(map).sort((a, b) => b.pendente - a.pendente || b.total - a.total)
 
-  // KPIs globais
-  const totalGeral    = todos.reduce((s, p) => s + Number(p.valor_total || 0), 0)
-  const totalRecebido = todos.filter(p => p.status === 'recebido').reduce((s, p) => s + Number(p.valor_total || 0), 0)
+  // KPIs do período
+  const totalGeral    = noPeriodo.reduce((s, p) => s + Number(p.valor_total || 0), 0)
+  const totalRecebido = noPeriodo.filter(p => p.status === 'recebido').reduce((s, p) => s + Number(p.valor_total || 0), 0)
   const totalPendente = totalGeral - totalRecebido
   const inadimplentes = clientes.filter(c => c.pendente > 0).length
 
-  // Top 6 clientes por valor total (para pizza)
+  // Top 6 clientes por valor total no período (para pizza)
   const top6 = clientes.slice(0, 6).filter(c => c.total > 0)
 
-  // Top 10 (para barras)
+  // Top 10 pendências no período (para barras)
   const top10 = clientes.slice(0, 10).filter(c => c.pendente > 0)
 
   // Tabela: itens do período pendentes, ou tudo no modo lista
@@ -85,7 +85,7 @@ export async function buildDashboardClientes(workspaceId, filtros, supabase, emp
     },
     visaoGeral: isLista
       ? `Listagem completa de cobranças por cliente no período. ${noPeriodo.length} registro(s).`
-      : `Visão consolidada de ${clientes.length} cliente(s) ativo(s). ${inadimplentes} com pendência em aberto, totalizando ${fmtBRL(totalPendente)} a receber.`,
+      : `Visão de clientes no período: ${clientes.length} cliente(s), ${inadimplentes} com pendência em aberto, totalizando ${fmtBRL(totalPendente)} a receber.`,
     analise: isLista ? null : [
       `${clientes.length} cliente(s) ativo(s) — ${inadimplentes} com pendência em aberto.`,
       `${fmtBRL(totalPendente)} a receber; ${fmtBRL(totalRecebido)} já recebidos.`,
@@ -96,9 +96,9 @@ export async function buildDashboardClientes(workspaceId, filtros, supabase, emp
       'Use filtro por cliente para detalhamento individual.',
     ],
     kpis: [
-      { label: 'Clientes ativos',  value: fmtNumero(clientes.length), tone: 'info',    sub: `${inadimplentes} c/ pendência`, icon: 'user' },
-      { label: 'A receber',        value: fmtBRL(totalPendente),       tone: totalPendente ? 'warning' : 'success', sub: `${noPeriodo.filter(p=>p.status!=='recebido').length} no período`, icon: 'clock' },
-      { label: 'Já recebido',      value: fmtBRL(totalRecebido),       tone: 'success', sub: `${todos.filter(p=>p.status==='recebido').length} confirmados`, icon: 'check' },
+      { label: 'Clientes no período', value: fmtNumero(clientes.length), tone: 'info',    sub: `${inadimplentes} c/ pendência`, icon: 'user' },
+      { label: 'A receber',         value: fmtBRL(totalPendente),        tone: totalPendente ? 'warning' : 'success', sub: `${noPeriodo.filter(p=>p.status!=='recebido').length} pendentes`, icon: 'clock' },
+      { label: 'Já recebido',       value: fmtBRL(totalRecebido),        tone: 'success', sub: `${noPeriodo.filter(p=>p.status==='recebido').length} confirmados`, icon: 'check' },
       { label: '% Recebimento',    value: totalGeral ? `${((totalRecebido/totalGeral)*100).toFixed(1)}%` : '—', tone: 'purple', icon: 'chart' },
     ],
     pizza: !isLista && top6.length ? {

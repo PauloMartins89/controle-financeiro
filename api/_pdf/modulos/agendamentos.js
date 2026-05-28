@@ -31,22 +31,20 @@ export async function buildDashboardAgendamentos(workspaceId, filtros, supabase,
     .from('agendamentos_servicos')
     .select('id, cliente_nome, tipo_servico, atividade, data_servico, horario_servico, status, motorista_nome, veiculo_nome, origem, destino, workspace_id')
     .eq('workspace_id', workspaceId)
+    .gte('data_servico', data_inicio)
+    .lte('data_servico', data_fim)
     .order('data_servico', { ascending: false })
-    .limit(5000)
+    .limit(2000)
   if (error) throw new Error('Erro ao buscar agendamentos: ' + error.message)
 
-  const todos = data || []
+  // Todos os registros já estão filtrados pelo período solicitado
+  const noPeriodo = data || []
+  const todos = noPeriodo
 
-  const noPeriodo = todos.filter(s => {
-    const d = String(s.data_servico || '').slice(0, 10)
-    return d >= data_inicio && d <= data_fim
-  })
-
-  // KPIs
-  const pendentes  = todos.filter(s => STATUS_PENDENTES.includes(s.status))
-  const confirmados= todos.filter(s => STATUS_CONFIRMADO.includes(s.status))
-  const concluidos = todos.filter(s => STATUS_CONCLUIDO.includes(s.status))
-  const cancelados = todos.filter(s => STATUS_CANCELADO.includes(s.status))
+  const pendentes  = noPeriodo.filter(s => STATUS_PENDENTES.includes(s.status))
+  const confirmados= noPeriodo.filter(s => STATUS_CONFIRMADO.includes(s.status))
+  const concluidos = noPeriodo.filter(s => STATUS_CONCLUIDO.includes(s.status))
+  const cancelados = noPeriodo.filter(s => STATUS_CANCELADO.includes(s.status))
 
   // Pizza: distribuição por status (período)
   const porStatus = {}
@@ -104,9 +102,9 @@ export async function buildDashboardAgendamentos(workspaceId, filtros, supabase,
     },
     visaoGeral: isLista
       ? `Listagem de ${noPeriodo.length} agendamento(s) de serviço no período.`
-      : `Panorama de agendamentos: ${todos.length} total, ${pendentes.length} pendentes, ${confirmados.length} confirmados/em execução, ${concluidos.length} concluídos.`,
+      : `Panorama de agendamentos no período: ${noPeriodo.length} agendamento(s), ${pendentes.length} pendentes, ${confirmados.length} confirmados/em execução, ${concluidos.length} concluídos.`,
     analise: isLista ? null : [
-      `${noPeriodo.length} agendamento(s) no período de ${todos.length} total cadastrado(s).`,
+      `${noPeriodo.length} agendamento(s) registrado(s) no período selecionado.`,
       `${confirmados.length} confirmado(s)/em execução · ${concluidos.length} concluído(s) · ${cancelados.length} cancelado(s).`,
       topTipo[0] ? `Serviço mais solicitado: ${topTipo[0][0]} (${topTipo[0][1]} vez(es)).` : 'Nenhum serviço registrado no período.',
     ],
@@ -119,7 +117,7 @@ export async function buildDashboardAgendamentos(workspaceId, filtros, supabase,
         : 'Nenhum cancelamento no período.',
     ],
     kpis: [
-      { label: 'Total agendamentos',  value: fmtNumero(todos.length),      tone: 'info',    sub: `${noPeriodo.length} no período`, icon: 'cal' },
+      { label: 'Total no período',    value: fmtNumero(noPeriodo.length),  tone: 'info',    sub: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`, icon: 'cal' },
       { label: 'Pendentes',           value: fmtNumero(pendentes.length),   tone: pendentes.length ? 'warning' : 'success', sub: 'aguardando ação', icon: 'clock' },
       { label: 'Confirmados',         value: fmtNumero(confirmados.length), tone: 'info',    sub: 'ou em execução', icon: 'check' },
       { label: 'Concluídos',          value: fmtNumero(concluidos.length),  tone: 'success', sub: `${cancelados.length} cancelados`, icon: 'chart' },

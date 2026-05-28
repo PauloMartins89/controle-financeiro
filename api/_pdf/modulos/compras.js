@@ -30,35 +30,33 @@ export async function buildDashboardCompras(workspaceId, filtros, supabase, empr
     .from('solicitacoes_compra')
     .select('id, titulo, descricao, valor_estimado, valor_aprovado, economia, fornecedor_vencedor, status, urgencia, tipo, created_at, data_aprovacao')
     .eq('workspace_id', workspaceId)
+    .gte('created_at', data_inicio)
+    .lte('created_at', data_fim + 'T23:59:59')
     .order('created_at', { ascending: false })
-    .limit(5000)
+    .limit(2000)
   if (error) throw new Error('Erro ao buscar compras: ' + error.message)
 
-  const todas = data || []
-
-  const noPeriodo = todas.filter(s => {
-    const d = String(s.created_at || '').slice(0, 10)
-    return d >= data_inicio && d <= data_fim
-  })
+  // Todos os registros já estão filtrados pelo período solicitado
+  const noPeriodo = data || []
+  const todas = noPeriodo
 
   const sum = (arr, k) => arr.reduce((a, x) => a + Number(x[k] || 0), 0)
 
-  // KPIs globais
-  const pendentes  = todas.filter(s => STATUS_PENDENTES.includes(s.status))
-  const aprovadas  = todas.filter(s => STATUS_CONCLUIDAS.includes(s.status))
-  const recusadas  = todas.filter(s => s.status === 'recusado')
+  const pendentes  = noPeriodo.filter(s => STATUS_PENDENTES.includes(s.status))
+  const aprovadas  = noPeriodo.filter(s => STATUS_CONCLUIDAS.includes(s.status))
+  const recusadas  = noPeriodo.filter(s => s.status === 'recusado')
   const valorAprovado = sum(aprovadas, 'valor_aprovado')
-  const economiaTotal = sum(todas, 'economia')
+  const economiaTotal = sum(noPeriodo, 'economia')
 
-  // Pizza: distribuição por status
+  // Pizza: distribuição por status no período
   const porStatus = {}
-  for (const s of todas) {
+  for (const s of noPeriodo) {
     const k = STATUS_LABEL[s.status] || s.status || '—'
     porStatus[k] = (porStatus[k] || 0) + 1
   }
   const pizzaArr = Object.entries(porStatus).sort((a, b) => b[1] - a[1]).slice(0, 6)
 
-  // Barras: valor aprovado por mês (últimos 12)
+  // Linha: valor aprovado por dia no período
   const porMes = {}
   for (const s of aprovadas) {
     const d = s.data_aprovacao || s.created_at
@@ -95,9 +93,9 @@ export async function buildDashboardCompras(workspaceId, filtros, supabase, empr
     },
     visaoGeral: isLista
       ? `Listagem detalhada das solicitações de compra no período. ${noPeriodo.length} solicitação(ões) registrada(s).`
-      : `Panorama de compras: ${todas.length} solicitação(ões) total, ${pendentes.length} aguardando aprovação, valor aprovado de ${fmtBRL(valorAprovado)} com economia de ${fmtBRL(economiaTotal)}.`,
+      : `Panorama de compras no período: ${noPeriodo.length} solicitação(ões), ${pendentes.length} aguardando aprovação, valor aprovado de ${fmtBRL(valorAprovado)} com economia de ${fmtBRL(economiaTotal)}.`,
     analise: isLista ? null : [
-      `${todas.length} solicitações registradas — ${noPeriodo.length} no período selecionado.`,
+      `${noPeriodo.length} solicitação(ões) no período — ${pendentes.length} aguardando, ${aprovadas.length} concluídas.`,
       `${pendentes.length} em aprovação; ${aprovadas.length} concluídas (${recusadas.length} recusadas).`,
       pizzaArr[0] ? `Maior bloco de pedidos: ${pizzaArr[0][0]} (${pizzaArr[0][1]} solicitações).` : 'Sem pedidos registrados.',
     ],
@@ -106,7 +104,7 @@ export async function buildDashboardCompras(workspaceId, filtros, supabase, empr
       aprovadas.length ? `Média por compra aprovada: ${fmtBRL(valorAprovado / aprovadas.length)}.` : 'Nenhuma compra aprovada ainda.',
     ],
     kpis: [
-      { label: 'Total solicitações', value: fmtNumero(todas.length),     tone: 'info',    sub: `${noPeriodo.length} no período`,   icon: 'doc' },
+      { label: 'Solicitações',       value: fmtNumero(noPeriodo.length), tone: 'info',    sub: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`, icon: 'doc' },
       { label: 'Em aprovação',       value: fmtNumero(pendentes.length), tone: pendentes.length ? 'warning' : 'success', sub: `${aprovadas.length} concluídas`, icon: 'clock' },
       { label: 'Valor aprovado',     value: fmtBRL(valorAprovado),       tone: 'success', sub: `${aprovadas.length} compras`,       icon: 'check' },
       { label: 'Economia gerada',    value: fmtBRL(economiaTotal),       tone: 'purple',  sub: `${recusadas.length} recusadas`,     icon: 'chart' },
