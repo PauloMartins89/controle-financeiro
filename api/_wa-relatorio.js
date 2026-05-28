@@ -71,7 +71,75 @@ export async function verificarAcesso(fromPhone, supabase) {
  *  data_fim:     YYYY-MM-DD
  *  eh_relatorio: boolean — false se não for pedido de relatório
  */
+/**
+ * Pré-filtro DETERMINÍSTICO: só considera "pedido de relatório" se a mensagem
+ * contiver um GATILHO explícito + indicação de módulo. Sem isso, retorna null
+ * e o webhook continua o fluxo normal (refeição, agenda, lançamento manual, etc.).
+ *
+ * Regras:
+ *  - Gatilhos: "relatorio", "relatório", "dashboard", "resumo", "panorama", "painel"
+ *  - "extrato" sozinho também serve (já implica lançamentos+tabela)
+ *  - Módulos: financeiro|lancamentos|faturamento|compras|refeicoes|efetivo (+ sinônimos)
+ *
+ * Retorna: { modulo, formato } se for relatório válido, ou null caso contrário.
+ */
+function detectarPedidoRelatorio(texto) {
+  const t = String(texto || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+
+  const GATILHOS = /\b(relatorio|dashboard|resumo|panorama|painel)\b/
+  const EXTRATO  = /\bextrato\b/
+
+  // Detecta módulo pela palavra-chave
+  const MODULOS = [
+    { mod: 'financeiro',  re: /\b(financeiro|financa|financas)\b/ },
+    { mod: 'lancamentos', re: /\b(lancamento|lancamentos|lista)\b/ },
+    { mod: 'faturamento', re: /\b(faturamento|vendas|recebimento|recebimentos)\b/ },
+    { mod: 'compras',     re: /\b(compra|compras|pedido|pedidos|cotacao|cotacoes|fornecedor|fornecedores)\b/ },
+    { mod: 'refeicoes',   re: /\b(refeicao|refeicoes)\b/ },
+    { mod: 'efetivo',     re: /\b(efetivo|colaborador|colaboradores|funcionario|funcionarios)\b/ },
+  ]
+
+  const temGatilho = GATILHOS.test(t)
+  const ehExtrato  = EXTRATO.test(t)
+
+  // "extrato" sozinho => relatório de lançamentos em formato tabela
+  if (ehExtrato && !temGatilho) {
+    return { modulo: 'lancamentos', formato: 'tabela' }
+  }
+
+  // Sem gatilho → NÃO é pedido de relatório (fluxo normal segue)
+  if (!temGatilho) return null
+
+  // Com gatilho: precisa também combinar com um módulo
+  const hit = MODULOS.find(m => m.re.test(t))
+  if (!hit) return null  // ex.: "relatorio" sozinho → ignora, deixa fluxo normal decidir
+
+  // Formato: "tabela|extrato|lista|detalhado" força tabela; resto = dashboard
+  const formato = /\b(tabela|extrato|lista|detalhad[oa])\b/.test(t) ? 'tabela'
+                : hit.mod === 'lancamentos' ? 'tabela'
+                : 'dashboard'
+
+  return { modulo: hit.mod, formato }
+}
+
+/**
+ * 2. Parser Groq — só roda se o pré-filtro confirmar que é pedido de relatório.
+ *    Resposta:
+ *  eh_relatorio: boolean
+ *  modulo: financeiro|lancamentos|faturamento|compras|refeicoes|efetivo
+ *  formato: dashboard|tabela
+ *  tipo:    entradas|saidas|todos
+ *  cliente: string|null
+ *  data_inicio:  YYYY-MM-DD
+ *  data_fim:     YYYY-MM-DD
+ */
 export async function parsearPedido(texto, today) {
+  // 🚦 Pré-filtro determinístico — protege fluxos existentes (refeição, agenda, etc.)
+  const hint = detectarPedidoRelatorio(texto)
+  if (!hint) return { eh_relatorio: false }
+
   const completion = await groq.chat.completions.create({
     model: 'llama-3.1-8b-instant',
     temperature: 0,
@@ -128,7 +196,8 @@ Se não for pedido de relatório, retorne {"eh_relatorio": false}`,
   const match = raw.match(/\{[\s\S]*\}/)
   try {
     const parsed = JSON.parse(match?.[0] || '{}')
-    if (!parsed.eh_relatorio) return { eh_relatorio: false }
+    // Pré-filtro já garantiu que É relatório — força flag mesmo se Groq divergir
+    parsed.eh_relatorio = true
     // Garante datas padrão
     if (!parsed.data_inicio) {
       const d = new Date(today)
@@ -138,13 +207,22 @@ Se não for pedido de relatório, retorne {"eh_relatorio": false}`,
     if (!parsed.data_fim) parsed.data_fim = today
     if (!parsed.tipo || !['entradas', 'saidas', 'todos'].includes(parsed.tipo)) parsed.tipo = 'todos'
     const MODULOS = ['financeiro','lancamentos','faturamento','compras','refeicoes','efetivo']
-    if (!parsed.modulo || !MODULOS.includes(parsed.modulo)) parsed.modulo = 'financeiro'
-    if (!parsed.formato || !['dashboard','tabela'].includes(parsed.formato)) {
-      parsed.formato = parsed.modulo === 'lancamentos' ? 'tabela' : 'dashboard'
-    }
+    // Confia no pré-filtro como fonte de verdade do módulo
+    if (!parsed.modulo || !MODULOS.includes(parsed.modulo)) parsed.modulo = hint.modulo
+    if (!parsed.formato || !['dashboard','tabela'].includes(parsed.formato)) parsed.formato = hint.formato
     return parsed
   } catch {
-    return { eh_relatorio: false }
+    // Falha do Groq → usa o pré-filtro com defaults
+    const d = new Date(today); d.setDate(d.getDate() - 30)
+    return {
+      eh_relatorio: true,
+      modulo: hint.modulo,
+      formato: hint.formato,
+      tipo: 'todos',
+      cliente: null,
+      data_inicio: d.toISOString().slice(0, 10),
+      data_fim: today,
+    }
   }
 }
 
