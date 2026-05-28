@@ -12,10 +12,10 @@ import {
   ExclamationCircleIcon, TableCellsIcon, CheckCircleIcon, ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 
-const fmtD   = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '�'
-const fmtH   = v => v != null ? `${Number(v).toFixed(1)}h` : '�'
-const fmtN   = (v, d = 2) => v != null ? Number(v).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '�'
-const fmtPct = v => v != null ? `${Number(v).toFixed(1)}%` : '�'
+const fmtD   = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '—'
+const fmtH   = v => v != null ? `${Number(v).toFixed(1)}h` : '—'
+const fmtN   = (v, d = 2) => v != null ? Number(v).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—'
+const fmtPct = v => v != null ? `${Number(v).toFixed(1)}%` : '—'
 const today  = () => new Date().toISOString().slice(0, 10)
 const minus  = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10) }
 const utilColor = p => p == null ? '#6b7280' : p >= 85 ? '#10b981' : p >= 55 ? '#eab308' : p > 20 ? '#f97316' : '#ef4444'
@@ -80,19 +80,19 @@ function TrendChart({ data }) {
 
 const STATUS_CFG = {
   processado:       { color: '#10b981', label: 'Processado' },
-  pendente_revisao: { color: '#fbbf24', label: 'Pend. Revis�o' },
+  pendente_revisao: { color: '#fbbf24', label: 'Pend. RevisÃo' },
   recebido:         { color: '#a78bfa', label: 'Recebido' },
   processando:      { color: '#60a5fa', label: 'Processando' },
   erro:             { color: '#f87171', label: 'Erro' },
 }
 function StatusPill({ status }) {
-  const { color, label } = STATUS_CFG[status] || { color: '#6b7280', label: status || '�' }
+  const { color, label } = STATUS_CFG[status] || { color: '#6b7280', label: status || '—' }
   return (
     <span style={{ fontSize: 10, fontWeight: 700, color, background: `${color}1a`, border: `1px solid ${color}44`, borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>{label}</span>
   )
 }
 
-function DataTable({ cols, rows, emptyMsg = 'Nenhum dado no per�odo' }) {
+function DataTable({ cols, rows, emptyMsg = 'Nenhum dado no período' }) {
   if (!rows.length) return (
     <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--text-secondary)' }}>
       <DocumentTextIcon style={{ width: 28, height: 28, margin: '0 auto 8px', opacity: 0.4 }} />
@@ -116,7 +116,7 @@ function DataTable({ cols, rows, emptyMsg = 'Nenhum dado no per�odo' }) {
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
               {cols.map(c => (
                 <td key={c.key} style={{ padding: '9px 10px', color: 'var(--text-primary)', textAlign: c.align || 'left', whiteSpace: c.wrap ? 'normal' : 'nowrap' }}>
-                  {c.render ? c.render(row) : (row[c.key] ?? '�')}
+                  {c.render ? c.render(row) : (row[c.key] ?? '—')}
                 </td>
               ))}
             </tr>
@@ -132,7 +132,7 @@ function exportCSV(filename, cols, rows) {
   const data   = rows.map(r => cols.map(c => c.csv ? c.csv(r) : (r[c.key] ?? '')))
   const ws = XLSX.utils.aoa_to_sheet([header, ...data])
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Relat�rio')
+  XLSX.utils.book_append_sheet(wb, ws, 'Relatório')
   XLSX.writeFile(wb, `${filename}.xlsx`)
   toast.success('Excel exportado!')
 }
@@ -143,7 +143,7 @@ function exportPDF(title, subtitle, cols, rows, landscape = true) {
   doc.setFillColor(99, 102, 241); doc.rect(0, 0, 4, 24, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold'); doc.setFontSize(13)
-  doc.text('SmartPro � M�quinas', 11, 10)
+  doc.text('SmartPro — Máquinas', 11, 10)
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
   doc.text(title, 11, 18)
   doc.setFontSize(8); doc.text(subtitle, W - 12, 18, { align: 'right' })
@@ -151,7 +151,7 @@ function exportPDF(title, subtitle, cols, rows, landscape = true) {
   autoTable(doc, {
     startY: 30,
     head: [cols.map(c => c.label)],
-    body: rows.map(r => cols.map(c => c.csv ? c.csv(r) : (r[c.key] ?? '�'))),
+    body: rows.map(r => cols.map(c => c.csv ? c.csv(r) : (r[c.key] ?? '—'))),
     styles: { fontSize: 8, cellPadding: 3 },
     headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
     alternateRowStyles: { fillColor: [248, 250, 252] },
@@ -314,7 +314,7 @@ export default function MaquinasDashboard() {
   const porEquip = useMemo(() => {
     const m = {}
     for (const r of filtrados) {
-      const k = r.equipamento || '�'
+      const k = r.equipamento || '—'
       if (!m[k]) m[k] = { equipamento: k, modelo: r.modelo, classe: r.classe_operacional, frente: r.frente, count: 0, hD: 0, hT: 0, hE: 0, pcts: [], prod: 0, un: r.produtividade_un }
       m[k].count++; m[k].hD += r.horas_disponiveis || 0; m[k].hT += r.horas_trabalhadas || 0; m[k].hE += r.horas_espera || 0
       if (r.porcentagem != null) m[k].pcts.push(r.porcentagem)
@@ -371,7 +371,7 @@ export default function MaquinasDashboard() {
     const hI = parseFloat(o.horimetro_inicial || 0) || null
     const hF = parseFloat(o.horimetro_final   || 0) || null
     const hD = parseFloat(o.horas_disponiveis || 0) || (hI != null && hF != null ? parseFloat((hF - hI).toFixed(2)) : null)
-    return { numero: b.numero, data: b.data_boletim, equipamento: (o.equipamento || '').toUpperCase(), colaborador: o.colaborador || o.operador || '�', status: b.status, hT, pct: hD && hT ? parseFloat((hT / hD * 100).toFixed(1)) : null }
+    return { numero: b.numero, data: b.data_boletim, equipamento: (o.equipamento || '').toUpperCase(), colaborador: o.colaborador || o.operador || '—', status: b.status, hT, pct: hD && hT ? parseFloat((hT / hD * 100).toFixed(1)) : null }
   }), [boletins])
 
   const periodLabel = `${fmtD(dtIni)} a ${fmtD(dtFim)}`
@@ -382,7 +382,7 @@ export default function MaquinasDashboard() {
     { id: 'equip',         label: 'Por Equipamento', icon: WrenchScrewdriverIcon },
     { id: 'frente',        label: 'Por Frente',      icon: MapPinIcon },
     { id: 'produtividade', label: 'Produtividade',   icon: ArrowTrendingUpIcon },
-    { id: 'horimetros',    label: 'Hor�metros',      icon: ClockIcon },
+    { id: 'horimetros',    label: 'Horímetros',      icon: ClockIcon },
     { id: 'boletins',      label: 'Boletins',        icon: DocumentTextIcon },
   ]
 
@@ -396,40 +396,40 @@ export default function MaquinasDashboard() {
     { key: 'hT', label: 'H. Trab.',  align: 'right', render: r => <span style={{ color: '#10b981', fontWeight: 800 }}>{fmtH(r.hT)}</span>, csv: r => fmtH(r.hT) },
     { key: 'hE', label: 'H. Espera', align: 'right', render: r => fmtH(r.hE), csv: r => fmtH(r.hE) },
     { key: 'util', label: 'Utiliz.', align: 'right', render: r => <span style={{ fontWeight: 900, color: utilColor(r.util) }}>{fmtPct(r.util)}</span>, csv: r => fmtPct(r.util) },
-    { key: 'prod', label: 'Produ��o', align: 'right', render: r => r.prod > 0 ? `${fmtN(r.prod, 0)} ${r.un}` : '�', csv: r => r.prod > 0 ? fmtN(r.prod, 0) : '' },
+    { key: 'prod', label: 'ProduçÃo', align: 'right', render: r => r.prod > 0 ? `${fmtN(r.prod, 0)} ${r.un}` : '—', csv: r => r.prod > 0 ? fmtN(r.prod, 0) : '' },
   ]
   const colsFrente = [
     { key: 'frente',  label: 'Frente' },
     { key: 'equips',  label: 'Equip.', align: 'center' },
     { key: 'count',   label: 'Dias',   align: 'center' },
     { key: 'hT',      label: 'H. Trabalhadas', align: 'right', render: r => fmtH(r.hT), csv: r => fmtH(r.hT) },
-    { key: 'util',    label: 'Utiliza��o M�dia', align: 'right', render: r => <span style={{ fontWeight: 900, color: utilColor(r.util) }}>{fmtPct(r.util)}</span>, csv: r => fmtPct(r.util) },
-    { key: 'prod',    label: 'Produ��o', align: 'right', render: r => r.prod > 0 ? fmtN(r.prod, 0) : '�', csv: r => r.prod > 0 ? fmtN(r.prod, 0) : '' },
+    { key: 'util',    label: 'UtilizaçÃo MÉdia', align: 'right', render: r => <span style={{ fontWeight: 900, color: utilColor(r.util) }}>{fmtPct(r.util)}</span>, csv: r => fmtPct(r.util) },
+    { key: 'prod',    label: 'ProduçÃo', align: 'right', render: r => r.prod > 0 ? fmtN(r.prod, 0) : '—', csv: r => r.prod > 0 ? fmtN(r.prod, 0) : '' },
   ]
   const colsProd = [
     { key: 'data',               label: 'Data',    render: r => fmtD(r.data), csv: r => fmtD(r.data) },
     { key: 'equipamento',        label: 'Equipamento' },
-    { key: 'turno',              label: 'Turno',   render: r => r.turno ? r.turno.toUpperCase() : '�' },
+    { key: 'turno',              label: 'Turno',   render: r => r.turno ? r.turno.toUpperCase() : '—' },
     { key: 'atividade_realizada', label: 'Atividade', wrap: true },
-    { key: 'produtividade_qtd',  label: 'Qtd.', align: 'right', render: r => r.produtividade_qtd != null ? fmtN(r.produtividade_qtd) : '�', csv: r => r.produtividade_qtd ?? '' },
+    { key: 'produtividade_qtd',  label: 'Qtd.', align: 'right', render: r => r.produtividade_qtd != null ? fmtN(r.produtividade_qtd) : '—', csv: r => r.produtividade_qtd ?? '' },
     { key: 'produtividade_un',   label: 'Un.' },
-    { key: 'produtividade_hora', label: 'Por Hora', align: 'right', render: r => r.produtividade_hora != null ? `${fmtN(r.produtividade_hora)} ${r.produtividade_un}/h` : '�', csv: r => r.produtividade_hora ?? '' },
+    { key: 'produtividade_hora', label: 'Por Hora', align: 'right', render: r => r.produtividade_hora != null ? `${fmtN(r.produtividade_hora)} ${r.produtividade_un}/h` : '—', csv: r => r.produtividade_hora ?? '' },
     { key: 'horas_trabalhadas',  label: 'H. Trab.', align: 'right', render: r => fmtH(r.horas_trabalhadas), csv: r => r.horas_trabalhadas ?? '' },
   ]
   const colsHori = [
     { key: 'data',              label: 'Data',      render: r => fmtD(r.data), csv: r => fmtD(r.data) },
     { key: 'equipamento',       label: 'Equipamento' },
-    { key: 'turno',             label: 'Turno',     render: r => r.turno ? r.turno.toUpperCase() : '�' },
+    { key: 'turno',             label: 'Turno',     render: r => r.turno ? r.turno.toUpperCase() : '—' },
     { key: 'horimetro_inicial', label: 'H. Inicial', align: 'right', render: r => fmtH(r.horimetro_inicial), csv: r => r.horimetro_inicial ?? '' },
     { key: 'horimetro_final',   label: 'H. Final',   align: 'right', render: r => fmtH(r.horimetro_final),   csv: r => r.horimetro_final ?? '' },
-    { key: '_diff', label: 'Diferen�a', align: 'right',
-      render: r => r.horimetro_inicial != null && r.horimetro_final != null ? fmtH(r.horimetro_final - r.horimetro_inicial) : '�',
+    { key: '_diff', label: 'Diferença', align: 'right',
+      render: r => r.horimetro_inicial != null && r.horimetro_final != null ? fmtH(r.horimetro_final - r.horimetro_inicial) : '—',
       csv:    r => r.horimetro_inicial != null && r.horimetro_final != null ? (r.horimetro_final - r.horimetro_inicial).toFixed(1) : '' },
     { key: 'horas_trabalhadas', label: 'H. Trab.', align: 'right', render: r => fmtH(r.horas_trabalhadas), csv: r => r.horas_trabalhadas ?? '' },
     { key: 'porcentagem', label: 'Utiliz.', align: 'right', render: r => <span style={{ fontWeight: 900, color: utilColor(r.porcentagem) }}>{fmtPct(r.porcentagem)}</span>, csv: r => fmtPct(r.porcentagem) },
   ]
   const colsBol = [
-    { key: 'numero',      label: 'N� Boletim' },
+    { key: 'numero',      label: 'Nº Boletim' },
     { key: 'data',        label: 'Data',      render: r => fmtD(r.data), csv: r => fmtD(r.data) },
     { key: 'equipamento', label: 'Equipamento' },
     { key: 'colaborador', label: 'Colaborador' },
@@ -441,8 +441,8 @@ export default function MaquinasDashboard() {
   return (
     <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
       <Header
-        title="M�quinas � Dashboard & Relat�rios"
-        subtitle="An�lise de utiliza��o, hor�metros e produtividade"
+        title="Máquinas — Dashboard & Relatórios"
+        subtitle="Análise de utilizaçÃo, horímetros e produtividade"
         action={{ label: 'Atualizar', onClick: load }}
       />
 
@@ -452,7 +452,7 @@ export default function MaquinasDashboard() {
         <div style={{ ...cardStyle, marginBottom: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(168px, 1fr))', gap: 12, alignItems: 'end' }}>
             <div>
-              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Data In�cio</label>
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Data Início</label>
               <input type="date" className="input" style={{ fontSize: 12 }} value={dtIni} onChange={e => setDtIni(e.target.value)} />
             </div>
             <div>
@@ -490,15 +490,15 @@ export default function MaquinasDashboard() {
           </div>
         </div>
 
-        {/* -- Status bar + Tabs � igual CentralGerencial -- */}
+        {/* -- Status bar + Tabs — igual CentralGerencial -- */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)', fontSize: 11 }}>
             {lastUpdate && (
               <>
                 <ArrowPathIcon style={{ width: 12, height: 12 }} />
-                Atualizado �s {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                &nbsp;�&nbsp;
-                {loading ? 'Carregando...' : `${lancamentos.length} registros � ${boletins.length} boletins � ${kpis.equips} equipamentos`}
+                Atualizado às {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                &nbsp;·&nbsp;
+                {loading ? 'Carregando...' : `${lancamentos.length} registros · ${boletins.length} boletins · ${kpis.equips} equipamentos`}
               </>
             )}
           </div>
@@ -530,31 +530,31 @@ export default function MaquinasDashboard() {
           <>
             {/* KPIs */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 16 }}>
-              <KPICard label="Equipamentos"     value={kpis.equips}           color="#6366f1" bg="rgba(99,102,241,0.12)"   icon={WrenchScrewdriverIcon} sub={`${kpis.total} registros no per�odo`} />
-              <KPICard label="H. Dispon�veis"   value={fmtH(kpis.tDisp)}      color="#8b5cf6" bg="rgba(139,92,246,0.12)"  icon={ClockIcon}             sub="total acumulado" />
+              <KPICard label="Equipamentos"     value={kpis.equips}           color="#6366f1" bg="rgba(99,102,241,0.12)"   icon={WrenchScrewdriverIcon} sub={`${kpis.total} registros no período`} />
+              <KPICard label="H. Disponíveis"   value={fmtH(kpis.tDisp)}      color="#8b5cf6" bg="rgba(139,92,246,0.12)"  icon={ClockIcon}             sub="total acumulado" />
               <KPICard label="H. Trabalhadas"   value={fmtH(kpis.tTrab)}      color="#10b981" bg="rgba(16,185,129,0.12)"  icon={CheckCircleIcon}       sub="produtivo efetivo" />
-              <KPICard label="H. Espera/Parada" value={fmtH(kpis.tEsp)}       color="#f59e0b" bg="rgba(245,158,11,0.12)"  icon={ExclamationCircleIcon} sub="aguardando/manuten��o" />
-              <KPICard label="Utiliza��o M�dia" value={fmtPct(kpis.utilMed)}  color={utilColor(kpis.utilMed)} bg={`${utilColor(kpis.utilMed)}1a`} icon={ChartBarIcon} sub={periodLabel} />
-              {kpis.tProd > 0 && <KPICard label="Produ��o Total" value={`${fmtN(kpis.tProd, 0)} ${kpis.unProd}`} color="#f97316" bg="rgba(249,115,22,0.12)" icon={ArrowTrendingUpIcon} sub="acumulado per�odo" />}
+              <KPICard label="H. Espera/Parada" value={fmtH(kpis.tEsp)}       color="#f59e0b" bg="rgba(245,158,11,0.12)"  icon={ExclamationCircleIcon} sub="aguardando/manutençÃo" />
+              <KPICard label="UtilizaçÃo MÉdia" value={fmtPct(kpis.utilMed)}  color={utilColor(kpis.utilMed)} bg={`${utilColor(kpis.utilMed)}1a`} icon={ChartBarIcon} sub={periodLabel} />
+              {kpis.tProd > 0 && <KPICard label="ProduçÃo Total" value={`${fmtN(kpis.tProd, 0)} ${kpis.unProd}`} color="#f97316" bg="rgba(249,115,22,0.12)" icon={ArrowTrendingUpIcon} sub="acumulado período" />}
             </div>
 
-            {/* Grid 1.55fr 1fr � igual CentralGerencial */}
+            {/* Grid 1.55fr 1fr — igual CentralGerencial */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 12, marginBottom: 14 }}>
 
               {/* Ranking equipamentos */}
               <div style={cardStyle}>
-                <SectionTitle label="Ranking de Utiliza��o por Equipamento" icon={WrenchScrewdriverIcon} color="#6366f1" />
+                <SectionTitle label="Ranking de UtilizaçÃo por Equipamento" icon={WrenchScrewdriverIcon} color="#6366f1" />
                 {porEquip.length === 0 ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '16px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)' }}>
                     <TableCellsIcon style={{ width: 18, height: 18, color: '#6366f1' }} />
-                    <span style={{ fontSize: 13, color: '#818cf8', fontWeight: 600 }}>Nenhum equipamento no per�odo selecionado.</span>
+                    <span style={{ fontSize: 13, color: '#818cf8', fontWeight: 600 }}>Nenhum equipamento no período selecionado.</span>
                   </div>
                 ) : (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                        {['#', 'Equipamento', 'Frente', 'Dias', 'H. Trab.', 'Utiliza��o'].map(h => (
-                          <th key={h} style={{ padding: '8px 10px', textAlign: h === '#' || h === 'Dias' ? 'center' : h === 'H. Trab.' || h === 'Utiliza��o' ? 'right' : 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
+                        {['#', 'Equipamento', 'Frente', 'Dias', 'H. Trab.', 'UtilizaçÃo'].map(h => (
+                          <th key={h} style={{ padding: '8px 10px', textAlign: h === '#' || h === 'Dias' ? 'center' : h === 'H. Trab.' || h === 'UtilizaçÃo' ? 'right' : 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -569,7 +569,7 @@ export default function MaquinasDashboard() {
                             {e.modelo && <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 400 }}>{e.modelo}</div>}
                           </td>
                           <td style={{ padding: '9px 10px' }}>
-                            {e.frente ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>{e.frente}</span> : <span style={{ color: 'var(--text-secondary)' }}>�</span>}
+                            {e.frente ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.1)', color: '#818cf8' }}>{e.frente}</span> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
                           </td>
                           <td style={{ padding: '9px 10px', textAlign: 'center', color: 'var(--text-secondary)' }}>{e.count}</td>
                           <td style={{ padding: '9px 10px', textAlign: 'right', color: '#10b981', fontWeight: 700 }}>{fmtH(e.hT)}</td>
@@ -619,13 +619,13 @@ export default function MaquinasDashboard() {
               </div>
             </div>
 
-            {/* Tend�ncia SVG */}
+            {/* Tendência SVG */}
             {trendData.length >= 2 && (
               <div style={cardStyle}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <SectionTitle label="Tend�ncia de Utiliza��o � �ltimos 30 dias" icon={ChartBarIcon} color="#6366f1" />
+                  <SectionTitle label="Tendência de UtilizaçÃo — Últimos 30 dias" icon={ChartBarIcon} color="#6366f1" />
                   <span style={{ fontSize: 10, color: '#6366f1', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ display: 'inline-block', width: 18, height: 2, background: '#6366f1', borderRadius: 2 }} /> Utiliza��o %
+                    <span style={{ display: 'inline-block', width: 18, height: 2, background: '#6366f1', borderRadius: 2 }} /> UtilizaçÃo %
                   </span>
                 </div>
                 <TrendChart data={trendData} />
@@ -641,12 +641,12 @@ export default function MaquinasDashboard() {
           <div style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
               <div>
-                <SectionTitle label="Relat�rio por Equipamento" icon={WrenchScrewdriverIcon} color="#6366f1" />
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} � {porEquip.length} equipamentos</div>
+                <SectionTitle label="Relatório por Equipamento" icon={WrenchScrewdriverIcon} color="#6366f1" />
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} — {porEquip.length} equipamentos</div>
               </div>
-              <ExportBtns onCSV={() => exportCSV('rel_equipamentos', colsEquip, porEquip)} onPDF={() => exportPDF('Relat�rio por Equipamento', periodLabel, colsEquip, porEquip)} />
+              <ExportBtns onCSV={() => exportCSV('rel_equipamentos', colsEquip, porEquip)} onPDF={() => exportPDF('Relatório por Equipamento', periodLabel, colsEquip, porEquip)} />
             </div>
-            <DataTable cols={colsEquip} rows={porEquip} emptyMsg="Nenhum equipamento no per�odo" />
+            <DataTable cols={colsEquip} rows={porEquip} emptyMsg="Nenhum equipamento no período" />
           </div>
 
         ) : tab === 'frente' ? (
@@ -654,12 +654,12 @@ export default function MaquinasDashboard() {
             <div style={cardStyle}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
                 <div>
-                  <SectionTitle label="Relat�rio por Frente de Trabalho" icon={MapPinIcon} color="#f97316" />
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} � {porFrente.length} frentes</div>
+                  <SectionTitle label="Relatório por Frente de Trabalho" icon={MapPinIcon} color="#f97316" />
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} — {porFrente.length} frentes</div>
                 </div>
-                <ExportBtns onCSV={() => exportCSV('rel_frentes', colsFrente, porFrente)} onPDF={() => exportPDF('Relat�rio por Frente', periodLabel, colsFrente, porFrente, false)} />
+                <ExportBtns onCSV={() => exportCSV('rel_frentes', colsFrente, porFrente)} onPDF={() => exportPDF('Relatório por Frente', periodLabel, colsFrente, porFrente, false)} />
               </div>
-              <DataTable cols={colsFrente} rows={porFrente} emptyMsg="Nenhuma frente no per�odo" />
+              <DataTable cols={colsFrente} rows={porFrente} emptyMsg="Nenhuma frente no período" />
             </div>
             {porFrente.map(f => {
               const itens = filtrados.filter(r => (r.frente || 'Sem frente') === f.frente)
@@ -674,7 +674,7 @@ export default function MaquinasDashboard() {
                     <DataTable cols={[
                       { key: 'data',        label: 'Data',      render: r => fmtD(r.data) },
                       { key: 'equipamento', label: 'Equipamento' },
-                      { key: 'turno',       label: 'Turno',     render: r => r.turno ? r.turno.toUpperCase() : '�' },
+                      { key: 'turno',       label: 'Turno',     render: r => r.turno ? r.turno.toUpperCase() : '—' },
                       { key: 'horas_trabalhadas', label: 'H. Trab.', align: 'right', render: r => <span style={{ color: '#10b981', fontWeight: 700 }}>{fmtH(r.horas_trabalhadas)}</span> },
                       { key: 'porcentagem', label: 'Utiliz.', align: 'right', render: r => <span style={{ fontWeight: 900, color: utilColor(r.porcentagem) }}>{fmtPct(r.porcentagem)}</span> },
                       { key: 'atividade_realizada', label: 'Atividade', wrap: true },
@@ -688,19 +688,19 @@ export default function MaquinasDashboard() {
         ) : tab === 'produtividade' ? (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 14 }}>
-              <KPICard label="Produ��o Total"    value={`${fmtN(kpis.tProd, 0)} ${kpis.unProd}`} color="#f97316" bg="rgba(249,115,22,0.12)" icon={ArrowTrendingUpIcon} sub="acumulado no per�odo" />
+              <KPICard label="ProduçÃo Total"    value={`${fmtN(kpis.tProd, 0)} ${kpis.unProd}`} color="#f97316" bg="rgba(249,115,22,0.12)" icon={ArrowTrendingUpIcon} sub="acumulado no período" />
               <KPICard label="Registros c/ Dados" value={prodRows.length} color="#0ea5e9" bg="rgba(14,165,233,0.12)" icon={DocumentTextIcon} sub="com produtividade informada" />
-              {prodRows.length > 0 && kpis.tProd > 0 && <KPICard label="M�dia por Registro" value={`${fmtN(kpis.tProd / prodRows.length, 1)} ${kpis.unProd}`} color="#8b5cf6" bg="rgba(139,92,246,0.12)" icon={ChartBarIcon} sub="m�dia por boletim" />}
+              {prodRows.length > 0 && kpis.tProd > 0 && <KPICard label="MÉdia por Registro" value={`${fmtN(kpis.tProd / prodRows.length, 1)} ${kpis.unProd}`} color="#8b5cf6" bg="rgba(139,92,246,0.12)" icon={ChartBarIcon} sub="mÉdia por boletim" />}
             </div>
             <div style={cardStyle}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
                 <div>
-                  <SectionTitle label="Relat�rio de Produtividade" icon={ArrowTrendingUpIcon} color="#f97316" />
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} � {prodRows.length} registros</div>
+                  <SectionTitle label="Relatório de Produtividade" icon={ArrowTrendingUpIcon} color="#f97316" />
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} — {prodRows.length} registros</div>
                 </div>
-                <ExportBtns onCSV={() => exportCSV('rel_produtividade', colsProd, prodRows)} onPDF={() => exportPDF('Relat�rio de Produtividade', periodLabel, colsProd, prodRows)} />
+                <ExportBtns onCSV={() => exportCSV('rel_produtividade', colsProd, prodRows)} onPDF={() => exportPDF('Relatório de Produtividade', periodLabel, colsProd, prodRows)} />
               </div>
-              <DataTable cols={colsProd} rows={prodRows} emptyMsg="Nenhum registro de produtividade no per�odo" />
+              <DataTable cols={colsProd} rows={prodRows} emptyMsg="Nenhum registro de produtividade no período" />
             </div>
           </>
 
@@ -708,12 +708,12 @@ export default function MaquinasDashboard() {
           <div style={cardStyle}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
               <div>
-                <SectionTitle label="Hist�rico de Hor�metros" icon={ClockIcon} color="#8b5cf6" />
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} � {horiRows.length} registros</div>
+                <SectionTitle label="Histórico de Horímetros" icon={ClockIcon} color="#8b5cf6" />
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} — {horiRows.length} registros</div>
               </div>
-              <ExportBtns onCSV={() => exportCSV('rel_horimetros', colsHori, horiRows)} onPDF={() => exportPDF('Hist�rico de Hor�metros', periodLabel, colsHori, horiRows)} />
+              <ExportBtns onCSV={() => exportCSV('rel_horimetros', colsHori, horiRows)} onPDF={() => exportPDF('Histórico de Horímetros', periodLabel, colsHori, horiRows)} />
             </div>
-            <DataTable cols={colsHori} rows={horiRows} emptyMsg="Nenhum hor�metro registrado no per�odo" />
+            <DataTable cols={colsHori} rows={horiRows} emptyMsg="Nenhum horímetro registrado no período" />
           </div>
 
         ) : tab === 'boletins' ? (
@@ -738,12 +738,12 @@ export default function MaquinasDashboard() {
             <div style={cardStyle}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
                 <div>
-                  <SectionTitle label="Relat�rio de Boletins" icon={DocumentTextIcon} color="#0ea5e9" />
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} � {bolRows.length} boletins</div>
+                  <SectionTitle label="Relatório de Boletins" icon={DocumentTextIcon} color="#0ea5e9" />
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: -8 }}>{periodLabel} — {bolRows.length} boletins</div>
                 </div>
-                <ExportBtns onCSV={() => exportCSV('rel_boletins', colsBol, bolRows)} onPDF={() => exportPDF('Relat�rio de Boletins', periodLabel, colsBol, bolRows, false)} />
+                <ExportBtns onCSV={() => exportCSV('rel_boletins', colsBol, bolRows)} onPDF={() => exportPDF('Relatório de Boletins', periodLabel, colsBol, bolRows, false)} />
               </div>
-              <DataTable cols={colsBol} rows={bolRows} emptyMsg="Nenhum boletim no per�odo" />
+              <DataTable cols={colsBol} rows={bolRows} emptyMsg="Nenhum boletim no período" />
             </div>
           </>
         ) : null}

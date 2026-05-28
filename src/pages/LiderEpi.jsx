@@ -18,17 +18,17 @@ const lbl = {
 }
 
 function fmtDt(iso) {
-  if (!iso) return '�'
+  if (!iso) return '—'
   const d = new Date(iso)
   return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 function fmtData(iso) {
-  if (!iso) return '�'
+  if (!iso) return '—'
   const [y, m, d] = iso.split('T')[0].split('-')
   return `${d}/${m}/${y}`
 }
 
-// -- dom�nio -------------------------------------------------------------------
+// -- domínio -------------------------------------------------------------------
 const MOTIVO_LABEL = {
   novo:             'Novo colaborador',
   troca_vencido:    'Troca por desgaste',
@@ -55,7 +55,7 @@ function StatusBadge({ status }) {
   )
 }
 
-// -- Modal gen�rico ------------------------------------------------------------
+// -- Modal genÉrico ------------------------------------------------------------
 function Modal({ title, onClose, children, maxWidth = 520 }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -83,7 +83,7 @@ export default function LiderEpi() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="?? Controle de EPIs / EPCs" subtitle="Solicita��es, cat�logo individual e coletivo" />
+      <Header title="?? Controle de EPIs / EPCs" subtitle="Solicitações, catálogo individual e coletivo" />
       <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
         {secao === 'solicitacoes' && <SecaoSolicitacoes workspaceId={workspaceId} />}
         {secao === 'catalogo-epi' && <SecaoCatalogoEPI  workspaceId={workspaceId} />}
@@ -94,7 +94,7 @@ export default function LiderEpi() {
 }
 
 // -------------------------------------------------------------------------------
-// SE��O � SOLICITA��ES
+// SEÇÃO — SOLICITAÇõES
 // -------------------------------------------------------------------------------
 function SecaoSolicitacoes({ workspaceId }) {
   const [rows,              setRows]              = useState([])
@@ -155,7 +155,7 @@ function SecaoSolicitacoes({ workspaceId }) {
   }
 
   async function confirmarReprovacao() {
-    if (!motivoReprov.trim()) { toast.error('Informe o motivo da reprova��o'); return }
+    if (!motivoReprov.trim()) { toast.error('Informe o motivo da reprovaçÃo'); return }
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('lider_solicitacoes_epi').update({
@@ -166,7 +166,7 @@ function SecaoSolicitacoes({ workspaceId }) {
     }).eq('id', modalReprovar)
     setSaving(false)
     if (error) { toast.error(error.message); return }
-    toast.success('Solicita��o reprovada')
+    toast.success('SolicitaçÃo reprovada')
     setModalReprovar(null); setMotivoReprov(''); carregar()
   }
 
@@ -236,7 +236,7 @@ function SecaoSolicitacoes({ workspaceId }) {
             className="input"
             value={buscaColaborador}
             onChange={e => setBuscaColaborador(e.target.value)}
-            placeholder="Buscar colaborador�"
+            placeholder="Buscar colaborador…"
             style={{ paddingLeft: 28, width: 180, fontSize: 12 }}
           />
           {buscaColaborador && (
@@ -247,7 +247,7 @@ function SecaoSolicitacoes({ workspaceId }) {
         </div>
       </div>
 
-      {/* -- Conte�do ------------------------------------------------------ */}
+      {/* -- ConteÚdo ------------------------------------------------------ */}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
           <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--accent)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
@@ -256,7 +256,7 @@ function SecaoSolicitacoes({ workspaceId }) {
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-secondary)' }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>??</div>
           <p style={{ fontSize: 13 }}>
-            {buscaColaborador.trim() ? `Nenhum colaborador encontrado para "${buscaColaborador.trim()}"` : 'Nenhuma solicita��o de EPI encontrada'}
+            {buscaColaborador.trim() ? `Nenhum colaborador encontrado para "${buscaColaborador.trim()}"` : 'Nenhuma solicitaçÃo de EPI encontrada'}
           </p>
         </div>
       ) : (
@@ -265,7 +265,7 @@ function SecaoSolicitacoes({ workspaceId }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-muted)' }}>
-                  {['Data', 'Colaborador', 'EPI', 'Qtd', 'Motivo', 'Frente / Equipe', 'Foto', 'Status', 'A��es'].map(h => (
+                  {['Data', 'Colaborador', 'EPI', 'Qtd', 'Motivo', 'Frente / Equipe', 'Foto', 'Status', 'Ações'].map(h => (
                     <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>
                       {h}
                     </th>
@@ -284,13 +284,13 @@ function SecaoSolicitacoes({ workspaceId }) {
                       <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>{MOTIVO_LABEL[row.motivo] ?? row.motivo}</td>
                       <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 11 }}>
                         {turno ? (
-                          <span>{turno.frente_nome}<br />{turno.equipe_nome} � {fmtData(turno.data)}</span>
+                          <span>{turno.frente_nome}<br />{turno.equipe_nome} · {fmtData(turno.data)}</span>
                         ) : <span style={{ fontStyle: 'italic' }}>Sem turno</span>}
                       </td>
                       <td style={{ padding: '10px 14px' }}>
                         {row.foto_url
                           ? <button onClick={() => setModalFoto(row.foto_url)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: 0, textDecoration: 'underline' }}>Ver foto</button>
-                          : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>�</span>}
+                          : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—/span>}
                       </td>
                       <td style={{ padding: '10px 14px' }}>
                         <StatusBadge status={row.status} />
@@ -354,14 +354,14 @@ function SecaoSolicitacoes({ workspaceId }) {
 
       {/* -- Modal Reprovar ------------------------------------------------ */}
       {modalReprovar && (
-        <Modal title="Reprovar solicita��o" onClose={() => setModalReprovar(null)} maxWidth={440}>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Informe o motivo da reprova��o. O l�der ser� notificado.</p>
+        <Modal title="Reprovar solicitaçÃo" onClose={() => setModalReprovar(null)} maxWidth={440}>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Informe o motivo da reprovaçÃo. O líder será notificado.</p>
           <label style={lbl}>Motivo *</label>
           <textarea
             value={motivoReprov}
             onChange={e => setMotivoReprov(e.target.value)}
             rows={3}
-            placeholder="Ex: EPI dispon�vel no almoxarifado..."
+            placeholder="Ex: EPI disponível no almoxarifado..."
             className="input"
             style={{ resize: 'none', height: 'auto' }}
           />
@@ -371,7 +371,7 @@ function SecaoSolicitacoes({ workspaceId }) {
               onClick={confirmarReprovacao}
               disabled={saving}
               style={{ fontSize: 13, padding: '8px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 9, cursor: 'pointer', fontWeight: 600 }}
-            >{saving ? 'Salvando...' : 'Confirmar reprova��o'}</button>
+            >{saving ? 'Salvando...' : 'Confirmar reprovaçÃo'}</button>
           </div>
         </Modal>
       )}
@@ -380,7 +380,7 @@ function SecaoSolicitacoes({ workspaceId }) {
 }
 
 // -------------------------------------------------------------------------------
-// SE��O � CAT�LOGO DE EPIs (Individual � por colaborador)
+// SEÇÃO — CATÁLOGO DE EPIs (Individual — por colaborador)
 // -------------------------------------------------------------------------------
 function SecaoCatalogoEPI({ workspaceId }) {
   const [epis,       setEpis]       = useState([])
@@ -406,7 +406,7 @@ function SecaoCatalogoEPI({ workspaceId }) {
   function abrirEditar(epi) { setNome(epi.nome); setCa(epi.ca ?? ''); setModal(epi) }
 
   async function salvar() {
-    if (!nome.trim()) { toast.error('Nome obrigat�rio'); return }
+    if (!nome.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
     const payload = { nome: nome.trim(), ca: ca.trim() || null }
     const { error } = modal === 'novo'
@@ -434,7 +434,7 @@ function SecaoCatalogoEPI({ workspaceId }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Cat�logo de EPIs</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Catálogo de EPIs</span>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 10 }}>{ativos} ativo{ativos !== 1 ? 's' : ''}</span>
         </div>
         <button onClick={abrirNovo} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -462,7 +462,7 @@ function SecaoCatalogoEPI({ workspaceId }) {
               onChange={e => { setBusca(e.target.value); setDropOpen(true) }}
               onFocus={() => setDropOpen(true)}
               onBlur={() => setTimeout(() => setDropOpen(false), 150)}
-              placeholder="Localizar EPI por nome ou CA�"
+              placeholder="Localizar EPI por nome ou CA…"
               style={{ paddingLeft: 32, fontSize: 13 }}
               autoComplete="off"
             />
@@ -533,7 +533,7 @@ function SecaoCatalogoEPI({ workspaceId }) {
           {/* -- Legenda quando dropdown fechado --------------------- */}
           {!dropOpen && !busca && (
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
-              {ativos} EPI{ativos !== 1 ? 's' : ''} ativo{ativos !== 1 ? 's' : ''} � clique no campo para listar todos
+              {ativos} EPI{ativos !== 1 ? 's' : ''} ativo{ativos !== 1 ? 's' : ''} · clique no campo para listar todos
             </p>
           )}
         </div>
@@ -544,10 +544,10 @@ function SecaoCatalogoEPI({ workspaceId }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={lbl}>Nome *</label>
-              <input className="input" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Capacete de seguran�a" />
+              <input className="input" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Capacete de segurança" />
             </div>
             <div>
-              <label style={lbl}>CA (Certificado de Aprova��o)</label>
+              <label style={lbl}>CA (Certificado de AprovaçÃo)</label>
               <input className="input" value={ca} onChange={e => setCa(e.target.value)} placeholder="Ex: 12345" />
             </div>
           </div>
@@ -564,7 +564,7 @@ function SecaoCatalogoEPI({ workspaceId }) {
 }
 
 // -------------------------------------------------------------------------------
-// SE��O � CAT�LOGO DE EPCs (Coletivo � por m�dulo / frente de trabalho)
+// SEÇÃO — CATÁLOGO DE EPCs (Coletivo — por módulo / frente de trabalho)
 // -------------------------------------------------------------------------------
 function SecaoCatalogoEPC({ workspaceId }) {
   const [epcs,     setEpcs]    = useState([])
@@ -596,7 +596,7 @@ function SecaoCatalogoEPC({ workspaceId }) {
   function abrirEditar(e)   { setNome(e.nome); setCa(e.ca ?? ''); setFrente(e.frente_nome ?? ''); setModal(e) }
 
   async function salvar() {
-    if (!nome.trim()) { toast.error('Nome obrigat�rio'); return }
+    if (!nome.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
     const payload = { nome: nome.trim(), ca: ca.trim() || null, frente_nome: frente || null }
     const { error } = modal === 'novo'
@@ -621,8 +621,8 @@ function SecaoCatalogoEPC({ workspaceId }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
-          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Cat�logo de EPCs</span>
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 8 }}>Equipamento de Prote��o Coletiva � por m�dulo</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>Catálogo de EPCs</span>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 8 }}>Equipamento de ProteçÃo Coletiva — por módulo</span>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 10 }}>{ativos} ativo{ativos !== 1 ? 's' : ''}</span>
         </div>
         <button onClick={abrirNovo} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -674,17 +674,17 @@ function SecaoCatalogoEPC({ workspaceId }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
               <label style={lbl}>Nome *</label>
-              <input className="input" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Sinaliza��o de seguran�a" />
+              <input className="input" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: SinalizaçÃo de segurança" />
             </div>
             <div>
-              <label style={lbl}>CA (Certificado de Aprova��o)</label>
+              <label style={lbl}>CA (Certificado de AprovaçÃo)</label>
               <input className="input" value={ca} onChange={e => setCa(e.target.value)} placeholder="Ex: 12345" />
             </div>
             <div>
-              <label style={lbl}>M�dulo / Frente de trabalho</label>
+              <label style={lbl}>Módulo / Frente de trabalho</label>
               {frentes.length > 0 ? (
                 <select className="input" value={frente} onChange={e => setFrente(e.target.value)}>
-                  <option value="">� Sem m�dulo espec�fico �</option>
+                  <option value="">— Sem módulo específico —</option>
                   {frentes.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
                 </select>
               ) : (

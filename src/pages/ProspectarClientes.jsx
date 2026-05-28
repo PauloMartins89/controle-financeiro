@@ -13,7 +13,7 @@ import {
   CheckCircleIcon, ClockIcon, XCircleIcon, BriefcaseIcon,
 } from '@heroicons/react/24/outline'
 
-// --- M�todos de venda ---------------------------------------------------------
+// --- Métodos de venda ---------------------------------------------------------
 const METODOS = [
   {
     id: 'b2b',
@@ -24,14 +24,14 @@ const METODOS = [
     border: 'rgba(99,102,241,0.25)',
     descricao: 'Abordagem direta a empresas. Foco no decisor.',
     passos: [
-      'Identifique o decisor: diretor, gerente de compras ou opera��es',
+      'Identifique o decisor: diretor, gerente de compras ou operações',
       'Envie proposta personalizada via WhatsApp citando o segmento deles',
-      'Ofere�a uma reuni�o de 15 min ou um case de empresa similar',
-      'Fa�a follow-up em 3 dias �teis se n�o houver resposta',
+      'Ofereça uma reuniÃo de 15 min ou um case de empresa similar',
+      'Faça follow-up em 3 dias Úteis se nÃo houver resposta',
       'Se positivo, envie proposta formal com ROI estimado',
     ],
     template: (nome, cat, servico) =>
-      `Ol�! Sou [seu nome], da [sua empresa].\n\nIdentificamos que a *${nome}* atua ${cat ? `em *${cat}*` : 'no setor'} e acreditamos que podemos agregar valor ao neg�cio de voc�s.\n\nTrabalhamos com *${servico || 'nossa solu��o'}* e atendemos empresas com perfil similar com resultados comprovados.\n\nPodemos agendar uma conversa r�pida de 15 min? ??`,
+      `Olá! Sou [seu nome], da [sua empresa].\n\nIdentificamos que a *${nome}* atua ${cat ? `em *${cat}*` : 'no setor'} e acreditamos que podemos agregar valor ao negócio de vocês.\n\nTrabalhamos com *${servico || 'nossa soluçÃo'}* e atendemos empresas com perfil similar com resultados comprovados.\n\nPodemos agendar uma conversa rápida de 15 min? ??`,
   },
   {
     id: 'inside_sales',
@@ -40,16 +40,16 @@ const METODOS = [
     cor: '#0ea5e9',
     bg: 'rgba(14,165,233,0.08)',
     border: 'rgba(14,165,233,0.25)',
-    descricao: 'Venda por telefone/v�deo. Meta: agendar demo.',
+    descricao: 'Venda por telefone/vídeo. Meta: agendar demo.',
     passos: [
-      'Ligue no hor�rio comercial (9�11h ou 14�16h)',
-      'Pe�a pelo respons�vel de compras ou opera��es',
-      'Abertura: "Atendemos empresas do seu segmento e vi que voc�s..."',
-      'Objetivo da liga��o: agendar 20 min de apresenta��o',
-      'Envie WhatsApp de confirma��o logo ap�s a liga��o',
+      'Ligue no horário comercial (9–11h ou 14–16h)',
+      'Peça pelo responsável de compras ou operações',
+      'Abertura: "Atendemos empresas do seu segmento e vi que vocês..."',
+      'Objetivo da ligaçÃo: agendar 20 min de apresentaçÃo',
+      'Envie WhatsApp de confirmaçÃo logo após a ligaçÃo',
     ],
     template: (nome, cat, servico) =>
-      `Ol�! Acabei de ligar para a *${nome}*.\n\nConforme combinado, seguem mais detalhes sobre como podemos ajudar ${cat ? `empresas de *${cat}*` : 'o seu neg�cio'} com *${servico || 'nossa solu��o'}*.\n\nAguardo sua confirma��o para a apresenta��o! ???`,
+      `Olá! Acabei de ligar para a *${nome}*.\n\nConforme combinado, seguem mais detalhes sobre como podemos ajudar ${cat ? `empresas de *${cat}*` : 'o seu negócio'} com *${servico || 'nossa soluçÃo'}*.\n\nAguardo sua confirmaçÃo para a apresentaçÃo! ???`,
   },
   {
     id: 'social_selling',
@@ -61,13 +61,13 @@ const METODOS = [
     descricao: 'Construa relacionamento antes de vender.',
     passos: [
       'Encontre o decisor no LinkedIn pelo nome da empresa',
-      'Conecte-se com mensagem de valor � sem vender na primeira',
-      'Interaja com 2�3 posts antes de fazer qualquer proposta',
-      'Ap�s ~1 semana, envie mensagem com proposta personalizada',
+      'Conecte-se com mensagem de valor – sem vender na primeira',
+      'Interaja com 2–3 posts antes de fazer qualquer proposta',
+      'Após ~1 semana, envie mensagem com proposta personalizada',
       'Migre para WhatsApp para acelerar o processo',
     ],
     template: (nome, cat, servico) =>
-      `Ol�! Vi o trabalho da *${nome}* ${cat ? `em *${cat}*` : ''} e fiquei muito impressionado.\n\nTrabalhamos com *${servico || 'nossa solu��o'}* e tenho ajudado empresas do seu perfil a crescerem. Posso compartilhar algo que acredito que vai te interessar? ??`,
+      `Olá! Vi o trabalho da *${nome}* ${cat ? `em *${cat}*` : ''} e fiquei muito impressionado.\n\nTrabalhamos com *${servico || 'nossa soluçÃo'}* e tenho ajudado empresas do seu perfil a crescerem. Posso compartilhar algo que acredito que vai te interessar? ??`,
   },
   {
     id: 'parceria',
@@ -76,24 +76,24 @@ const METODOS = [
     cor: '#10b981',
     bg: 'rgba(16,185,129,0.08)',
     border: 'rgba(16,185,129,0.25)',
-    descricao: 'Proposta de parceria ou indica��o m�tua.',
+    descricao: 'Proposta de parceria ou indicaçÃo mÚtua.',
     passos: [
-      'Identifique empresas complementares (n�o concorrentes diretos)',
-      'Proponha parceria de indica��o com comiss�o ou benef�cio m�tuo',
+      'Identifique empresas complementares (nÃo concorrentes diretos)',
+      'Proponha parceria de indicaçÃo com comissÃo ou benefício mÚtuo',
       'Prepare material de apoio para o parceiro apresentar ao cliente',
-      'Defina m�tricas e comiss�es com clareza desde o in�cio',
+      'Defina métricas e comissões com clareza desde o início',
       'Revise a parceria a cada 30 dias com dados reais',
     ],
     template: (nome, cat, servico) =>
-      `Ol�! Tudo bem?\n\nVi que a *${nome}* atende um p�blico muito parecido com o nosso. Trabalhamos com *${servico || 'nossa solu��o'}* e acredito que uma parceria entre n�s poderia gerar resultados para os dois lados.\n\nA ideia seria uma indica��o m�tua com benef�cios claros. Faz sentido conversar? ??`,
+      `Olá! Tudo bem?\n\nVi que a *${nome}* atende um pÚblico muito parecido com o nosso. Trabalhamos com *${servico || 'nossa soluçÃo'}* e acredito que uma parceria entre nós poderia gerar resultados para os dois lados.\n\nA ideia seria uma indicaçÃo mÚtua com benefícios claros. Faz sentido conversar? ??`,
   },
 ]
 
 // --- Status de lead -----------------------------------------------------------
 const STATUS_LEAD = [
-  { id: 'nao_contatado', label: 'N�o contatado', cor: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
+  { id: 'nao_contatado', label: 'NÃo contatado', cor: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
   { id: 'contatado',     label: 'Contatado',     cor: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
-  { id: 'negociando',    label: 'Em negocia��o', cor: '#0ea5e9', bg: 'rgba(14,165,233,0.1)'  },
+  { id: 'negociando',    label: 'Em negociaçÃo', cor: '#0ea5e9', bg: 'rgba(14,165,233,0.1)'  },
   { id: 'fechado',       label: 'Fechado ?',     cor: '#10b981', bg: 'rgba(16,185,129,0.1)' },
   { id: 'recusado',      label: 'Recusado',      cor: '#ef4444', bg: 'rgba(239,68,68,0.1)'  },
 ]
@@ -115,20 +115,20 @@ function estrelas(r) {
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36) }
 
 const SEGMENTOS = [
-  'Construtoras', 'Ind�strias', 'Hospitais', 'Cl�nicas', 'Supermercados',
-  'Escolas', 'Transportadoras', 'Hot�is', 'Restaurantes', 'Farm�cias',
-  'Oficinas mec�nicas', 'Escrit�rios de advocacia', 'Imobili�rias',
-  'Academias', 'Sal�es de beleza', 'Condom�nios', 'Postos de combust�vel',
-  'Distribuidoras', 'Frigor�ficos', 'Latic�nios', 'Metal�rgicas',
-  'Gr�ficas', 'Laborat�rios', 'Seguradoras', 'Contabilidades',
+  'Construtoras', 'IndÚstrias', 'Hospitais', 'Clínicas', 'Supermercados',
+  'Escolas', 'Transportadoras', 'Hotéis', 'Restaurantes', 'Farmácias',
+  'Oficinas mecânicas', 'Escritórios de advocacia', 'Imobiliárias',
+  'Academias', 'Salões de beleza', 'Condomínios', 'Postos de combustível',
+  'Distribuidoras', 'Frigoríficos', 'Laticínios', 'MetalÚrgicas',
+  'Gráficas', 'Laboratórios', 'Seguradoras', 'Contabilidades',
 ]
 const SERVICOS = [
-  'Manuten��o industrial', 'TI e suporte', 'Limpeza e conserva��o',
-  'Seguran�a patrimonial', 'Consultoria financeira', 'Marketing digital',
-  'Contabilidade', 'RH e treinamento', 'Log�stica e transporte',
-  'Alimenta��o corporativa', 'Uniformes e EPIs', 'Materiais de escrit�rio',
-  'Embalagens', 'Combust�vel', 'Instala��es el�tricas', 'Hidr�ulica',
-  'Software e sistemas', 'C�meras e monitoramento', 'Paisagismo',
+  'ManutençÃo industrial', 'TI e suporte', 'Limpeza e conservaçÃo',
+  'Segurança patrimonial', 'Consultoria financeira', 'Marketing digital',
+  'Contabilidade', 'RH e treinamento', 'Logística e transporte',
+  'AlimentaçÃo corporativa', 'Uniformes e EPIs', 'Materiais de escritório',
+  'Embalagens', 'Combustível', 'Instalações elétricas', 'Hidráulica',
+  'Software e sistemas', 'Câmeras e monitoramento', 'Paisagismo',
 ]
 const ESTADOS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
@@ -205,7 +205,7 @@ function AutocompleteInput({ value, onChange, onSelect, sugestoes, placeholder, 
   )
 }
 
-// --- Seletor de M�todo --------------------------------------------------------
+// --- Seletor de Método --------------------------------------------------------
 function MetodoSelector({ metodoAtivo, onChange }) {
   const [guiaAberto, setGuiaAberto] = useState(false)
   const m = METODOS.find(x => x.id === metodoAtivo) || METODOS[0]
@@ -267,18 +267,18 @@ function PropostaModal({ empresa, servico, metodoId, onClose }) {
   const [copiado, setCopiado] = useState(false)
 
   async function gerarComIA() {
-    if (!servico?.trim()) { toast.error('Informe o que voc� oferece para gerar com IA'); return }
+    if (!servico?.trim()) { toast.error('Informe o que você oferece para gerar com IA'); return }
     setGerandoIA(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) throw new Error('N�o autenticado')
+      if (!session?.access_token) throw new Error('NÃo autenticado')
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({
           messages: [{
             role: 'user',
-            content: `Crie uma mensagem curta de prospec��o para WhatsApp usando a estrat�gia de *${metodo.label}*, profissional e amig�vel (m�ximo 5 linhas), para uma empresa que oferece "${servico}" prospectando a empresa "${empresa.nome}"${empresa.categoria ? ` que atua em "${empresa.categoria}"` : ''}. Estilo da mensagem: ${metodo.descricao}. Use emojis com modera��o. Responda APENAS a mensagem, sem explica��es.`,
+            content: `Crie uma mensagem curta de prospecçÃo para WhatsApp usando a estratégia de *${metodo.label}*, profissional e amigável (máximo 5 linhas), para uma empresa que oferece "${servico}" prospectando a empresa "${empresa.nome}"${empresa.categoria ? ` que atua em "${empresa.categoria}"` : ''}. Estilo da mensagem: ${metodo.descricao}. Use emojis com moderaçÃo. Responda APENAS a mensagem, sem explicações.`,
           }],
           context: '',
         }),
@@ -287,7 +287,7 @@ function PropostaModal({ empresa, servico, metodoId, onClose }) {
       const { content } = await res.json()
       if (content) setMsg(content)
     } catch {
-      toast.error('N�o foi poss�vel gerar com IA. Usando modelo padr�o.')
+      toast.error('NÃo foi possível gerar com IA. Usando modelo padrÃo.')
     } finally {
       setGerandoIA(false)
     }
@@ -345,7 +345,7 @@ function PropostaModal({ empresa, servico, metodoId, onClose }) {
               </a>
             ) : (
               <div style={{ flex: 2, padding: '10px', borderRadius: 9, fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                Telefone n�o dispon�vel
+                Telefone nÃo disponível
               </div>
             )}
           </div>
@@ -374,7 +374,7 @@ function SalvarGrupoModal({ empresa, metodoId, servico, segmento, cidade, onClos
     if (!grupoSelecionado) { toast.error('Selecione ou crie um grupo'); return }
     const atualizados = grupos.map(g => {
       if (g.id !== grupoSelecionado) return g
-      if (g.leads.some(l => l.nome === empresa.nome)) { toast('Lead j� est� neste grupo'); return g }
+      if (g.leads.some(l => l.nome === empresa.nome)) { toast('Lead já está neste grupo'); return g }
       return { ...g, leads: [...g.leads, { id: uid(), nome: empresa.nome, telefone: empresa.telefone, website: empresa.website, endereco: empresa.endereco, categoria: empresa.categoria, status: 'nao_contatado' }] }
     })
     saveGrupos(atualizados); onSalvo(); onClose(); toast.success('Lead salvo no grupo!')
@@ -386,7 +386,7 @@ function SalvarGrupoModal({ empresa, metodoId, servico, segmento, cidade, onClos
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 420 }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Salvar em Grupo � {metodo.emoji} {metodo.label}</div>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Salvar em Grupo · {metodo.emoji} {metodo.label}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><XMarkIcon style={{ width: 18, height: 18 }} /></button>
         </div>
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -411,7 +411,7 @@ function SalvarGrupoModal({ empresa, metodoId, servico, segmento, cidade, onClos
                     <input type="radio" name="grupo" value={g.id} checked={grupoSelecionado === g.id} onChange={() => setGrupoSelecionado(g.id)} style={{ accentColor: metodo.cor }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{g.nome}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{g.leads.length} lead{g.leads.length !== 1 ? 's' : ''} � {g.criado_em}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{g.leads.length} lead{g.leads.length !== 1 ? 's' : ''} · {g.criado_em}</div>
                     </div>
                   </label>
                 ))}
@@ -437,7 +437,7 @@ function ProspectoCard({ e, servico, metodoId, onProposta, onSalvar, jaNoGrupo }
 
   return (
     <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, border: `1px solid ${jaNoGrupo ? metodo.border : 'var(--border)'}`, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
-      {jaNoGrupo && <div style={{ position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: '50%', background: metodo.cor }} title="J� salvo em grupo" />}
+      {jaNoGrupo && <div style={{ position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: '50%', background: metodo.cor }} title="Já salvo em grupo" />}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
@@ -453,7 +453,7 @@ function ProspectoCard({ e, servico, metodoId, onProposta, onSalvar, jaNoGrupo }
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <button onClick={() => onSalvar(e)} title={jaNoGrupo ? 'J� salvo' : 'Salvar em grupo'}
+          <button onClick={() => onSalvar(e)} title={jaNoGrupo ? 'Já salvo' : 'Salvar em grupo'}
             style={{ padding: '6px 9px', borderRadius: 7, fontSize: 11, background: jaNoGrupo ? metodo.bg : 'var(--bg-primary)', border: `1px solid ${jaNoGrupo ? metodo.border : 'var(--border)'}`, color: jaNoGrupo ? metodo.cor : 'var(--text-secondary)', cursor: 'pointer' }}>
             {jaNoGrupo ? <BookmarkSlashIcon style={{ width: 13, height: 13 }} /> : <BookmarkIcon style={{ width: 13, height: 13 }} />}
           </button>
@@ -507,7 +507,7 @@ function AbaGrupos() {
     <div style={{ textAlign: 'center', padding: '56px 24px', color: 'var(--text-secondary)' }}>
       <UserGroupIcon style={{ width: 48, height: 48, margin: '0 auto 14px', opacity: 0.2 }} />
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Nenhum grupo ainda</div>
-      <div style={{ fontSize: 13 }}>Fa�a uma busca e salve prospectos em grupos por m�todo de venda.</div>
+      <div style={{ fontSize: 13 }}>Faça uma busca e salve prospectos em grupos por método de venda.</div>
     </div>
   )
 
@@ -543,9 +543,9 @@ function AbaGrupos() {
                     <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{grupo.nome}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                       <span style={{ color: m.cor, fontWeight: 600 }}>{m.label}</span>
-                      {' � '}{totalLeads} lead{totalLeads !== 1 ? 's' : ''}
-                      {' � '}{grupo.criado_em}
-                      {grupo.cidade && ` � ${grupo.cidade}`}
+                      {' · '}{totalLeads} lead{totalLeads !== 1 ? 's' : ''}
+                      {' · '}{grupo.criado_em}
+                      {grupo.cidade && ` · ${grupo.cidade}`}
                     </div>
                   </div>
                 </div>
@@ -579,7 +579,7 @@ function AbaGrupos() {
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.nome}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{lead.categoria && <span>{lead.categoria} � </span>}{lead.telefone}</div>
+                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{lead.categoria && <span>{lead.categoria} · </span>}{lead.telefone}</div>
                               </div>
                               <select value={lead.status} onChange={e => atualizarStatus(grupo.id, lead.id, e.target.value)}
                                 style={{ padding: '4px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, border: `1.5px solid ${st.cor}`, background: st.bg, color: st.cor, cursor: 'pointer', outline: 'none' }}>
@@ -610,7 +610,7 @@ function AbaGrupos() {
   )
 }
 
-// --- P�gina principal ---------------------------------------------------------
+// --- Página principal ---------------------------------------------------------
 export default function ProspectarClientes() {
   const [aba, setAba] = useState('buscar')
   const [servico, setServico] = useState('')
@@ -658,7 +658,7 @@ export default function ProspectarClientes() {
 
   return (
     <div>
-      <Header title="Prospectar Clientes" subtitle="Encontre empresas e aplique sua estrat�gia de venda" />
+      <Header title="Prospectar Clientes" subtitle="Encontre empresas e aplique sua estratégia de venda" />
 
       <div style={{ padding: '0 24px 32px' }}>
 
@@ -683,8 +683,8 @@ export default function ProspectarClientes() {
             <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', padding: '18px 20px', marginBottom: 20 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>O que voc� oferece *</label>
-                  <AutocompleteInput value={servico} onChange={setServico} sugestoes={SERVICOS} placeholder="Ex: manuten��o industrial, TI, EPI..." style={inpStyle} />
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>O que você oferece *</label>
+                  <AutocompleteInput value={servico} onChange={setServico} sugestoes={SERVICOS} placeholder="Ex: manutençÃo industrial, TI, EPI..." style={inpStyle} />
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Segmento-alvo *</label>
@@ -692,7 +692,7 @@ export default function ProspectarClientes() {
                 </div>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Cidade *</label>
-                  <AutocompleteInput value={cidade} onChange={setCidade} onSelect={s => { setCidade(s.label); if (s.uf) setUf(s.uf) }} sugestoes={cidadesSugestoes} placeholder="Ex: S�o Paulo" style={inpStyle} onEnter={buscar} />
+                  <AutocompleteInput value={cidade} onChange={setCidade} onSelect={s => { setCidade(s.label); if (s.uf) setUf(s.uf) }} sugestoes={cidadesSugestoes} placeholder="Ex: SÃo Paulo" style={inpStyle} onEnter={buscar} />
                 </div>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Estado</label>
@@ -718,7 +718,7 @@ export default function ProspectarClientes() {
                   <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                     <strong style={{ color: 'var(--text-primary)' }}>{resultados.length}</strong> empresa{resultados.length !== 1 ? 's' : ''} em{' '}
                     <strong style={{ color: 'var(--text-primary)' }}>{cidade}{uf ? `, ${uf}` : ''}</strong>
-                    <span style={{ marginLeft: 8, color: metodoAtual.cor, fontWeight: 600 }}>� {metodoAtual.emoji} {metodoAtual.label}</span>
+                    <span style={{ marginLeft: 8, color: metodoAtual.cor, fontWeight: 600 }}>· {metodoAtual.emoji} {metodoAtual.label}</span>
                   </span>
                 </div>
                 {resultados.length === 0
@@ -743,8 +743,8 @@ export default function ProspectarClientes() {
             {resultados === null && !loading && (
               <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-secondary)' }}>
                 <SparklesIcon style={{ width: 44, height: 44, margin: '0 auto 14px', opacity: 0.2 }} />
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Encontre seus pr�ximos clientes</div>
-                <div style={{ fontSize: 13 }}>Escolha o m�todo de venda, defina o segmento-alvo e a cidade.</div>
+                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Encontre seus próximos clientes</div>
+                <div style={{ fontSize: 13 }}>Escolha o método de venda, defina o segmento-alvo e a cidade.</div>
               </div>
             )}
           </>
