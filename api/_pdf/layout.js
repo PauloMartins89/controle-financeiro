@@ -3,6 +3,14 @@
  * Primitivas de layout — padrão SmartPro PREMIUM (light theme).
  */
 
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+let LOGO_BUF = null
+try { LOGO_BUF = readFileSync(join(__dirname, 'assets', 'logo.png')) } catch {}
+
 export const COR = {
   primary:    '#4f46e5',   // indigo-600
   primaryDk:  '#3730a3',   // indigo-800
@@ -52,26 +60,29 @@ export function renderHeader(doc, { titulo, subtitulo, empresa }) {
   const W = doc.page.width
   const M = 40
 
-  doc.rect(0, 0, W, 110).fill('white')
+  doc.rect(0, 0, W, 120).fill('white')
 
-  // chip "SP"
-  const chipX = M, chipY = 26, chipS = 34
-  doc.roundedRect(chipX, chipY, chipS, chipS, 8).fill(COR.primary)
-  doc.fillColor('white').font('Helvetica-Bold').fontSize(15)
-     .text('SP', chipX, chipY + 9, { width: chipS, align: 'center' })
-
-  // wordmark
-  doc.fillColor(COR.ink).font('Helvetica-Bold').fontSize(15)
-     .text('SmartPro', chipX + chipS + 10, chipY + 4)
-  doc.fillColor(COR.muted).font('Helvetica').fontSize(8)
-     .text('Inteligência Financeira', chipX + chipS + 10, chipY + 22)
+  // Logo SmartPro (ou fallback chip+wordmark)
+  const logoH = 64
+  if (LOGO_BUF) {
+    doc.image(LOGO_BUF, M, 18, { height: logoH })
+  } else {
+    const chipX = M, chipY = 26, chipS = 34
+    doc.roundedRect(chipX, chipY, chipS, chipS, 8).fill(COR.primary)
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(15)
+       .text('SP', chipX, chipY + 9, { width: chipS, align: 'center' })
+    doc.fillColor(COR.ink).font('Helvetica-Bold').fontSize(15)
+       .text('SmartPro', chipX + chipS + 10, chipY + 4)
+    doc.fillColor(COR.muted).font('Helvetica').fontSize(8)
+       .text('Gestão Inteligente', chipX + chipS + 10, chipY + 22)
+  }
 
   // titulo + subtitulo
   doc.fillColor(COR.ink).font('Helvetica-Bold').fontSize(18)
-     .text(titulo || '', M, 70, { width: W - M * 2 - 240 })
+     .text(titulo || '', M, 90, { width: W - M * 2 - 240 })
   if (subtitulo) {
     doc.fillColor(COR.muted).font('Helvetica').fontSize(9)
-       .text(subtitulo, M, 92, { width: W - M * 2 - 240 })
+       .text(subtitulo, M, 112, { width: W - M * 2 - 240 })
   }
 
   // bloco empresa
@@ -84,10 +95,10 @@ export function renderHeader(doc, { titulo, subtitulo, empresa }) {
   }
 
   // linha divisória
-  doc.moveTo(M, 116).lineTo(W - M, 116).lineWidth(0.8).strokeColor(COR.border).stroke()
+  doc.moveTo(M, 138).lineTo(W - M, 138).lineWidth(0.8).strokeColor(COR.border).stroke()
 
   doc.fillColor(COR.text).font('Helvetica')
-  doc.y = 130
+  doc.y = 152
   return doc.y
 }
 
@@ -238,7 +249,7 @@ export function renderFooter(doc) {
   const y = doc.page.height - 36
   doc.moveTo(M, y).lineTo(W - M, y).lineWidth(0.5).strokeColor(COR.border).stroke()
   doc.fontSize(7).fillColor(COR.muted).font('Helvetica').text(
-    `SmartPro · Inteligência Financeira  ·  ${new Date().toLocaleString('pt-BR')}`,
+    `SmartPro · Gestão Inteligente  ·  ${new Date().toLocaleString('pt-BR')}`,
     M, y + 8, { width: W - M * 2, align: 'center' }
   )
   doc.fontSize(6.5).fillColor(COR.faint).text(
