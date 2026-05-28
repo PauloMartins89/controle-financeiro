@@ -6,6 +6,7 @@
     --bg-secondary: #13161a;
     --bg-card: #1a1d22;
     --bg-card-hover: #1f2329;
+    --bg-muted: #1f2329;
     --input-bg: #1a1d22;
     --accent: #00c896;
     --accent-hover: #00e6aa;
@@ -16,7 +17,10 @@
     --warning: #f97316;
     --text-primary: #e8eaed;
     --text-secondary: #8a9099;
-    --border: rgba(255,255,255,0.06);
+    --text: var(--text-primary);
+    --bg: var(--bg-primary);
+    --border: rgba(255,255,255,0.08);
+    --shadow-card: 0 1px 4px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.25);
     /* ── Sidebar (dark mode defaults) ── */
     --sb-bg: linear-gradient(175deg, #0e1a2e 0%, #0a1118 65%);
     --sb-bg-hover: rgba(255,255,255,0.05);
@@ -31,10 +35,11 @@
   }
 
   :root[data-theme="light"] {
-    --bg-primary: #e8eaf6;
-    --bg-secondary: #f0f1fa;
-    --bg-card: #f5f6ff;
-    --bg-card-hover: #eceeff;
+    --bg-primary: #EEF2F8;
+    --bg-secondary: #F4F7FB;
+    --bg-card: #FFFFFF;
+    --bg-card-hover: #F8FAFC;
+    --bg-muted: #F8FAFC;
     --input-bg: #ffffff;
     --accent: #6366f1;
     --accent-hover: #4f46e5;
@@ -42,9 +47,12 @@
     --success: #059669;
     --danger: #dc2626;
     --warning: #d97706;
-    --text-primary: #0f172a;
-    --text-secondary: #64748b;
-    --border: rgba(99,102,241,0.18);
+    --text-primary: #1A2332;
+    --text-secondary: #6B7A99;
+    --text: var(--text-primary);
+    --bg: var(--bg-primary);
+    --border: #E5EAF2;
+    --shadow-card: 0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.05);
     /* ── Sidebar (light mode — mesma cor do dark) ── */
     --sb-bg: linear-gradient(175deg, #0e1a2e 0%, #0a1118 65%);
     --sb-bg-hover: rgba(255,255,255,0.05);
@@ -76,10 +84,10 @@
   ::-webkit-scrollbar-corner { background: transparent; }
 
   /* ── Scrollbar global (light mode) ── */
-  :root[data-theme="light"] * { scrollbar-color: rgba(99,102,241,0.4) transparent; }
-  :root[data-theme="light"] ::-webkit-scrollbar-track { background: rgba(99,102,241,0.05); }
-  :root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.35); }
-  :root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.65); }
+  :root[data-theme="light"] * { scrollbar-color: rgba(100,116,139,0.4) transparent; }
+  :root[data-theme="light"] ::-webkit-scrollbar-track { background: rgba(100,116,139,0.05); }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.35); }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.65); }
 
   /* Logo sempre visível — card verde fixo no sidebar */
 }
@@ -90,20 +98,20 @@
     border: 1px solid var(--border);
     border-radius: 16px;
     transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-card);
   }
   .card:hover { background: var(--bg-card-hover); border-color: rgba(16,185,129,0.15); box-shadow: 0 4px 20px rgba(0,0,0,0.18); }
 
-  /* Cards com gradiente sutil no modo claro */
+  /* Cards no modo claro — padrão neutral (sem tint roxo) */
   :root[data-theme="light"] .card {
-    background: linear-gradient(145deg, #f5f6ff 0%, #eceeff 100%);
-    border-color: rgba(99,102,241,0.2);
-    box-shadow: 0 2px 6px rgba(99,102,241,0.1), 0 6px 20px rgba(99,102,241,0.08);
+    background: #FFFFFF;
+    border-color: #E5EAF2;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.05);
   }
   :root[data-theme="light"] .card:hover {
-    background: linear-gradient(145deg, #eceeff 0%, #e4e6ff 100%);
-    border-color: rgba(99,102,241,0.3);
-    box-shadow: 0 4px 12px rgba(99,102,241,0.15), 0 8px 24px rgba(99,102,241,0.1);
+    background: #F8FAFC;
+    border-color: #C7D2E2;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10), 0 8px 24px rgba(0,0,0,0.08);
   }
 
   .btn-primary {
@@ -238,6 +246,7 @@
   .stat-card {
     background: var(--bg-card); border: 1px solid var(--border);
     border-radius: 16px; padding: 18px 20px; position: relative; overflow: hidden;
+    box-shadow: var(--shadow-card);
     transition: all 0.2s;
   }
   .stat-card:hover { border-color: rgba(0,200,150,0.2); transform: translateY(-2px); }
@@ -254,7 +263,7 @@
     padding: 10px 16px; border-bottom: 1px solid var(--border);
     transition: background 0.15s;
   }
-  .table-row:hover { background: rgba(255,255,255,0.03); }
+  .table-row:hover { background: var(--bg-muted); }
   .table-row:last-child { border-bottom: none; }
 
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

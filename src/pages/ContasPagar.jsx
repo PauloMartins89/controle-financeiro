@@ -137,7 +137,7 @@ function ContaModal({ conta, onClose, onSave }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 540, border: '1px solid var(--border)', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 540, border: '1px solid var(--border)', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -247,7 +247,7 @@ function MarcarPagoModal({ conta, onClose, onConfirm }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 420, border: '1px solid var(--border)', boxShadow: '0 24px 60px rgba(0,0,0,0.4)', padding: 28 }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 420, border: '1px solid var(--border)', boxShadow: '0 24px 60px rgba(0,0,0,0.4)', padding: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <CheckCircleIcon style={{ width: 24, height: 24, color: '#10b981' }} />
@@ -316,7 +316,7 @@ function DetalhesModal({ item, onClose }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 560, border: '1px solid var(--border)', boxShadow: '0 24px 60px rgba(0,0,0,0.4)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 560, border: '1px solid var(--border)', boxShadow: '0 24px 60px rgba(0,0,0,0.4)', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
@@ -644,7 +644,7 @@ export default function ContasPagar() {
           ].map(card => {
             const Icon = card.icon
             return (
-              <div key={card.label} style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '18px 20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div key={card.label} style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '18px 20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14, boxShadow: 'var(--shadow-card)' }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon style={{ width: 22, height: 22, color: card.color }} />
                 </div>
@@ -705,7 +705,7 @@ export default function ContasPagar() {
         </div>
 
         {/* Tabela */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
           {loading ? (
             <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
               <ArrowPathIcon style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />

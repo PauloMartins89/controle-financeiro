@@ -170,7 +170,7 @@ export default function Dashboard() {
               <div style={{ fontWeight: 800, fontSize: 16 }}>Proventos de Negócios</div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Receitas e distribuições dos seus negócios compartilhados</div>
             </div>
-            <button onClick={() => navigate('/proventos')} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', color: '#818cf8', fontSize: 13, fontWeight: 600 }}>
+            <button onClick={() => navigate('/proventos')} style={{ background: 'var(--bg-muted)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
               Ver todos →
             </button>
           </div>
@@ -183,7 +183,7 @@ export default function Dashboard() {
               { label: 'Minha participação', value: minhaPartPendente, color: '#8b5cf6', icon: '👤' },
               { label: 'Negócios ativos', value: negocios.filter(n => n.ativo).length, color: '#6366f1', icon: '🏢', isCur: false },
             ].map(s => (
-              <div key={s.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', position: 'relative', overflow: 'hidden' }}>
+              <div key={s.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: s.color }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -208,7 +208,7 @@ export default function Dashboard() {
               }, 0)
 
               return (
-                <div key={neg.id} onClick={() => navigate('/proventos')} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', cursor: 'pointer', transition: 'border-color 0.2s', position: 'relative', overflow: 'hidden' }}
+                <div key={neg.id} onClick={() => navigate('/proventos')} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 18px', cursor: 'pointer', transition: 'border-color 0.2s', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = neg.cor}
                   onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                 >

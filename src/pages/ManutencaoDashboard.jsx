@@ -40,10 +40,11 @@ function KPICard({ label, value, sub, color, bg, icon: Icon, onClick }) {
     <div
       onClick={onClick}
       style={{
-        background: 'var(--bg-secondary)', borderRadius: 14, padding: '14px 16px',
+        background: 'var(--bg-card)', borderRadius: 14, padding: '14px 16px',
         border: '1px solid var(--border)', borderTop: `3px solid ${color}`,
+        boxShadow: 'var(--shadow-card)',
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'transform 0.15s',
+        transition: 'transform 0.15s, box-shadow 0.15s',
       }}
       onMouseEnter={e => onClick && (e.currentTarget.style.transform = 'translateY(-2px)')}
       onMouseLeave={e => onClick && (e.currentTarget.style.transform = 'translateY(0)')}
@@ -178,7 +179,7 @@ export default function ManutencaoDashboard() {
                       const dias = os.data_prevista ? Math.ceil((new Date(os.data_prevista + 'T12:00:00') - new Date()) / 86400000) : null
                       return (
                         <tr key={os.id} onClick={() => navigate('/manutencao/operacoes/os')} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-muted)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                           <td style={tdStyle}>
@@ -226,7 +227,7 @@ export default function ManutencaoDashboard() {
                   <tbody>
                     {preventivas.map(p => (
                       <tr key={p.id} onClick={() => navigate('/manutencao/operacoes/preventiva')} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-muted)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <td style={tdStyle}><span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>{p.titulo}</span></td>
@@ -278,8 +279,8 @@ export default function ManutencaoDashboard() {
 }
 
 const cardStyle = {
-  background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)',
-  overflow: 'hidden',
+  background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)',
+  boxShadow: 'var(--shadow-card)', overflow: 'hidden',
 }
 const cardHeaderStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',

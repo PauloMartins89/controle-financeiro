@@ -135,7 +135,7 @@ function TransporteDetail({ d = {} }) {
       )}
       {kmRows.length > 0 && (
         <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
             {['', 'SAÍDA', 'ENTRADA', 'TOTAL/KM'].map(h => (
               <div key={h} style={{ padding: '5px 8px', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'center' }}>{h}</div>
             ))}
@@ -178,7 +178,7 @@ function HistoricoModal({ lancamento, onClose }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 520, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 520, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
 
         {/* cabeçalho */}
         <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
@@ -233,7 +233,7 @@ function HistoricoModal({ lancamento, onClose }) {
                 <div>
                   <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Quilometragem</div>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
                       {['TIPO', 'SAÍDA', 'ENTRADA', 'TOTAL KM'].map(h => (
                         <div key={h} style={{ padding: '5px 8px', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'center' }}>{h}</div>
                       ))}
@@ -247,7 +247,7 @@ function HistoricoModal({ lancamento, onClose }) {
                       </div>
                     ))}
                     {/* totais */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr', borderTop: '2px solid var(--border)', background: 'rgba(255,255,255,0.03)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr', borderTop: '2px solid var(--border)', background: 'var(--bg-muted)' }}>
                       <div style={{ padding: '7px 8px', fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)', textAlign: 'center' }}>TOTAIS</div>
                       <div />
                       <div />
@@ -428,7 +428,7 @@ function PagamentoModal({ selecionados, workspaceId, userId, onClose, onSave }) 
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', borderRadius: 18, width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
 
         {/* cabeçalho */}
         <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
@@ -1000,7 +1000,7 @@ export default function Faturamento() {
             { label: 'FATURADO',  value: fmtCurrency(totalFaturado),  color: '#8b5cf6', sub: null },
             { label: 'REPROVADO', value: fmtCurrency(totalReprovado), color: '#ef4444', sub: null },
           ].map(c => (
-            <div key={c.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+            <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: c.color }}>{c.value}</div>
               {c.sub && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>{c.sub}</div>}

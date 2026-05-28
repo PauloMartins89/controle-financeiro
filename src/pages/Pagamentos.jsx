@@ -81,7 +81,7 @@ function ConfirmarRecebimentoModal({ pagamento, onClose, onSaved }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
     }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{
-        background: 'var(--bg-secondary)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460,
+        background: 'var(--bg-card)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 460,
         border: '1px solid var(--border)', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
         {/* Cabeçalho */}
@@ -190,7 +190,7 @@ function PagamentoCard({ pagamento, onRefresh }) {
   const fmtKm = v => v > 0 ? v.toLocaleString('pt-BR') : '—'
 
   return (
-    <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: `1px solid ${isRecebido ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`, overflow: 'hidden', transition: 'box-shadow 0.2s' }}>
+    <div style={{ background: 'var(--bg-card)', borderRadius: 14, border: `1px solid ${isRecebido ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`, overflow: 'hidden', transition: 'box-shadow 0.2s', boxShadow: 'var(--shadow-card)' }}>
 
       {/* cabeçalho do card */}
       <div
@@ -328,7 +328,7 @@ function PagamentoCard({ pagamento, onRefresh }) {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
-                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+                  <tr style={{ background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
                     {['DATA', 'Nº DM', 'EMPRESA / CLIENTE', 'MOTORISTA', 'PLACA', 'ORIGEM → DESTINO', 'KM ASF', 'KM TER', 'VALOR'].map(h => (
                       <th key={h} style={{ padding: '8px 14px', textAlign: h === 'VALOR' || h.startsWith('KM') ? 'right' : 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
@@ -340,7 +340,7 @@ function PagamentoCard({ pagamento, onRefresh }) {
                     const km = calcKmTotais(d)
                     return (
                       <tr key={l.id} style={{ borderBottom: i < lancamentos.length - 1 ? '1px solid var(--border)' : 'none' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-muted)'}
                         onMouseLeave={e => e.currentTarget.style.background = ''}
                       >
                         <td style={{ padding: '9px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtDate(l.data)}</td>
@@ -455,7 +455,7 @@ export default function Pagamentos() {
             { label: 'JÁ RECEBIDO',           value: fmtCurrency(totalRecebido), color: '#10b981', sub: null },
             { label: 'FATURADO ESTE MÊS',     value: fmtCurrency(totalMes),      color: '#6366f1', sub: null },
           ].map(c => (
-            <div key={c.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+            <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: c.color }}>{c.value}</div>
               {c.sub && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>{c.sub}</div>}
