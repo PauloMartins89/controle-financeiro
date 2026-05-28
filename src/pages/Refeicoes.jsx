@@ -727,7 +727,7 @@ function CrudRegras({ workspaceId, ownerId }) {
 
       {/* -- 1. Dias e Horários -- */}
       <div style={sCard}>
-        <SH emoji="??" title="Dias e Horários" sub="Em quais dias as refeições são permitidas e qual o horário limite para pedidos" />
+        <SH emoji="🕐" title="Dias e Horários" sub="Em quais dias as refeições são permitidas e qual o horário limite para pedidos" />
         <div style={{ marginBottom: 16 }}>
           <label style={lbl}>Dias da semana permitidos</label>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
@@ -758,7 +758,7 @@ function CrudRegras({ workspaceId, ownerId }) {
 
       {/* -- 2. Limites e Cotas -- */}
       <div style={sCard}>
-        <SH emoji="??" title="Limites e Cotas" sub="Controle de volume e valor por equipe e colaborador" />
+        <SH emoji="📊" title="Limites e Cotas" sub="Controle de volume e valor por equipe e colaborador" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
           <div>
             <label style={lbl}>Teto por equipe (itens)</label>
@@ -777,17 +777,17 @@ function CrudRegras({ workspaceId, ownerId }) {
 
       {/* -- 3. Tipos Habilitados -- */}
       <div style={sCard}>
-        <SH emoji="?" title="Tipos Habilitados" sub="O que pode ser solicitado pelos líderes no formulário" />
+        <SH emoji="✅" title="Tipos Habilitados" sub="O que pode ser solicitado pelos líderes no formulário" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <ToggleRow checked={!!form.permite_refeicao} onChange={() => f('permite_refeicao', !form.permite_refeicao)} label="🍽️ Refeição (Almoço / Jantar)" desc="Permite solicitar refeições no formulário do líder" />
-          <ToggleRow checked={!!form.permite_cafe}     onChange={() => f('permite_cafe',     !form.permite_cafe)}     label="? Café da Manhã / Lanche"        desc="Permite solicitar café junto com a refeição" />
-          <ToggleRow checked={!!form.permite_extra}    onChange={() => f('permite_extra',    !form.permite_extra)}    label="? Extras (com justificativa)"    desc="Permite adicionar pessoas fora da lista oficial da equipe" />
+          <ToggleRow checked={!!form.permite_cafe}     onChange={() => f('permite_cafe',     !form.permite_cafe)}     label="☕ Café da Manhã / Lanche"        desc="Permite solicitar café junto com a refeição" />
+          <ToggleRow checked={!!form.permite_extra}    onChange={() => f('permite_extra',    !form.permite_extra)}    label="➕ Extras (com justificativa)"    desc="Permite adicionar pessoas fora da lista oficial da equipe" />
         </div>
       </div>
 
       {/* -- 4. Fluxo de Aprovação -- */}
       <div style={sCard}>
-        <SH emoji="??" title="Fluxo de Aprovação" sub="Como os pedidos são processados antes de ir para o restaurante" />
+        <SH emoji="🔄" title="Fluxo de Aprovação" sub="Como os pedidos são processados antes de ir para o restaurante" />
         <div style={{ marginBottom: 16 }}>
           <label style={lbl}>Tipo de aprovação</label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 6 }}>
@@ -826,7 +826,7 @@ function CrudRegras({ workspaceId, ownerId }) {
 
       {/* -- 5. Notificações -- */}
       <div style={sCard}>
-        <SH emoji="??" title="Notificações WhatsApp" sub="Quais mensagens automáticas são enviadas durante o processo" />
+        <SH emoji="💬" title="Notificações WhatsApp" sub="Quais mensagens automáticas são enviadas durante o processo" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <ToggleRow checked={!!form.notifica_lider_resultado}     onChange={() => f('notifica_lider_resultado',     !form.notifica_lider_resultado)}     label="Notificar líder do resultado"          desc="Envia WA informando se o pedido foi aprovado ou reprovado" />
           <ToggleRow checked={!!form.notifica_supervisor_pendente} onChange={() => f('notifica_supervisor_pendente', !form.notifica_supervisor_pendente)} label="Alertar supervisor sobre pendências" desc="Lembrete quando o pedido aguarda aprovação além do prazo" />
