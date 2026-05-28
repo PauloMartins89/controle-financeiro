@@ -65,34 +65,61 @@ export default async function handler(req, res) {
     })
 
     if (createErr) {
-      // Se já existe, retorna ok com flag
+      // Se já existe, busca o user_id existente e faz upsert no perfil
       if (createErr.message?.includes('already') || createErr.code === 'email_exists') {
+        const { data: existing } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 })
+        const existingUser = existing?.users?.find(u => u.email === email)
+        if (existingUser) {
+          await db.from('lider_perfis').upsert({
+            workspace_id,
+            user_id:  existingUser.id,
+            matricula: matricula.toLowerCase(),
+            nome:      nome || `Líder ${matricula}`,
+          }, { onConflict: 'user_id' })
+        }
         return res.status(200).json({ ok: true, ja_existia: true, email })
       }
       return res.status(400).json({ error: createErr.message })
     }
 
-    return res.status(200).json({ ok: true, ja_existia: false, email, user_id: created.user?.id })
+    const newUserId = created.user?.id
+    // Insere perfil na tabela lider_perfis
+    if (newUserId) {
+      await db.from('lider_perfis').upsert({
+        workspace_id,
+        user_id:   newUserId,
+        matricula: matricula.toLowerCase(),
+        nome:      nome || `Líder ${matricula}`,
+      }, { onConflict: 'user_id' })
+    }
+
+    return res.status(200).json({ ok: true, ja_existia: false, email, user_id: newUserId })
   }
 
   // ── listar-usuarios ───────────────────────────────────────────────────────
   if (action === 'listar-usuarios') {
     if (!workspace_id) return res.status(400).json({ error: 'workspace_id é obrigatório' })
 
-    const { data: usersData } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 })
-    const liderUsers = (usersData?.users || []).filter(u => {
-      const meta = u.user_metadata || {}
-      return u.email?.endsWith('@lider.smartpro') && meta.workspace_id === workspace_id
-    })
+    // Usa lider_perfis diretamente — muito mais rápido que varrer auth.users
+    const { data: perfis, error: perfisErr } = await db
+      .from('lider_perfis')
+      .select('id, user_id, matricula, nome, equipe_id, ativo, created_at')
+      .eq('workspace_id', workspace_id)
+      .order('matricula')
+
+    if (perfisErr) return res.status(500).json({ error: perfisErr.message })
 
     return res.status(200).json({
-      usuarios: liderUsers.map(u => ({
-        id:           u.id,
-        email:        u.email,
-        matricula:    u.user_metadata?.matricula || u.email?.split('@')[0],
-        nome:         u.user_metadata?.nome || '',
-        workspace_id: u.user_metadata?.workspace_id || '',
-        created_at:   u.created_at,
+      usuarios: (perfis || []).map(p => ({
+        id:           p.user_id,
+        perfil_id:    p.id,
+        email:        `${p.matricula}@lider.smartpro`,
+        matricula:    p.matricula,
+        nome:         p.nome || '',
+        equipe_id:    p.equipe_id || null,
+        workspace_id,
+        ativo:        p.ativo,
+        created_at:   p.created_at,
       })),
     })
   }

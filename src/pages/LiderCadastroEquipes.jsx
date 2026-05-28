@@ -21,15 +21,16 @@ export default function LiderCadastroEquipes() {
 
   async function load() {
     setLoading(true)
-    const { data: { session } } = await supabase.auth.getSession()
     const [r1, r2, r3] = await Promise.all([
       supabase.from('lider_equipes').select('*, lider_frentes(nome)').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('lider_frentes').select('id, nome').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
-      fetch('/api/lider-admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ action: 'listar-usuarios', workspace_id: workspaceId }),
-      }).then(r => r.json()).catch(() => ({ usuarios: [] })),
+      supabase
+        .from('lider_perfis')
+        .select('user_id, matricula, nome, equipe_id')
+        .eq('workspace_id', workspaceId)
+        .eq('ativo', true)
+        .order('matricula')
+        .then(({ data }) => ({ usuarios: (data || []).map(p => ({ id: p.user_id, matricula: p.matricula, nome: p.nome, equipe_id: p.equipe_id, email: `${p.matricula}@lider.smartpro` })) })),
     ])
     setRecords(r1.data || [])
     setFrentes(r2.data || [])
