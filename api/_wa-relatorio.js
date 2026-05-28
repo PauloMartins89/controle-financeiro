@@ -143,15 +143,15 @@ function detectarPedidoRelatorio(texto) {
   // Sem gatilho → NÃO é pedido de relatório (fluxo normal segue)
   if (!temGatilho) return null
 
-  // Com gatilho: precisa também combinar com um módulo
+  // Com gatilho: tenta combinar com um módulo; sem módulo → default financeiro
   const hit = MODULOS.find(m => m.re.test(t))
-  if (!hit) return null  // ex.: "relatorio" sozinho → ignora, deixa fluxo normal decidir
 
   // Formato: 'lista' (linha a linha) quando explicitamente pedido; senão 'dashboard'
   const formato = /\b(tabela|extrato|lista|listagem|detalhad[oa]|detalhe|linha a linha|completa|completo|todos|todas)\b/.test(t)
     ? 'lista' : 'dashboard'
 
-  return { modulo: hit.mod, formato }
+  // Se sem módulo explícito, deixa o Groq decidir usando financeiro como default
+  return { modulo: hit?.mod ?? 'financeiro', formato }
 }
 
 /**
