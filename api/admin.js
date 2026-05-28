@@ -55,7 +55,7 @@ export default async function handler(req, res) {
                  : req.method === 'GET'  ? req.query?.action
                  : null
 
-  if (wsAction === 'workspace-add-user' || wsAction === 'workspace-members-list') {
+  if (wsAction === 'workspace-add-user' || wsAction === 'workspace-members-list' || wsAction === 'workspace-member-update-wa') {
     const wsMember = await verifyWorkspaceMember(req)
     if (!wsMember) return res.status(401).json({ error: 'Não autorizado' })
     if (!wsMember.isAdmin) return res.status(403).json({ error: 'Apenas o admin do workspace pode realizar esta ação' })
