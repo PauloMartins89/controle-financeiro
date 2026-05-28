@@ -290,7 +290,7 @@ function SecaoSolicitacoes({ workspaceId }) {
                       <td style={{ padding: '10px 14px' }}>
                         {row.foto_url
                           ? <button onClick={() => setModalFoto(row.foto_url)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: 0, textDecoration: 'underline' }}>Ver foto</button>
-                          : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—/span>}
+                          : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>}
                       </td>
                       <td style={{ padding: '10px 14px' }}>
                         <StatusBadge status={row.status} />
