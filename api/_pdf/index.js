@@ -1,95 +1,110 @@
 /**
  * api/_pdf/index.js
- * Consolidador: recebe estrutura normalizada por módulo e produz PDF buffer.
+ * Orquestra o novo padrão CORPORATIVO de relatório.
  *
- * Shape esperado (dadosNormalizados):
+ * Shape esperado (com fallbacks para o shape antigo):
  * {
- *   titulo: 'Relatório Financeiro',
- *   subtitulo: '01/05/2026 a 28/05/2026',
- *   empresa: 'Nome do Workspace',
- *   kpis: [{ label, value, sub?, color? }, ...],          // 0..8
- *   pizza: { titulo, labels, data, colors? } | null,
- *   barras: { titulo, labels, data, color?, label? } | null,
- *   tabela: { colunas, linhas } | null,                    // opcional
- *   observacoes?: string                                    // texto livre rodapé
+ *   titulo,                  // ex: 'Relatório do Módulo' OU 'RELATÓRIO FINANCEIRO'
+ *   modulo,                  // ex: 'NOME DO MÓDULO' (opcional)
+ *   subtitulo,               // descrição curta sob o título
+ *   empresa,                 // string OU { nome, tagline }
+ *   meta: { periodo, geradoEm, geradoPor },
+ *   visaoGeral,              // string descritiva (Seção 1)
+ *   kpis: [{ label, value, sub?, delta?, deltaLabel?, icon?, tone? }, ...],  // 4..6
+ *   linha:  { titulo?, labels, data, label? } | null,
+ *   pizza:  { titulo?, labels, data, colors? } | null,
+ *   barras: { titulo?, labels, data } | null,   // fallback → vira `linha`
+ *   tabela: { titulo?, colunas, linhas, totais? } | null,
+ *   analise: string[],       // bullets (Seção 6)
+ *   observacoes: string[] | string,  // bullets (Seção 7)
+ *   sumario: string[],       // fallback antigo → vira `analise`
  * }
  */
 
 import PDFDocument from 'pdfkit'
-import { renderHeader, renderKPIs, renderSecao, renderChartImage, renderTabela, renderFooter, renderSumario, renderPlaceholder, COR } from './layout.js'
-import { renderChartPNG, pizzaConfig, barrasConfig } from './charts.js'
+import {
+  renderHeader, renderVisaoGeral, renderKPIs, renderGraficosDuplo,
+  renderTabela, renderCardsTexto, renderFooter, renderPlaceholder,
+} from './layout.js'
 
 export async function gerarDashboardPDF(dados) {
-  // 1) gera as imagens dos gráficos em paralelo (antes de iniciar o doc)
-  const [pizzaBuf, barrasBuf] = await Promise.all([
-    dados.pizza?.labels?.length
-      ? renderChartPNG(pizzaConfig(dados.pizza),  { width: 600, height: 360 })
-      : Promise.resolve(null),
-    dados.barras?.labels?.length
-      ? renderChartPNG(barrasConfig(dados.barras), { width: 600, height: 320 })
-      : Promise.resolve(null),
-  ])
-
-  // 2) monta o PDF
   return new Promise((resolve, reject) => {
     const chunks = []
-    const doc = new PDFDocument({ margin: 40, size: 'A4', bufferPages: true })
+    const doc = new PDFDocument({ margin: 24, size: 'A4', bufferPages: true })
     doc.on('data', c => chunks.push(c))
     doc.on('end', () => resolve(Buffer.concat(chunks)))
     doc.on('error', reject)
 
-    // Cabeçalho
+    // ---------- normalização (compat com shape antigo) ----------
+    const empresa = (typeof dados.empresa === 'object' && dados.empresa)
+      ? dados.empresa
+      : { nome: dados.empresa || 'SmartPro', tagline: 'Sistema de Gestão' }
+
+    const meta = dados.meta || {
+      periodo: dados.subtitulo,
+      geradoEm: new Date().toLocaleString('pt-BR'),
+      geradoPor: typeof dados.empresa === 'string' ? dados.empresa : (empresa.nome),
+    }
+
+    const linha = dados.linha
+      || (dados.barras?.labels?.length ? {
+            titulo: dados.barras.titulo,
+            labels: dados.barras.labels,
+            data:   dados.barras.data,
+            label:  dados.barras.label,
+          } : null)
+
+    const analise = dados.analise?.length
+      ? dados.analise
+      : (dados.sumario?.length ? dados.sumario : null)
+
+    let observacoes = dados.observacoes
+    if (typeof observacoes === 'string') observacoes = [observacoes]
+
+    // ---------- HEADER ----------
     renderHeader(doc, {
       titulo:    dados.titulo,
+      modulo:    dados.modulo,
       subtitulo: dados.subtitulo,
-      empresa:   dados.empresa,
+      empresa,
+      meta,
     })
 
-    // KPIs
-    if (dados.kpis?.length) {
-      renderKPIs(doc, dados.kpis)
+    // ---------- 1. VISÃO GERAL ----------
+    if (dados.visaoGeral) {
+      renderVisaoGeral(doc, { texto: dados.visaoGeral })
     }
 
-    // Sumário executivo (bullets automáticos enviados pelo módulo)
-    if (dados.sumario?.length) {
-      renderSumario(doc, dados.sumario)
+    // ---------- 2. INDICADORES ----------
+    if (dados.kpis?.length) renderKPIs(doc, dados.kpis)
+
+    // ---------- 3 + 4. GRÁFICOS ----------
+    if (linha || dados.pizza) {
+      renderGraficosDuplo(doc, {
+        linha, pizza: dados.pizza,
+        titulos: { linha: linha?.titulo, pizza: dados.pizza?.titulo },
+      })
     }
 
-    // Gráficos
-    if (dados.pizza?.labels?.length) {
-      renderSecao(doc, dados.pizza.titulo || 'Distribuição')
-      renderChartImage(doc, pizzaBuf, { width: 460 })
-    } else if (dados.pizza === undefined && !dados.tabela && !dados.barras) {
-      // módulo nem mandou pizza
-    }
-    if (dados.barras?.labels?.length) {
-      renderSecao(doc, dados.barras.titulo || 'Evolução')
-      renderChartImage(doc, barrasBuf, { width: 480 })
-    }
-
-    // Tabela opcional
+    // ---------- 5. TABELA ----------
     if (dados.tabela?.linhas?.length) {
-      if (doc.y > doc.page.height - 160) doc.addPage()
-      renderSecao(doc, dados.tabela.titulo || 'Detalhamento')
       renderTabela(doc, dados.tabela)
     } else if (dados.tabela) {
-      renderSecao(doc, dados.tabela.titulo || 'Detalhamento')
-      renderPlaceholder(doc, 'Nenhum registro encontrado para o período informado.')
+      renderPlaceholder(doc, 'Nenhum registro encontrado no período.')
     }
 
-    // Observações
-    if (dados.observacoes) {
-      doc.moveDown(0.6)
-      doc.fontSize(8).fillColor(COR.muted).text(dados.observacoes, 40, doc.y, { width: doc.page.width - 80 })
+    // ---------- 6 + 7. ANÁLISE / OBSERVAÇÕES ----------
+    if (analise || observacoes) {
+      renderCardsTexto(doc, { analise, observacoes })
     }
 
-    // Rodapé em TODAS as páginas (com paginação X / Y)
+    // ---------- FOOTER ----------
     const range = doc.bufferedPageRange()
+    const tituloFooter = `${dados.titulo || 'Relatório'}${dados.modulo ? ' - ' + dados.modulo : ''}`
     for (let i = range.start; i < range.start + range.count; i++) {
       doc.switchToPage(i)
-      renderFooter(doc, i - range.start + 1, range.count)
+      renderFooter(doc, i - range.start + 1, range.count, { titulo: tituloFooter })
     }
-
     doc.end()
   })
 }

@@ -82,44 +82,60 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
   }))
 
   return {
-    titulo:    isLista ? 'Lista — Faturamento' : 'Relatório de Faturamento',
-    subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
+    titulo:    'RELATÓRIO',
+    modulo:    isLista ? 'FATURAMENTO — LISTAGEM' : 'FATURAMENTO',
+    subtitulo: `Período de ${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
-    sumario: isLista ? [] : [
+    meta: {
+      periodo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
+      geradoEm: new Date().toLocaleString('pt-BR'),
+      geradoPor: typeof empresa === 'string' ? empresa : (empresa?.nome || 'SmartPro'),
+    },
+    visaoGeral: isLista
+      ? `Listagem detalhada de pagamentos no período. ${noPeriodo.length} lançamento(s) encontrados.`
+      : `Espelho de Contas a Receber: ${todos.length} pagamento(s) totalizando ${fmtBRL(totalGeral)}. ${fmtBRL(totalPendente)} ainda aguardando recebimento.`,
+    analise: isLista ? null : [
       `Faturamento total: ${fmtBRL(totalGeral)} em ${todos.length} pagamento(s).`,
       `${fmtBRL(totalPendente)} aguardando recebimento (${pendentes.length} pendentes).`,
       `${fmtBRL(totalRecebido)} já recebidos (${recebidos.length} confirmados).`,
+    ],
+    observacoes: isLista ? null : [
       `Este mês: ${fmtBRL(totalMes)} faturados.`,
+      'Filtre por cliente para análises individualizadas.',
     ],
     kpis: [
-      { label: 'Total Faturado',    value: fmtBRL(totalGeral),    color: COR.primary, sub: `${todos.length} faturamento(s)` },
-      { label: 'Ag. Recebimento',   value: fmtBRL(totalPendente), color: COR.warning, sub: `${pendentes.length} pendente(s)` },
-      { label: 'Já Recebido',       value: fmtBRL(totalRecebido), color: COR.success, sub: `${recebidos.length} confirmado(s)` },
-      { label: 'Faturado Este Mês', value: fmtBRL(totalMes),      color: COR.info },
+      { label: 'Total Faturado',  value: fmtBRL(totalGeral),    tone: 'info',    sub: `${todos.length} faturamento(s)`,  icon: 'doc' },
+      { label: 'Ag. Recebimento', value: fmtBRL(totalPendente), tone: 'warning', sub: `${pendentes.length} pendente(s)`,  icon: 'clock' },
+      { label: 'Já Recebido',     value: fmtBRL(totalRecebido), tone: 'success', sub: `${recebidos.length} confirmado(s)`,icon: 'check' },
+      { label: 'Faturado no Mês', value: fmtBRL(totalMes),      tone: 'purple',  icon: 'chart' },
     ],
     pizza: !isLista && pizzaData.length ? {
-      titulo: 'Distribuição por status',
+      titulo: 'DISTRIBUIÇÃO POR STATUS',
       labels: pizzaData.map(x => x.label),
       data:   pizzaData.map(x => Number(x.value.toFixed(2))),
       colors: pizzaData.map(x => x.color),
     } : null,
-    barras: !isLista && meses.length ? {
-      titulo: 'Faturamento por mês (últimos 12)',
+    linha: !isLista && meses.length ? {
+      titulo: 'EVOLUÇÃO MENSAL',
       labels: labelsBarras,
       data:   dataBarras,
-      color:  COR.primary,
-      label:  'R$',
+      label:  'Faturado por mês (R$)',
     } : null,
     tabela: linhas.length ? {
-      titulo: `Lançamentos do período (${noPeriodo.length})`,
+      titulo: `5. DETALHAMENTO — ${noPeriodo.length} pagamento(s)`,
       colunas: [
-        { key: 'data',   label: 'Data',   width: 60 },
-        { key: 'nf',     label: 'NF',     width: 70 },
+        { key: 'data',   label: 'Data',      width: 60 },
+        { key: 'nf',     label: 'NF',        width: 70 },
         { key: 'desc',   label: 'Descrição', width: 220 },
-        { key: 'valor',  label: 'Valor',  width: 80,  align: 'right' },
-        { key: 'status', label: 'Status', width: 85,  align: 'center' },
+        { key: 'valor',  label: 'Valor',     width: 80, align: 'right' },
+        { key: 'status', label: 'Status',    width: 85, align: 'center' },
       ],
       linhas,
+      totais: {
+        desc:  'TOTAL DO PERÍODO',
+        valor: fmtBRL(noPeriodo.reduce((s, p) => s + Number(p.valor_total || 0), 0)),
+        status:`${noPeriodo.length} reg.`,
+      },
     } : null,
   }
 }

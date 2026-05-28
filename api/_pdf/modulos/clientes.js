@@ -74,47 +74,63 @@ export async function buildDashboardClientes(workspaceId, filtros, supabase, emp
   }))
 
   return {
-    titulo:    isLista ? 'Lista — Aprovação de Clientes' : 'Aprovação de Clientes',
-    subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
+    titulo:    'RELATÓRIO',
+    modulo:    isLista ? 'APROVAÇÃO DE CLIENTES — LISTAGEM' : 'APROVAÇÃO DE CLIENTES',
+    subtitulo: `Período de ${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
-    sumario: isLista ? [] : [
+    meta: {
+      periodo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
+      geradoEm: new Date().toLocaleString('pt-BR'),
+      geradoPor: typeof empresa === 'string' ? empresa : (empresa?.nome || 'SmartPro'),
+    },
+    visaoGeral: isLista
+      ? `Listagem completa de cobranças por cliente no período. ${noPeriodo.length} registro(s).`
+      : `Visão consolidada de ${clientes.length} cliente(s) ativo(s). ${inadimplentes} com pendência em aberto, totalizando ${fmtBRL(totalPendente)} a receber.`,
+    analise: isLista ? null : [
       `${clientes.length} cliente(s) ativo(s) — ${inadimplentes} com pendência em aberto.`,
       `${fmtBRL(totalPendente)} a receber; ${fmtBRL(totalRecebido)} já recebidos.`,
       totalGeral ? `Taxa de recebimento: ${((totalRecebido / totalGeral) * 100).toFixed(1)}%.` : 'Sem faturamento registrado ainda.',
+    ],
+    observacoes: isLista ? null : [
       top10[0] ? `Maior pendência: ${top10[0].cliente} (${fmtBRL(top10[0].pendente)}).` : 'Nenhuma pendência em aberto.',
+      'Use filtro por cliente para detalhamento individual.',
     ],
     kpis: [
-      { label: 'Clientes ativos',     value: fmtNumero(clientes.length),    color: COR.primary, sub: `${inadimplentes} com pendência` },
-      { label: 'A receber',           value: fmtBRL(totalPendente),         color: totalPendente ? COR.warning : COR.success, sub: `${noPeriodo.filter(p => p.status !== 'recebido').length} no período` },
-      { label: 'Já recebido',         value: fmtBRL(totalRecebido),         color: COR.success, sub: `${todos.filter(p => p.status === 'recebido').length} confirmados` },
-      { label: '% Recebimento',       value: totalGeral ? `${((totalRecebido / totalGeral) * 100).toFixed(1)}%` : '—', color: COR.info },
+      { label: 'Clientes ativos',  value: fmtNumero(clientes.length), tone: 'info',    sub: `${inadimplentes} c/ pendência`, icon: 'user' },
+      { label: 'A receber',        value: fmtBRL(totalPendente),       tone: totalPendente ? 'warning' : 'success', sub: `${noPeriodo.filter(p=>p.status!=='recebido').length} no período`, icon: 'clock' },
+      { label: 'Já recebido',      value: fmtBRL(totalRecebido),       tone: 'success', sub: `${todos.filter(p=>p.status==='recebido').length} confirmados`, icon: 'check' },
+      { label: '% Recebimento',    value: totalGeral ? `${((totalRecebido/totalGeral)*100).toFixed(1)}%` : '—', tone: 'purple', icon: 'chart' },
     ],
     pizza: !isLista && top6.length ? {
-      titulo: 'Top 6 clientes por faturamento',
+      titulo: 'TOP 6 CLIENTES POR FATURAMENTO',
       labels: top6.map(c => c.cliente),
       data:   top6.map(c => Number(c.total.toFixed(2))),
       colors: top6.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: !isLista && top10.length ? {
-      titulo: 'Top 10 clientes com valor pendente',
-      labels: top10.map(c => c.cliente.length > 14 ? c.cliente.slice(0, 12) + '…' : c.cliente),
+    linha: !isLista && top10.length ? {
+      titulo: 'TOP 10 PENDÊNCIAS',
+      labels: top10.map(c => c.cliente.length > 10 ? c.cliente.slice(0, 8) + '…' : c.cliente),
       data:   top10.map(c => Number(c.pendente.toFixed(2))),
-      color:  COR.warning,
-      label:  'R$',
+      label:  'Pendente por cliente (R$)',
     } : null,
     tabela: linhas.length ? {
       titulo: isLista
-        ? `Lançamentos do período (${noPeriodo.length})`
-        : `Pendências do período (${itens.length})`,
+        ? `5. DETALHAMENTO — ${noPeriodo.length} lançamento(s)`
+        : `5. DETALHAMENTO — ${itens.length} pendência(s)`,
       colunas: [
-        { key: 'data',    label: 'Data',    width: 55 },
-        { key: 'nf',      label: 'NF',      width: 55 },
-        { key: 'cliente', label: 'Cliente', width: 140 },
+        { key: 'data',    label: 'Data',      width: 55 },
+        { key: 'nf',      label: 'NF',        width: 55 },
+        { key: 'cliente', label: 'Cliente',   width: 140 },
         { key: 'desc',    label: 'Descrição', width: 165 },
-        { key: 'valor',   label: 'Valor',   width: 70, align: 'right' },
-        { key: 'status',  label: 'Status',  width: 65, align: 'center' },
+        { key: 'valor',   label: 'Valor',     width: 70, align: 'right' },
+        { key: 'status',  label: 'Status',    width: 65, align: 'center' },
       ],
       linhas,
+      totais: {
+        cliente: 'TOTAL',
+        valor:   fmtBRL(itens.reduce((s, p) => s + Number(p.valor_total || 0), 0)),
+        status:  `${itens.length} reg.`,
+      },
     } : null,
   }
 }

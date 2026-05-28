@@ -77,45 +77,61 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
   }))
 
   return {
-    titulo:    isLista ? 'Lista — Lançamentos Financeiros' : 'Relatório Financeiro',
-    subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
+    titulo:    'RELATÓRIO',
+    modulo:    isLista ? 'LANÇAMENTOS FINANCEIROS' : 'FINANCEIRO',
+    subtitulo: `Período de ${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
-    sumario: isLista ? [] : [
+    meta: {
+      periodo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
+      geradoEm: new Date().toLocaleString('pt-BR'),
+      geradoPor: typeof empresa === 'string' ? empresa : (empresa?.nome || 'SmartPro'),
+    },
+    visaoGeral: isLista
+      ? `Listagem detalhada dos lançamentos financeiros no período. Total de ${noPeriodo.length} registro(s) entre receitas e despesas.`
+      : `Panorama financeiro do workspace consolidando ${todos.length} lançamento(s). Saldo de ${fmtBRL(saldo)}, com ${pctPago}% dos lançamentos já quitados.`,
+    analise: isLista ? null : [
       `Saldo do período: ${fmtBRL(saldo)} (${todos.length} lançamentos no total).`,
       `Entradas somam ${fmtBRL(sumEntradas)} em ${receitas.length} registro(s); saídas, ${fmtBRL(sumSaidas)} em ${despesas.length}.`,
       topCat[0] ? `Maior despesa: ${topCat[0][0]} (${fmtBRL(topCat[0][1])}).` : 'Sem despesas registradas.',
+    ],
+    observacoes: isLista ? null : [
       `${pctPago}% dos lançamentos já estão quitados (${pagos.length} de ${todos.length}).`,
+      'Para detalhes individuais, solicite o relatório em formato "lista".',
     ],
     kpis: [
-      { label: 'Entradas',  value: fmtBRL(sumEntradas), color: COR.success, sub: `${receitas.length} registros` },
-      { label: 'Saídas',    value: fmtBRL(sumSaidas),   color: COR.danger,  sub: `${despesas.length} registros` },
-      { label: 'Saldo',     value: fmtBRL(saldo),       color: saldo >= 0 ? COR.info : COR.warning },
-      { label: '% Pago',    value: pctPago + '%',       color: COR.primary, sub: `${pagos.length} de ${todos.length}` },
+      { label: 'Entradas',  value: fmtBRL(sumEntradas), tone: 'success', sub: `${receitas.length} registros`, icon: 'check' },
+      { label: 'Saídas',    value: fmtBRL(sumSaidas),   tone: 'danger',  sub: `${despesas.length} registros`, icon: 'x' },
+      { label: 'Saldo',     value: fmtBRL(saldo),       tone: saldo >= 0 ? 'info' : 'warning', icon: 'chart' },
+      { label: '% Pago',    value: pctPago + '%',       tone: 'purple',  sub: `${pagos.length} de ${todos.length}`, icon: 'doc' },
     ],
     pizza: !isLista && topCat.length ? {
-      titulo: 'Top categorias de despesa',
+      titulo: 'DISTRIBUIÇÃO POR CATEGORIA',
       labels: topCat.map(([k]) => k),
       data:   topCat.map(([, v]) => Number(v.toFixed(2))),
       colors: topCat.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: !isLista && dias.length ? {
-      titulo: `Saldo diário no período (${noPeriodo.length} registros)`,
+    linha: !isLista && dias.length ? {
+      titulo: 'EVOLUÇÃO NO PERÍODO',
       labels: labelsBarras,
       data:   dataBarras,
-      color:  COR.primary,
-      label:  'R$',
+      label:  'Saldo diário (R$)',
     } : null,
     tabela: linhasTab.length ? {
-      titulo: `Lançamentos do período (${noPeriodo.length})`,
+      titulo: `5. DETALHAMENTO — ${noPeriodo.length} lançamento(s)`,
       colunas: [
-        { key: 'data',     label: 'Data',      width: 55 },
+        { key: 'data',     label: 'Data',      width: 52 },
         { key: 'tipo',     label: 'Tipo',      width: 55, align: 'center' },
-        { key: 'desc',     label: 'Descrição', width: 200 },
-        { key: 'categoria',label: 'Categoria', width: 85 },
+        { key: 'desc',     label: 'Descrição', width: 195 },
+        { key: 'categoria',label: 'Categoria', width: 80 },
         { key: 'valor',    label: 'Valor',     width: 70, align: 'right' },
-        { key: 'status',   label: 'Status',    width: 55, align: 'center' },
+        { key: 'status',   label: 'Status',    width: 72, align: 'center' },
       ],
       linhas: linhasTab,
+      totais: {
+        desc: 'TOTAL',
+        valor: fmtBRL(noPeriodo.reduce((s,l)=>s+(l.tipo==='receita'?1:-1)*Number(l.valor||0),0)),
+        status: `${noPeriodo.length} reg.`,
+      },
     } : null,
   }
 }

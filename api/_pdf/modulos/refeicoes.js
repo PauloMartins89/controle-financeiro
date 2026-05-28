@@ -11,7 +11,7 @@ import { fmtBRL, fmtData, fmtNumero, COR } from '../layout.js'
 import { PALETA } from '../charts.js'
 
 const STATUS_PENDENTES = ['pendente', 'aguardando_aprovacao']
-const STATUS_EM_PREPARO = ['confirmado_restaurante', 'enviado_restaurante', 'em_acompanhamento']
+const STATUS_EM_PREPARO = ['confirmado_restaurante', 'enviado_restaurante', 'em_acompanhamento', 'novo_status']
 const STATUS_ENTREGUES = ['entregue', 'finalizado']
 
 export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, empresa) {
@@ -89,46 +89,64 @@ export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, em
   }))
 
   return {
-    titulo:    isLista ? 'Lista — Refeições' : 'Relatório de Refeições',
-    subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
+    titulo:    'RELATÓRIO',
+    modulo:    isLista ? 'REFEIÇÕES — LISTAGEM' : 'REFEIÇÕES',
+    subtitulo: `Período de ${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
     empresa,
-    sumario: isLista ? [] : [
+    meta: {
+      periodo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
+      geradoEm: new Date().toLocaleString('pt-BR'),
+      geradoPor: typeof empresa === 'string' ? empresa : (empresa?.nome || 'SmartPro'),
+    },
+    visaoGeral: isLista
+      ? `Listagem detalhada das solicitações de refeição no período. ${noPeriodo.length} solicitação(ões) ativa(s).`
+      : `Panorama operacional de refeições: ${refMes + cafMes} itens consumidos no mês, custo de ${fmtBRL(valorMes)}, ${pendentes.length} solicitação(ões) aguardando aprovação.`,
+    analise: isLista ? null : [
       `${refMes + cafMes} itens no mês (${refMes} refeições · ${cafMes} cafés) em ${noMes.length} solicitações.`,
       `Custo do mês: ${fmtBRL(valorMes)}.`,
       pendentes.length ? `${pendentes.length} solicitações aguardando aprovação.` : 'Nenhuma solicitação pendente — fluxo em dia.',
+    ],
+    observacoes: isLista ? null : [
       topRest[0] ? `Restaurante líder no período: ${topRest[0][0]} (${fmtBRL(topRest[0][1])}).` : 'Sem custos registrados no período.',
+      `Status final: ${entregues.length} entregues, ${emPreparo.length} em preparo.`,
     ],
     kpis: [
-      { label: 'Refeições no mês', value: fmtNumero(refMes + cafMes), color: COR.primary, sub: `${refMes} refeições · ${cafMes} cafés` },
-      { label: 'Custo no mês',     value: fmtBRL(valorMes),           color: COR.info,    sub: `${noMes.length} solicitações` },
-      { label: 'Aguardando Aprov.',value: fmtNumero(pendentes.length),color: pendentes.length ? COR.danger : COR.success, sub: `Aprovadas: ${aprovados.length}` },
-      { label: 'Entregues',        value: fmtNumero(entregues.length),color: COR.success, sub: `Em preparo: ${emPreparo.length}` },
+      { label: 'Refeições no mês', value: fmtNumero(refMes + cafMes), tone: 'info',    sub: `${refMes} ref · ${cafMes} cafés`, icon: 'chart' },
+      { label: 'Custo no mês',     value: fmtBRL(valorMes),           tone: 'purple',  sub: `${noMes.length} solicitações`,    icon: 'doc' },
+      { label: 'Ag. Aprovação',    value: fmtNumero(pendentes.length),tone: pendentes.length ? 'warning' : 'success', sub: `Aprovadas: ${aprovados.length}`, icon: 'clock' },
+      { label: 'Entregues',         value: fmtNumero(entregues.length),tone: 'success', sub: `Em preparo: ${emPreparo.length}`,  icon: 'check' },
     ],
     pizza: !isLista && topRest.length ? {
-      titulo: 'Custo por restaurante (período)',
+      titulo: 'CUSTO POR RESTAURANTE',
       labels: topRest.map(([k]) => k),
       data:   topRest.map(([, v]) => Number(v.toFixed(2))),
       colors: topRest.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
-    barras: !isLista && dias.length ? {
-      titulo: `Refeições por dia (período)`,
+    linha: !isLista && dias.length ? {
+      titulo: 'EVOLUÇÃO NO PERÍODO',
       labels: labelsBarras,
       data:   dataBarras,
-      color:  COR.primary,
-      label:  'qtd',
+      label:  'Itens por dia',
     } : null,
     tabela: linhasTab.length ? {
-      titulo: `Solicitações do período (${noPeriodo.length})`,
+      titulo: `5. DETALHAMENTO — ${noPeriodo.length} solicitação(ões)`,
       colunas: [
-        { key: 'data',       label: 'Data',       width: 55 },
-        { key: 'equipe',     label: 'Equipe',     width: 110 },
-        { key: 'restaurante',label: 'Restaurante',width: 110 },
-        { key: 'ref',        label: 'Ref',        width: 35, align: 'center' },
-        { key: 'caf',        label: 'Café',       width: 35, align: 'center' },
-        { key: 'valor',      label: 'Valor',      width: 70, align: 'right' },
-        { key: 'status',     label: 'Status',     width: 90, align: 'center' },
+        { key: 'data',        label: 'Data',       width: 55 },
+        { key: 'equipe',      label: 'Equipe',     width: 110 },
+        { key: 'restaurante', label: 'Restaurante',width: 110 },
+        { key: 'ref',         label: 'Ref',        width: 35, align: 'center' },
+        { key: 'caf',         label: 'Café',       width: 35, align: 'center' },
+        { key: 'valor',       label: 'Valor',      width: 70, align: 'right' },
+        { key: 'status',      label: 'Status',     width: 90, align: 'center' },
       ],
       linhas: linhasTab,
+      totais: {
+        equipe: 'TOTAL',
+        ref:    noPeriodo.reduce((s, x) => s + Number(x.total_refeicoes || 0), 0),
+        caf:    noPeriodo.reduce((s, x) => s + Number(x.total_cafes || 0), 0),
+        valor:  fmtBRL(noPeriodo.reduce((s, x) => s + Number(x.valor_total || 0), 0)),
+        status: `${noPeriodo.length} reg.`,
+      },
     } : null,
   }
 }
