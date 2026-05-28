@@ -270,6 +270,154 @@ function AbaMembros({ workspaceId, apiWs }) {
   )
 }
 
+// ─── Aba Módulos ────────────────────────────────────────────────────────────
+function AbaModulos({ workspaceId, apiWs }) {
+  const [modulos, setModulos] = useState([])
+  const [associacoes, setAssociacoes] = useState([])
+  const [membros, setMembros] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [adicionando, setAdicionando] = useState(null)
+  const [userSel, setUserSel] = useState({})
+
+  const carregar = useCallback(async () => {
+    if (!workspaceId) return
+    setLoading(true)
+    const [{ data: mods }, { data: assocs }, apiRes] = await Promise.all([
+      supabase.from('plataforma_modulos').select('*').eq('ativo', true).order('nome'),
+      supabase.from('plataforma_usuario_modulos').select('*').eq('workspace_id', workspaceId),
+      apiWs({ action: 'workspace-members-list' }),
+    ])
+    setModulos(mods || [])
+    setAssociacoes(assocs || [])
+    setMembros(apiRes?.members || [])
+    setLoading(false)
+  }, [workspaceId, apiWs])
+
+  useEffect(() => { carregar() }, [carregar])
+
+  async function toggleAssoc(assocId, ativo) {
+    await supabase.from('plataforma_usuario_modulos').update({ ativo: !ativo }).eq('id', assocId)
+    setAssociacoes(prev => prev.map(a => a.id === assocId ? { ...a, ativo: !ativo } : a))
+    toast.success(!ativo ? 'Acesso reativado.' : 'Acesso suspenso.')
+  }
+
+  async function removerAssoc(assocId) {
+    if (!window.confirm('Remover acesso a este módulo?')) return
+    await supabase.from('plataforma_usuario_modulos').delete().eq('id', assocId)
+    setAssociacoes(prev => prev.filter(a => a.id !== assocId))
+    toast.success('Acesso removido.')
+  }
+
+  async function adicionarUsuario(moduloId) {
+    const userId = userSel[moduloId]
+    if (!userId) return
+    const { data, error } = await supabase.from('plataforma_usuario_modulos')
+      .insert({ workspace_id: workspaceId, user_id: userId, modulo_id: moduloId, ativo: true })
+      .select().single()
+    if (error) { toast.error(error.message); return }
+    setAssociacoes(prev => [...prev, data])
+    setUserSel(prev => ({ ...prev, [moduloId]: '' }))
+    setAdicionando(null)
+    toast.success('Acesso concedido!')
+  }
+
+  if (loading) return <div className="py-12 text-center text-gray-400 text-sm">Carregando módulos…</div>
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: 16 }}>
+      {modulos.map(mod => {
+        const assocsMod = associacoes.filter(a => a.modulo_id === mod.id)
+        const usersComAcesso = assocsMod.map(a => {
+          const m = membros.find(mb => mb.user_id === a.user_id)
+          return { ...a, nome: m?.nome || m?.email || a.user_id }
+        })
+        const usersSemAcesso = membros.filter(mb => !assocsMod.some(a => a.user_id === mb.user_id))
+        return (
+          <div key={mod.id} style={{ background: 'white', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+            <div style={{ height: 4, background: mod.cor || '#6366f1' }} />
+            <div style={{ padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', margin: 0 }}>{mod.nome}</h3>
+                  <p style={{ fontSize: 12, color: '#64748b', margin: '4px 0 0' }}>{mod.descricao}</p>
+                </div>
+                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: '#f0fdf4', color: '#15803d', flexShrink: 0, marginLeft: 8 }}>
+                  {usersComAcesso.length} usuário{usersComAcesso.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {mod.rotas?.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+                    Telas incluídas ({mod.rotas.length})
+                  </div>
+                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {mod.rotas.map(r => (
+                      <span key={r} style={{ padding: '2px 7px', borderRadius: 5, background: '#f1f5f9', color: '#475569', fontSize: 11 }}>
+                        {r.replace('/', '') || '/'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {usersComAcesso.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Usuários com acesso</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {usersComAcesso.map(u => (
+                      <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>{u.nome}</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => toggleAssoc(u.id, u.ativo)}
+                            style={{ padding: '2px 8px', borderRadius: 5, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', background: u.ativo ? '#dcfce7' : '#f1f5f9', color: u.ativo ? '#166534' : '#6b7280' }}>
+                            {u.ativo ? 'Ativo' : 'Suspenso'}
+                          </button>
+                          <button onClick={() => removerAssoc(u.id)}
+                            style={{ padding: '2px 8px', borderRadius: 5, border: 'none', background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {adicionando === mod.id ? (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select value={userSel[mod.id] || ''} onChange={e => setUserSel(p => ({ ...p, [mod.id]: e.target.value }))}
+                    style={{ flex: 1, border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 10px', fontSize: 12 }}>
+                    <option value="">Selecionar usuário…</option>
+                    {usersSemAcesso.map(mb => (
+                      <option key={mb.user_id} value={mb.user_id}>{mb.nome || mb.email}</option>
+                    ))}
+                  </select>
+                  <button onClick={() => adicionarUsuario(mod.id)}
+                    style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Conceder</button>
+                  <button onClick={() => setAdicionando(null)}
+                    style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 8, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}>✕</button>
+                </div>
+              ) : (
+                <button onClick={() => { setAdicionando(mod.id); setUserSel(p => ({ ...p, [mod.id]: '' })) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px dashed #cbd5e1', background: 'none', color: '#64748b', fontSize: 12, cursor: 'pointer', width: '100%', justifyContent: 'center' }}>
+                  <PlusIcon style={{ width: 14, height: 14 }} /> Associar usuário ao módulo
+                </button>
+              )}
+            </div>
+          </div>
+        )
+      })}
+      {modulos.length === 0 && (
+        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 48, color: '#94a3b8' }}>
+          <PuzzlePieceIcon style={{ width: 36, height: 36, margin: '0 auto 12px', opacity: 0.3 }} />
+          <p>Nenhum módulo cadastrado.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Helper: chama /api/admin com o JWT do usuário logado ───────────────────
 async function apiWs(body) {
   const { data: { session } } = await supabase.auth.getSession()
@@ -374,9 +522,10 @@ export default function Acessos() {
   }
 
   const abas = [
-    { key: 'usuarios', label: 'Usuários', icon: UsersIcon },
+    { key: 'usuarios', label: 'Usuários',         icon: UsersIcon },
     { key: 'perfis',   label: 'Grupos de Acesso', icon: ShieldCheckIcon },
     { key: 'membros',  label: 'Membros & Grupos', icon: UserGroupIcon },
+    { key: 'modulos',  label: 'Módulos',           icon: PuzzlePieceIcon },
   ]
 
   return (
@@ -535,6 +684,9 @@ export default function Acessos() {
 
         {/* Aba: Membros */}
         {aba === 'membros' && <AbaMembros workspaceId={workspaceId} apiWs={apiWs} />}
+
+        {/* Aba: Módulos */}
+        {aba === 'modulos' && <AbaModulos workspaceId={workspaceId} apiWs={apiWs} />}
       </div>
     </div>
   )

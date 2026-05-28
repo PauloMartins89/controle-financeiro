@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS lider_perfis (
 
 -- RLS: mesma política dos demais objetos lider_ (authenticated pode tudo)
 ALTER TABLE lider_perfis ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "lider_auth_all" ON lider_perfis;
 CREATE POLICY "lider_auth_all" ON lider_perfis
   FOR ALL TO authenticated
   USING (true)
@@ -111,8 +112,9 @@ END;
 $$;
 
 -- ─── Backfill: popula lider_perfis com líderes já existentes ─────────────
+-- DISTINCT ON garante uma linha por lider_id (evita conflito duplo no upsert)
 INSERT INTO lider_perfis (workspace_id, user_id, matricula, nome, equipe_id)
-SELECT
+SELECT DISTINCT ON (e.lider_id)
   e.workspace_id,
   e.lider_id,
   split_part(u.email, '@', 1) AS matricula,
@@ -122,6 +124,7 @@ FROM lider_equipes e
 JOIN auth.users u ON u.id = e.lider_id
 WHERE e.lider_id IS NOT NULL
   AND e.ativo = true
+ORDER BY e.lider_id, e.created_at DESC
 ON CONFLICT (user_id)
 DO UPDATE SET
   equipe_id  = EXCLUDED.equipe_id,
