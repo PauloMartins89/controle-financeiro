@@ -193,34 +193,20 @@ export default function SmartLiderAdmin() {
     <div style={{ minHeight: '100vh', background: S.pageBg }}>
       <Header title="SmartLíder — Admin" />
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
+      <div style={{ padding: '12px 20px' }}>
 
-        {/* ── Título ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 10, background: '#DCFCE7',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <DevicePhoneMobileIcon style={{ width: 22, height: 22, color: S.primaryDk }} />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: S.text }}>SmartLíder — Administração</h1>
-            <p style={{ margin: 0, fontSize: 13, color: S.textSub }}>Gerencie workspaces e usuários do app mobile</p>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16, alignItems: 'start' }}>
 
           {/* ── Coluna esquerda: seletor de workspace ── */}
-          <div style={{ background: S.card, borderRadius: 12, border: `1px solid ${S.border}`, boxShadow: S.shadow, overflow: 'hidden', position: 'sticky', top: 80, maxHeight: 'calc(100vh - 100px)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${S.border}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <BuildingOffice2Icon style={{ width: 16, height: 16, color: S.primary }} />
-                <span style={{ fontWeight: 700, fontSize: 12, color: S.text, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                  Workspaces
+          <div style={{ background: S.card, borderRadius: 12, border: `1px solid ${S.border}`, boxShadow: S.shadow, overflow: 'hidden', position: 'sticky', top: 64, maxHeight: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '10px 12px', borderBottom: `1px solid ${S.border}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <BuildingOffice2Icon style={{ width: 14, height: 14, color: S.primary }} />
+                <span style={{ fontWeight: 700, fontSize: 11, color: S.text, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                  Workspaces ({workspaces.length})
                 </span>
               </div>
-              <div style={{ position: 'relative', marginTop: 10 }}>
+              <div style={{ position: 'relative', marginTop: 8 }}>
                 <MagnifyingGlassIcon style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: S.textSub }} />
                 <input
                   style={{ ...inputStyle, paddingLeft: 28, background: S.pageBg }}
