@@ -8,12 +8,13 @@ if (existsSync('.env')) {
 }
 import { createClient } from '@supabase/supabase-js'
 import { gerarDashboardPDF } from '../api/_pdf/index.js'
-import { buildDashboardFinanceiro }  from '../api/_pdf/modulos/financeiro.js'
-import { buildDashboardFaturamento } from '../api/_pdf/modulos/faturamento.js'
-import { buildDashboardClientes }    from '../api/_pdf/modulos/clientes.js'
-import { buildDashboardRefeicoes }   from '../api/_pdf/modulos/refeicoes.js'
-import { buildDashboardCompras }     from '../api/_pdf/modulos/compras.js'
-import { buildDashboardEfetivo }     from '../api/_pdf/modulos/efetivo.js'
+import { buildDashboardFinanceiro }   from '../api/_pdf/modulos/financeiro.js'
+import { buildDashboardFaturamento }  from '../api/_pdf/modulos/faturamento.js'
+import { buildDashboardClientes }     from '../api/_pdf/modulos/clientes.js'
+import { buildDashboardRefeicoes }    from '../api/_pdf/modulos/refeicoes.js'
+import { buildDashboardCompras }      from '../api/_pdf/modulos/compras.js'
+import { buildDashboardEfetivo }      from '../api/_pdf/modulos/efetivo.js'
+import { buildDashboardAgendamentos } from '../api/_pdf/modulos/agendamentos.js'
 
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY)
 const WS = 'd0261b4e-450a-47ce-a751-2ba9a12fe7d5'
@@ -26,7 +27,8 @@ const modulos = [
   ['clientes',    buildDashboardClientes],
   ['refeicoes',   buildDashboardRefeicoes],
   ['compras',     buildDashboardCompras],
-  ['efetivo',     buildDashboardEfetivo],
+  ['efetivo',       buildDashboardEfetivo],
+  ['agendamentos',  buildDashboardAgendamentos],
 ]
 
 for (const fmt of ['dashboard', 'lista']) {

@@ -20,12 +20,13 @@
 import Groq from 'groq-sdk'
 import PDFDocument from 'pdfkit'
 import { gerarDashboardPDF } from './_pdf/index.js'
-import { buildDashboardFinanceiro }  from './_pdf/modulos/financeiro.js'
-import { buildDashboardFaturamento } from './_pdf/modulos/faturamento.js'
-import { buildDashboardRefeicoes }   from './_pdf/modulos/refeicoes.js'
-import { buildDashboardCompras }     from './_pdf/modulos/compras.js'
-import { buildDashboardEfetivo }     from './_pdf/modulos/efetivo.js'
-import { buildDashboardClientes }    from './_pdf/modulos/clientes.js'
+import { buildDashboardFinanceiro }    from './_pdf/modulos/financeiro.js'
+import { buildDashboardFaturamento }   from './_pdf/modulos/faturamento.js'
+import { buildDashboardRefeicoes }     from './_pdf/modulos/refeicoes.js'
+import { buildDashboardCompras }       from './_pdf/modulos/compras.js'
+import { buildDashboardEfetivo }       from './_pdf/modulos/efetivo.js'
+import { buildDashboardClientes }      from './_pdf/modulos/clientes.js'
+import { buildDashboardAgendamentos }  from './_pdf/modulos/agendamentos.js'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const APP_URL = process.env.APP_URL || 'https://smartpro.app.br'
@@ -213,7 +214,7 @@ Se não for pedido de relatório, retorne {"eh_relatorio": false}`,
     }
     if (!parsed.data_fim) parsed.data_fim = today
     if (!parsed.tipo || !['entradas', 'saidas', 'todos'].includes(parsed.tipo)) parsed.tipo = 'todos'
-    const MODULOS = ['financeiro','lancamentos','faturamento','clientes','compras','refeicoes','efetivo']
+    const MODULOS = ['financeiro','lancamentos','faturamento','clientes','compras','refeicoes','efetivo','agendamentos','agenda']
     // Confia no pré-filtro como fonte de verdade do módulo
     if (!parsed.modulo || !MODULOS.includes(parsed.modulo)) parsed.modulo = hint.modulo
     if (!parsed.formato || !['dashboard','tabela','lista'].includes(parsed.formato)) parsed.formato = hint.formato
@@ -503,6 +504,9 @@ async function construirDashboard(modulo, workspaceId, filtros, supabase, empres
       return buildDashboardCompras(workspaceId, filtros, supabase, empresa)
     case 'efetivo':
       return buildDashboardEfetivo(workspaceId, filtros, supabase, empresa)
+    case 'agendamentos':
+    case 'agenda':
+      return buildDashboardAgendamentos(workspaceId, filtros, supabase, empresa)
     default:
       return null
   }
