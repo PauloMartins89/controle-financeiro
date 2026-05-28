@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
@@ -21,7 +21,7 @@ function fmtBRL(v) {
   return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 function fmtData(d) {
-  if (!d) return '�'
+  if (!d) return '—'
   const [y, m, dia] = String(d).split('-')
   return `${dia}/${m}/${y}`
 }
@@ -33,7 +33,7 @@ function todayISO() {
 const STATUS = {
   // -- Novos status do fluxo completo --
   rascunho:                    { label: 'Rascunho',             color: '#64748b', bg: 'rgba(100,116,139,0.15)', icon: ClipboardDocumentListIcon },
-  aguardando_aprovacao:        { label: 'Aguard. Aprova��o',    color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  icon: ClockIcon },
+  aguardando_aprovacao:        { label: 'Aguard. Aprovação',    color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  icon: ClockIcon },
   aprovado:                    { label: 'Aprovado',             color: '#10b981', bg: 'rgba(16,185,129,0.15)',  icon: CheckCircleIcon },
   reprovado:                   { label: 'Reprovado',            color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   icon: XCircleIcon },
   consolidado:                 { label: 'Consolidado',          color: '#6366f1', bg: 'rgba(99,102,241,0.15)',  icon: CheckCircleIcon },
@@ -41,11 +41,11 @@ const STATUS = {
   confirmado_restaurante:      { label: 'Confirmado Rest.',      color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', icon: CheckCircleIcon },
   em_acompanhamento:           { label: 'Em Acompanhamento',    color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   icon: ClockIcon },
   entregue:                    { label: 'Entregue',             color: '#34d399', bg: 'rgba(52,211,153,0.15)',  icon: CheckCircleIcon },
-  aguardando_validacao:        { label: 'Aguard. Valida��o',    color: '#f97316', bg: 'rgba(249,115,22,0.15)',  icon: ClockIcon },
+  aguardando_validacao:        { label: 'Aguard. Validação',    color: '#f97316', bg: 'rgba(249,115,22,0.15)',  icon: ClockIcon },
   finalizado:                  { label: 'Finalizado',           color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', icon: NoSymbolIcon },
-  finalizado_com_ocorrencia:   { label: 'Finaliz. c/ Ocorr�ncia', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', icon: XCircleIcon },
+  finalizado_com_ocorrencia:   { label: 'Finaliz. c/ Ocorrência', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', icon: XCircleIcon },
   // -- Aliases de compatibilidade (status antigos) --
-  pendente:   { label: 'Aguard. Aprova��o', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  icon: ClockIcon },
+  pendente:   { label: 'Aguard. Aprovação', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  icon: ClockIcon },
   preparando: { label: 'Em Preparo',        color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   icon: ClockIcon },
   fechado:    { label: 'Finalizado',        color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', icon: NoSymbolIcon },
 }
@@ -61,11 +61,11 @@ function StatusBadge({ status }) {
   )
 }
 
-// --- Estilos compartilhados (formul�rios) -------------------------------------
+// --- Estilos compartilhados (formulários) -------------------------------------
 const lbl = { display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }
 const inp = { width: '100%', padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 13, boxSizing: 'border-box', outline: 'none' }
 
-// --- Modal gen�rico -----------------------------------------------------------
+// --- Modal genérico -----------------------------------------------------------
 function Modal({ title, onClose, children, maxWidth = 560 }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -101,7 +101,7 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
   function openEdit(r) { setForm({ ...r }); setModal({ mode: 'edit', id: r.id }) }
 
   async function save() {
-    if (!form.nome?.trim()) { toast.error('Nome obrigat�rio'); return }
+    if (!form.nome?.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
     const payload = { nome: form.nome, cnpj: form.cnpj || null, numero_pedido: form.numero_pedido || null, valor_refeicao: form.valor_refeicao || 0, valor_cafe: form.valor_cafe || 0, telefone_wa: form.telefone_wa || null, ativo: !!form.ativo, confirma_pedido: !!form.confirma_pedido, workspace_id: workspaceId, owner_id: ownerId }
     if (modal.mode === 'new') {
@@ -154,9 +154,9 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
               <input className="input" value={form.nome || ''} onChange={e => f('nome', e.target.value)} placeholder="Nome do restaurante" />
             </div>
             <div><label style={lbl}>CNPJ</label><input className="input" value={form.cnpj || ''} onChange={e => f('cnpj', e.target.value)} /></div>
-            <div><label style={lbl}>N� do Pedido</label><input className="input" value={form.numero_pedido || ''} onChange={e => f('numero_pedido', e.target.value)} /></div>
-            <div><label style={lbl}>Valor Refei��o (R$)</label><input type="number" step="0.01" className="input" value={form.valor_refeicao || ''} onChange={e => f('valor_refeicao', e.target.value)} /></div>
-            <div><label style={lbl}>Valor Caf� (R$)</label><input type="number" step="0.01" className="input" value={form.valor_cafe || ''} onChange={e => f('valor_cafe', e.target.value)} /></div>
+            <div><label style={lbl}>Nº do Pedido</label><input className="input" value={form.numero_pedido || ''} onChange={e => f('numero_pedido', e.target.value)} /></div>
+            <div><label style={lbl}>Valor Refeição (R$)</label><input type="number" step="0.01" className="input" value={form.valor_refeicao || ''} onChange={e => f('valor_refeicao', e.target.value)} /></div>
+            <div><label style={lbl}>Valor Café (R$)</label><input type="number" step="0.01" className="input" value={form.valor_cafe || ''} onChange={e => f('valor_cafe', e.target.value)} /></div>
             <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Telefone WA</label><input className="input" value={form.telefone_wa || ''} onChange={e => f('telefone_wa', e.target.value)} placeholder="5511..." /></div>
             <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8 }}>
               <input type="checkbox" id="rAtivo" checked={!!form.ativo} onChange={e => f('ativo', e.target.checked)} style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
@@ -189,7 +189,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
   const [sendingLink, setSendingLink] = useState(null)
 
   async function enviarLink(equipe) {
-    if (!equipe.lider_telefone) { toast.error('Cadastre o telefone do l�der primeiro'); return }
+    if (!equipe.lider_telefone) { toast.error('Cadastre o telefone do líder primeiro'); return }
     setSendingLink(equipe.id)
     try {
       const r = await fetch('/api/refeicoes', {
@@ -219,7 +219,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
   }
 
   async function save() {
-    if (!form.nome?.trim()) { toast.error('Nome obrigat�rio'); return }
+    if (!form.nome?.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
     const payload = { nome: form.nome, cdc: form.cdc || null, lider_nome: form.lider_nome || null, lider_telefone: form.lider_telefone || null, supervisor_nome: form.supervisor_nome || null, supervisor_telefone: form.supervisor_telefone || null, ativo: form.ativo !== false, workspace_id: workspaceId, owner_id: ownerId }
     if (modal.mode === 'new') {
@@ -233,7 +233,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
   }
 
   async function saveColab() {
-    if (!colabForm.nome?.trim()) { toast.error('Nome obrigat�rio'); return }
+    if (!colabForm.nome?.trim()) { toast.error('Nome obrigatório'); return }
     if (colabForm.id) {
       await supabase.from('refei_colaboradores').update({ nome: colabForm.nome, cargo: colabForm.cargo || null, ativo: colabForm.ativo !== false }).eq('id', colabForm.id)
     } else {
@@ -270,7 +270,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
               <button
                 onClick={() => enviarLink(r)}
                 disabled={sendingLink === r.id}
-                title="Enviar link do formul�rio para o l�der via WhatsApp"
+                title="Enviar link do formulário para o líder via WhatsApp"
                 style={{ background: 'rgba(245,158,11,0.12)', border: 'none', color: '#f59e0b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}
               >
                 {sendingLink === r.id ? '...' : '?? Link'}
@@ -290,8 +290,8 @@ function CrudEquipes({ workspaceId, ownerId }) {
             <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Nome *</label><input className="input" value={form.nome || ''} onChange={e => f('nome', e.target.value)} /></div>
             <div><label style={lbl}>CDC</label><input className="input" value={form.cdc || ''} onChange={e => f('cdc', e.target.value)} placeholder="Ex: CDC-07" /></div>
             <div />
-            <div><label style={lbl}>Nome do L�der</label><input className="input" value={form.lider_nome || ''} onChange={e => f('lider_nome', e.target.value)} /></div>
-            <div><label style={lbl}>Telefone WA L�der</label><input className="input" value={form.lider_telefone || ''} onChange={e => f('lider_telefone', e.target.value)} placeholder="5511..." /></div>
+            <div><label style={lbl}>Nome do Líder</label><input className="input" value={form.lider_nome || ''} onChange={e => f('lider_nome', e.target.value)} /></div>
+            <div><label style={lbl}>Telefone WA Líder</label><input className="input" value={form.lider_telefone || ''} onChange={e => f('lider_telefone', e.target.value)} placeholder="5511..." /></div>
             <div><label style={lbl}>Nome do Supervisor</label><input className="input" value={form.supervisor_nome || ''} onChange={e => f('supervisor_nome', e.target.value)} /></div>
             <div><label style={lbl}>Telefone WA Supervisor</label><input className="input" value={form.supervisor_telefone || ''} onChange={e => f('supervisor_telefone', e.target.value)} placeholder="5511..." /></div>
           </div>
@@ -312,7 +312,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
               {colabForm.id ? 'Salvar' : '+ Add'}
             </button>
           </div>
-          {colabForm.id && <button onClick={() => setColabForm({})} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 10 }}>? Cancelar edi��o</button>}
+          {colabForm.id && <button onClick={() => setColabForm({})} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 10 }}>? Cancelar edição</button>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 280, overflowY: 'auto' }}>
             {colabs.map(c => (
               <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)' }}>
@@ -348,7 +348,7 @@ function CrudCDC({ workspaceId, ownerId }) {
   useEffect(() => { load() }, [load])
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
   async function save() {
-    if (!form.nome?.trim()) { toast.error('Nome obrigat�rio'); return }
+    if (!form.nome?.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
     const payload = { nome: form.nome, codigo: form.codigo || null, ativo: !!form.ativo, workspace_id: workspaceId, owner_id: ownerId }
     if (modal.mode === 'new') {
@@ -387,7 +387,7 @@ function CrudCDC({ workspaceId, ownerId }) {
         <Modal title={modal.mode === 'new' ? 'Novo Centro de Custo' : 'Editar Centro de Custo'} onClose={() => setModal(null)}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Nome *</label><input className="input" value={form.nome || ''} onChange={e => f('nome', e.target.value)} /></div>
-            <div><label style={lbl}>C�digo</label><input className="input" value={form.codigo || ''} onChange={e => f('codigo', e.target.value)} placeholder="Ex: CDC-07" /></div>
+            <div><label style={lbl}>Código</label><input className="input" value={form.codigo || ''} onChange={e => f('codigo', e.target.value)} placeholder="Ex: CDC-07" /></div>
             <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
                 <input type="checkbox" checked={!!form.ativo} onChange={e => f('ativo', e.target.checked)} style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
@@ -419,7 +419,7 @@ function CrudRegionais({ workspaceId, ownerId }) {
   useEffect(() => { load() }, [load])
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
   async function save() {
-    if (!form.nome?.trim()) { toast.error('Nome obrigat�rio'); return }
+    if (!form.nome?.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
     const payload = { nome: form.nome, ativo: !!form.ativo, workspace_id: workspaceId, owner_id: ownerId }
     if (modal.mode === 'new') {
@@ -470,7 +470,7 @@ function CrudRegionais({ workspaceId, ownerId }) {
   )
 }
 
-// --- CRUD Tabela de Pre�os ----------------------------------------------------
+// --- CRUD Tabela de Preços ----------------------------------------------------
 function CrudTabelaPrecos({ workspaceId, ownerId }) {
   const [rows, setRows] = useState([])
   const [rests, setRests] = useState([])
@@ -505,15 +505,15 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
         <button onClick={() => { setForm({ ativo: true }); setModal({ mode: 'new' }) }} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px' }}>
-          <PlusIcon style={{ width: 15, height: 15 }} /> Nova Vig�ncia
+          <PlusIcon style={{ width: 15, height: 15 }} /> Nova Vigência
         </button>
       </div>
-      {rows.length === 0 && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 24, fontSize: 13 }}>Nenhuma tabela de pre�os cadastrada.</p>}
+      {rows.length === 0 && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 24, fontSize: 13 }}>Nenhuma tabela de preços cadastrada.</p>}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Restaurante', 'Vig�ncia In�cio', 'Vig�ncia Fim', '??? Refei��o', '? Caf�', 'Status', ''].map((h, i) => (
+              {['Restaurante', 'Vigência Início', 'Vigência Fim', '??? Refeição', '? Café', 'Status', ''].map((h, i) => (
                 <th key={i} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6 }}>{h}</th>
               ))}
             </tr>
@@ -521,7 +521,7 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
           <tbody>
             {rows.map(r => (
               <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.refei_restaurantes?.nome || '�'}</td>
+                <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>{r.refei_restaurantes?.nome || '—'}</td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{fmtData(r.vigencia_inicio)}</td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{fmtData(r.vigencia_fim)}</td>
                 <td style={{ padding: '10px 12px', fontWeight: 700, color: '#10b981' }}>{fmtBRL(r.valor_refeicao)}</td>
@@ -539,7 +539,7 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
         </table>
       </div>
       {modal && (
-        <Modal title={modal.mode === 'new' ? 'Nova Tabela de Pre�os' : 'Editar Tabela de Pre�os'} onClose={() => setModal(null)}>
+        <Modal title={modal.mode === 'new' ? 'Nova Tabela de Preços' : 'Editar Tabela de Preços'} onClose={() => setModal(null)}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ gridColumn: '1/-1' }}>
               <label style={lbl}>Restaurante *</label>
@@ -548,10 +548,10 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
                 {rests.map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
             </div>
-            <div><label style={lbl}>Vig�ncia In�cio</label><input type="date" className="input" value={form.vigencia_inicio || ''} onChange={e => f('vigencia_inicio', e.target.value)} /></div>
-            <div><label style={lbl}>Vig�ncia Fim</label><input type="date" className="input" value={form.vigencia_fim || ''} onChange={e => f('vigencia_fim', e.target.value)} /></div>
-            <div><label style={lbl}>Valor Refei��o (R$)</label><input type="number" step="0.01" className="input" value={form.valor_refeicao || ''} onChange={e => f('valor_refeicao', e.target.value)} /></div>
-            <div><label style={lbl}>Valor Caf� (R$)</label><input type="number" step="0.01" className="input" value={form.valor_cafe || ''} onChange={e => f('valor_cafe', e.target.value)} /></div>
+            <div><label style={lbl}>Vigência Início</label><input type="date" className="input" value={form.vigencia_inicio || ''} onChange={e => f('vigencia_inicio', e.target.value)} /></div>
+            <div><label style={lbl}>Vigência Fim</label><input type="date" className="input" value={form.vigencia_fim || ''} onChange={e => f('vigencia_fim', e.target.value)} /></div>
+            <div><label style={lbl}>Valor Refeição (R$)</label><input type="number" step="0.01" className="input" value={form.valor_refeicao || ''} onChange={e => f('valor_refeicao', e.target.value)} /></div>
+            <div><label style={lbl}>Valor Café (R$)</label><input type="number" step="0.01" className="input" value={form.valor_cafe || ''} onChange={e => f('valor_cafe', e.target.value)} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input type="checkbox" checked={!!form.ativo} onChange={e => f('ativo', e.target.checked)} style={{ width: 14, height: 14, accentColor: 'var(--accent)', cursor: 'pointer' }} />
               <label style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer' }}>Ativo</label>
@@ -567,7 +567,7 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
   )
 }
 
-// --- Todos os Colaboradores (vis�o completa) ----------------------------------
+// --- Todos os Colaboradores (visão completa) ----------------------------------
 function CrudColaboradores({ workspaceId }) {
   const [colabs, setColabs] = useState([])
   const [filtroEq, setFiltroEq] = useState('')
@@ -605,8 +605,8 @@ function CrudColaboradores({ workspaceId }) {
             {filtered.map(c => (
               <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
                 <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>{c.nome}</td>
-                <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{c.cargo || '�'}</td>
-                <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{c.refei_equipes?.nome || '�'}</td>
+                <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{c.cargo || '—'}</td>
+                <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{c.refei_equipes?.nome || '—'}</td>
                 <td style={{ padding: '10px 12px' }}>{c.ativo !== false ? <span className="badge badge-success" style={{ fontSize: 10 }}>Ativo</span> : <span className="badge badge-danger" style={{ fontSize: 10 }}>Inativo</span>}</td>
                 <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                   <button onClick={async () => { if (!confirm('Excluir colaborador?')) return; await supabase.from('refei_colaboradores').delete().eq('id', c.id); load() }} style={{ background: 'rgba(239,68,68,0.1)', border: 'none', color: '#f87171', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}><TrashIcon style={{ width: 13, height: 13 }} /></button>
@@ -617,7 +617,7 @@ function CrudColaboradores({ workspaceId }) {
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 12 }}>Para adicionar colaboradores, v� em Cadastros ? Equipes e clique no �cone ??.</p>
+      <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 12 }}>Para adicionar colaboradores, vá em Cadastros ? Equipes e clique no ícone ??.</p>
     </div>
   )
 }
@@ -637,11 +637,11 @@ function ToggleRow({ checked, onChange, label, desc }) {
   )
 }
 
-// --- Regras de Refei��o -------------------------------------------------------
+// --- Regras de Refeição -------------------------------------------------------
 function CrudRegras({ workspaceId, ownerId }) {
   const DIAS_SEMANA = [
     { n: 1, label: 'SEG' }, { n: 2, label: 'TER' }, { n: 3, label: 'QUA' },
-    { n: 4, label: 'QUI' }, { n: 5, label: 'SEX' }, { n: 6, label: 'S�B' }, { n: 0, label: 'DOM' },
+    { n: 4, label: 'QUI' }, { n: 5, label: 'SEX' }, { n: 6, label: 'SÁB' }, { n: 0, label: 'DOM' },
   ]
   const DEFAULT = {
     dias_semana: [1, 2, 3, 4, 5],
@@ -725,9 +725,9 @@ function CrudRegras({ workspaceId, ownerId }) {
   return (
     <div style={{ maxWidth: 740 }}>
 
-      {/* -- 1. Dias e Hor�rios -- */}
+      {/* -- 1. Dias e Horários -- */}
       <div style={sCard}>
-        <SH emoji="??" title="Dias e Hor�rios" sub="Em quais dias as refei��es s�o permitidas e qual o hor�rio limite para pedidos" />
+        <SH emoji="??" title="Dias e Horários" sub="Em quais dias as refeições são permitidas e qual o horário limite para pedidos" />
         <div style={{ marginBottom: 16 }}>
           <label style={lbl}>Dias da semana permitidos</label>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
@@ -744,14 +744,14 @@ function CrudRegras({ workspaceId, ownerId }) {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <div>
-            <label style={lbl}>Hor�rio de corte</label>
+            <label style={lbl}>Horário de corte</label>
             <input type="time" className="input" value={form.horario_corte || '10:00'} onChange={e => f('horario_corte', e.target.value)} />
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Hora limite para envio do formul�rio pelo l�der</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Hora limite para envio do formulário pelo líder</div>
           </div>
           <div>
-            <label style={lbl}>Anteced�ncia m�nima (horas)</label>
+            <label style={lbl}>Antecedência mínima (horas)</label>
             <input type="number" min={0} className="input" value={form.antecedencia_horas} onChange={e => f('antecedencia_horas', e.target.value)} placeholder="2" />
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Horas antes da refei��o para encerrar pedidos</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Horas antes da refeição para encerrar pedidos</div>
           </div>
         </div>
       </div>
@@ -765,11 +765,11 @@ function CrudRegras({ workspaceId, ownerId }) {
             <input type="number" min={0} className="input" value={form.teto_por_equipe || ''} onChange={e => f('teto_por_equipe', e.target.value)} placeholder="Sem limite" />
           </div>
           <div>
-            <label style={lbl}>Valor m�x. / colaborador / dia (R$)</label>
+            <label style={lbl}>Valor máx. / colaborador / dia (R$)</label>
             <input type="number" min={0} step="0.01" className="input" value={form.teto_valor_colaborador || ''} onChange={e => f('teto_valor_colaborador', e.target.value)} placeholder="Sem limite" />
           </div>
           <div>
-            <label style={lbl}>M�x. refei��es / colaborador / dia</label>
+            <label style={lbl}>Máx. refeições / colaborador / dia</label>
             <input type="number" min={1} max={10} className="input" value={form.max_refeicoes_dia || 1} onChange={e => f('max_refeicoes_dia', e.target.value)} />
           </div>
         </div>
@@ -777,23 +777,23 @@ function CrudRegras({ workspaceId, ownerId }) {
 
       {/* -- 3. Tipos Habilitados -- */}
       <div style={sCard}>
-        <SH emoji="?" title="Tipos Habilitados" sub="O que pode ser solicitado pelos l�deres no formul�rio" />
+        <SH emoji="?" title="Tipos Habilitados" sub="O que pode ser solicitado pelos líderes no formulário" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <ToggleRow checked={!!form.permite_refeicao} onChange={() => f('permite_refeicao', !form.permite_refeicao)} label="??? Refei��o (Almo�o / Jantar)" desc="Permite solicitar refei��es no formul�rio do l�der" />
-          <ToggleRow checked={!!form.permite_cafe}     onChange={() => f('permite_cafe',     !form.permite_cafe)}     label="? Caf� da Manh� / Lanche"        desc="Permite solicitar caf� junto com a refei��o" />
+          <ToggleRow checked={!!form.permite_refeicao} onChange={() => f('permite_refeicao', !form.permite_refeicao)} label="??? Refeição (Almoço / Jantar)" desc="Permite solicitar refeições no formulário do líder" />
+          <ToggleRow checked={!!form.permite_cafe}     onChange={() => f('permite_cafe',     !form.permite_cafe)}     label="? Café da Manhã / Lanche"        desc="Permite solicitar café junto com a refeição" />
           <ToggleRow checked={!!form.permite_extra}    onChange={() => f('permite_extra',    !form.permite_extra)}    label="? Extras (com justificativa)"    desc="Permite adicionar pessoas fora da lista oficial da equipe" />
         </div>
       </div>
 
-      {/* -- 4. Fluxo de Aprova��o -- */}
+      {/* -- 4. Fluxo de Aprovação -- */}
       <div style={sCard}>
-        <SH emoji="??" title="Fluxo de Aprova��o" sub="Como os pedidos s�o processados antes de ir para o restaurante" />
+        <SH emoji="??" title="Fluxo de Aprovação" sub="Como os pedidos são processados antes de ir para o restaurante" />
         <div style={{ marginBottom: 16 }}>
-          <label style={lbl}>Tipo de aprova��o</label>
+          <label style={lbl}>Tipo de aprovação</label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 6 }}>
             {[
-              { id: 'obrigatoria', emoji: '??', title: 'Obrigat�ria',  desc: 'Supervisor sempre aprova' },
-              { id: 'automatica',  emoji: '?', title: 'Autom�tica',   desc: 'Aprova��o sem interven��o' },
+              { id: 'obrigatoria', emoji: '??', title: 'Obrigatória',  desc: 'Supervisor sempre aprova' },
+              { id: 'automatica',  emoji: '?', title: 'Automática',   desc: 'Aprovação sem intervenção' },
               { id: 'por_valor',   emoji: '??', title: 'Por Valor',    desc: 'Auto-aprova abaixo de R$X' },
             ].map(opt => {
               const active = form.tipo_aprovacao === opt.id
@@ -812,24 +812,24 @@ function CrudRegras({ workspaceId, ownerId }) {
           <div style={{ marginBottom: 16 }}>
             <label style={lbl}>Auto-aprovar pedidos abaixo de (R$)</label>
             <input type="number" min={0} step="0.01" className="input" style={{ maxWidth: 220 }} value={form.valor_aprovacao_automatica || ''} onChange={e => f('valor_aprovacao_automatica', e.target.value)} placeholder="Ex: 150.00" />
-            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Pedidos com valor total abaixo deste limite s�o aprovados automaticamente</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Pedidos com valor total abaixo deste limite são aprovados automaticamente</div>
           </div>
         )}
         {form.tipo_aprovacao !== 'automatica' && (
           <div>
-            <label style={lbl}>Prazo para aprova��o (horas)</label>
+            <label style={lbl}>Prazo para aprovação (horas)</label>
             <input type="number" min={1} className="input" style={{ maxWidth: 180 }} value={form.prazo_aprovacao_horas || 24} onChange={e => f('prazo_aprovacao_horas', e.target.value)} />
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Tempo que o supervisor tem para aprovar antes de ser alertado novamente</div>
           </div>
         )}
       </div>
 
-      {/* -- 5. Notifica��es -- */}
+      {/* -- 5. Notificações -- */}
       <div style={sCard}>
-        <SH emoji="??" title="Notifica��es WhatsApp" sub="Quais mensagens autom�ticas s�o enviadas durante o processo" />
+        <SH emoji="??" title="Notificações WhatsApp" sub="Quais mensagens automáticas são enviadas durante o processo" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <ToggleRow checked={!!form.notifica_lider_resultado}     onChange={() => f('notifica_lider_resultado',     !form.notifica_lider_resultado)}     label="Notificar l�der do resultado"          desc="Envia WA informando se o pedido foi aprovado ou reprovado" />
-          <ToggleRow checked={!!form.notifica_supervisor_pendente} onChange={() => f('notifica_supervisor_pendente', !form.notifica_supervisor_pendente)} label="Alertar supervisor sobre pend�ncias" desc="Lembrete quando o pedido aguarda aprova��o al�m do prazo" />
+          <ToggleRow checked={!!form.notifica_lider_resultado}     onChange={() => f('notifica_lider_resultado',     !form.notifica_lider_resultado)}     label="Notificar líder do resultado"          desc="Envia WA informando se o pedido foi aprovado ou reprovado" />
+          <ToggleRow checked={!!form.notifica_supervisor_pendente} onChange={() => f('notifica_supervisor_pendente', !form.notifica_supervisor_pendente)} label="Alertar supervisor sobre pendências" desc="Lembrete quando o pedido aguarda aprovação além do prazo" />
         </div>
       </div>
 
@@ -845,7 +845,7 @@ function CrudRegras({ workspaceId, ownerId }) {
 // Alias para compatibilidade
 const CrudParametros = CrudRegras
 
-// --- Se��o: Cadastros ---------------------------------------------------------
+// --- Seção: Cadastros ---------------------------------------------------------
 function SecaoCadastros({ workspaceId, ownerId, sub }) {
   return (
     <div>
@@ -860,7 +860,7 @@ function SecaoCadastros({ workspaceId, ownerId, sub }) {
   )
 }
 
-// --- Modal de Detalhe / Aprova��o --------------------------------------------
+// --- Modal de Detalhe / Aprovação --------------------------------------------
 function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspaceId }) {
   const [itens,             setItens]             = useState([])
   const [motivo,            setMotivo]            = useState('')
@@ -880,7 +880,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
       const j = await r.json()
       if (r.ok) toast.success('Link enviado ao supervisor via WhatsApp!')
       else toast.error(j.error || 'Erro ao enviar')
-    } catch { toast.error('Erro de conex�o') }
+    } catch { toast.error('Erro de conexão') }
     setSendingSupervisor(false)
   }
 
@@ -889,7 +889,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
       .then(({ data }) => setItens(data || []))
   }, [sol.id])
 
-  // -- Executar a��o via API REST ----------------------------------------------
+  // -- Executar ação via API REST ----------------------------------------------
   async function execAcao(actionName, extra = {}) {
     setSaving(true)
     try {
@@ -900,14 +900,14 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Erro')
-      toast.success(j.mensagem || 'A��o realizada!')
+      toast.success(j.mensagem || 'Ação realizada!')
       onUpdated()
       onClose()
     } catch (err) { toast.error(err.message || 'Erro') }
     setSaving(false)
   }
 
-  // -- Aprovar / Reprovar (mant�m compatibilidade com Flow Engine) ------------
+  // -- Aprovar / Reprovar (mantém compatibilidade com Flow Engine) ------------
   async function aprovar(acao) {
     if (acao === 'reprovado' && !motivo.trim()) { toast.error('Informe o motivo'); return }
     setSaving(true)
@@ -920,7 +920,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
           const { acoes } = await actRes.json()
           const acaoNome = acao === 'aprovado' ? 'aprovar' : 'reprovar'
           const acaoObj = acoes.find(a => a.nome === acaoNome)
-          if (!acaoObj) throw new Error(`A��o "${acaoNome}" n�o dispon�vel nesta etapa`)
+          if (!acaoObj) throw new Error(`Ação "${acaoNome}" não disponível nesta etapa`)
           const execRes = await fetch('/api/flow-engine?action=execute', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ instance_id: instancia.id, acao_id: acaoObj.id, executado_por: userId, dados: acao === 'reprovado' ? { motivo } : {}, origem: 'humano' }),
@@ -943,23 +943,23 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
   }
 
   const st      = STATUS[sol.status] || STATUS.rascunho
-  const ticket  = sol.ticket || sol.numero_pedido || '�'
+  const ticket  = sol.ticket || sol.numero_pedido || '—'
   const isFinal = ['finalizado', 'finalizado_com_ocorrencia', 'fechado'].includes(sol.status)
 
-  // -- Bot�es de a��o por status -----------------------------------------------
+  // -- Botões de ação por status -----------------------------------------------
   function ActionBlock() {
     const btnBase = { width: '100%', padding: '11px 18px', borderRadius: 9, fontWeight: 700, fontSize: 13, cursor: 'pointer', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
 
     if (['pendente', 'aguardando_aprovacao'].includes(sol.status)) return (
       <div>
-        {/* Info + bot�o reenvio para supervisor */}
+        {/* Info + botão reenvio para supervisor */}
         <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Supervisor</div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
               {sol.supervisor_telefone
                 ? <span>?? {sol.supervisor_telefone}</span>
-                : <span style={{ color: '#f87171' }}>?? Telefone n�o cadastrado na equipe</span>}
+                : <span style={{ color: '#f87171' }}>?? Telefone não cadastrado na equipe</span>}
             </div>
           </div>
           <button
@@ -970,7 +970,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
             {sendingSupervisor ? '...' : '?? Enviar link ao Supervisor'}
           </button>
         </div>
-        <label style={lbl}>Motivo (obrigat�rio ao reprovar)</label>
+        <label style={lbl}>Motivo (obrigatório ao reprovar)</label>
         <input className="input" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Descreva o motivo se for reprovar..." style={{ marginBottom: 12 }} />
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => aprovar('reprovado')} disabled={saving} className="btn-danger" style={{ flex: 1, justifyContent: 'center' }}>? Reprovar</button>
@@ -999,28 +999,28 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
 
     if (sol.status === 'entregue') return (
       <button onClick={() => execAcao('enviar_validacao')} disabled={saving} style={{ ...btnBase, background: '#f97316', color: '#fff' }}>
-        ?? Enviar Valida��o ao L�der
+        ?? Enviar Validação ao Líder
       </button>
     )
 
     if (sol.status === 'aguardando_validacao') return (
       <div>
         <div style={{ background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.25)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#f97316', marginBottom: 4 }}>?? Aguardando valida��o do l�der</div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>O l�der ainda n�o confirmou o recebimento. Voc� pode registrar manualmente abaixo.</div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#f97316', marginBottom: 4 }}>?? Aguardando validação do líder</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>O líder ainda não confirmou o recebimento. Você pode registrar manualmente abaixo.</div>
         </div>
         <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
           <button onClick={() => execAcao('validar_entrega', { resultado: 'correto' })} disabled={saving} style={{ ...btnBase, flex: 1, background: '#10b981', color: '#fff' }}>?? Confirmar Entrega Correta</button>
         </div>
-        <label style={lbl}>Registrar ocorr�ncia (se houve problema)</label>
+        <label style={lbl}>Registrar ocorrência (se houve problema)</label>
         <input className="input" value={ocorr} onChange={e => setOcorr(e.target.value)} placeholder="Descreva o problema na entrega..." style={{ marginBottom: 10 }} />
-        <button onClick={() => { if (!ocorr.trim()) { toast.error('Descreva a ocorr�ncia'); return } execAcao('validar_entrega', { resultado: 'com_ocorrencia', ocorrencia: ocorr }) }} disabled={saving} style={{ ...btnBase, background: '#f59e0b', color: '#000' }}>?? Finalizar com Ocorr�ncia</button>
+        <button onClick={() => { if (!ocorr.trim()) { toast.error('Descreva a ocorrência'); return } execAcao('validar_entrega', { resultado: 'com_ocorrencia', ocorrencia: ocorr }) }} disabled={saving} style={{ ...btnBase, background: '#f59e0b', color: '#000' }}>?? Finalizar com Ocorrência</button>
       </div>
     )
 
     if (sol.status === 'reprovado') return (
       <button onClick={() => execAcao('reabrir')} disabled={saving} style={{ ...btnBase, background: '#f59e0b', color: '#000' }}>
-        ?? Reabrir para Corre��o
+        ?? Reabrir para Correção
       </button>
     )
 
@@ -1030,7 +1030,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
   return (
     <Modal title="" onClose={onClose} maxWidth={620}>
 
-      {/* -- Cabe�alho do pedido -- */}
+      {/* -- Cabeçalho do pedido -- */}
       <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 20px', marginBottom: 18, border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
           <div>
@@ -1055,8 +1055,8 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
       {/* -- Cards de totais -- */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 18 }}>
         {[
-          { label: 'Refei��es', value: sol.total_refeicoes || 0, emoji: '???', color: '#6366f1' },
-          { label: 'Caf�s',     value: sol.total_cafes     || 0, emoji: '?', color: '#f59e0b' },
+          { label: 'Refeições', value: sol.total_refeicoes || 0, emoji: '???', color: '#6366f1' },
+          { label: 'Cafés',     value: sol.total_cafes     || 0, emoji: '?', color: '#f59e0b' },
           { label: 'Pessoas',   value: itens.length,             emoji: '??', color: '#06b6d4' },
           { label: 'Total',     value: fmtBRL(sol.valor_total),  emoji: '??', color: '#10b981', text: true },
         ].map((c, i) => (
@@ -1112,7 +1112,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
               </div>
             </div>
           )}
-          {/* Observa��es e motivo */}
+          {/* Observações e motivo */}
           {sol.observacoes && (
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid var(--border)' }}>?? {sol.observacoes}</div>
           )}
@@ -1120,9 +1120,9 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
             <div style={{ fontSize: 12, color: '#f87171', background: 'rgba(239,68,68,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(239,68,68,0.2)', borderLeft: '3px solid #ef4444' }}>? Reprovado: {sol.motivo_reprovacao}</div>
           )}
           {sol.ocorrencia && (
-            <div style={{ fontSize: 12, color: '#fbbf24', background: 'rgba(245,158,11,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(245,158,11,0.2)', borderLeft: '3px solid #f59e0b' }}>?? Ocorr�ncia: {sol.ocorrencia}</div>
+            <div style={{ fontSize: 12, color: '#fbbf24', background: 'rgba(245,158,11,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(245,158,11,0.2)', borderLeft: '3px solid #f59e0b' }}>?? Ocorrência: {sol.ocorrencia}</div>
           )}
-          {/* Hist�rico de datas */}
+          {/* Histórico de datas */}
           {[
             { label: 'Aprovado em',     val: sol.aprovado_em },
             { label: 'Consolidado em',  val: sol.consolidado_em },
@@ -1131,7 +1131,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
             { label: 'Validado em',     val: sol.validado_em },
           ].some(t => t.val) && (
             <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 8 }}>?? Hist�rico</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 8 }}>?? Histórico</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {[
                   { label: 'Aprovado em',     val: sol.aprovado_em },
@@ -1160,7 +1160,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
         </div>
       )}
 
-      {/* -- Bloco de a��es -- */}
+      {/* -- Bloco de ações -- */}
       {!isFinal && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 16 }}>
           <ActionBlock />
@@ -1169,7 +1169,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
 
       {isFinal && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 14, textAlign: 'center' }}>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>?? Pedido encerrado � nenhuma a��o dispon�vel</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>?? Pedido encerrado — nenhuma ação disponível</span>
         </div>
       )}
     </Modal>
@@ -1195,16 +1195,16 @@ function Sparkline({ data, color = '#6366f1', width = 80, height = 28 }) {
 }
 
 function relTime(iso) {
-  if (!iso) return '�'
+  if (!iso) return '—'
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
   if (mins < 1) return 'agora'
-  if (mins < 60) return `h� ${mins}min`
+  if (mins < 60) return `há ${mins}min`
   const h = Math.floor(mins / 60), m = mins % 60
-  if (h < 24) return m > 0 ? `h� ${h}h${m}m` : `h� ${h}h`
-  return `h� ${Math.floor(h / 24)}d`
+  if (h < 24) return m > 0 ? `há ${h}h${m}m` : `há ${h}h`
+  return `há ${Math.floor(h / 24)}d`
 }
 
-// --- Se��o: Dashboard ---------------------------------------------------------
+// --- Seção: Dashboard ---------------------------------------------------------
 function LineChart({ series, labels, height = 160, gridColor = '#E5EAF2', labelColor = '#A0AEC0', dotFill = 'white' }) {
   const VW = 480, VH = height
   const PAD = { t: 12, r: 16, b: 28, l: 36 }
@@ -1253,7 +1253,7 @@ function LineChart({ series, labels, height = 160, gridColor = '#E5EAF2', labelC
 }
 
 function HBarChart({ items, colorFn, labelColor = '#1A2332', trackColor = '#EEF2F8' }) {
-  if (!items || items.length === 0) return <div style={{ textAlign: 'center', color: labelColor, fontSize: 12, padding: '24px 0' }}>Sem dados dispon�veis</div>
+  if (!items || items.length === 0) return <div style={{ textAlign: 'center', color: labelColor, fontSize: 12, padding: '24px 0' }}>Sem dados disponíveis</div>
   const max = Math.max(...items.map(it => it.value), 1)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1364,15 +1364,15 @@ function SecaoDashboard({ sols, onNav }) {
     const hojePedCaf = hojeSols.filter(s => (s.total_cafes || 0) > 0).length
 
     const kpis = [
-      { icon: '???', label: 'Refei��es hoje', val: hojePedRef, isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem', footer: `M�s: ${refMes} refei��es`, secondary: hojeRef, secondaryLabel: 'refei��es hoje', items: hojeSols.filter(s => (s.total_refeicoes || 0) > 0) },
-      { icon: '?',  label: 'Caf�s hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `M�s: ${cafMes} caf�s`,    secondary: hojeCaf, secondaryLabel: 'caf�s hoje', items: hojeSols.filter(s => (s.total_cafes || 0) > 0) },
-      { icon: '?',  label: 'Aguardando Aprova��o', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revis�o` : 'Tudo em dia ?', ref: sum(pendentes, 'total_refeicoes'), caf: sum(pendentes, 'total_cafes'), items: pendentes },
-      { icon: '?',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} j� entregues`, ref: sum(aprovSts, 'total_refeicoes'), caf: sum(aprovSts, 'total_cafes'), items: aprovSts },
-      { icon: '?',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos �ltimos 7 dias` : 'Nenhuma reprova��o', ref: sum(reprovados, 'total_refeicoes'), caf: sum(reprovados, 'total_cafes'), items: reprovados },
+      { icon: '???', label: 'Refeições hoje', val: hojePedRef, isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem', footer: `Mês: ${refMes} refeições`, secondary: hojeRef, secondaryLabel: 'refeições hoje', items: hojeSols.filter(s => (s.total_refeicoes || 0) > 0) },
+      { icon: '?',  label: 'Cafés hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `Mês: ${cafMes} cafés`,    secondary: hojeCaf, secondaryLabel: 'cafés hoje', items: hojeSols.filter(s => (s.total_cafes || 0) > 0) },
+      { icon: '?',  label: 'Aguardando Aprovação', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ?', ref: sum(pendentes, 'total_refeicoes'), caf: sum(pendentes, 'total_cafes'), items: pendentes },
+      { icon: '?',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues`, ref: sum(aprovSts, 'total_refeicoes'), caf: sum(aprovSts, 'total_cafes'), items: aprovSts },
+      { icon: '?',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos últimos 7 dias` : 'Nenhuma reprovação', ref: sum(reprovados, 'total_refeicoes'), caf: sum(reprovados, 'total_cafes'), items: reprovados },
       { icon: '??',  label: 'Aguardando Entrega',    val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje`, ref: sum(aguardEnt, 'total_refeicoes'), caf: sum(aguardEnt, 'total_cafes'), items: aguardEnt },
-      { icon: '??',  label: 'Diverg�ncias',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer aten��o' : 'Nenhuma ocorr�ncia', ref: sum(divergencias, 'total_refeicoes'), caf: sum(divergencias, 'total_cafes'), items: divergencias },
+      { icon: '??',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência', ref: sum(divergencias, 'total_refeicoes'), caf: sum(divergencias, 'total_cafes'), items: divergencias },
       { icon: '??',  label: 'Custo previsto dia',  val: fmtBRL(hojeCusto), isText: true,  color: '#14B8A6', var: null, varLabel: null, footer: `${hojeRef + hojeCaf} itens previstos`, items: hojeSols },
-      { icon: '??',  label: 'Custo no m�s',        val: fmtBRL(valorMes),  isText: true,  color: '#6366f1', var: fv(valorMes, valorMAnt), varLabel: 'vs m�s ant.', footer: valorMAnt > 0 ? `Ant.: ${fmtBRL(valorMAnt)}` : 'Sem comparativo', items: mesSols },
+      { icon: '??',  label: 'Custo no mês',        val: fmtBRL(valorMes),  isText: true,  color: '#6366f1', var: fv(valorMes, valorMAnt), varLabel: 'vs mês ant.', footer: valorMAnt > 0 ? `Ant.: ${fmtBRL(valorMAnt)}` : 'Sem comparativo', items: mesSols },
     ]
 
     const chartRef7 = last7.map(d => sum(ativos.filter(s => s.data_refeicao === d), 'total_refeicoes'))
@@ -1389,12 +1389,12 @@ function SecaoDashboard({ sols, onNav }) {
     const cdcLabel  = hasCDC ? 'Consumo por CDC' : 'Consumo por Equipe'
 
     const donut = [
-      { label: 'Aguardando Aprova��o', value: pendentes.length,    color: '#F59E0B' },
+      { label: 'Aguardando Aprovação', value: pendentes.length,    color: '#F59E0B' },
       { label: 'Aprovados',        value: aprovSts.length,     color: '#4F6EF7' },
       { label: 'Preparo/Entrega',  value: emPreparo.length,    color: '#8B5CF6' },
       { label: 'Entregues',        value: entregues.length,    color: '#10B981' },
       { label: 'Reprovados',       value: reprovados.length,   color: '#EF4444' },
-      { label: 'Diverg�ncias',     value: divergencias.length, color: '#F97316' },
+      { label: 'Divergências',     value: divergencias.length, color: '#F97316' },
     ].filter(d => d.value > 0)
 
     const eqMap = {}
@@ -1433,27 +1433,27 @@ function SecaoDashboard({ sols, onNav }) {
     const pendLongos = pendentes.filter(s => s.criado_em && (Date.now() - new Date(s.criado_em)) > 7200000)
     if (pendLongos.length) {
       const oldest = [...pendLongos].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em))[0]
-      alertas.push({ type: 'warn', icon: '??', title: `${pendLongos.length} solicita��o${pendLongos.length > 1 ? '�es' : ''} fora do prazo`, desc: `Aguardando aprova��o h� mais de 2h � mais antigo: ${relTime(oldest.criado_em)}`, action: 'Ver Aprova��es', nav: () => onNav('operacoes', 'aprovacoes') })
+      alertas.push({ type: 'warn', icon: '??', title: `${pendLongos.length} solicitação${pendLongos.length > 1 ? 'ões' : ''} fora do prazo`, desc: `Aguardando aprovação há mais de 2h — mais antigo: ${relTime(oldest.criado_em)}`, action: 'Ver Aprovações', nav: () => onNav('operacoes', 'aprovacoes') })
     }
     const aprovHoje = aprovSts.filter(s => s.data_refeicao === hoje)
-    if (aprovHoje.length) alertas.push({ type: 'warn', icon: '??', title: `${aprovHoje.length} entrega${aprovHoje.length > 1 ? 's' : ''} com confirma��o pendente`, desc: 'Aprovados mas restaurante ainda n�o confirmou a entrega', action: null })
-    if (valorMAnt > 0 && (valorMes - valorMAnt) / valorMAnt > 0.15) alertas.push({ type: 'danger', icon: '??', title: 'Custo do m�s acima do per�odo anterior', desc: `${fmtBRL(valorMes)} vs ${fmtBRL(valorMAnt)} � varia��o de +${(((valorMes - valorMAnt) / valorMAnt) * 100).toFixed(0)}%`, action: null })
-    if (reprov7.length) alertas.push({ type: 'danger', icon: '?', title: `${reprov7.length} pedido${reprov7.length > 1 ? 's' : ''} reprovado${reprov7.length > 1 ? 's' : ''} nos �ltimos 7 dias`, desc: 'Verifique os motivos de reprova��o no hist�rico', action: null })
-    if (divergencias.length) alertas.push({ type: 'warn', icon: '??', title: `${divergencias.length} diverg�ncia${divergencias.length > 1 ? 's' : ''} pendente${divergencias.length > 1 ? 's' : ''}`, desc: 'Pedidos com ocorr�ncias aguardando valida��o', action: null })
+    if (aprovHoje.length) alertas.push({ type: 'warn', icon: '??', title: `${aprovHoje.length} entrega${aprovHoje.length > 1 ? 's' : ''} com confirmação pendente`, desc: 'Aprovados mas restaurante ainda não confirmou a entrega', action: null })
+    if (valorMAnt > 0 && (valorMes - valorMAnt) / valorMAnt > 0.15) alertas.push({ type: 'danger', icon: '??', title: 'Custo do mês acima do período anterior', desc: `${fmtBRL(valorMes)} vs ${fmtBRL(valorMAnt)} — variação de +${(((valorMes - valorMAnt) / valorMAnt) * 100).toFixed(0)}%`, action: null })
+    if (reprov7.length) alertas.push({ type: 'danger', icon: '?', title: `${reprov7.length} pedido${reprov7.length > 1 ? 's' : ''} reprovado${reprov7.length > 1 ? 's' : ''} nos últimos 7 dias`, desc: 'Verifique os motivos de reprovação no histórico', action: null })
+    if (divergencias.length) alertas.push({ type: 'warn', icon: '??', title: `${divergencias.length} divergência${divergencias.length > 1 ? 's' : ''} pendente${divergencias.length > 1 ? 's' : ''}`, desc: 'Pedidos com ocorrências aguardando validação', action: null })
 
-    // -- Pr�xima A��o Recomendada ------------------------------------------
+    // -- Próxima Ação Recomendada ------------------------------------------
     let proximaAcao = null
     if (pendLongos.length > 0) {
       proximaAcao = { cor: '#ef4444', bg: 'rgba(239,68,68,0.10)', borda: 'rgba(239,68,68,0.30)',
-        emoji: '??', msg: `${pendLongos.length} solicita��o(�es) aguardando aprova��o h� mais de 2h`,
+        emoji: '??', msg: `${pendLongos.length} solicitação(ões) aguardando aprovação há mais de 2h`,
         acao: 'Aprovar agora', navKey: 'aprovacoes' }
     } else if (pendentes.length > 0) {
       proximaAcao = { cor: '#f59e0b', bg: 'rgba(245,158,11,0.10)', borda: 'rgba(245,158,11,0.30)',
-        emoji: '?', msg: `${pendentes.length} solicita��o(�es) aguardando aprova��o`,
-        acao: 'Ver aprova��es', navKey: 'aprovacoes' }
+        emoji: '?', msg: `${pendentes.length} solicitação(ões) aguardando aprovação`,
+        acao: 'Ver aprovações', navKey: 'aprovacoes' }
     } else if (divergencias.length > 0) {
       proximaAcao = { cor: '#f97316', bg: 'rgba(249,115,22,0.10)', borda: 'rgba(249,115,22,0.30)',
-        emoji: '??', msg: `${divergencias.length} diverg�ncia(s) pendente(s) de valida��o`,
+        emoji: '??', msg: `${divergencias.length} divergência(s) pendente(s) de validação`,
         acao: 'Resolver', navKey: 'historico' }
     } else if (aguardEnt.length > 0) {
       proximaAcao = { cor: '#8b5cf6', bg: 'rgba(139,92,246,0.10)', borda: 'rgba(139,92,246,0.30)',
@@ -1461,7 +1461,7 @@ function SecaoDashboard({ sols, onNav }) {
         acao: 'Monitorar', navKey: null }
     } else {
       proximaAcao = { cor: '#10b981', bg: 'rgba(16,185,129,0.10)', borda: 'rgba(16,185,129,0.25)',
-        emoji: '?', msg: 'Sem pend�ncias cr�ticas no momento' + (valorMes > 0 ? ` � custo acumulado no m�s: ${fmtBRL(valorMes)}` : ''),
+        emoji: '?', msg: 'Sem pendências críticas no momento' + (valorMes > 0 ? ` — custo acumulado no mês: ${fmtBRL(valorMes)}` : ''),
         acao: null, navKey: null }
     }
 
@@ -1489,7 +1489,7 @@ function SecaoDashboard({ sols, onNav }) {
       <div style={{ background: CARD, borderBottom: `1px solid ${BORDER}`, padding: '18px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontSize: 20, fontWeight: 800, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1 }}>Dashboard</div>
-          <div style={{ fontSize: 12, color: TEXT2, marginTop: 4 }}>Torre de Controle de Alimenta��o Operacional</div>
+          <div style={{ fontSize: 12, color: TEXT2, marginTop: 4 }}>Torre de Controle de Alimentação Operacional</div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: isDark ? '#1f2329' : '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px' }}>
@@ -1508,14 +1508,14 @@ function SecaoDashboard({ sols, onNav }) {
         </div>
       </div>
 
-      {/* -- Faixa de Pr�xima A��o -- */}
+      {/* -- Faixa de Próxima Ação -- */}
       {dash.proximaAcao && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '10px 28px', background: dash.proximaAcao.bg,
           borderBottom: `1px solid ${dash.proximaAcao.borda}`, gap: 12, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 15 }}>{dash.proximaAcao.emoji}</span>
-            <span style={{ fontSize: 13, color: dash.proximaAcao.cor, fontWeight: 600 }}>Pr�xima a��o:</span>
+            <span style={{ fontSize: 13, color: dash.proximaAcao.cor, fontWeight: 600 }}>Próxima ação:</span>
             <span style={{ fontSize: 13, color: TEXT }}>{dash.proximaAcao.msg}</span>
           </div>
           {dash.proximaAcao.acao && dash.proximaAcao.navKey && (
@@ -1550,14 +1550,14 @@ function SecaoDashboard({ sols, onNav }) {
                 </div>
                 {/* split value row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 0, position: 'relative', marginBottom: 12 }}>
-                  {/* primary � pedidos */}
+                  {/* primary — pedidos */}
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 36, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.03em' }}>{k.val}</div>
                     <div style={{ fontSize: 10, fontWeight: 700, color: TEXT2, marginTop: 5, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pedidos</div>
                   </div>
                   {/* divider */}
                   <div style={{ width: 1, height: 42, background: BORDER, flexShrink: 0, margin: '0 14px' }} />
-                  {/* secondary � refei��es / caf�s */}
+                  {/* secondary — refeições / cafés */}
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
                     <div style={{ fontSize: 24, fontWeight: 700, color: k.color, lineHeight: 1, letterSpacing: '-0.02em', opacity: 0.9 }}>{k.secondary}</div>
                     <div style={{ fontSize: 9, fontWeight: 600, color: TEXT3, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{k.secondaryLabel}</div>
@@ -1582,8 +1582,8 @@ function SecaoDashboard({ sols, onNav }) {
                   <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em' }}>{k.val}</div>
                   {k.ref !== undefined && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                      <span style={{ fontSize: 13, color: TEXT2 }}>??? <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Refei��es</span></span>
-                      <span style={{ fontSize: 13, color: TEXT2 }}>? <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Caf�s</span></span>
+                      <span style={{ fontSize: 13, color: TEXT2 }}>??? <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Refeições</span></span>
+                      <span style={{ fontSize: 13, color: TEXT2 }}>? <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Cafés</span></span>
                     </div>
                   )}
                 </div>
@@ -1602,19 +1602,19 @@ function SecaoDashboard({ sols, onNav }) {
         {/* -- Charts Row -------------------------------------------------------- */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.3fr 1fr', gap: 14 }}>
 
-          {/* Evolu��o di�ria */}
+          {/* Evolução diária */}
           <div style={{ ...cardStyle, padding: '20px 22px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Evolu��o di�ria</div>
-                <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Refei��es e caf�s � �ltimos 7 dias</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Evolução diária</div>
+                <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Refeições e cafés — últimos 7 dias</div>
               </div>
               <div style={{ display: 'flex', gap: 16 }}>
                 <span style={{ fontSize: 11, color: '#4F6EF7', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ width: 20, height: 3, background: '#4F6EF7', borderRadius: 2, display: 'inline-block' }} />Refei��es
+                  <span style={{ width: 20, height: 3, background: '#4F6EF7', borderRadius: 2, display: 'inline-block' }} />Refeições
                 </span>
                 <span style={{ fontSize: 11, color: '#F59E0B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ width: 20, height: 3, background: '#F59E0B', borderRadius: 2, display: 'inline-block' }} />Caf�s
+                  <span style={{ width: 20, height: 3, background: '#F59E0B', borderRadius: 2, display: 'inline-block' }} />Cafés
                 </span>
               </div>
             </div>
@@ -1634,7 +1634,7 @@ function SecaoDashboard({ sols, onNav }) {
           <div style={{ ...cardStyle, padding: '20px 22px' }}>
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Por status</div>
-              <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Distribui��o atual</div>
+              <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Distribuição atual</div>
             </div>
             <DonutChart segments={dash.donut} emptyColor={BORDER} centerColor={TEXT} subColor={TEXT2} />
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -1658,7 +1658,7 @@ function SecaoDashboard({ sols, onNav }) {
           {/* Ranking equipes */}
           <div style={{ ...cardStyle, padding: '20px 22px' }}>
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>?? Top Equipes</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>🏆 Top Equipes</div>
               <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Por volume de consumo (itens)</div>
             </div>
             {dash.rankingEq.length === 0
@@ -1688,7 +1688,7 @@ function SecaoDashboard({ sols, onNav }) {
           {/* Ranking restaurantes */}
           <div style={{ ...cardStyle, padding: '20px 22px' }}>
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>??? Top Restaurantes</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>🍽️ Top Restaurantes</div>
               <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>Por valor total faturado</div>
             </div>
             {dash.rankingRest.length === 0
@@ -1708,7 +1708,7 @@ function SecaoDashboard({ sols, onNav }) {
                       <div style={{ height: 5, borderRadius: 999, background: BG }}>
                         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 999 }} />
                       </div>
-                      <div style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>{r.total} itens � {r.ped} pedido{r.ped > 1 ? 's' : ''}</div>
+                      <div style={{ fontSize: 10, color: TEXT3, marginTop: 4 }}>{r.total} itens · {r.ped} pedido{r.ped > 1 ? 's' : ''}</div>
                     </div>
                   )
                 })
@@ -1719,8 +1719,8 @@ function SecaoDashboard({ sols, onNav }) {
           <div style={{ ...cardStyle, padding: '20px 22px' }}>
             <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>?? Painel Operacional</div>
-                <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>{dash.hoje === todayISO() ? 'Situa��o de hoje' : fmtData(dash.hoje)}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>📊 Painel Operacional</div>
+                <div style={{ fontSize: 11, color: TEXT2, marginTop: 2 }}>{dash.hoje === todayISO() ? 'Situação de hoje' : fmtData(dash.hoje)}</div>
               </div>
             </div>
             {dash.painelHoje.length === 0
@@ -1740,9 +1740,9 @@ function SecaoDashboard({ sols, onNav }) {
                           <td style={{ padding: '9px 8px', fontWeight: 600, color: TEXT, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11 }}>{r.nome}</td>
                           <td style={{ padding: '9px 8px', textAlign: 'center', color: '#4F6EF7', fontWeight: 700 }}>{r.ref}</td>
                           <td style={{ padding: '9px 8px', textAlign: 'center', color: '#F59E0B', fontWeight: 700 }}>{r.caf}</td>
-                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.pend > 0 ? <span style={{ color: '#EF4444', fontWeight: 700 }}>{r.pend}</span> : <span style={{ color: TEXT3 }}>�</span>}</td>
-                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.ent > 0 ? <span style={{ color: '#10B981', fontWeight: 700 }}>{r.ent}</span> : <span style={{ color: TEXT3 }}>�</span>}</td>
-                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.div > 0 ? <span style={{ color: '#F97316', fontWeight: 700 }}>{r.div}</span> : <span style={{ color: TEXT3 }}>�</span>}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.pend > 0 ? <span style={{ color: '#EF4444', fontWeight: 700 }}>{r.pend}</span> : <span style={{ color: TEXT3 }}>—</span>}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.ent > 0 ? <span style={{ color: '#10B981', fontWeight: 700 }}>{r.ent}</span> : <span style={{ color: TEXT3 }}>—</span>}</td>
+                          <td style={{ padding: '9px 8px', textAlign: 'center' }}>{r.div > 0 ? <span style={{ color: '#F97316', fontWeight: 700 }}>{r.div}</span> : <span style={{ color: TEXT3 }}>—</span>}</td>
                           <td style={{ padding: '9px 8px', textAlign: 'right', fontWeight: 700, color: '#14B8A6', whiteSpace: 'nowrap', fontSize: 11 }}>{fmtBRL(r.valor)}</td>
                         </tr>
                       ))}
@@ -1767,7 +1767,7 @@ function SecaoDashboard({ sols, onNav }) {
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
-              Alertas e Exce��es
+              Alertas e Exceções
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
               {dash.alertas.map((a, i) => {
@@ -1785,7 +1785,7 @@ function SecaoDashboard({ sols, onNav }) {
                         <button onClick={a.nav} style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: alertColor, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>{a.action} ?</button>
                       )}
                     </div>
-                    <span style={{ fontSize: 18, color: TEXT3, flexShrink: 0, lineHeight: 1 }}>�</span>
+                    <span style={{ fontSize: 18, color: TEXT3, flexShrink: 0, lineHeight: 1 }}>›</span>
                   </div>
                 )
               })}
@@ -1796,14 +1796,14 @@ function SecaoDashboard({ sols, onNav }) {
       </div>
 
       {kpiDetalhe && (
-        <Modal title={`${kpiDetalhe.icon} ${kpiDetalhe.label} � ${kpiDetalhe.items.length} pedido${kpiDetalhe.items.length !== 1 ? 's' : ''}`} onClose={() => setKpiDetalhe(null)} maxWidth={920}>
+        <Modal title={`${kpiDetalhe.icon} ${kpiDetalhe.label}${kpiDetalhe.label} — ${kpiDetalhe.items.length} pedido${kpiDetalhe.items.length !== 1 ? 's' : ''}`} onClose={() => setKpiDetalhe(null)} maxWidth={920}>
           <div style={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto' }}>
             {kpiDetalhe.items.length === 0
               ? <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '24px 0' }}>Nenhum item para exibir</p>
               : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-primary)', zIndex: 1 }}>
                     <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      {['Pedido', 'L�der', 'Equipe', 'Data Refei��o', 'Ref.', 'Caf�', 'Valor', 'Status'].map(h => (
+                      {['Pedido', 'Líder', 'Equipe', 'Data Refeição', 'Ref.', 'Café', 'Valor', 'Status'].map(h => (
                         <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
@@ -1813,9 +1813,9 @@ function SecaoDashboard({ sols, onNav }) {
                       const cfg = STATUS[s.status] || STATUS.rascunho
                       return (
                         <tr key={s.id} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)') }}>
-                          <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{s.numero_pedido || '�'}</td>
-                          <td style={{ padding: '8px 10px', color: 'var(--text-primary)' }}>{s.lider_nome || '�'}</td>
-                          <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>{s.refei_equipes?.nome || '�'}</td>
+                          <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{s.numero_pedido || '—'}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--text-primary)' }}>{s.lider_nome || '—'}</td>
+                          <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>{s.refei_equipes?.nome || '—'}</td>
                           <td style={{ padding: '8px 10px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtData(s.data_refeicao)}</td>
                           <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-primary)' }}>{s.total_refeicoes || 0}</td>
                           <td style={{ padding: '8px 10px', textAlign: 'center', fontWeight: 700, color: 'var(--text-primary)' }}>{s.total_cafes || 0}</td>
@@ -1836,7 +1836,7 @@ function SecaoDashboard({ sols, onNav }) {
   )
 }
 
-// --- Se��o: Solicita��es ------------------------------------------------------
+// --- Seção: Solicitações ------------------------------------------------------
 function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
   const [form,    setForm]    = useState({ equipe_id: '', restaurante_id: '', data_refeicao: todayISO(), total_refeicoes: '', total_cafes: '', observacoes: '' })
   const [equipes, setEquipes] = useState([])
@@ -1863,7 +1863,7 @@ function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
     if (!form.equipe_id)       { toast.error('Selecione a equipe'); return }
     if (!form.restaurante_id)  { toast.error('Selecione o restaurante'); return }
     if (!form.data_refeicao)   { toast.error('Informe a data'); return }
-    if (nRef + nCaf === 0)     { toast.error('Informe ao menos 1 refei��o ou caf�'); return }
+    if (nRef + nCaf === 0)     { toast.error('Informe ao menos 1 refeição ou café'); return }
     setSaving(true)
     try {
       const payload = {
@@ -1884,7 +1884,7 @@ function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
       }
       const { error } = await supabase.from('refei_solicitacoes').insert(payload)
       if (error) throw new Error(error.message)
-      toast.success('Solicita��o criada!')
+      toast.success('Solicitação criada!')
       onSaved()
       onClose()
     } catch (err) { toast.error(err.message || 'Erro ao salvar') }
@@ -1892,7 +1892,7 @@ function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
   }
 
   return (
-    <Modal title="Nova Solicita��o de Refei��o" onClose={onClose} maxWidth={560}>
+    <Modal title="Nova Solicitação de Refeição" onClose={onClose} maxWidth={560}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           <div style={{ gridColumn: '1 / -1' }}>
@@ -1901,7 +1901,7 @@ function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
               <option value="">Selecione a equipe...</option>
               {equipes.map(e => <option key={e.id} value={e.id}>{e.nome}{e.cdc ? ` (CDC ${e.cdc})` : ''}</option>)}
             </select>
-            {eq && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>L�der: {eq.lider_nome || '�'} � Supervisor: {eq.supervisor_nome || '�'}</div>}
+            {eq && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Líder: {eq.lider_nome || '—'} · Supervisor: {eq.supervisor_nome || '—'}</div>}
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={lbl}>Restaurante *</label>
@@ -1909,36 +1909,36 @@ function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
               <option value="">Selecione o restaurante...</option>
               {rests.map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
             </select>
-            {rst && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Refei��o: {fmtBRL(rst.valor_refeicao)} � Caf�: {fmtBRL(rst.valor_cafe)}</div>}
+            {rst && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Refeição: {fmtBRL(rst.valor_refeicao)} · Café: {fmtBRL(rst.valor_cafe)}</div>}
           </div>
           <div>
-            <label style={lbl}>Data da Refei��o *</label>
+            <label style={lbl}>Data da Refeição *</label>
             <input type="date" className="input" style={{ fontSize: 13 }} value={form.data_refeicao} onChange={e => f('data_refeicao', e.target.value)} />
           </div>
           <div />
           <div>
-            <label style={lbl}>??? Qtd. Refei��es</label>
+            <label style={lbl}>??? Qtd. Refeições</label>
             <input type="number" min="0" className="input" style={{ fontSize: 13 }} placeholder="0" value={form.total_refeicoes} onChange={e => f('total_refeicoes', e.target.value)} />
           </div>
           <div>
-            <label style={lbl}>? Qtd. Caf�s</label>
+            <label style={lbl}>? Qtd. Cafés</label>
             <input type="number" min="0" className="input" style={{ fontSize: 13 }} placeholder="0" value={form.total_cafes} onChange={e => f('total_cafes', e.target.value)} />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
-            <label style={lbl}>Observa��es</label>
+            <label style={lbl}>Observações</label>
             <textarea className="input" rows={2} style={{ resize: 'vertical', fontSize: 13 }} placeholder="Opcional..." value={form.observacoes} onChange={e => f('observacoes', e.target.value)} />
           </div>
         </div>
         {(nRef + nCaf > 0 && rst) && (
           <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{nRef} refei��o(�es) + {nCaf} caf�(s)</span>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{nRef} refeição(ões) + {nCaf} café(s)</span>
             <span style={{ fontSize: 16, fontWeight: 800, color: '#10b981' }}>{fmtBRL(valorTotal)}</span>
           </div>
         )}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 4 }}>
           <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 9, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Cancelar</button>
           <button onClick={salvar} disabled={saving} className="btn-primary" style={{ padding: '9px 20px', fontSize: 13 }}>
-            {saving ? 'Salvando...' : '? Criar Solicita��o'}
+            {saving ? 'Salvando...' : '? Criar Solicitação'}
           </button>
         </div>
       </div>
@@ -2009,11 +2009,11 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: '1 1 200px', minWidth: 160 }}>
           <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: 'var(--text-secondary)' }} />
-          <input className="input" style={{ paddingLeft: 32, fontSize: 13 }} placeholder="Buscar pedido, equipe, l�der..." value={busca} onChange={e => setBusca(e.target.value)} />
+          <input className="input" style={{ paddingLeft: 32, fontSize: 13 }} placeholder="Buscar pedido, equipe, líder..." value={busca} onChange={e => setBusca(e.target.value)} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="date" className="input" style={{ width: 150, fontSize: 13 }} value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} title="Data inicial" />
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>at�</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>até</span>
           <input type="date" className="input" style={{ width: 150, fontSize: 13 }} value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} title="Data final" />
           {(filtroDataInicio || filtroDataFim) && (
             <button onClick={() => { setFiltroDataInicio(''); setFiltroDataFim('') }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px 10px', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>Limpar datas</button>
@@ -2030,7 +2030,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
           })}
         </div>
         <button onClick={() => setShowNova(true)} className="btn-primary" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, whiteSpace: 'nowrap' }}>
-          <PlusIcon style={{ width: 15, height: 15 }} /> Nova Solicita��o
+          <PlusIcon style={{ width: 15, height: 15 }} /> Nova Solicitação
         </button>
       </div>
 
@@ -2038,7 +2038,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
       {!loading && grupos.length === 0 && (
         <div style={{ textAlign: 'center', padding: 64, color: 'var(--text-secondary)' }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>???</div>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Nenhuma solicita��o encontrada</div>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Nenhuma solicitação encontrada</div>
           <div style={{ fontSize: 13 }}>Ajuste os filtros ou aguarde novos pedidos via WhatsApp.</div>
         </div>
       )}
@@ -2073,10 +2073,10 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
                   <tbody>
                     {solsGrupo.map(sol => (
                       <tr key={sol.id} onClick={() => setDetailSol(sol)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.12s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{sol.numero_pedido || '�'}</td>
+                        <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{sol.numero_pedido || '—'}</td>
                         <td style={{ padding: '11px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtData(sol.data_refeicao)}</td>
                         <td style={{ padding: '11px 14px' }}><StatusBadge status={sol.status} /></td>
-                        <td style={{ padding: '11px 14px', color: 'var(--text-primary)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sol.refei_restaurantes?.nome || <span style={{ color: 'var(--text-secondary)' }}>�</span>}</td>
+                        <td style={{ padding: '11px 14px', color: 'var(--text-primary)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sol.refei_restaurantes?.nome || <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>
                         <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--text-primary)' }}>{sol.total_refeicoes || 0}</td>
                         <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--text-primary)' }}>{sol.total_cafes || 0}</td>
                         <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 800, color: '#10b981', whiteSpace: 'nowrap' }}>{fmtBRL(sol.valor_total)}</td>
@@ -2100,7 +2100,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
   )
 }
 
-// --- Se��o: Aprova��es --------------------------------------------------------
+// --- Seção: Aprovações --------------------------------------------------------
 function SecaoAprovacoes({ sols, onReload, useFlowEngine, userId, workspaceId }) {
   const [subFiltro, setSubFiltro] = useState('pendente')
   const [detailSol, setDetailSol] = useState(null)
@@ -2120,7 +2120,7 @@ function SecaoAprovacoes({ sols, onReload, useFlowEngine, userId, workspaceId })
           <button key={t.id} onClick={() => setSubFiltro(t.id)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', background: subFiltro === t.id ? 'var(--accent)' : 'rgba(255,255,255,0.05)', color: subFiltro === t.id ? '#fff' : 'var(--text-secondary)' }}>{t.label}</button>
         ))}
       </div>
-      {filtrado.length === 0 && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 40, fontSize: 13 }}>Nenhuma solicita��o nesse status.</p>}
+      {filtrado.length === 0 && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 40, fontSize: 13 }}>Nenhuma solicitação nesse status.</p>}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
@@ -2133,10 +2133,10 @@ function SecaoAprovacoes({ sols, onReload, useFlowEngine, userId, workspaceId })
           <tbody>
             {filtrado.map(sol => (
               <tr key={sol.id} onClick={() => setDetailSol(sol)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--accent)' }}>{sol.numero_pedido || '�'}</td>
+                <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--accent)' }}>{sol.numero_pedido || '—'}</td>
                 <td style={{ padding: '11px 14px', color: 'var(--text-secondary)' }}>{fmtData(sol.data_refeicao)}</td>
-                <td style={{ padding: '11px 14px', color: 'var(--text-primary)' }}>{sol.refei_equipes?.nome || '�'}</td>
-                <td style={{ padding: '11px 14px', color: 'var(--text-primary)' }}>{sol.refei_restaurantes?.nome || '�'}</td>
+                <td style={{ padding: '11px 14px', color: 'var(--text-primary)' }}>{sol.refei_equipes?.nome || '—'}</td>
+                <td style={{ padding: '11px 14px', color: 'var(--text-primary)' }}>{sol.refei_restaurantes?.nome || '—'}</td>
                 <td style={{ padding: '11px 14px', color: 'var(--text-secondary)' }}>{(sol.total_refeicoes || 0) + (sol.total_cafes || 0)}</td>
                 <td style={{ padding: '11px 14px', fontWeight: 800, color: '#10b981' }}>{fmtBRL(sol.valor_total)}</td>
                 <td style={{ padding: '11px 14px' }}><StatusBadge status={sol.status} /></td>
@@ -2150,7 +2150,7 @@ function SecaoAprovacoes({ sols, onReload, useFlowEngine, userId, workspaceId })
   )
 }
 
-// --- Se��o: Fechamentos -------------------------------------------------------
+// --- Seção: Fechamentos -------------------------------------------------------
 function SecaoFechamentos({ workspaceId, ownerId }) {
   const agora = new Date()
   const [mes, setMes] = useState(agora.getMonth() + 1)
@@ -2187,7 +2187,7 @@ function SecaoFechamentos({ workspaceId, ownerId }) {
     <div>
       <div className="card" style={{ padding: 20, marginBottom: 24, display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
         <div>
-          <label style={lbl}>M�s</label>
+          <label style={lbl}>Mês</label>
           <select className="input" style={{ width: 120 }} value={mes} onChange={e => setMes(Number(e.target.value))}>
             {MESES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
@@ -2204,7 +2204,7 @@ function SecaoFechamentos({ workspaceId, ownerId }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['Per�odo', 'Status', 'Solicita��es', 'Refei��es', 'Caf�s', 'Valor Total', 'Gerado em'].map((h, i) => (
+                {['Período', 'Status', 'Solicitações', 'Refeições', 'Cafés', 'Valor Total', 'Gerado em'].map((h, i) => (
                   <th key={i} style={{ padding: '9px 14px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6 }}>{h}</th>
                 ))}
               </tr>
@@ -2212,13 +2212,13 @@ function SecaoFechamentos({ workspaceId, ownerId }) {
             <tbody>
               {fechamentos.map(f => (
                 <tr key={f.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtData(f.periodo_inicio)} � {fmtData(f.periodo_fim)}</td>
+                  <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtData(f.periodo_inicio)} — {fmtData(f.periodo_fim)}</td>
                   <td style={{ padding: '11px 14px' }}><span className={`badge badge-${f.status === 'fechado' ? 'neutral' : 'success'}`} style={{ fontSize: 10 }}>{f.status}</span></td>
                   <td style={{ padding: '11px 14px', textAlign: 'center', color: 'var(--text-primary)', fontWeight: 700 }}>{f.total_solicitacoes}</td>
                   <td style={{ padding: '11px 14px', textAlign: 'center', color: 'var(--text-primary)' }}>{f.total_refeicoes}</td>
                   <td style={{ padding: '11px 14px', textAlign: 'center', color: 'var(--text-primary)' }}>{f.total_cafes}</td>
                   <td style={{ padding: '11px 14px', fontWeight: 800, color: '#10b981' }}>{fmtBRL(f.total_valor)}</td>
-                  <td style={{ padding: '11px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{f.gerado_em ? new Date(f.gerado_em).toLocaleDateString('pt-BR') : '�'}</td>
+                  <td style={{ padding: '11px 14px', color: 'var(--text-secondary)', fontSize: 12 }}>{f.gerado_em ? new Date(f.gerado_em).toLocaleDateString('pt-BR') : '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -2229,7 +2229,7 @@ function SecaoFechamentos({ workspaceId, ownerId }) {
   )
 }
 
-// --- Se��o: Relat�rios --------------------------------------------------------
+// --- Seção: Relatérios --------------------------------------------------------
 function SecaoRelatorios({ sub, sols }) {
   const [dtInicio, setDtInicio] = useState('')
   const [dtFim,    setDtFim]    = useState('')
@@ -2248,7 +2248,7 @@ function SecaoRelatorios({ sub, sols }) {
       if      (sub === 'rel-equipe')      { key = s.equipe_id || '__';      label = s.refei_equipes?.nome || 'Sem equipe' }
       else if (sub === 'rel-restaurante') { key = s.restaurante_id || '__'; label = s.refei_restaurantes?.nome || 'Sem restaurante' }
       else if (sub === 'rel-cdc')         { key = s.refei_equipes?.cdc || '__'; label = s.refei_equipes?.cdc || 'Sem CDC' }
-      else                               { key = s.id; label = `${s.numero_pedido || '�'} � ${s.refei_equipes?.nome || '�'}` }
+      else                               { key = s.id; label = `${s.numero_pedido || '—'} — ${s.refei_equipes?.nome || '—'}` }
       if (!map[key]) map[key] = { label, count: 0, refeicoes: 0, cafes: 0, valor: 0 }
       map[key].count++
       map[key].refeicoes += (s.total_refeicoes || 0)
@@ -2261,7 +2261,7 @@ function SecaoRelatorios({ sub, sols }) {
   const totais = useMemo(() => grupos.reduce((acc, g) => ({ count: acc.count + g.count, refeicoes: acc.refeicoes + g.refeicoes, cafes: acc.cafes + g.cafes, valor: acc.valor + g.valor }), { count: 0, refeicoes: 0, cafes: 0, valor: 0 }), [grupos])
 
   function exportCSV() {
-    const header = 'Grupo,Solicita��es,Refei��es,Caf�s,Valor Total\n'
+    const header = 'Grupo,Solicitações,Refeições,Cafés,Valor Total\n'
     const rows   = grupos.map(g => `"${g.label}",${g.count},${g.refeicoes},${g.cafes},${g.valor.toFixed(2)}`).join('\n')
     const blob   = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' })
     const url    = URL.createObjectURL(blob)
@@ -2270,13 +2270,13 @@ function SecaoRelatorios({ sub, sols }) {
     URL.revokeObjectURL(url)
   }
 
-  const REL_LABEL = { 'rel-equipe': 'Por Equipe', 'rel-restaurante': 'Por Restaurante', 'rel-cdc': 'Por CDC/Regional', 'rel-divergencias': 'Diverg�ncias (extras)' }
+  const REL_LABEL = { 'rel-equipe': 'Por Equipe', 'rel-restaurante': 'Por Restaurante', 'rel-cdc': 'Por CDC/Regional', 'rel-divergencias': 'Divergências (extras)' }
 
   return (
     <div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div><label style={lbl}>De</label><input type="date" className="input" style={{ width: 160 }} value={dtInicio} onChange={e => setDtInicio(e.target.value)} /></div>
-        <div><label style={lbl}>At�</label><input type="date" className="input" style={{ width: 160 }} value={dtFim} onChange={e => setDtFim(e.target.value)} /></div>
+        <div><label style={lbl}>Até</label><input type="date" className="input" style={{ width: 160 }} value={dtFim} onChange={e => setDtFim(e.target.value)} /></div>
         {(dtInicio || dtFim) && <button onClick={() => { setDtInicio(''); setDtFim('') }} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px 10px', fontSize: 11, fontWeight: 600, alignSelf: 'flex-end' }}>Limpar</button>}
         <div style={{ flex: 1 }} />
         {grupos.length > 0 && <button onClick={exportCSV} className="btn-ghost" style={{ fontSize: 13, gap: 6, alignSelf: 'flex-end' }}><ArrowDownTrayIcon style={{ width: 15, height: 15 }} /> CSV</button>}
@@ -2285,7 +2285,7 @@ function SecaoRelatorios({ sub, sols }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {[REL_LABEL[sub] || 'Grupo', 'Solicita��es', '??? Refei��es', '? Caf�s', 'Valor Total'].map((h, i) => (
+              {[REL_LABEL[sub] || 'Grupo', 'Solicitações', '??? Refeições', '? Cafés', 'Valor Total'].map((h, i) => (
                 <th key={i} style={{ padding: '9px 14px', textAlign: i > 0 ? 'center' : 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6 }}>{h}</th>
               ))}
             </tr>
@@ -2309,7 +2309,7 @@ function SecaoRelatorios({ sub, sols }) {
                 <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 800, color: '#10b981' }}>{fmtBRL(totais.valor)}</td>
               </tr>
             )}
-            {grupos.length === 0 && <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>Nenhum dado no per�odo selecionado.</td></tr>}
+            {grupos.length === 0 && <tr><td colSpan={5} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>Nenhum dado no período selecionado.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -2375,7 +2375,7 @@ export default function Refeicoes() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="??? Refei��es" subtitle="Gest�o completa de refei��es" />
+      <Header title="??? Refeições" subtitle="Gestão completa de refeições" />
       {/* Barra de flow engine quando ativo */}
       {flowEngineOn && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 24px', background: 'rgba(99,102,241,0.08)', borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
@@ -2384,7 +2384,7 @@ export default function Refeicoes() {
             userId={ownerId}
             workspaceId={workspaceId}
             onSelectTask={(entidadeId) => {
-              // Navega para aprova��es e abre o modal pela URL
+              // Navega para aprovações e abre o modal pela URL
               nav('operacoes', 'aprovacoes')
             }}
           />
