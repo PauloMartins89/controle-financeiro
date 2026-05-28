@@ -22,6 +22,9 @@ import PDFDocument from 'pdfkit'
 import { gerarDashboardPDF } from './_pdf/index.js'
 import { buildDashboardFinanceiro }  from './_pdf/modulos/financeiro.js'
 import { buildDashboardFaturamento } from './_pdf/modulos/faturamento.js'
+import { buildDashboardRefeicoes }   from './_pdf/modulos/refeicoes.js'
+import { buildDashboardCompras }     from './_pdf/modulos/compras.js'
+import { buildDashboardEfetivo }     from './_pdf/modulos/efetivo.js'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const APP_URL = process.env.APP_URL || 'https://smartpro.app.br'
@@ -485,11 +488,12 @@ async function construirDashboard(modulo, workspaceId, filtros, supabase, empres
       return buildDashboardFinanceiro(workspaceId, filtros, supabase, empresa)
     case 'faturamento':
       return buildDashboardFaturamento(workspaceId, filtros, supabase, empresa)
-    // Próximos módulos entram aqui:
-    case 'compras':
     case 'refeicoes':
+      return buildDashboardRefeicoes(workspaceId, filtros, supabase, empresa)
+    case 'compras':
+      return buildDashboardCompras(workspaceId, filtros, supabase, empresa)
     case 'efetivo':
-      return null  // sinaliza "em construção" no handler
+      return buildDashboardEfetivo(workspaceId, filtros, supabase, empresa)
     default:
       return null
   }
