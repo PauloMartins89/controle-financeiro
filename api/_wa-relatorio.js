@@ -116,10 +116,8 @@ function detectarPedidoRelatorio(texto) {
   const hit = MODULOS.find(m => m.re.test(t))
   if (!hit) return null  // ex.: "relatorio" sozinho → ignora, deixa fluxo normal decidir
 
-  // Formato: "tabela|extrato|lista|detalhado" força tabela; resto = dashboard
-  const formato = /\b(tabela|extrato|lista|detalhad[oa])\b/.test(t) ? 'tabela'
-                : hit.mod === 'lancamentos' ? 'tabela'
-                : 'dashboard'
+  // Formato: tabela só quando explicitamente pedida (extrato/detalhado/lista/tabela)
+  const formato = /\b(tabela|extrato|lista|detalhad[oa])\b/.test(t) ? 'tabela' : 'dashboard'
 
   return { modulo: hit.mod, formato }
 }
@@ -172,9 +170,9 @@ Regras de MÓDULO (escolha 1):
 - Padrão se ambíguo: financeiro
 
 Regras de FORMATO:
-- "dashboard", "resumo", "gráfico", "painel" → dashboard
-- "extrato", "lista", "detalhado", "detalhe" → tabela
-- Padrão para módulo=lancamentos: tabela; demais módulos: dashboard
+- "dashboard", "resumo", "gráfico", "painel", "relatório" → dashboard
+- "extrato", "lista", "detalhado", "detalhe", "tabela" → tabela
+- Padrão sempre: dashboard
 
 Regras de TIPO (só relevante para financeiro/lancamentos):
 - "entradas" = receitas

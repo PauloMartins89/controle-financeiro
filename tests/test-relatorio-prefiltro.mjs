@@ -21,8 +21,7 @@ function detectarPedidoRelatorio(texto) {
   if (!temGatilho) return null
   const hit = MODULOS.find(m => m.re.test(t))
   if (!hit) return null
-  const formato = /\b(tabela|extrato|lista|detalhad[oa])\b/.test(t) ? 'tabela'
-                : hit.mod === 'lancamentos' ? 'tabela' : 'dashboard'
+  const formato = /\b(tabela|extrato|lista|detalhad[oa])\b/.test(t) ? 'tabela' : 'dashboard'
   return { modulo: hit.mod, formato }
 }
 
