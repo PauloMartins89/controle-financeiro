@@ -18,36 +18,34 @@ export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, em
   const { data_inicio, data_fim, formato } = filtros
   const isLista = formato === 'lista' || formato === 'tabela'
 
+  // Filtra diretamente no banco pelo período solicitado — fidelidade total ao dado pedido
   const { data, error } = await supabase
     .from('refei_solicitacoes')
     .select('id, status, valor_total, total_refeicoes, total_cafes, data_refeicao, restaurante_id, equipe_id, refei_restaurantes(nome), refei_equipes(nome)')
     .eq('workspace_id', workspaceId)
+    .gte('data_refeicao', data_inicio)
+    .lte('data_refeicao', data_fim)
     .order('data_refeicao', { ascending: false })
-    .limit(5000)
+    .limit(2000)
   if (error) throw new Error('Erro ao buscar refeições: ' + error.message)
 
   const sols = (data || [])
     .map(s => ({ ...s, restaurante_nome: s.refei_restaurantes?.nome || null, equipe_nome: s.refei_equipes?.nome || null }))
     .filter(s => s.status !== 'rascunho' && s.status !== 'reprovado')
 
-  // KPIs globais (todo o workspace + recorte mês)
-  const mesAtual = new Date().toISOString().slice(0, 7)
-  const noMes = sols.filter(s => String(s.data_refeicao || '').startsWith(mesAtual))
-  const noPeriodo = sols.filter(s => {
-    const d = s.data_refeicao || ''
-    return d >= data_inicio && d <= data_fim
-  })
+  // Todos os agregados são do período solicitado — sem desvio para "mês atual"
+  const noPeriodo = sols
 
   const sum = (arr, k) => arr.reduce((a, x) => a + Number(x[k] || 0), 0)
 
-  const pendentes  = sols.filter(s => STATUS_PENDENTES.includes(s.status))
-  const aprovados  = sols.filter(s => s.status === 'aprovado')
-  const emPreparo  = sols.filter(s => STATUS_EM_PREPARO.includes(s.status))
-  const entregues  = sols.filter(s => STATUS_ENTREGUES.includes(s.status))
+  const pendentes  = noPeriodo.filter(s => STATUS_PENDENTES.includes(s.status))
+  const aprovados  = noPeriodo.filter(s => s.status === 'aprovado')
+  const emPreparo  = noPeriodo.filter(s => STATUS_EM_PREPARO.includes(s.status))
+  const entregues  = noPeriodo.filter(s => STATUS_ENTREGUES.includes(s.status))
 
-  const refMes    = sum(noMes, 'total_refeicoes')
-  const cafMes    = sum(noMes, 'total_cafes')
-  const valorMes  = sum(noMes, 'valor_total')
+  const totalRef   = sum(noPeriodo, 'total_refeicoes')
+  const totalCaf   = sum(noPeriodo, 'total_cafes')
+  const totalValor = sum(noPeriodo, 'valor_total')
 
   // ── Pizza: por restaurante (top 6, no período) ──────────────────────────
   const porRest = {}
@@ -100,10 +98,10 @@ export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, em
     },
     visaoGeral: isLista
       ? `Listagem detalhada das solicitações de refeição no período. ${noPeriodo.length} solicitação(ões) ativa(s).`
-      : `Panorama operacional de refeições: ${refMes + cafMes} itens consumidos no mês, custo de ${fmtBRL(valorMes)}, ${pendentes.length} solicitação(ões) aguardando aprovação.`,
+      : `Panorama operacional de refeições de ${fmtData(data_inicio)} a ${fmtData(data_fim)}: ${totalRef + totalCaf} itens consumidos, custo de ${fmtBRL(totalValor)}, ${pendentes.length} solicitação(ões) aguardando aprovação.`,
     analise: isLista ? null : [
-      `${refMes + cafMes} itens no mês (${refMes} refeições · ${cafMes} cafés) em ${noMes.length} solicitações.`,
-      `Custo do mês: ${fmtBRL(valorMes)}.`,
+      `${totalRef + totalCaf} itens no período (${totalRef} refeições · ${totalCaf} cafés) em ${noPeriodo.length} solicitações.`,
+      `Custo do período: ${fmtBRL(totalValor)}.`,
       pendentes.length ? `${pendentes.length} solicitações aguardando aprovação.` : 'Nenhuma solicitação pendente — fluxo em dia.',
     ],
     observacoes: isLista ? null : [
@@ -111,10 +109,10 @@ export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, em
       `Status final: ${entregues.length} entregues, ${emPreparo.length} em preparo.`,
     ],
     kpis: [
-      { label: 'Refeições no mês', value: fmtNumero(refMes + cafMes), tone: 'info',    sub: `${refMes} ref · ${cafMes} cafés`, icon: 'chart' },
-      { label: 'Custo no mês',     value: fmtBRL(valorMes),           tone: 'purple',  sub: `${noMes.length} solicitações`,    icon: 'doc' },
-      { label: 'Ag. Aprovação',    value: fmtNumero(pendentes.length),tone: pendentes.length ? 'warning' : 'success', sub: `Aprovadas: ${aprovados.length}`, icon: 'clock' },
-      { label: 'Entregues',         value: fmtNumero(entregues.length),tone: 'success', sub: `Em preparo: ${emPreparo.length}`,  icon: 'check' },
+      { label: 'Refeições no período', value: fmtNumero(totalRef + totalCaf), tone: 'info',    sub: `${totalRef} ref · ${totalCaf} cafés`, icon: 'chart' },
+      { label: 'Custo no período',     value: fmtBRL(totalValor),             tone: 'purple',  sub: `${noPeriodo.length} solicitações`,    icon: 'doc' },
+      { label: 'Ag. Aprovação',        value: fmtNumero(pendentes.length),    tone: pendentes.length ? 'warning' : 'success', sub: `Aprovadas: ${aprovados.length}`, icon: 'clock' },
+      { label: 'Entregues',            value: fmtNumero(entregues.length),    tone: 'success', sub: `Em preparo: ${emPreparo.length}`,  icon: 'check' },
     ],
     pizza: !isLista && topRest.length ? {
       titulo: 'CUSTO POR RESTAURANTE',

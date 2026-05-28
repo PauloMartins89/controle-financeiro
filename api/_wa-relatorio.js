@@ -212,9 +212,13 @@ Regras de TIPO (só relevante para financeiro/lancamentos):
 - "todos" = padrão
 
 Regras de PERÍODO:
-- "últimos 30 dias" → data_inicio = hoje-30d, data_fim = hoje
+- "últimos 7 dias" / "última semana" / "semana passada" → data_inicio = hoje-7d, data_fim = hoje
+- "esta semana" → segunda-feira desta semana até hoje
+- "últimos 30 dias" / "último mês" → data_inicio = hoje-30d, data_fim = hoje
 - "este mês" → primeiro dia do mês atual até hoje
-- "mês passado" → mês anterior completo
+- "mês passado" → primeiro e último dia do mês anterior
+- "hoje" → data_inicio = hoje, data_fim = hoje
+- "ontem" → data_inicio = ontem, data_fim = ontem
 - Sem período mencionado → últimos 30 dias
 
 Se não for pedido de relatório, retorne {"eh_relatorio": false}`,
