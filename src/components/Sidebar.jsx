@@ -210,6 +210,7 @@ export default function Sidebar({ collapsed, onToggle }) {
   const enabledModules = useStore(s => s.enabledModules)
   const isPlatformAdmin = useStore(s => s.isPlatformAdmin)
   const permissoes = useStore(s => s.permissoes)
+  const plataformaModulos = useStore(s => s.plataformaModulos)
   const authUserName = useStore(s => s.authUserName)
   const [weather, setWeather] = useState(null)
   const [weatherLoading, setWeatherLoading] = useState(true)
@@ -238,6 +239,11 @@ export default function Sidebar({ collapsed, onToggle }) {
   function isItemVisible(item) {
     if (item.adminOnly) return isPlatformAdmin
     if (item.empresaAdminOnly) return isPlatformAdmin || permissoes?.includes('*')
+    // Guard por plataforma_modulos (restrição por usuário — whitelist de rotas)
+    if (!isPlatformAdmin && plataformaModulos !== null) {
+      const allowed = plataformaModulos.some(r => item.to === r || item.to.startsWith(r))
+      if (!allowed) return false
+    }
     if (!item.moduleKey) return true
     if (enabledModules === null) return true // sem restrição (admin ou workspace sem config)
     return enabledModules.includes(item.moduleKey) // enabledModules = whitelist de habilitados

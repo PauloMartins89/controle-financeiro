@@ -199,6 +199,27 @@ function RequireEmpresaAdmin({ children }) {
   return children
 }
 
+// Bloqueia rotas não permitidas pelo plataforma_modulos do usuário.
+// Redireciona para "/" sem exibir nada.
+function ModuloGuard() {
+  const location   = useLocation()
+  const navigate   = useNavigate()
+  const isPlatformAdmin  = useStore(s => s.isPlatformAdmin)
+  const plataformaModulos = useStore(s => s.plataformaModulos)
+
+  useEffect(() => {
+    if (isPlatformAdmin || plataformaModulos === null) return
+    // Rotas sempre acessíveis independente de módulo
+    const ALWAYS = ['/', '/acessos', '/perfil', '/plataforma']
+    const path = location.pathname
+    if (ALWAYS.some(r => path === r || path.startsWith(r + '/'))) return
+    const allowed = plataformaModulos.some(r => path === r || path.startsWith(r))
+    if (!allowed) navigate('/', { replace: true })
+  }, [location.pathname, isPlatformAdmin, plataformaModulos, navigate])
+
+  return null
+}
+
 // Protege rota por permissão granular. Usuários sem perfil_id (admin empresa)
 // e platform admins sempre têm acesso. Usuários com perfil restrito precisam
 // ter a combinação modulo.acao na tabela perfil_permissoes.
@@ -254,6 +275,7 @@ export default function App() {
       saldoCaixa: 0, currentUser: null, ownerId: null,
       workspaceId: null, enabledModules: null,
       isPlatformAdmin: false, permissoes: ['*'],
+      plataformaModulos: null,
     }
 
     const load = async () => {
@@ -368,6 +390,22 @@ export default function App() {
           // Se perfil_id é NULL → admin da empresa → permissoes = ['*']
         }
         update.permissoes = permissoes
+
+        // Carrega módulos permitidos por usuário (plataforma_usuario_modulos)
+        // null = sem restrição; array = whitelist de prefixos de rota
+        if (!adminRow && workspaceId) {
+          const { data: userMods } = await supabase
+            .from('plataforma_usuario_modulos')
+            .select('plataforma_modulos!inner(rotas)')
+            .eq('user_id', authUser.id)
+            .eq('workspace_id', workspaceId)
+            .eq('ativo', true)
+          if (userMods && userMods.length > 0) {
+            update.plataformaModulos = userMods.flatMap(m => m.plataforma_modulos?.rotas || [])
+          } else {
+            update.plataformaModulos = null
+          }
+        }
       }
       const rawName = authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || null
       update.authUserName = rawName
@@ -470,6 +508,7 @@ export default function App() {
           <RequireAuth>
             <RequireSubscription>
             <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--bg-primary)' }}>
+              <ModuloGuard />
               <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(c => !c)} />
               <main style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <Routes>
