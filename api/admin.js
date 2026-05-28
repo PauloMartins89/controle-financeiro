@@ -65,7 +65,7 @@ export default async function handler(req, res) {
     if (wsAction === 'workspace-members-list') {
       const { data: members } = await db
         .from('workspace_members')
-        .select('id, user_id, perfil_id, ativo, created_at')
+        .select('id, user_id, perfil_id, ativo, created_at, whatsapp, relatorio_wa')
         .eq('workspace_id', wsMember.workspaceId)
         .order('created_at')
       if (!members || members.length === 0) return res.status(200).json({ members: [] })
@@ -83,6 +83,18 @@ export default async function handler(req, res) {
         nome:  userMap[m.user_id]?.nome  || '—',
       }))
       return res.status(200).json({ members: result })
+    }
+
+    // Atualiza whatsapp + relatorio_wa de um membro
+    if (wsAction === 'workspace-member-update-wa') {
+      const { member_id, whatsapp, relatorio_wa } = req.body
+      if (!member_id) return res.status(400).json({ error: 'member_id obrigatório' })
+      const { error } = await db.from('workspace_members')
+        .update({ whatsapp: whatsapp || null, relatorio_wa: !!relatorio_wa })
+        .eq('id', member_id)
+        .eq('workspace_id', wsMember.workspaceId)
+      if (error) return res.status(400).json({ error: error.message })
+      return res.status(200).json({ ok: true })
     }
 
     // Cria usuário (se ainda não existe) e adiciona ao workspace

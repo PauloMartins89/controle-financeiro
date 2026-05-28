@@ -55,6 +55,7 @@ export async function verificarAcesso(fromPhone, supabase) {
   const sem9   = sem55.length === 11 && sem55[2] === '9' ? sem55.slice(0, 2) + sem55.slice(3) : sem55
   const variantes = [...new Set([fromPhone, sem55, '55' + sem55, com9, '55' + com9, sem9, '55' + sem9])]
 
+  // 1. Verificar na tabela legada wa_relatorio_acesso
   for (const v of variantes) {
     const { data } = await supabase
       .from('wa_relatorio_acesso')
@@ -64,6 +65,27 @@ export async function verificarAcesso(fromPhone, supabase) {
       .maybeSingle()
     if (data) return data
   }
+
+  // 2. Verificar via workspace_members (whatsapp + relatorio_wa OU admin sem perfil)
+  for (const v of variantes) {
+    const { data } = await supabase
+      .from('workspace_members')
+      .select('workspace_id, perfil_id, relatorio_wa')
+      .eq('whatsapp', v)
+      .eq('ativo', true)
+      .maybeSingle()
+    if (data) {
+      const isAdmin = !data.perfil_id
+      if (isAdmin || data.relatorio_wa) {
+        return {
+          workspace_id: data.workspace_id,
+          nome: v,
+          relatorios_permitidos: [],   // [] = todos os módulos liberados
+        }
+      }
+    }
+  }
+
   return null
 }
 

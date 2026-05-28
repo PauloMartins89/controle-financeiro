@@ -218,6 +218,18 @@ function AbaMembros({ workspaceId, apiWs }) {
     toast.success(ativo ? 'Usuário reativado.' : 'Usuário desativado.')
   }
 
+  async function salvarWA(membroId, whatsapp, relatorio_wa) {
+    setSalvando(membroId + '_wa')
+    const res = await apiWs({ action: 'workspace-member-update-wa', member_id: membroId, whatsapp, relatorio_wa })
+    if (res?.ok) {
+      setMembros(prev => prev.map(m => m.id === membroId ? { ...m, whatsapp, relatorio_wa } : m))
+      toast.success('WhatsApp atualizado!')
+    } else {
+      toast.error('Erro ao salvar WhatsApp')
+    }
+    setSalvando(null)
+  }
+
   if (loading) return <div className="py-12 text-center text-gray-400 text-sm">Carregando membros…</div>
 
   return (
@@ -227,6 +239,7 @@ function AbaMembros({ workspaceId, apiWs }) {
           <tr>
             <th className="px-4 py-3 text-left">Usuário</th>
             <th className="px-4 py-3 text-left">Grupo de acesso</th>
+            <th className="px-4 py-3 text-left">WhatsApp / Relatórios WA</th>
             <th className="px-4 py-3 text-left">Status</th>
             <th className="px-4 py-3 text-left">Desde</th>
           </tr>
@@ -250,6 +263,14 @@ function AbaMembros({ workspaceId, apiWs }) {
                 </select>
               </td>
               <td className="px-4 py-3">
+                <WACell
+                  membro={m}
+                  salvando={salvando}
+                  onSave={salvarWA}
+                  isAdmin={!m.perfil_id}
+                />
+              </td>
+              <td className="px-4 py-3">
                 <button
                   onClick={() => alterarAtivo(m.id, !m.ativo)}
                   disabled={salvando === m.id}
@@ -262,10 +283,56 @@ function AbaMembros({ workspaceId, apiWs }) {
             </tr>
           ))}
           {membros.length === 0 && (
-            <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">Nenhum membro encontrado.</td></tr>
+            <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Nenhum membro encontrado.</td></tr>
           )}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+function WACell({ membro: m, salvando, onSave, isAdmin }) {
+  const [wa, setWa] = useState(m.whatsapp || '')
+  const [enabled, setEnabled] = useState(isAdmin ? true : !!m.relatorio_wa)
+  const dirty = wa !== (m.whatsapp || '') || enabled !== (isAdmin ? true : !!m.relatorio_wa)
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[200px]">
+      <input
+        type="text"
+        placeholder="5511999990000"
+        value={wa}
+        onChange={e => setWa(e.target.value.replace(/\D/g, ''))}
+        className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-2 focus:ring-indigo-300"
+      />
+      <div className="flex items-center justify-between gap-2">
+        {isAdmin ? (
+          <span className="text-xs text-indigo-600 font-medium flex items-center gap-1">
+            <span>⚡</span> Admin — acesso WA automático
+          </span>
+        ) : (
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <div
+              onClick={() => setEnabled(v => !v)}
+              className={`relative w-8 h-4 rounded-full transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${enabled ? 'translate-x-4' : ''}`} />
+            </div>
+            <span className={`text-xs font-medium ${enabled ? 'text-green-700' : 'text-gray-400'}`}>
+              {enabled ? 'Relatório WA ativo' : 'Sem acesso WA'}
+            </span>
+          </label>
+        )}
+        {dirty && (
+          <button
+            onClick={() => onSave(m.id, wa || null, isAdmin ? true : enabled)}
+            disabled={salvando === m.id + '_wa'}
+            className="text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Salvar
+          </button>
+        )}
+      </div>
     </div>
   )
 }
