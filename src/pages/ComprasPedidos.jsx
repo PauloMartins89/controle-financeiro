@@ -47,7 +47,7 @@ function ModalEmitirPedido({ sol, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 14, width: '100%', maxWidth: 440, padding: 26 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, width: '100%', maxWidth: 440, padding: 26 }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Emitir Pedido</div>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18 }}>#{sol.numero_requisicao || sol.id.slice(-6).toUpperCase()} — {sol.titulo}</div>
         <div style={{ marginBottom: 20 }}>
@@ -81,7 +81,7 @@ function ModalRecebido({ sol, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 14, width: '100%', maxWidth: 440, padding: 26 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, width: '100%', maxWidth: 440, padding: 26 }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Confirmar Recebimento</div>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18 }}>#{sol.numero_requisicao || sol.id.slice(-6).toUpperCase()} — {sol.titulo}</div>
         <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(14,165,233,0.07)', border: '1px solid rgba(14,165,233,0.2)', marginBottom: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
@@ -123,7 +123,7 @@ function ModalPago({ sol, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 14, width: '100%', maxWidth: 440, padding: 26 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, width: '100%', maxWidth: 440, padding: 26 }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Marcar como Pago</div>
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 18 }}>#{sol.numero_requisicao || sol.id.slice(-6).toUpperCase()} — {sol.titulo}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
@@ -296,7 +296,7 @@ export default function ComprasPedidos() {
             <div style={{ fontSize: 15, fontWeight: 700 }}>Nenhum pedido encontrado</div>
           </div>
         ) : (
-          <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>

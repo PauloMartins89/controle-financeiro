@@ -586,7 +586,7 @@ export default function MapaApontamentoMaquina() {
           <table style={{ borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed', minWidth: '100%' }}>
             {/* THEAD */}
             <thead>
-              <tr style={{ background: 'var(--bg-secondary)' }}>
+              <tr style={{ background: 'var(--bg-muted)' }}>
                 {/* sticky col 1: + */}
                 <th style={{ width: 36, padding: '10px 8px', position: 'sticky', left: 0, zIndex: 20, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)' }} />
                 {/* sticky col 2: Modelo */}

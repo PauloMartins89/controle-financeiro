@@ -153,7 +153,7 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
   return (
     <>
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
         <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontWeight: 800, fontSize: 16 }}>Criar Lote para Cliente</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><XMarkIcon style={{ width: 20, height: 20 }} /></button>
@@ -255,7 +255,7 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
     {/* Modal: Clientes divergentes */}
     {confirmDivModal && (
       <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 500, border: '1px solid rgba(245,158,11,0.4)', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 500, border: '1px solid rgba(245,158,11,0.4)', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
           {/* Header */}
           <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(245,158,11,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⚠️</div>
@@ -353,7 +353,7 @@ function DeAcordoModal({ lote, workspaceId, onClose, onSaved }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 480, border: '1px solid var(--border)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 480, border: '1px solid var(--border)' }}>
         <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 16 }}>Registrar De Acordo</div>
@@ -471,7 +471,7 @@ function GerarLotesModal({ lancamentos, workspaceId, userId, onClose, onSaved })
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
 
         {/* Header */}
         <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -785,7 +785,7 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 480, border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 480, border: '1px solid var(--border)', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1011,7 +1011,7 @@ function LoteCard({ lote, onRefresh }) {
 
   return (
     <>
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 12 }}>
+      <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 12 }}>
         {/* Header do card */}
         <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={loadLancamentos}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -1287,7 +1287,7 @@ export default function LotesCliente() {
             { label: 'APROVADOS',        value: counts.aprovado_cliente || 0, color: '#10b981' },
             { label: 'RECUSADOS',        value: counts.recusado_cliente || 0, color: '#ef4444' },
           ].map(c => (
-            <div key={c.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)' }}>
+            <div key={c.label} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: c.color }}>{c.value}</div>
             </div>

@@ -36,7 +36,7 @@ function SplitInsights({ expenses, people }) {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
         {pagadorPorCategoria.map(({ cat, pessoa, pct, total }) => (
-          <div key={cat} style={{ padding: 12, background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)' }}>
+          <div key={cat} style={{ padding: 12, background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: 20 }}>{getCategoryIcon(cat)}</span>
               <span style={{ fontSize: 13, fontWeight: 600 }}>{cat}</span>

@@ -94,7 +94,7 @@ export default function ComprasRelEconomia() {
                 { label: 'Savings via leilão',  value: fmtCurrency(ecoLeilao),     color: '#8b5cf6' },
                 { label: 'Solicitações analis.', value: comValores.length,         color: '#f59e0b' },
               ].map((k, i) => (
-                <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
+                <div key={i} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>{k.label}</div>
                   <div style={{ fontSize: 18, fontWeight: 900, color: k.color }}>{k.value}</div>
                 </div>
@@ -103,7 +103,7 @@ export default function ComprasRelEconomia() {
 
             {/* Barra comparativa */}
             {totalEstimado > 0 && (
-              <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '22px 24px', border: '1px solid var(--border)', marginBottom: 20 }}>
+              <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '22px 24px', border: '1px solid var(--border)', marginBottom: 20 }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 20 }}>Orçamento × Aprovado</div>
                 <div style={{ marginBottom: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
@@ -137,7 +137,7 @@ export default function ComprasRelEconomia() {
 
             {/* Top savings */}
             {topSavings.length > 0 && (
-              <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '22px 24px', border: '1px solid var(--border)' }}>
+              <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '22px 24px', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 18 }}>
                   <TrophyIcon style={{ width: 16, height: 16, display: 'inline', marginRight: 6, verticalAlign: 'middle', color: '#10b981' }} />
                   Top Economias Geradas

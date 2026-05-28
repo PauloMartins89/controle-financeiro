@@ -35,7 +35,7 @@ function SemaforoCard({ label, status, detail, icon: Icon }) {
 
   return (
     <div style={{
-      background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 18px',
+      background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 18px',
       border: `1px solid ${cfg.color}33`, borderLeft: `3px solid ${cfg.color}`,
       display: 'flex', alignItems: 'center', gap: 12,
     }}>
@@ -56,7 +56,7 @@ function SemaforoCard({ label, status, detail, icon: Icon }) {
 // ─── KPI mini ─────────────────────────────────────────────────────────────────
 function KpiMini({ label, value, color, sub }) {
   return (
-    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)' }}>
+    <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)' }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 22, fontWeight: 900, color }}>{value}</div>
       {sub && <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{sub}</div>}
@@ -346,7 +346,7 @@ export default function SaudeTab() {
   }
 
   const cardStyle = {
-    background: 'var(--bg-secondary)', borderRadius: 14,
+    background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14,
     border: '1px solid var(--border)', padding: '18px 20px', marginBottom: 20,
   }
 
@@ -503,7 +503,7 @@ export default function SaudeTab() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
 
         {/* Últimos lançamentos */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <DocumentTextIcon style={{ width: 15, height: 15, color: '#6366f1' }} />
             <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Últimos Lançamentos</span>
@@ -533,7 +533,7 @@ export default function SaudeTab() {
         </div>
 
         {/* Lotes aguardando cliente */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <UserGroupIcon style={{ width: 15, height: 15, color: '#f59e0b' }} />
             <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Lotes Aguardando Cliente</span>
@@ -563,7 +563,7 @@ export default function SaudeTab() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
 
         {/* Lotes prontos para faturar */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircleIcon style={{ width: 15, height: 15, color: '#10b981' }} />
             <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Prontos para Faturar</span>
@@ -590,7 +590,7 @@ export default function SaudeTab() {
         </div>
 
         {/* Faturamentos pendentes */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <BanknotesIcon style={{ width: 15, height: 15, color: '#8b5cf6' }} />
             <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Faturamentos s/ Recebimento</span>
@@ -620,7 +620,7 @@ export default function SaudeTab() {
 
       {/* Erros WhatsApp */}
       {data.tabelas.errosWA.length > 0 && (
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)', overflow: 'hidden', marginBottom: 20 }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid rgba(239,68,68,0.3)', overflow: 'hidden', marginBottom: 20 }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(239,68,68,0.04)' }}>
             <SignalSlashIcon style={{ width: 15, height: 15, color: '#ef4444' }} />
             <span style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: 0.4 }}>Erros WhatsApp — últimas 24h</span>

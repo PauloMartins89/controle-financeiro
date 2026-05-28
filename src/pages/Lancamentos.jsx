@@ -502,7 +502,7 @@ function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: tipoForm === 'transporte' ? 680 : 540, maxHeight: '92vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: tipoForm === 'transporte' ? 680 : 540, maxHeight: '92vh', overflowY: 'auto', padding: 28 }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -688,7 +688,7 @@ function RotaModal({ lancamento, onClose }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
         {/* ── Header fixo ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 2, borderRadius: '16px 16px 0 0' }}>
@@ -958,7 +958,7 @@ function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: detectedType === 'transporte' && step === 'review' ? 680 : 540, maxHeight: '92vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: detectedType === 'transporte' && step === 'review' ? 680 : 540, maxHeight: '92vh', overflowY: 'auto', padding: 28 }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1208,7 +1208,7 @@ function WhatsAppPanel({ workspaceId }) {
       </div>
 
       {/* Adicionar motorista */}
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, border: '1px solid var(--border)', padding: '20px', marginBottom: 20 }}>
+      <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, border: '1px solid var(--border)', padding: '20px', marginBottom: 20 }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <UserPlusIcon style={{ width: 18, height: 18 }} /> Cadastrar Motorista
         </h3>
@@ -1239,7 +1239,7 @@ function WhatsAppPanel({ workspaceId }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {motoristas.map(m => (
-            <div key={m.id} style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: `1px solid ${m.ativo ? 'rgba(37,211,102,0.2)' : 'var(--border)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div key={m.id} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: `1px solid ${m.ativo ? 'rgba(37,211,102,0.2)' : 'var(--border)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: m.ativo ? 'rgba(37,211,102,0.12)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <PhoneIcon style={{ width: 17, height: 17, color: m.ativo ? '#25d366' : 'var(--text-secondary)' }} />
               </div>
@@ -1362,7 +1362,7 @@ function StatusNotifPanel({ workspaceId }) {
       </div>
 
       {/* Formulário de adição */}
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, border: '1px solid var(--border)', padding: '20px', marginBottom: 24 }}>
+      <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, border: '1px solid var(--border)', padding: '20px', marginBottom: 24 }}>
         <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <UserPlusIcon style={{ width: 17, height: 17 }} /> Adicionar Destinatário
         </h3>
@@ -1407,7 +1407,7 @@ function StatusNotifPanel({ workspaceId }) {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {grupo.items.map(r => (
-                  <div key={r.id} style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: `1px solid ${r.ativo ? 'rgba(129,140,248,0.2)' : 'var(--border)'}`, padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div key={r.id} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: `1px solid ${r.ativo ? 'rgba(129,140,248,0.2)' : 'var(--border)'}`, padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 9, background: r.ativo ? 'rgba(129,140,248,0.1)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <PhoneIcon style={{ width: 16, height: 16, color: r.ativo ? '#818cf8' : 'var(--text-secondary)' }} />
                     </div>
@@ -2164,7 +2164,7 @@ export default function Lancamentos() {
             { label: 'SALDO',     value: fmtCurrency(totalReceitas - totalDespesas), color: totalReceitas - totalDespesas >= 0 ? '#10b981' : '#ef4444' },
             { label: 'PENDENTES', value: pendentes, color: pendentes > 0 ? '#f59e0b' : 'var(--text-primary)' },
           ].map(c => (
-            <div key={c.label} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
+            <div key={c.label} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: c.color }}>{c.value}</div>
             </div>
@@ -2234,7 +2234,7 @@ export default function Lancamentos() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-muted)' }}>
                   <th style={{ padding: '10px 12px', width: 36, textAlign: 'center' }}>
                     <input type="checkbox"
                       checked={filtered.length > 0 && filtered.every(l => selectedIds.has(l.id))}
@@ -2452,7 +2452,7 @@ export default function Lancamentos() {
       {/* Modal: Conflito de Lote */}
       {loteConflito && (
         <div onClick={() => setLoteConflito(null)} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 480, border: '1px solid rgba(239,68,68,0.3)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 480, border: '1px solid rgba(239,68,68,0.3)' }}>
             <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontWeight: 800, fontSize: 16, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ExclamationTriangleIcon style={{ width: 20, height: 20 }} /> Itens já atribuídos a um Lote
@@ -2520,7 +2520,7 @@ export default function Lancamentos() {
 
         return (
           <div onClick={() => setCriarLoteModal(false)} style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 460, border: '1px solid var(--border)' }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 460, border: '1px solid var(--border)' }}>
               <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ fontWeight: 800, fontSize: 16 }}>Criar Lote para Cliente</div>
                 <button onClick={() => setCriarLoteModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><XMarkIcon style={{ width: 20, height: 20 }} /></button>
@@ -2587,7 +2587,7 @@ export default function Lancamentos() {
         }
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 500, border: '1px solid rgba(245,158,11,0.4)', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
+            <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 500, border: '1px solid rgba(245,158,11,0.4)', boxShadow: '0 8px 40px rgba(0,0,0,0.4)' }}>
               <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(245,158,11,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>⚠️</div>
                 <div>

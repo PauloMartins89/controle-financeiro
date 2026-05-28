@@ -347,7 +347,7 @@ export default function ManutencaoPreventiva() {
   )
 }
 
-const cardStyle = { background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }
+const cardStyle = { background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }
 const cardHeaderStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }
 const thStyle = { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', whiteSpace: 'nowrap' }
 const tdStyle = { padding: '10px 14px', verticalAlign: 'middle' }

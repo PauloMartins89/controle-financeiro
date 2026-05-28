@@ -615,7 +615,7 @@ function GerarLotesModal({ lancamentos, workspaceId, userId, onClose, onSaved })
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 640, maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
 
         {/* Header */}
         <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -1079,7 +1079,7 @@ export default function Faturamento() {
               }[lote.status] || { color: '#94a3b8', label: lote.status }
 
               return (
-                <div key={lote.id} style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <div key={lote.id} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
                   {/* Cabeçalho do lote */}
                   <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1255,7 +1255,7 @@ export default function Faturamento() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-secondary)' }}>
+                <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-muted)' }}>
                   <th style={{ padding: '10px 12px', width: 36, textAlign: 'center' }}>
                     <input type="checkbox"
                       checked={filtered.filter(l => l.status === 'aprovado').length > 0 && filtered.filter(l => l.status === 'aprovado').every(l => selectedIds.has(l.id))}
@@ -1444,7 +1444,7 @@ export default function Faturamento() {
       {/* ── Modal: Devolver com Motivo ── */}
       {devolverItem && (
         <div onClick={() => setDevolverItem(null)} style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 420, padding: 28, display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 420, padding: 28, display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(249,115,22,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1483,7 +1483,7 @@ export default function Faturamento() {
       {/* Modal: Confirmação de Ação */}
       {confirmacao && (
         <div onClick={() => setConfirmacao(null)} style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 18, width: '100%', maxWidth: 400, border: `1px solid ${confirmacao.acao === 'aprovado' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 18, width: '100%', maxWidth: 400, border: `1px solid ${confirmacao.acao === 'aprovado' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
             <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
               <ExclamationTriangleIcon style={{ width: 20, height: 20, color: confirmacao.acao === 'aprovado' ? '#10b981' : '#ef4444' }} />
               <div style={{ fontWeight: 800, fontSize: 16, color: confirmacao.acao === 'aprovado' ? '#10b981' : '#ef4444' }}>

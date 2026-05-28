@@ -206,7 +206,7 @@ export default function ManutencaoEquipamentos() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* Abas */}
-        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-secondary)', borderRadius: 10, padding: 4, width: 'fit-content', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, padding: 4, width: 'fit-content', border: '1px solid var(--border)' }}>
           <TabBtn active={aba === 'equipamentos'} onClick={() => { setAba('equipamentos'); setBusca('') }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><WrenchScrewdriverIcon style={{ width: 15, height: 15 }} /> Equipamentos ({equipamentos.length})</span>
           </TabBtn>
@@ -479,7 +479,7 @@ export default function ManutencaoEquipamentos() {
   )
 }
 
-const cardStyle = { background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }
+const cardStyle = { background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }
 const thStyle = { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', background: 'var(--bg-secondary)', whiteSpace: 'nowrap' }
 const tdStyle = { padding: '10px 14px', verticalAlign: 'middle' }
 const labelStyle = { display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.4 }

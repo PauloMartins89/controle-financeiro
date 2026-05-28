@@ -1161,7 +1161,7 @@ export default function RadarComercial() {
                   { cor: '#a78bfa', label: 'Camada 2 — LinkedIn', desc: 'Decisores via Google Search (gratuito)' },
                   { cor: '#10b981', label: 'Camada 3 — Classificação por IA', desc: 'Scoring por cargo, sugestão de abordagem e produto' },
                 ].map((l, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 9, border: '1px solid var(--border)' }}>
+                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', padding: '10px 14px', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 9, border: '1px solid var(--border)' }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.cor, flexShrink: 0, marginTop: 5 }} />
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{l.label}</div>

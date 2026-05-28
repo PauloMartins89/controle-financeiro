@@ -447,7 +447,7 @@ export default function Acessos() {
                     { label: 'Tokens usados', value: aiMetrics.totalTokens.toLocaleString('pt-BR'), color: '#06b6d4' },
                     { label: 'Usuários ativos', value: aiMetrics.uniqueUsers, color: '#10b981' },
                   ].map(m => (
-                    <div key={m.label} style={{ textAlign: 'center', padding: 12, background: 'var(--bg-secondary)', borderRadius: 10 }}>
+                    <div key={m.label} style={{ textAlign: 'center', padding: 12, background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10 }}>
                       <div style={{ fontSize: 22, fontWeight: 800, color: m.color }}>{m.value}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{m.label}</div>
                     </div>

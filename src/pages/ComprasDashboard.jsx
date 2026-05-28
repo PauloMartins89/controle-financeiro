@@ -186,7 +186,7 @@ export default function ComprasDashboard() {
         {/* KPI Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14, marginBottom: 24 }}>
           {kpis.map((k, i) => (
-            <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
+            <div key={i} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, lineHeight: 1.4 }}>{k.label}</div>
                 <k.icon style={{ width: 18, height: 18, color: k.color, flexShrink: 0, opacity: 0.8 }} />
@@ -198,7 +198,7 @@ export default function ComprasDashboard() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
           {/* Pipeline */}
-          <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 18 }}>Pipeline de Status</div>
             {PIPELINE_ORDER.filter(s => statusCounts[s]).map(s => {
               const cfg   = STATUS_CFG[s]
@@ -222,7 +222,7 @@ export default function ComprasDashboard() {
           </div>
 
           {/* Últimas requisições */}
-          <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 18 }}>Últimas Requisições</div>
             {recentes.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13, padding: 24 }}>Nenhuma requisição ainda</div>

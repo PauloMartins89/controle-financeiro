@@ -113,7 +113,7 @@ export default function ComprasRelFornecedor() {
                 { label: 'Maior fornecedor',      value: fornecedores[0]?.nome?.split(' ')[0] || '—', color: '#f59e0b' },
                 { label: 'Maior gasto único',     value: fmtCurrency(fornecedores[0]?.totalGasto || 0), color: '#8b5cf6', isText: true },
               ].map((k, i) => (
-                <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
+                <div key={i} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>{k.label}</div>
                   <div style={{ fontSize: k.isText ? 16 : 26, fontWeight: 900, color: k.color }}>{k.value}</div>
                 </div>
@@ -121,7 +121,7 @@ export default function ComprasRelFornecedor() {
             </div>
 
             {/* Ranking */}
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
               <div style={{ padding: '18px 22px', fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}>
                 Ranking de Fornecedores
               </div>

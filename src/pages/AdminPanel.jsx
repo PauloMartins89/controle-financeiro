@@ -145,7 +145,7 @@ function WorkspaceNotifSection({ workspaceId }) {
       {loading ? (
         <div style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '8px 0' }}>Carregando...</div>
       ) : registros.length === 0 ? (
-        <div style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px dashed var(--border)' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)', padding: '8px 12px', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8, border: '1px dashed var(--border)' }}>
           Nenhum destinatário configurado. Adicione acima para enviar WhatsApp automaticamente ao mudar status.
         </div>
       ) : (
@@ -155,7 +155,7 @@ function WorkspaceNotifSection({ workspaceId }) {
               <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-secondary)', marginBottom: 5 }}>{grupo.label}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {grupo.items.map(r => (
-                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 8, border: `1px solid ${r.ativo ? 'rgba(99,102,241,0.2)' : 'var(--border)'}` }}>
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8, border: `1px solid ${r.ativo ? 'rgba(99,102,241,0.2)' : 'var(--border)'}` }}>
                     <PhoneIcon style={{ width: 14, height: 14, color: r.ativo ? '#818cf8' : 'var(--text-secondary)', flexShrink: 0 }} />
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{r.nome_destinatario}</span>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>+{r.phone_number}</span>
@@ -477,7 +477,7 @@ export default function AdminPanel() {
                               {members.map(m => {
                                 const u = data.authUsers.find(u => u.id === m.user_id)
                                 return (
-                                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
+                                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8 }}>
                                     <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
                                       {(u?.email || '?')[0].toUpperCase()}
                                     </div>
@@ -698,7 +698,7 @@ export default function AdminPanel() {
                   <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                       <thead>
-                        <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+                        <tr style={{ background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
                           {['Nome', 'Telefone', 'Workspace', 'Status', 'Ações'].map(h => (
                             <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                           ))}
@@ -776,7 +776,7 @@ export default function AdminPanel() {
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
-                      <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+                      <tr style={{ background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
                         {['Pessoa', 'Conta (e-mail)', 'Telefone cadastrado', 'Canal WhatsApp', 'Status / Conta canal', 'Ações'].map(h => (
                           <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                         ))}
@@ -946,7 +946,7 @@ export default function AdminPanel() {
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead>
-                      <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+                      <tr style={{ background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
                         {['Quando', 'Telefone', 'Direção', 'Conteúdo'].map(h => (
                           <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                         ))}
@@ -1036,7 +1036,7 @@ export default function AdminPanel() {
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
-                      <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+                      <tr style={{ background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
                         {['E-mail', 'Criado em', 'Último acesso', 'Pessoas vinculadas', 'Canais ativos'].map(h => (
                           <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                         ))}
@@ -1092,7 +1092,7 @@ export default function AdminPanel() {
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
-                      <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+                      <tr style={{ background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
                         {['E-mail', 'Status', 'Plano', 'Expira em', 'Ações'].map(h => (
                           <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                         ))}

@@ -155,7 +155,7 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 500, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
 
         {/* Cabeçalho */}
         <div style={{ marginBottom: 20 }}>
@@ -307,7 +307,7 @@ function ModalSelecionarVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>Selecionar Vencedor do Leilão</div>
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{solicitacao.titulo} — {enviadas.length} proposta(s) recebida(s)</div>
 
@@ -383,7 +383,7 @@ function CardAprovador({ s, cotacoes, onRefresh }) {
   return (
     <>
       <div style={{
-        background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 20px',
+        background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '18px 20px',
         border: `1px solid ${aguardando ? 'rgba(245,158,11,0.3)' : leilaoEncerrado ? 'rgba(139,92,246,0.3)' : 'var(--border)'}`,
         borderLeft: `3px solid ${STATUS_CFG[s.status]?.color || '#94a3b8'}`,
       }}>
@@ -528,7 +528,7 @@ export default function ComprasAprovar() {
     return matchFiltro && matchBusca
   })
 
-  const kpiStyle = { background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--border)', flex: 1 }
+  const kpiStyle = { background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--border)', flex: 1 }
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>

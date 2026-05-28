@@ -352,12 +352,12 @@ function CadastroTab({ tipo, config, ownerId }) {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Carregando...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 12, border: '1px solid var(--border)' }}>
+        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-secondary)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
           <div style={{ fontSize: 13 }}>Nenhum registro encontrado.</div>
           <div style={{ fontSize: 12, marginTop: 6 }}>Clique em "Novo" ou importe uma planilha.</div>
         </div>
       ) : (
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
           {/* Cabeçalho da tabela */}
           <div style={{ display: 'grid', gridTemplateColumns: `1fr ${listCols.slice(1).map(() => '1fr').join(' ')} 90px`, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.03)' }}>
             {listCols.map(f => (

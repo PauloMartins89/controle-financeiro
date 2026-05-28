@@ -36,11 +36,12 @@
 
   :root[data-theme="light"] {
     --bg-primary: #EEF2F8;
-    --bg-secondary: #F4F7FB;
+    --bg-secondary: #FFFFFF;
     --bg-card: #FFFFFF;
     --bg-card-hover: #F8FAFC;
     --bg-muted: #F8FAFC;
-    --input-bg: #ffffff;
+    --bg-input: #F4F7FB;
+    --input-bg: #F4F7FB;
     --accent: #6366f1;
     --accent-hover: #4f46e5;
     --accent-glow: rgba(99,102,241,0.2);

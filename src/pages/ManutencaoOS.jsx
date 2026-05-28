@@ -287,7 +287,7 @@ export default function ManutencaoOS() {
         </div>
 
         {/* Tabela */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -486,7 +486,7 @@ export default function ManutencaoOS() {
                 </div>
 
                 {/* Itens / Peças */}
-                <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
                   <button
                     onClick={() => setShowItens(v => !v)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}

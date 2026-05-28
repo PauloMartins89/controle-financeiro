@@ -103,7 +103,7 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Nova Solicitação de Compra</div>
@@ -235,7 +235,7 @@ function ModalEditar({ solicitacao, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Editar Solicitação</div>
@@ -332,7 +332,7 @@ function ModalHistorico({ solicitacao, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 420, padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 420, padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Histórico do Pedido</div>
@@ -445,7 +445,7 @@ function ModalSelecionarVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', padding: 28 }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>Selecionar Vencedor do Leilão</div>
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{solicitacao.titulo} — {enviadas.length} proposta(s) recebida(s)</div>
 
@@ -595,7 +595,7 @@ function ModalComprovante({ solicitacao, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 440, padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 440, padding: 28 }}>
 
         <div style={{ marginBottom: 18 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Confirmar Compra Realizada</div>
@@ -680,7 +680,7 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
   return (
     <>
       <div style={{
-        background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 18px',
+        background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px',
         border: `1px solid ${isPago ? 'rgba(16,185,129,0.3)' : isAprovado ? 'rgba(16,185,129,0.2)' : 'var(--border)'}`,
         borderLeft: `3px solid ${STATUS[s.status]?.color || '#94a3b8'}`,
       }}>
@@ -940,7 +940,7 @@ function ModalConfigAprovador({ onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 14, width: '100%', maxWidth: 400, padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, width: '100%', maxWidth: 400, padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>⚙️ Aprovador de Compras</div>
@@ -1045,7 +1045,7 @@ export default function Compras() {
   })
 
   const kpiStyle = {
-    background: 'var(--bg-secondary)', borderRadius: 12, padding: '16px 18px',
+    background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px',
     border: '1px solid var(--border)', flex: 1,
   }
 

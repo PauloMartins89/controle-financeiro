@@ -36,7 +36,7 @@ function KPICard({ label, value, sub, color, bg, icon: Icon, onClick, trend }) {
   return (
     <div onClick={onClick}
       style={{
-        background: 'var(--bg-secondary)', borderRadius: 14, padding: '18px 20px',
+        background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '18px 20px',
         border: '1px solid var(--border)', borderTop: `3px solid ${color}`,
         cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow 0.15s',
         display: 'flex', flexDirection: 'column', gap: 6,
@@ -70,7 +70,7 @@ function PipelineStep({ label, count, value, color, bg, isLast }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
       <div style={{
-        flex: 1, background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px',
+        flex: 1, background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 16px',
         border: `1px solid var(--border)`, borderLeft: `3px solid ${color}`,
       }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>{label}</div>
@@ -344,7 +344,7 @@ export default function CentralGerencial() {
   useEffect(() => { load() }, [load])
 
   const cardStyle = {
-    background: 'var(--bg-secondary)', borderRadius: 14,
+    background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14,
     border: '1px solid var(--border)', padding: '20px 20px',
   }
   const sectionTitle = (label, icon) => (

@@ -39,7 +39,7 @@ function ModalCategoria({ cat, onClose, onSaved, workspaceId }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 440, padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 440, padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
           <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>{isEdit ? 'Editar Categoria' : 'Nova Categoria'}</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 20 }}>×</button>
@@ -104,7 +104,7 @@ export default function ComprasCategorias() {
 
   function CategoriaRow({ c }) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: '1px solid var(--border)' }}>
         <div style={{ width: 38, height: 38, borderRadius: 10, background: `${c.cor || '#6366f1'}20`, border: `2px solid ${c.cor || '#6366f1'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <TagIcon style={{ width: 18, height: 18, color: c.cor || '#6366f1' }} />
         </div>

@@ -861,7 +861,7 @@ function ModalRegras({ onClose, workspaceId }) {
               <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 16 }}>Comportamento padrão aplicado automaticamente a todos os agendamentos.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <div style={{ padding: '14px 16px', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: params.lembrete_ativo ? 12 : 0 }}>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>🔔 Lembrete padrão</div>
@@ -882,7 +882,7 @@ function ModalRegras({ onClose, workspaceId }) {
                   )}
                 </div>
 
-                <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ padding: '14px 16px', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>📋 Lista diária às 5h</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Envia a agenda do dia para todos os gestores ativos todo dia às 5h</div>

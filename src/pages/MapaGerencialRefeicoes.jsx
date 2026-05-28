@@ -414,7 +414,7 @@ function MatrixTable({ matrix, days, viewBy, onCellClick, selectedCell, isDark }
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600, tableLayout: 'fixed' }}>
           <thead>
-            <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)' }}>
+            <tr style={{ background: 'var(--bg-muted)', borderBottom: '2px solid var(--border)' }}>
               <th style={{ ...sticky, background: 'var(--bg-secondary)', left: 0, width: 160, minWidth: 160, padding: '10px 14px', textAlign: 'left', fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', borderRight: '1px solid var(--border)', zIndex: 3 }}>
                 {col1}
               </th>
@@ -460,7 +460,7 @@ function MatrixTable({ matrix, days, viewBy, onCellClick, selectedCell, isDark }
           </tbody>
 
           <tfoot>
-            <tr style={{ background: 'var(--bg-secondary)', borderTop: '2px solid var(--border)' }}>
+            <tr style={{ background: 'var(--bg-muted)', borderTop: '2px solid var(--border)' }}>
               <td
                 colSpan={2}
                 style={{ ...sticky, background: 'var(--bg-secondary)', left: 0, padding: '8px 14px', fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', borderRight: '2px solid var(--border)', zIndex: 3 }}

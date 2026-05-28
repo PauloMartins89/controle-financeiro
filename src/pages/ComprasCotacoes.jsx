@@ -78,7 +78,7 @@ function ModalAddFornecedor({ solicitacao, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Convidar Fornecedor</div>
@@ -145,7 +145,7 @@ function ModalVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '85vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '85vh', overflowY: 'auto', padding: 28 }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>Selecionar Vencedor</div>
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{solicitacao.titulo} · {enviadas.length} proposta(s)</div>
 
@@ -219,7 +219,7 @@ function LeilaoCard({ sol, cotacoesDaSol, onRefresh }) {
 
   return (
     <>
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '20px 22px', border: `1px solid ${isEncerrado ? 'rgba(249,115,22,0.25)' : 'rgba(139,92,246,0.25)'}`, borderLeft: `4px solid ${isEncerrado ? '#f97316' : '#8b5cf6'}` }}>
+      <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '20px 22px', border: `1px solid ${isEncerrado ? 'rgba(249,115,22,0.25)' : 'rgba(139,92,246,0.25)'}`, borderLeft: `4px solid ${isEncerrado ? '#f97316' : '#8b5cf6'}` }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>

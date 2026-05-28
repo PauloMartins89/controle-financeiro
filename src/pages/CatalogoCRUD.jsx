@@ -367,7 +367,7 @@ export default function CatalogoCRUD() {
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+              <tr style={{ background: 'var(--bg-muted)', borderBottom: '1px solid var(--border)' }}>
                 {['Fabricante', 'Família', 'Modelo', 'Config.', 'Classe / Tipo', 'Potência (CV)', 'Ano', 'Transmissão', 'Tração', 'Motor', 'Ações'].map(h => (
                   <th key={h} style={{ padding: '9px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-secondary)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}

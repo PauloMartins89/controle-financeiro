@@ -203,7 +203,7 @@ export default function ComprasPesquisaPrecos({ produto: produtoProp, onBenchmar
             ].map(card => {
               const Icon = card.icon
               return (
-                <div key={card.label} style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '18px 20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div key={card.label} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '18px 20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14 }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Icon style={{ width: 22, height: 22, color: card.color }} />
                   </div>
@@ -240,7 +240,7 @@ export default function ComprasPesquisaPrecos({ produto: produtoProp, onBenchmar
         </div>
 
         {/* Resultado container */}
-        <div style={{ background: 'var(--bg-secondary)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
 
           {loading ? (
             <div style={{ padding: 56, textAlign: 'center', color: 'var(--text-secondary)' }}>

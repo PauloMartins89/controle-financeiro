@@ -108,7 +108,7 @@ export default function ComprasParametros() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 660 }}>
             {PARAMETROS.map(secao => (
-              <div key={secao.secao} style={{ background: 'var(--bg-secondary)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
+              <div key={secao.secao} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <CogIcon style={{ width: 16, height: 16, color: '#0ea5e9' }} />
                   <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>{secao.secao}</span>

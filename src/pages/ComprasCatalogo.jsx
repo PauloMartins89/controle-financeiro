@@ -650,7 +650,7 @@ function ModalHistoricoPrecos({ item, historico, loading, refPrice, onClose }) {
             <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: 'var(--bg-secondary)' }}>
+                  <tr style={{ background: 'var(--bg-muted)' }}>
                     {['Data', 'Requisição', 'Fornecedor', 'Preço Unit.', ''].map(h => (
                       <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, borderBottom: '1px solid var(--border)', textTransform: 'uppercase' }}>{h}</th>
                     ))}

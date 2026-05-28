@@ -38,7 +38,7 @@ function ModalRecebimento({ sol, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-secondary)', borderRadius: 16, width: '100%', maxWidth: 460, padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: 460, padding: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>Confirmar Recebimento</div>
@@ -90,7 +90,7 @@ function PedidoCard({ sol, onRefresh }) {
 
   return (
     <>
-      <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '18px 20px', border: `1px solid ${atrasado ? 'rgba(239,68,68,0.25)' : 'var(--border)'}`, borderLeft: `4px solid ${atrasado ? '#ef4444' : '#0ea5e9'}` }}>
+      <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '18px 20px', border: `1px solid ${atrasado ? 'rgba(239,68,68,0.25)' : 'var(--border)'}`, borderLeft: `4px solid ${atrasado ? '#ef4444' : '#0ea5e9'}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
@@ -164,7 +164,7 @@ export default function ComprasRecebimento() {
             { label: 'Atrasados',          value: atrasados.length,    color: '#ef4444', icon: ExclamationTriangleIcon },
             { label: 'Total a pagar',      value: fmtCurrency(data.reduce((a, s) => a + (s.valor_aprovado || s.valor_estimado || 0), 0)), color: '#f59e0b', isText: true, icon: CheckCircleIcon },
           ].map((k, i) => (
-            <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
+            <div key={i} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>{k.label}</div>
                 <k.icon style={{ width: 16, height: 16, color: k.color, opacity: 0.8 }} />

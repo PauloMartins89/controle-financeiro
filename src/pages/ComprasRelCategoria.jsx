@@ -111,7 +111,7 @@ export default function ComprasRelCategoria() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
             {/* Barras horizontais */}
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '22px 24px', border: '1px solid var(--border)' }}>
+            <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '22px 24px', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 20 }}>Gasto por Categoria</div>
               {categorias.map((c, i) => {
                 const pct = totalGeral > 0 ? (c.total / totalGeral) * 100 : 0
@@ -138,7 +138,7 @@ export default function ComprasRelCategoria() {
             </div>
 
             {/* Tabela detalhada */}
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 14, padding: '22px 24px', border: '1px solid var(--border)' }}>
+            <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '22px 24px', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 20 }}>Detalhamento</div>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
