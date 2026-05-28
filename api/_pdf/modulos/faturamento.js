@@ -15,41 +15,47 @@ import { PALETA } from '../charts.js'
 export async function buildDashboardFaturamento(workspaceId, filtros, supabase, empresa) {
   const { data_inicio, data_fim, cliente } = filtros
 
-  let q = supabase
+  // 1) TODOS os pagamentos do workspace (KPIs precisam bater com a tela "Contas a Receber",
+  //    que não filtra por data).
+  let qAll = supabase
     .from('pagamentos')
     .select('id, descricao, valor_total, data_pagamento, data_recebimento, numero_nf, status')
     .eq('workspace_id', workspaceId)
-    .gte('data_pagamento', data_inicio)
-    .lte('data_pagamento', data_fim)
     .order('data_pagamento', { ascending: false })
 
-  if (cliente) q = q.ilike('descricao', `%${cliente}%`)
+  if (cliente) qAll = qAll.ilike('descricao', `%${cliente}%`)
 
-  const { data, error } = await q.limit(1000)
-  if (error) throw new Error('Erro ao buscar pagamentos: ' + error.message)
+  const { data: dataAll, error: errAll } = await qAll.limit(5000)
+  if (errAll) throw new Error('Erro ao buscar pagamentos: ' + errAll.message)
+  const todos = dataAll || []
 
-  const pags     = data || []
-  const recebidos = pags.filter(p => p.status === 'recebido')
-  const pendentes = pags.filter(p => p.status !== 'recebido')
-  const totalGeral    = pags.reduce((s, p) => s + Number(p.valor_total || 0), 0)
+  // 2) Recortes do período (apenas para tabela detalhada)
+  const noPeriodo = todos.filter(p => {
+    const d = p.data_pagamento || ''
+    return d >= data_inicio && d <= data_fim
+  })
+
+  // ── KPIs globais (espelham a tela /pagamentos) ──────────────────────────
+  const recebidos = todos.filter(p => p.status === 'recebido')
+  const pendentes = todos.filter(p => p.status !== 'recebido')
+  const totalGeral    = todos.reduce((s, p) => s + Number(p.valor_total || 0), 0)
   const totalRecebido = recebidos.reduce((s, p) => s + Number(p.valor_total || 0), 0)
   const totalPendente = pendentes.reduce((s, p) => s + Number(p.valor_total || 0), 0)
 
-  // Faturado no mês atual (independente do filtro, igual à tela)
   const mesAtual = new Date().toISOString().slice(0, 7)
-  const totalMes = pags
+  const totalMes = todos
     .filter(p => String(p.data_pagamento || '').startsWith(mesAtual))
     .reduce((s, p) => s + Number(p.valor_total || 0), 0)
 
-  // Pizza: distribuição por status
+  // ── Pizza: distribuição por status (global) ─────────────────────────────
   const pizzaData = [
     { label: 'Já Recebido',     value: totalRecebido, color: COR.success },
     { label: 'Ag. Recebimento', value: totalPendente, color: COR.warning },
   ].filter(x => x.value > 0)
 
-  // Barras: faturado por mês (até 12 meses dentro do range)
+  // ── Barras: faturado por mês (últimos 12 meses, global) ─────────────────
   const porMes = {}
-  for (const p of pags) {
+  for (const p of todos) {
     const m = String(p.data_pagamento || '').slice(0, 7)
     if (!m) continue
     porMes[m] = (porMes[m] || 0) + Number(p.valor_total || 0)
@@ -61,8 +67,8 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
   })
   const dataBarras = meses.map(m => Number(porMes[m].toFixed(2)))
 
-  // Tabela detalhada (até 25 lançamentos)
-  const linhas = pags.slice(0, 25).map(p => ({
+  // ── Tabela: lançamentos DO PERÍODO solicitado ───────────────────────────
+  const linhas = noPeriodo.slice(0, 25).map(p => ({
     data:     fmtData(p.data_pagamento),
     nf:       p.numero_nf || '—',
     desc:     p.descricao || '—',
@@ -78,7 +84,7 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
     kpis: [
-      { label: 'Total Faturado',    value: fmtBRL(totalGeral),    color: COR.primary, sub: `${pags.length} faturamento(s)` },
+      { label: 'Total Faturado',    value: fmtBRL(totalGeral),    color: COR.primary, sub: `${todos.length} faturamento(s)` },
       { label: 'Ag. Recebimento',   value: fmtBRL(totalPendente), color: COR.warning, sub: `${pendentes.length} pendente(s)` },
       { label: 'Já Recebido',       value: fmtBRL(totalRecebido), color: COR.success, sub: `${recebidos.length} confirmado(s)` },
       { label: 'Faturado Este Mês', value: fmtBRL(totalMes),      color: COR.info },
@@ -90,14 +96,14 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
       colors: pizzaData.map(x => x.color),
     } : null,
     barras: meses.length ? {
-      titulo: 'Faturamento por mês',
+      titulo: 'Faturamento por mês (últimos 12)',
       labels: labelsBarras,
       data:   dataBarras,
       color:  COR.primary,
       label:  'R$',
     } : null,
     tabela: linhas.length ? {
-      titulo: 'Lançamentos do período',
+      titulo: `Lançamentos do período (${noPeriodo.length})`,
       colunas: [
         { key: 'data',   label: 'Data',   width: 60 },
         { key: 'nf',     label: 'NF',     width: 70 },

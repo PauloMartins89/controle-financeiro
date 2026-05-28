@@ -10,32 +10,36 @@ import { PALETA } from '../charts.js'
 export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, empresa) {
   const { data_inicio, data_fim, cliente, tipo = 'todos' } = filtros
 
-  let q = supabase
+  // 1) TODOS os lançamentos do workspace (para KPIs globais que batem com a tela)
+  let qAll = supabase
     .from('lancamentos')
     .select('id, tipo, descricao, valor, data, categoria, status')
     .eq('workspace_id', workspaceId)
-    .gte('data', data_inicio)
-    .lte('data', data_fim)
     .order('data', { ascending: false })
 
-  if (tipo === 'entradas') q = q.eq('tipo', 'receita')
-  if (tipo === 'saidas')   q = q.eq('tipo', 'despesa')
-  if (cliente)             q = q.ilike('descricao', `%${cliente}%`)
+  if (tipo === 'entradas') qAll = qAll.eq('tipo', 'receita')
+  if (tipo === 'saidas')   qAll = qAll.eq('tipo', 'despesa')
+  if (cliente)             qAll = qAll.ilike('descricao', `%${cliente}%`)
 
-  const { data, error } = await q.limit(1000)
+  const { data, error } = await qAll.limit(5000)
   if (error) throw new Error('Erro ao buscar lançamentos: ' + error.message)
 
-  const lanc = data || []
-  const receitas = lanc.filter(l => l.tipo === 'receita')
-  const despesas = lanc.filter(l => l.tipo === 'despesa')
+  const todos     = data || []
+  const noPeriodo = todos.filter(l => {
+    const d = String(l.data || '').slice(0, 10)
+    return d >= data_inicio && d <= data_fim
+  })
+
+  // ── KPIs globais ─────────────────────────────────────────────────────────
+  const receitas = todos.filter(l => l.tipo === 'receita')
+  const despesas = todos.filter(l => l.tipo === 'despesa')
   const sumEntradas = receitas.reduce((s, l) => s + Number(l.valor || 0), 0)
   const sumSaidas   = despesas.reduce((s, l) => s + Number(l.valor || 0), 0)
   const saldo       = sumEntradas - sumSaidas
+  const pagos       = todos.filter(l => String(l.status || '').toLowerCase() === 'pago')
+  const pctPago     = todos.length ? Math.round((pagos.length / todos.length) * 100) : 0
 
-  const pagos      = lanc.filter(l => String(l.status || '').toLowerCase() === 'pago')
-  const pctPago    = lanc.length ? Math.round((pagos.length / lanc.length) * 100) : 0
-
-  // Pizza: top categorias de despesa
+  // ── Pizza: top categorias de despesa (global) ───────────────────────────
   const porCategoria = {}
   for (const l of despesas) {
     const k = l.categoria || 'Sem categoria'
@@ -45,9 +49,9 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
 
-  // Barras: entradas x saídas por dia (limitado a 14 últimos dias do range)
+  // ── Barras: saldo diário DO PERÍODO solicitado ──────────────────────────
   const porDia = {}
-  for (const l of lanc) {
+  for (const l of noPeriodo) {
     const d = String(l.data).slice(0, 10)
     porDia[d] = porDia[d] || { receita: 0, despesa: 0 }
     porDia[d][l.tipo] = (porDia[d][l.tipo] || 0) + Number(l.valor || 0)
@@ -64,7 +68,7 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
       { label: 'Entradas',  value: fmtBRL(sumEntradas), color: COR.success, sub: `${receitas.length} registros` },
       { label: 'Saídas',    value: fmtBRL(sumSaidas),   color: COR.danger,  sub: `${despesas.length} registros` },
       { label: 'Saldo',     value: fmtBRL(saldo),       color: saldo >= 0 ? COR.info : COR.warning },
-      { label: '% Pago',    value: pctPago + '%',       color: COR.primary, sub: `${pagos.length} de ${lanc.length}` },
+      { label: '% Pago',    value: pctPago + '%',       color: COR.primary, sub: `${pagos.length} de ${todos.length}` },
     ],
     pizza: topCat.length ? {
       titulo: 'Top categorias de despesa',
@@ -73,7 +77,7 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
       colors: topCat.map((_, i) => PALETA[i % PALETA.length]),
     } : null,
     barras: dias.length ? {
-      titulo: 'Saldo diário (entradas − saídas)',
+      titulo: `Saldo diário no período (${noPeriodo.length} registros)`,
       labels: labelsBarras,
       data:   dataBarras,
       color:  COR.primary,
