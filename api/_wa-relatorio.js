@@ -19,6 +19,8 @@
 
 import Groq from 'groq-sdk'
 import PDFDocument from 'pdfkit'
+import { gerarDashboardPDF } from './_pdf/index.js'
+import { buildDashboardFinanceiro } from './_pdf/modulos/financeiro.js'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const APP_URL = process.env.APP_URL || 'https://smartpro.app.br'
@@ -77,28 +79,47 @@ export async function parsearPedido(texto, today) {
     messages: [
       {
         role: 'system',
-        content: `Você é um parser de pedidos de relatório financeiro. Extraia as informações do texto e retorne APENAS JSON válido, sem explicação.
+        content: `Você é um parser de pedidos de relatório via WhatsApp. Extraia as informações e retorne APENAS JSON válido, sem explicação.
 
 Hoje: ${today}
 
 Saída esperada:
 {
   "eh_relatorio": true,
+  "modulo": "financeiro|lancamentos|faturamento|compras|refeicoes|efetivo",
+  "formato": "dashboard|tabela",
   "tipo": "entradas|saidas|todos",
-  "cliente": "nome do cliente/fornecedor/pessoa mencionada ou null",
+  "cliente": "nome mencionado ou null",
   "data_inicio": "YYYY-MM-DD",
   "data_fim": "YYYY-MM-DD"
 }
 
-Regras:
-- "entradas" = receitas/créditos
-- "saidas" = despesas/débitos
-- "todos" = tudo (padrão se não especificado)
+Regras de MÓDULO (escolha 1):
+- "financeiro", "dashboard financeiro", "resumo financeiro", "panorama" → financeiro
+- "extrato", "lançamentos", "lista" → lancamentos
+- "faturamento", "vendas", "recebimentos" → faturamento
+- "compras", "pedidos", "cotações", "fornecedores" → compras
+- "refeição", "refeições", "refeicao" → refeicoes
+- "efetivo", "colaboradores", "funcionários" → efetivo
+- Padrão se ambíguo: financeiro
+
+Regras de FORMATO:
+- "dashboard", "resumo", "gráfico", "painel" → dashboard
+- "extrato", "lista", "detalhado", "detalhe" → tabela
+- Padrão para módulo=lancamentos: tabela; demais módulos: dashboard
+
+Regras de TIPO (só relevante para financeiro/lancamentos):
+- "entradas" = receitas
+- "saidas" = despesas
+- "todos" = padrão
+
+Regras de PERÍODO:
 - "últimos 30 dias" → data_inicio = hoje-30d, data_fim = hoje
 - "este mês" → primeiro dia do mês atual até hoje
 - "mês passado" → mês anterior completo
-- Se não mencionar período, use os últimos 30 dias
-- Se não for um pedido de relatório/extrato/lançamento, retorne {"eh_relatorio": false}`,
+- Sem período mencionado → últimos 30 dias
+
+Se não for pedido de relatório, retorne {"eh_relatorio": false}`,
       },
       { role: 'user', content: texto },
     ],
@@ -116,6 +137,11 @@ Regras:
     }
     if (!parsed.data_fim) parsed.data_fim = today
     if (!parsed.tipo || !['entradas', 'saidas', 'todos'].includes(parsed.tipo)) parsed.tipo = 'todos'
+    const MODULOS = ['financeiro','lancamentos','faturamento','compras','refeicoes','efetivo']
+    if (!parsed.modulo || !MODULOS.includes(parsed.modulo)) parsed.modulo = 'financeiro'
+    if (!parsed.formato || !['dashboard','tabela'].includes(parsed.formato)) {
+      parsed.formato = parsed.modulo === 'lancamentos' ? 'tabela' : 'dashboard'
+    }
     return parsed
   } catch {
     return { eh_relatorio: false }
@@ -317,14 +343,21 @@ export async function handleRelatorioWA(texto, fromPhone, supabase) {
 
     const today = new Date().toISOString().slice(0, 10)
 
-    // 2. Parsear intenção
+    // 2. Parsear intenção (modulo + formato + filtros)
     const pedido = await parsearPedido(texto, today)
     if (!pedido.eh_relatorio) return false
 
-    // Confirma ao usuário que está gerando
+    // 2.1 Checagem de permissão por módulo (relatorios_permitidos)
+    const permitidos = acesso.relatorios_permitidos || []
+    const permiteTudo = permitidos.includes('todos')
+    if (!permiteTudo && !permitidos.includes(pedido.modulo)) {
+      await enviarTextoWA(fromPhone, `🔒 Você não tem permissão para o relatório de *${pedido.modulo}*.`)
+      return true
+    }
+
     await enviarTextoWA(fromPhone, '⏳ Gerando seu relatório, aguarde...')
 
-    // 3. Buscar nome da empresa (workspace)
+    // 3. Nome da empresa
     const { data: ws } = await supabase
       .from('workspaces')
       .select('nome')
@@ -332,27 +365,54 @@ export async function handleRelatorioWA(texto, fromPhone, supabase) {
       .maybeSingle()
     const nomeEmpresa = ws?.nome || null
 
-    // 4. Buscar lançamentos
-    const lancamentos = await buscarLancamentos(acesso.workspace_id, pedido, supabase)
+    // 4. Roteamento por módulo + formato
+    let pdfBuffer
+    let caption
+    const periodoLabel = `${pedido.data_inicio.split('-').reverse().join('/')} a ${pedido.data_fim.split('-').reverse().join('/')}`
 
-    // 5. Gerar PDF
-    const pdfBuffer = await gerarPDFBuffer(lancamentos, pedido, nomeEmpresa)
+    if (pedido.modulo === 'lancamentos' && pedido.formato === 'tabela') {
+      // Fluxo legado (tabela) — mantém comportamento original
+      const lancamentos = await buscarLancamentos(acesso.workspace_id, pedido, supabase)
+      pdfBuffer = await gerarPDFBuffer(lancamentos, pedido, nomeEmpresa)
+      const tipoLabel = pedido.tipo === 'entradas' ? 'Entradas' : pedido.tipo === 'saidas' ? 'Saídas' : 'Lançamentos'
+      caption = `📊 *${tipoLabel}${pedido.cliente ? ' — ' + pedido.cliente : ''}*\n📅 ${periodoLabel}\n📋 ${lancamentos.length} registro(s)`
+    } else {
+      // Fluxo dashboard padronizado
+      const dados = await construirDashboard(pedido.modulo, acesso.workspace_id, pedido, supabase, nomeEmpresa)
+      if (!dados) {
+        await enviarTextoWA(fromPhone, `🛠️ Relatório de *${pedido.modulo}* ainda em construção. Em breve!`)
+        return true
+      }
+      pdfBuffer = await gerarDashboardPDF(dados)
+      caption = `📊 *${dados.titulo}*\n📅 ${periodoLabel}`
+    }
 
-    // 6. Upload
+    // 5. Upload + envio
     const pdfUrl = await uploadPDF(pdfBuffer, supabase)
-
-    // 7. Enviar
-    const tipoLabel = pedido.tipo === 'entradas' ? 'Entradas' : pedido.tipo === 'saidas' ? 'Saídas' : 'Lançamentos'
-    const caption = `📊 *${tipoLabel}${pedido.cliente ? ' — ' + pedido.cliente : ''}*\n` +
-      `📅 ${pedido.data_inicio.split('-').reverse().join('/')} a ${pedido.data_fim.split('-').reverse().join('/')}\n` +
-      `📋 ${lancamentos.length} registro(s) encontrado(s)`
-
     await enviarDocumentoWA(fromPhone, pdfUrl, caption)
     return true
 
   } catch (err) {
     console.error('[WA Relatório] erro:', err?.message || err)
     await enviarTextoWA(fromPhone, '❌ Não consegui gerar o relatório agora. Tente novamente em instantes.')
-    return true // consumiu a mensagem mesmo com erro
+    return true
+  }
+}
+
+// ─── Router de módulos ───────────────────────────────────────────────────────
+
+async function construirDashboard(modulo, workspaceId, filtros, supabase, empresa) {
+  switch (modulo) {
+    case 'financeiro':
+    case 'lancamentos':   // dashboard de lancamentos = financeiro
+      return buildDashboardFinanceiro(workspaceId, filtros, supabase, empresa)
+    // Próximos módulos entram aqui:
+    case 'faturamento':
+    case 'compras':
+    case 'refeicoes':
+    case 'efetivo':
+      return null  // sinaliza "em construção" no handler
+    default:
+      return null
   }
 }
