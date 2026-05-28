@@ -77,6 +77,12 @@ export async function buildDashboardClientes(workspaceId, filtros, supabase, emp
     titulo:    isLista ? 'Lista — Aprovação de Clientes' : 'Aprovação de Clientes',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
+    sumario: isLista ? [] : [
+      `${clientes.length} cliente(s) ativo(s) — ${inadimplentes} com pendência em aberto.`,
+      `${fmtBRL(totalPendente)} a receber; ${fmtBRL(totalRecebido)} já recebidos.`,
+      totalGeral ? `Taxa de recebimento: ${((totalRecebido / totalGeral) * 100).toFixed(1)}%.` : 'Sem faturamento registrado ainda.',
+      top10[0] ? `Maior pendência: ${top10[0].cliente} (${fmtBRL(top10[0].pendente)}).` : 'Nenhuma pendência em aberto.',
+    ],
     kpis: [
       { label: 'Clientes ativos',     value: fmtNumero(clientes.length),    color: COR.primary, sub: `${inadimplentes} com pendência` },
       { label: 'A receber',           value: fmtBRL(totalPendente),         color: totalPendente ? COR.warning : COR.success, sub: `${noPeriodo.filter(p => p.status !== 'recebido').length} no período` },

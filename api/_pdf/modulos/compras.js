@@ -87,6 +87,12 @@ export async function buildDashboardCompras(workspaceId, filtros, supabase, empr
     titulo:    isLista ? 'Lista — Compras' : 'Relatório de Compras',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
     empresa,
+    sumario: isLista ? [] : [
+      `${todas.length} solicitações registradas — ${noPeriodo.length} no período selecionado.`,
+      `${pendentes.length} em aprovação; ${aprovadas.length} concluídas (${recusadas.length} recusadas).`,
+      `Valor aprovado: ${fmtBRL(valorAprovado)} · Economia gerada: ${fmtBRL(economiaTotal)}.`,
+      pizzaArr[0] ? `Maior bloco de pedidos: ${pizzaArr[0][0]} (${pizzaArr[0][1]} solicitações).` : 'Sem pedidos registrados.',
+    ],
     kpis: [
       { label: 'Total solicitações', value: fmtNumero(todas.length),    color: COR.primary, sub: `${noPeriodo.length} no período` },
       { label: 'Em aprovação',       value: fmtNumero(pendentes.length),color: pendentes.length ? COR.warning : COR.success },

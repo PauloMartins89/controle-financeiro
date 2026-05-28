@@ -80,6 +80,12 @@ export async function buildDashboardFinanceiro(workspaceId, filtros, supabase, e
     titulo:    isLista ? 'Lista — Lançamentos Financeiros' : 'Relatório Financeiro',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
+    sumario: isLista ? [] : [
+      `Saldo do período: ${fmtBRL(saldo)} (${todos.length} lançamentos no total).`,
+      `Entradas somam ${fmtBRL(sumEntradas)} em ${receitas.length} registro(s); saídas, ${fmtBRL(sumSaidas)} em ${despesas.length}.`,
+      topCat[0] ? `Maior despesa: ${topCat[0][0]} (${fmtBRL(topCat[0][1])}).` : 'Sem despesas registradas.',
+      `${pctPago}% dos lançamentos já estão quitados (${pagos.length} de ${todos.length}).`,
+    ],
     kpis: [
       { label: 'Entradas',  value: fmtBRL(sumEntradas), color: COR.success, sub: `${receitas.length} registros` },
       { label: 'Saídas',    value: fmtBRL(sumSaidas),   color: COR.danger,  sub: `${despesas.length} registros` },

@@ -245,18 +245,76 @@ export function renderTabela(doc, { colunas, linhas }) {
 }
 
 /**
- * Rodapé com linha divisória, marca e URL.
+ * Rodapé padronizado com paginação (X / Y).
  */
-export function renderFooter(doc) {
+export function renderFooter(doc, pageNum, totalPages) {
   const M = 40
   const W = doc.page.width
   const y = doc.page.height - 36
   doc.moveTo(M, y).lineTo(W - M, y).lineWidth(0.5).strokeColor(COR.border).stroke()
-  doc.fontSize(7).fillColor(COR.muted).font('Helvetica').text(
-    `SmartPro · Gestão Inteligente  ·  ${new Date().toLocaleString('pt-BR')}`,
-    M, y + 8, { width: W - M * 2, align: 'center' }
-  )
-  doc.fontSize(6.5).fillColor(COR.faint).text(
-    'smartpro.app.br', M, y + 19, { width: W - M * 2, align: 'center' }
-  )
+
+  // esquerda: marca
+  doc.fontSize(7).fillColor(COR.muted).font('Helvetica')
+     .text('SmartPro · Gestão Inteligente', M, y + 8, { width: 200, align: 'left' })
+
+  // centro: timestamp
+  doc.fontSize(7).fillColor(COR.muted).font('Helvetica')
+     .text(new Date().toLocaleString('pt-BR'), M, y + 8, { width: W - M * 2, align: 'center' })
+
+  // direita: paginação
+  if (typeof pageNum === 'number' && typeof totalPages === 'number') {
+    doc.fontSize(7).fillColor(COR.muted).font('Helvetica-Bold')
+       .text(`Página ${pageNum} de ${totalPages}`, W - M - 120, y + 8, { width: 120, align: 'right' })
+  }
+
+  doc.fontSize(6.5).fillColor(COR.faint).font('Helvetica')
+     .text('smartpro.app.br', M, y + 20, { width: W - M * 2, align: 'center' })
+}
+
+/**
+ * Sumário executivo: bloco compacto com bullets de insights.
+ * Renderizado logo abaixo dos KPIs.
+ */
+export function renderSumario(doc, bullets = []) {
+  if (!bullets.length) return doc.y
+  const M = 40
+  const W = doc.page.width - M * 2
+  const padX = 14, padY = 12
+  const lineH = 12
+  const altura = padY * 2 + bullets.length * lineH + 14 // header
+
+  const y0 = doc.y + 6
+  // card de fundo
+  doc.roundedRect(M, y0, W, altura, 10).fill(COR.primarySoft)
+  // header
+  doc.fillColor(COR.primaryDk).font('Helvetica-Bold').fontSize(8.5)
+     .text('SUMÁRIO EXECUTIVO', M + padX, y0 + padY, { characterSpacing: 0.8 })
+
+  // bullets
+  doc.fillColor(COR.text).font('Helvetica').fontSize(9)
+  bullets.forEach((b, i) => {
+    const by = y0 + padY + 14 + i * lineH
+    // bullet dot
+    doc.circle(M + padX + 3, by + 4, 1.8).fill(COR.primary)
+    doc.fillColor(COR.text).font('Helvetica').fontSize(9)
+       .text(String(b), M + padX + 12, by, { width: W - padX * 2 - 12, lineBreak: false, ellipsis: true })
+  })
+
+  doc.y = y0 + altura + 8
+  return doc.y
+}
+
+/**
+ * Placeholder padronizado para seções vazias (sem dados).
+ */
+export function renderPlaceholder(doc, mensagem = 'Sem dados para o período informado.') {
+  const M = 40
+  const W = doc.page.width - M * 2
+  const h = 56
+  const y0 = doc.y
+  doc.roundedRect(M, y0, W, h, 10).fill(COR.bgSoft)
+     .strokeColor(COR.borderSoft).lineWidth(0.8).stroke()
+  doc.fillColor(COR.muted).font('Helvetica-Oblique').fontSize(9)
+     .text(mensagem, M, y0 + 22, { width: W, align: 'center' })
+  doc.y = y0 + h + 8
 }

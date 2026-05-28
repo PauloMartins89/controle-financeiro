@@ -92,6 +92,12 @@ export async function buildDashboardRefeicoes(workspaceId, filtros, supabase, em
     titulo:    isLista ? 'Lista — Refeições' : 'Relatório de Refeições',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}`,
     empresa,
+    sumario: isLista ? [] : [
+      `${refMes + cafMes} itens no mês (${refMes} refeições · ${cafMes} cafés) em ${noMes.length} solicitações.`,
+      `Custo do mês: ${fmtBRL(valorMes)}.`,
+      pendentes.length ? `${pendentes.length} solicitações aguardando aprovação.` : 'Nenhuma solicitação pendente — fluxo em dia.',
+      topRest[0] ? `Restaurante líder no período: ${topRest[0][0]} (${fmtBRL(topRest[0][1])}).` : 'Sem custos registrados no período.',
+    ],
     kpis: [
       { label: 'Refeições no mês', value: fmtNumero(refMes + cafMes), color: COR.primary, sub: `${refMes} refeições · ${cafMes} cafés` },
       { label: 'Custo no mês',     value: fmtBRL(valorMes),           color: COR.info,    sub: `${noMes.length} solicitações` },

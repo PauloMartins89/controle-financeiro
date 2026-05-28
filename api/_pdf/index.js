@@ -16,7 +16,7 @@
  */
 
 import PDFDocument from 'pdfkit'
-import { renderHeader, renderKPIs, renderSecao, renderChartImage, renderTabela, renderFooter, COR } from './layout.js'
+import { renderHeader, renderKPIs, renderSecao, renderChartImage, renderTabela, renderFooter, renderSumario, renderPlaceholder, COR } from './layout.js'
 import { renderChartPNG, pizzaConfig, barrasConfig } from './charts.js'
 
 export async function gerarDashboardPDF(dados) {
@@ -50,12 +50,19 @@ export async function gerarDashboardPDF(dados) {
       renderKPIs(doc, dados.kpis)
     }
 
+    // Sumário executivo (bullets automáticos enviados pelo módulo)
+    if (dados.sumario?.length) {
+      renderSumario(doc, dados.sumario)
+    }
+
     // Gráficos
-    if (dados.pizza) {
+    if (dados.pizza?.labels?.length) {
       renderSecao(doc, dados.pizza.titulo || 'Distribuição')
       renderChartImage(doc, pizzaBuf, { width: 460 })
+    } else if (dados.pizza === undefined && !dados.tabela && !dados.barras) {
+      // módulo nem mandou pizza
     }
-    if (dados.barras) {
+    if (dados.barras?.labels?.length) {
       renderSecao(doc, dados.barras.titulo || 'Evolução')
       renderChartImage(doc, barrasBuf, { width: 480 })
     }
@@ -65,11 +72,9 @@ export async function gerarDashboardPDF(dados) {
       if (doc.y > doc.page.height - 160) doc.addPage()
       renderSecao(doc, dados.tabela.titulo || 'Detalhamento')
       renderTabela(doc, dados.tabela)
-    } else if (dados.tabela && !dados.tabela.linhas?.length) {
+    } else if (dados.tabela) {
       renderSecao(doc, dados.tabela.titulo || 'Detalhamento')
-      doc.fontSize(9).fillColor(COR.muted).text(
-        'Nenhum registro encontrado para o período informado.', 40, doc.y, { width: doc.page.width - 80 }
-      )
+      renderPlaceholder(doc, 'Nenhum registro encontrado para o período informado.')
     }
 
     // Observações
@@ -78,11 +83,11 @@ export async function gerarDashboardPDF(dados) {
       doc.fontSize(8).fillColor(COR.muted).text(dados.observacoes, 40, doc.y, { width: doc.page.width - 80 })
     }
 
-    // Rodapé em TODAS as páginas
+    // Rodapé em TODAS as páginas (com paginação X / Y)
     const range = doc.bufferedPageRange()
     for (let i = range.start; i < range.start + range.count; i++) {
       doc.switchToPage(i)
-      renderFooter(doc)
+      renderFooter(doc, i - range.start + 1, range.count)
     }
 
     doc.end()

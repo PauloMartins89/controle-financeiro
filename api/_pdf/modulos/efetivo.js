@@ -52,6 +52,12 @@ export async function buildDashboardEfetivo(workspaceId, filtros, supabase, empr
     titulo:    isLista ? 'Lista — Efetivo' : 'Relatório de Efetivo',
     subtitulo: `Quadro atual · ${todos.length} colaborador(es) cadastrado(s)`,
     empresa,
+    sumario: isLista ? [] : [
+      `${ativos.length} colaboradores ativos · ${inativos.length} inativos.`,
+      `${funcoesUnicas} funções distintas · ${cargosUnicos} cargos distintos.`,
+      topFuncoes[0] ? `Função mais comum: ${topFuncoes[0][0]} (${topFuncoes[0][1]} pessoas).` : 'Nenhuma função cadastrada.',
+      topCargos[0] ? `Cargo mais comum: ${topCargos[0][0]} (${topCargos[0][1]} pessoas).` : 'Nenhum cargo cadastrado.',
+    ],
     kpis: [
       { label: 'Ativos',          value: fmtNumero(ativos.length),   color: COR.success, sub: `${inativos.length} inativos` },
       { label: 'Funções',         value: fmtNumero(funcoesUnicas),   color: COR.primary },

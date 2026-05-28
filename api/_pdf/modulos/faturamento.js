@@ -85,6 +85,12 @@ export async function buildDashboardFaturamento(workspaceId, filtros, supabase, 
     titulo:    isLista ? 'Lista — Faturamento' : 'Relatório de Faturamento',
     subtitulo: `${fmtData(data_inicio)} a ${fmtData(data_fim)}` + (cliente ? `  •  ${cliente}` : ''),
     empresa,
+    sumario: isLista ? [] : [
+      `Faturamento total: ${fmtBRL(totalGeral)} em ${todos.length} pagamento(s).`,
+      `${fmtBRL(totalPendente)} aguardando recebimento (${pendentes.length} pendentes).`,
+      `${fmtBRL(totalRecebido)} já recebidos (${recebidos.length} confirmados).`,
+      `Este mês: ${fmtBRL(totalMes)} faturados.`,
+    ],
     kpis: [
       { label: 'Total Faturado',    value: fmtBRL(totalGeral),    color: COR.primary, sub: `${todos.length} faturamento(s)` },
       { label: 'Ag. Recebimento',   value: fmtBRL(totalPendente), color: COR.warning, sub: `${pendentes.length} pendente(s)` },
