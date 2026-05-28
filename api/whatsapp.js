@@ -4,6 +4,7 @@ import { runOCR } from './_ocr.js'
 import ws from 'ws'
 import { rotearMensagem } from './_wa-router.js'
 import { handleAgendaWA } from './_agenda-wa.js'
+import { handleRelatorioWA } from './_wa-relatorio.js'
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN
@@ -429,6 +430,12 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
     }
 
     const db = getDb()
+
+    // ── Relatório via WA — grupo restrito, antes de qualquer outro fluxo ─────
+    if ((message.type === 'text' || message.type === 'audio') && text) {
+      const relatorioProcesado = await handleRelatorioWA(text, from, db)
+      if (relatorioProcesado) return res.status(200).end()
+    }
 
     // ── Log: atualiza o registro dedup com o conteúdo real ───────────────────
     if (msgId) {
