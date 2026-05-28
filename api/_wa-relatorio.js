@@ -441,6 +441,26 @@ async function enviarTextoWA(phone, message) {
   )
 }
 
+// ─── Feedback de calibração IA ──────────────────────────────────────────────
+
+/**
+ * Salva mensagens que o usuário autenticado enviou mas a IA não conseguiu
+ * interpretar corretamente. Usado para recalibrar o prompt do Groq.
+ */
+async function salvarFeedbackIA(supabase, workspace_id, from_phone, texto, motivo, pedido_json = null) {
+  try {
+    await supabase.from('wa_ia_feedback').insert({
+      workspace_id: workspace_id || null,
+      from_phone,
+      texto,
+      motivo,
+      pedido_json: pedido_json ? pedido_json : null
+    })
+  } catch (e) {
+    console.warn('[WA Relatório] falha ao salvar feedback IA:', e?.message)
+  }
+}
+
 // ─── Handler principal ────────────────────────────────────────────────────────
 
 /**
@@ -458,7 +478,11 @@ export async function handleRelatorioWA(texto, fromPhone, supabase) {
 
     // 2. Parsear intenção (modulo + formato + filtros)
     const pedido = await parsearPedido(texto, today)
-    if (!pedido.eh_relatorio) return false
+    if (!pedido.eh_relatorio) {
+      // Usuário tem acesso mas a IA não reconheceu o pedido → salvar para recalibração
+      await salvarFeedbackIA(supabase, acesso.workspace_id, fromPhone, texto, 'nao_reconhecido', pedido)
+      return false
+    }
 
     // 2.1 Checagem de permissão por módulo (relatorios_permitidos)
     const permitidos = acesso.relatorios_permitidos || []
@@ -493,6 +517,7 @@ export async function handleRelatorioWA(texto, fromPhone, supabase) {
       // Fluxo padronizado (dashboard OU lista)
       const dados = await construirDashboard(pedido.modulo, acesso.workspace_id, pedido, supabase, nomeEmpresa)
       if (!dados) {
+        await salvarFeedbackIA(supabase, acesso.workspace_id, fromPhone, texto, 'modulo_desconhecido', pedido)
         await enviarTextoWA(fromPhone, `🛠️ Relatório de *${pedido.modulo}* ainda em construção. Em breve!`)
         return true
       }
@@ -508,6 +533,7 @@ export async function handleRelatorioWA(texto, fromPhone, supabase) {
 
   } catch (err) {
     console.error('[WA Relatório] erro:', err?.message || err)
+    await salvarFeedbackIA(supabase, acesso?.workspace_id, fromPhone, texto, 'erro', { message: err?.message })
     await enviarTextoWA(fromPhone, '❌ Não consegui gerar o relatório agora. Tente novamente em instantes.')
     return true
   }
