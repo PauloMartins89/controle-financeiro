@@ -447,9 +447,13 @@ export default function App() {
     // Tempo real — cria o canal só após carregar (usuário autenticado)
     let channel = null
     function setupChannel() {
-      if (channel) { try { supabase.removeChannel(channel) } catch (_) {} }
+      if (channel) { try { supabase.removeChannel(channel) } catch (_) {} channel = null }
+      // Nome único evita conflito com canal cacheado pelo supabase-js
+      // (StrictMode em dev monta o effect 2x e reusaria o canal já subscrito,
+      // o que dispara: "cannot add postgres_changes callbacks ... after subscribe()")
+      const channelName = `db-changes:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`
       channel = supabase
-        .channel('db-changes')
+        .channel(channelName)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'despesas' }, () => load())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'cartoes' }, () => load())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pessoas' }, () => load())
@@ -479,7 +483,7 @@ export default function App() {
     load().then(() => setupChannel())
 
     return () => {
-      if (channel) supabase.removeChannel(channel)
+      if (channel) { try { supabase.removeChannel(channel) } catch (_) {} channel = null }
       subscription.unsubscribe()
     }
   }, [])
