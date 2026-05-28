@@ -326,7 +326,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           src="/logo_smartpro.png"
           alt="SmartPro"
           style={{
-            height: collapsed ? 36 : 60,
+            height: collapsed ? 31 : 51,
             width: 'auto',
             maxWidth: '100%',
             objectFit: 'contain',
