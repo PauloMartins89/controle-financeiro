@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
@@ -136,8 +136,8 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
             <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{r.nome} {!r.ativo && <span className="badge badge-danger" style={{ fontSize: 10, marginLeft: 6 }}>Inativo</span>}</div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {r.numero_pedido && <span>Pedido {r.numero_pedido}</span>}
-              <span>??? {fmtBRL(r.valor_refeicao)}</span>
-              <span>? {fmtBRL(r.valor_cafe)}</span>
+              <span>🍽️ {fmtBRL(r.valor_refeicao)}</span>
+              <span>☕ {fmtBRL(r.valor_cafe)}</span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
@@ -262,8 +262,8 @@ function CrudEquipes({ workspaceId, ownerId }) {
                 {r.cdc && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 8 }}>CDC {r.cdc}</span>}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-                {r.lider_nome && <span>?? {r.lider_nome}</span>}
-                {r.supervisor_nome && <span style={{ marginLeft: 12 }}>?? {r.supervisor_nome}</span>}
+                {r.lider_nome && <span>👤 {r.lider_nome}</span>}
+                {r.supervisor_nome && <span style={{ marginLeft: 12 }}>🎯 {r.supervisor_nome}</span>}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -273,9 +273,9 @@ function CrudEquipes({ workspaceId, ownerId }) {
                 title="Enviar link do formulário para o líder via WhatsApp"
                 style={{ background: 'rgba(245,158,11,0.12)', border: 'none', color: '#f59e0b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}
               >
-                {sendingLink === r.id ? '...' : '?? Link'}
+                {sendingLink === r.id ? '...' : '📤 Link'}
               </button>
-              <button onClick={() => { setColabEquipe(r.id); loadColabs(r.id) }} style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#34d399', borderRadius: 8, padding: '5px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>??</button>
+              <button onClick={() => { setColabEquipe(r.id); loadColabs(r.id) }} style={{ background: 'rgba(16,185,129,0.1)', border: 'none', color: '#34d399', borderRadius: 8, padding: '5px 8px', cursor: 'pointer', fontSize: 11, fontWeight: 700 }}>👥</button>
               <button onClick={() => { setForm({ ...r }); setModal({ mode: 'edit', id: r.id }) }} style={{ background: 'rgba(99,102,241,0.12)', border: 'none', color: '#818cf8', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}><PencilIcon style={{ width: 13, height: 13 }} /></button>
               <button onClick={async () => { if (!confirm('Excluir equipe?')) return; await supabase.from('refei_equipes').delete().eq('id', r.id); load() }} style={{ background: 'rgba(239,68,68,0.1)', border: 'none', color: '#f87171', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}><TrashIcon style={{ width: 13, height: 13 }} /></button>
             </div>
@@ -312,7 +312,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
               {colabForm.id ? 'Salvar' : '+ Add'}
             </button>
           </div>
-          {colabForm.id && <button onClick={() => setColabForm({})} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 10 }}>? Cancelar edição</button>}
+          {colabForm.id && <button onClick={() => setColabForm({})} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 10 }}>✕ Cancelar edição</button>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 280, overflowY: 'auto' }}>
             {colabs.map(c => (
               <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)' }}>
@@ -513,7 +513,7 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {['Restaurante', 'Vigência Início', 'Vigência Fim', '??? Refeição', '? Café', 'Status', ''].map((h, i) => (
+              {['Restaurante', 'Vigência Início', 'Vigência Fim', '🍽️ Refeição', '? Café', 'Status', ''].map((h, i) => (
                 <th key={i} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6 }}>{h}</th>
               ))}
             </tr>
@@ -779,7 +779,7 @@ function CrudRegras({ workspaceId, ownerId }) {
       <div style={sCard}>
         <SH emoji="?" title="Tipos Habilitados" sub="O que pode ser solicitado pelos líderes no formulário" />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <ToggleRow checked={!!form.permite_refeicao} onChange={() => f('permite_refeicao', !form.permite_refeicao)} label="??? Refeição (Almoço / Jantar)" desc="Permite solicitar refeições no formulário do líder" />
+          <ToggleRow checked={!!form.permite_refeicao} onChange={() => f('permite_refeicao', !form.permite_refeicao)} label="🍽️ Refeição (Almoço / Jantar)" desc="Permite solicitar refeições no formulário do líder" />
           <ToggleRow checked={!!form.permite_cafe}     onChange={() => f('permite_cafe',     !form.permite_cafe)}     label="? Café da Manhã / Lanche"        desc="Permite solicitar café junto com a refeição" />
           <ToggleRow checked={!!form.permite_extra}    onChange={() => f('permite_extra',    !form.permite_extra)}    label="? Extras (com justificativa)"    desc="Permite adicionar pessoas fora da lista oficial da equipe" />
         </div>
@@ -792,9 +792,9 @@ function CrudRegras({ workspaceId, ownerId }) {
           <label style={lbl}>Tipo de aprovação</label>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 6 }}>
             {[
-              { id: 'obrigatoria', emoji: '??', title: 'Obrigatória',  desc: 'Supervisor sempre aprova' },
-              { id: 'automatica',  emoji: '?', title: 'Automática',   desc: 'Aprovação sem intervenção' },
-              { id: 'por_valor',   emoji: '??', title: 'Por Valor',    desc: 'Auto-aprova abaixo de R$X' },
+              { id: 'obrigatoria', emoji: '👤', title: 'Obrigatória',  desc: 'Supervisor sempre aprova' },
+              { id: 'automatica',  emoji: '⚡', title: 'Automática',   desc: 'Aprovação sem intervenção' },
+              { id: 'por_valor',   emoji: '💰', title: 'Por Valor',    desc: 'Auto-aprova abaixo de R$X' },
             ].map(opt => {
               const active = form.tipo_aprovacao === opt.id
               return (
@@ -958,8 +958,8 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
             <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 0.5 }}>Supervisor</div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
               {sol.supervisor_telefone
-                ? <span>?? {sol.supervisor_telefone}</span>
-                : <span style={{ color: '#f87171' }}>?? Telefone não cadastrado na equipe</span>}
+                ? <span>📱 {sol.supervisor_telefone}</span>
+                : <span style={{ color: '#f87171' }}>⚠️ Telefone não cadastrado na equipe</span>}
             </div>
           </div>
           <button
@@ -973,8 +973,8 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
         <label style={lbl}>Motivo (obrigatório ao reprovar)</label>
         <input className="input" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Descreva o motivo se for reprovar..." style={{ marginBottom: 12 }} />
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => aprovar('reprovado')} disabled={saving} className="btn-danger" style={{ flex: 1, justifyContent: 'center' }}>? Reprovar</button>
-          <button onClick={() => aprovar('aprovado')}  disabled={saving} className="btn-success" style={{ flex: 1, justifyContent: 'center' }}>? Aprovar</button>
+          <button onClick={() => aprovar('reprovado')} disabled={saving} className="btn-danger" style={{ flex: 1, justifyContent: 'center' }}>❌ Reprovar</button>
+          <button onClick={() => aprovar('aprovado')}  disabled={saving} className="btn-success" style={{ flex: 1, justifyContent: 'center' }}>✅ Aprovar</button>
         </div>
       </div>
     )
@@ -1006,21 +1006,21 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
     if (sol.status === 'aguardando_validacao') return (
       <div>
         <div style={{ background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.25)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: '#f97316', marginBottom: 4 }}>?? Aguardando validação do líder</div>
+          <div style={{ fontWeight: 700, fontSize: 13, color: '#f97316', marginBottom: 4 }}>📱 Aguardando validação do líder</div>
           <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>O líder ainda não confirmou o recebimento. Você pode registrar manualmente abaixo.</div>
         </div>
         <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-          <button onClick={() => execAcao('validar_entrega', { resultado: 'correto' })} disabled={saving} style={{ ...btnBase, flex: 1, background: '#10b981', color: '#fff' }}>?? Confirmar Entrega Correta</button>
+          <button onClick={() => execAcao('validar_entrega', { resultado: 'correto' })} disabled={saving} style={{ ...btnBase, flex: 1, background: '#10b981', color: '#fff' }}>🎉 Confirmar Entrega Correta</button>
         </div>
         <label style={lbl}>Registrar ocorrência (se houve problema)</label>
         <input className="input" value={ocorr} onChange={e => setOcorr(e.target.value)} placeholder="Descreva o problema na entrega..." style={{ marginBottom: 10 }} />
-        <button onClick={() => { if (!ocorr.trim()) { toast.error('Descreva a ocorrência'); return } execAcao('validar_entrega', { resultado: 'com_ocorrencia', ocorrencia: ocorr }) }} disabled={saving} style={{ ...btnBase, background: '#f59e0b', color: '#000' }}>?? Finalizar com Ocorrência</button>
+        <button onClick={() => { if (!ocorr.trim()) { toast.error('Descreva a ocorrência'); return } execAcao('validar_entrega', { resultado: 'com_ocorrencia', ocorrencia: ocorr }) }} disabled={saving} style={{ ...btnBase, background: '#f59e0b', color: '#000' }}>⚠️ Finalizar com Ocorrência</button>
       </div>
     )
 
     if (sol.status === 'reprovado') return (
       <button onClick={() => execAcao('reabrir')} disabled={saving} style={{ ...btnBase, background: '#f59e0b', color: '#000' }}>
-        ?? Reabrir para Correção
+        🔄 Reabrir para Correção
       </button>
     )
 
@@ -1040,10 +1040,10 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
           <StatusBadge status={sol.status} />
         </div>
         <div style={{ display: 'flex', gap: 20, marginTop: 12, flexWrap: 'wrap' }}>
-          {[            { icon: '??', val: sol.refei_equipes?.nome },
-            { icon: '??', val: sol.refei_restaurantes?.nome },
-            { icon: '??', val: fmtData(sol.data_refeicao) },
-            { icon: '??', val: sol.lider_nome },
+          {[            { icon: '👥', val: sol.refei_equipes?.nome },
+            { icon: '🏪', val: sol.refei_restaurantes?.nome },
+            { icon: '📅', val: fmtData(sol.data_refeicao) },
+            { icon: '👤', val: sol.lider_nome },
           ].filter(r => r.val).map((r, i) => (
             <span key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
               {r.icon} {r.val}
@@ -1055,10 +1055,10 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
       {/* -- Cards de totais -- */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 18 }}>
         {[
-          { label: 'Refeições', value: sol.total_refeicoes || 0, emoji: '???', color: '#6366f1' },
-          { label: 'Cafés',     value: sol.total_cafes     || 0, emoji: '?', color: '#f59e0b' },
-          { label: 'Pessoas',   value: itens.length,             emoji: '??', color: '#06b6d4' },
-          { label: 'Total',     value: fmtBRL(sol.valor_total),  emoji: '??', color: '#10b981', text: true },
+          { label: 'Refeições', value: sol.total_refeicoes || 0, emoji: '🍽️', color: '#6366f1' },
+          { label: 'Cafés',     value: sol.total_cafes     || 0, emoji: '☕', color: '#f59e0b' },
+          { label: 'Pessoas',   value: itens.length,             emoji: '👥', color: '#06b6d4' },
+          { label: 'Total',     value: fmtBRL(sol.valor_total),  emoji: '💰', color: '#10b981', text: true },
         ].map((c, i) => (
           <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
             <div style={{ fontSize: 18, marginBottom: 4 }}>{c.emoji}</div>
@@ -1070,7 +1070,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
 
       {/* -- Abas: Resumo / Timeline -- */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, padding: 4 }}>
-        {[{ id: 'resumo', label: '?? Resumo' }, { id: 'timeline', label: '?? Timeline' }].map(t => (
+        {[{ id: 'resumo', label: '📋 Resumo' }, { id: 'timeline', label: '⏱️ Timeline' }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', background: tab === t.id ? 'var(--bg-card)' : 'transparent', color: tab === t.id ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: tab === t.id ? '0 1px 4px rgba(0,0,0,0.12)' : 'none', transition: 'all 0.15s' }}>
             {t.label}
@@ -1089,7 +1089,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
                 {itens.filter(it => !it.extra).map(it => (
                   <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8, border: '1px solid var(--border)', fontSize: 13 }}>
                     <span style={{ color: 'var(--text-primary)' }}>{it.colaborador_nome}</span>
-                    <span style={{ fontSize: 14 }}>{it.refeicao ? '??? ' : ''}{it.cafe ? '?' : ''}</span>
+                    <span style={{ fontSize: 14 }}>{it.refeicao ? '🍽️ ' : ''}{it.cafe ? '☕' : ''}</span>
                   </div>
                 ))}
               </div>
@@ -1098,15 +1098,15 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
           {/* Extras */}
           {itens.some(it => it.extra) && (
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 6 }}>?? Extras</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 6 }}>⚠️ Extras</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {itens.filter(it => it.extra).map(it => (
                   <div key={it.id} style={{ padding: '6px 10px', background: 'rgba(245,158,11,0.05)', borderRadius: 8, border: '1px solid rgba(245,158,11,0.2)', fontSize: 13 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{it.colaborador_nome}</span>
-                      <span>{it.refeicao ? '??? ' : ''}{it.cafe ? '?' : ''}</span>
+                      <span>{it.refeicao ? '🍽️ ' : ''}{it.cafe ? '☕' : ''}</span>
                     </div>
-                    {it.justificativa && <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 2 }}>?? {it.justificativa}</div>}
+                    {it.justificativa && <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 2 }}>💬 {it.justificativa}</div>}
                   </div>
                 ))}
               </div>
@@ -1114,13 +1114,13 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
           )}
           {/* Observações e motivo */}
           {sol.observacoes && (
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid var(--border)' }}>?? {sol.observacoes}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid var(--border)' }}>📝 {sol.observacoes}</div>
           )}
           {sol.motivo_reprovacao && (
-            <div style={{ fontSize: 12, color: '#f87171', background: 'rgba(239,68,68,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(239,68,68,0.2)', borderLeft: '3px solid #ef4444' }}>? Reprovado: {sol.motivo_reprovacao}</div>
+            <div style={{ fontSize: 12, color: '#f87171', background: 'rgba(239,68,68,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(239,68,68,0.2)', borderLeft: '3px solid #ef4444' }}>❌ Reprovado: {sol.motivo_reprovacao}</div>
           )}
           {sol.ocorrencia && (
-            <div style={{ fontSize: 12, color: '#fbbf24', background: 'rgba(245,158,11,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(245,158,11,0.2)', borderLeft: '3px solid #f59e0b' }}>?? Ocorrência: {sol.ocorrencia}</div>
+            <div style={{ fontSize: 12, color: '#fbbf24', background: 'rgba(245,158,11,0.07)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, border: '1px solid rgba(245,158,11,0.2)', borderLeft: '3px solid #f59e0b' }}>⚠️ Ocorrência: {sol.ocorrencia}</div>
           )}
           {/* Histórico de datas */}
           {[
@@ -1131,7 +1131,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
             { label: 'Validado em',     val: sol.validado_em },
           ].some(t => t.val) && (
             <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 8, border: '1px solid var(--border)', padding: '10px 14px', marginBottom: 12 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 8 }}>?? Histórico</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 8 }}>🕐 Histórico</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {[
                   { label: 'Aprovado em',     val: sol.aprovado_em },
@@ -1169,7 +1169,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
 
       {isFinal && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 14, textAlign: 'center' }}>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>?? Pedido encerrado — nenhuma ação disponível</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>🏁 Pedido encerrado — nenhuma ação disponível</span>
         </div>
       )}
     </Modal>
@@ -1364,15 +1364,15 @@ function SecaoDashboard({ sols, onNav }) {
     const hojePedCaf = hojeSols.filter(s => (s.total_cafes || 0) > 0).length
 
     const kpis = [
-      { icon: '???', label: 'Refeições hoje', val: hojePedRef, isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem', footer: `Mês: ${refMes} refeições`, secondary: hojeRef, secondaryLabel: 'refeições hoje', items: hojeSols.filter(s => (s.total_refeicoes || 0) > 0) },
-      { icon: '?',  label: 'Cafés hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `Mês: ${cafMes} cafés`,    secondary: hojeCaf, secondaryLabel: 'cafés hoje', items: hojeSols.filter(s => (s.total_cafes || 0) > 0) },
-      { icon: '?',  label: 'Aguardando Aprovação', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ?', ref: sum(pendentes, 'total_refeicoes'), caf: sum(pendentes, 'total_cafes'), items: pendentes },
-      { icon: '?',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues`, ref: sum(aprovSts, 'total_refeicoes'), caf: sum(aprovSts, 'total_cafes'), items: aprovSts },
-      { icon: '?',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos últimos 7 dias` : 'Nenhuma reprovação', ref: sum(reprovados, 'total_refeicoes'), caf: sum(reprovados, 'total_cafes'), items: reprovados },
-      { icon: '??',  label: 'Aguardando Entrega',    val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje`, ref: sum(aguardEnt, 'total_refeicoes'), caf: sum(aguardEnt, 'total_cafes'), items: aguardEnt },
-      { icon: '??',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência', ref: sum(divergencias, 'total_refeicoes'), caf: sum(divergencias, 'total_cafes'), items: divergencias },
-      { icon: '??',  label: 'Custo previsto dia',  val: fmtBRL(hojeCusto), isText: true,  color: '#14B8A6', var: null, varLabel: null, footer: `${hojeRef + hojeCaf} itens previstos`, items: hojeSols },
-      { icon: '??',  label: 'Custo no mês',        val: fmtBRL(valorMes),  isText: true,  color: '#6366f1', var: fv(valorMes, valorMAnt), varLabel: 'vs mês ant.', footer: valorMAnt > 0 ? `Ant.: ${fmtBRL(valorMAnt)}` : 'Sem comparativo', items: mesSols },
+      { icon: '🍽️', label: 'Refeições hoje', val: hojePedRef, isText: false, color: '#4F6EF7', var: fv(hojeRef, ontemRef), varLabel: 'vs ontem', footer: `Mês: ${refMes} refeições`, secondary: hojeRef, secondaryLabel: 'refeições hoje', items: hojeSols.filter(s => (s.total_refeicoes || 0) > 0) },
+      { icon: '☕',  label: 'Cafés hoje',     val: hojePedCaf, isText: false, color: '#F59E0B', var: fv(hojeCaf, ontemCaf), varLabel: 'vs ontem', footer: `Mês: ${cafMes} cafés`,    secondary: hojeCaf, secondaryLabel: 'cafés hoje', items: hojeSols.filter(s => (s.total_cafes || 0) > 0) },
+      { icon: '⏳',  label: 'Aguardando Aprovação', val: pendentes.length,  isText: false, color: pendentes.length > 0 ? '#EF4444' : '#10B981', var: null, varLabel: null, footer: pendentes.length > 0 ? `${pendentes.length} aguardando revisão` : 'Tudo em dia ?', ref: sum(pendentes, 'total_refeicoes'), caf: sum(pendentes, 'total_cafes'), items: pendentes },
+      { icon: '✅',  label: 'Aprovados',            val: aprovSts.length,  isText: false, color: '#10B981', var: null, varLabel: null, footer: `${entregues.length} já entregues`, ref: sum(aprovSts, 'total_refeicoes'), caf: sum(aprovSts, 'total_cafes'), items: aprovSts },
+      { icon: '❌',  label: 'Reprovados',           val: reprovados.length, isText: false, color: reprovados.length > 0 ? '#EF4444' : '#94A3B8', var: null, varLabel: null, footer: reprovados.length > 0 ? `${reprov7.length} nos últimos 7 dias` : 'Nenhuma reprovação', ref: sum(reprovados, 'total_refeicoes'), caf: sum(reprovados, 'total_cafes'), items: reprovados },
+      { icon: '🚚',  label: 'Aguardando Entrega',    val: aguardEnt.length,  isText: false, color: '#8B5CF6', var: null, varLabel: null, footer: `${entreguesHoje} entregues hoje`, ref: sum(aguardEnt, 'total_refeicoes'), caf: sum(aguardEnt, 'total_cafes'), items: aguardEnt },
+      { icon: '⚠️',  label: 'Divergências',        val: divergencias.length, isText: false, color: divergencias.length > 0 ? '#F97316' : '#94A3B8', var: null, varLabel: null, footer: divergencias.length > 0 ? 'Requer atenção' : 'Nenhuma ocorrência', ref: sum(divergencias, 'total_refeicoes'), caf: sum(divergencias, 'total_cafes'), items: divergencias },
+      { icon: '💰',  label: 'Custo previsto dia',  val: fmtBRL(hojeCusto), isText: true,  color: '#14B8A6', var: null, varLabel: null, footer: `${hojeRef + hojeCaf} itens previstos`, items: hojeSols },
+      { icon: '📊',  label: 'Custo no mês',        val: fmtBRL(valorMes),  isText: true,  color: '#6366f1', var: fv(valorMes, valorMAnt), varLabel: 'vs mês ant.', footer: valorMAnt > 0 ? `Ant.: ${fmtBRL(valorMAnt)}` : 'Sem comparativo', items: mesSols },
     ]
 
     const chartRef7 = last7.map(d => sum(ativos.filter(s => s.data_refeicao === d), 'total_refeicoes'))
@@ -1433,35 +1433,35 @@ function SecaoDashboard({ sols, onNav }) {
     const pendLongos = pendentes.filter(s => s.criado_em && (Date.now() - new Date(s.criado_em)) > 7200000)
     if (pendLongos.length) {
       const oldest = [...pendLongos].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em))[0]
-      alertas.push({ type: 'warn', icon: '??', title: `${pendLongos.length} solicitação${pendLongos.length > 1 ? 'ões' : ''} fora do prazo`, desc: `Aguardando aprovação há mais de 2h — mais antigo: ${relTime(oldest.criado_em)}`, action: 'Ver Aprovações', nav: () => onNav('operacoes', 'aprovacoes') })
+      alertas.push({ type: 'warn', icon: '🕐', title: `${pendLongos.length} solicitação${pendLongos.length > 1 ? 'ões' : ''} fora do prazo`, desc: `Aguardando aprovação há mais de 2h — mais antigo: ${relTime(oldest.criado_em)}`, action: 'Ver Aprovações', nav: () => onNav('operacoes', 'aprovacoes') })
     }
     const aprovHoje = aprovSts.filter(s => s.data_refeicao === hoje)
-    if (aprovHoje.length) alertas.push({ type: 'warn', icon: '??', title: `${aprovHoje.length} entrega${aprovHoje.length > 1 ? 's' : ''} com confirmação pendente`, desc: 'Aprovados mas restaurante ainda não confirmou a entrega', action: null })
-    if (valorMAnt > 0 && (valorMes - valorMAnt) / valorMAnt > 0.15) alertas.push({ type: 'danger', icon: '??', title: 'Custo do mês acima do período anterior', desc: `${fmtBRL(valorMes)} vs ${fmtBRL(valorMAnt)} — variação de +${(((valorMes - valorMAnt) / valorMAnt) * 100).toFixed(0)}%`, action: null })
-    if (reprov7.length) alertas.push({ type: 'danger', icon: '?', title: `${reprov7.length} pedido${reprov7.length > 1 ? 's' : ''} reprovado${reprov7.length > 1 ? 's' : ''} nos últimos 7 dias`, desc: 'Verifique os motivos de reprovação no histórico', action: null })
-    if (divergencias.length) alertas.push({ type: 'warn', icon: '??', title: `${divergencias.length} divergência${divergencias.length > 1 ? 's' : ''} pendente${divergencias.length > 1 ? 's' : ''}`, desc: 'Pedidos com ocorrências aguardando validação', action: null })
+    if (aprovHoje.length) alertas.push({ type: 'warn', icon: '🚚', title: `${aprovHoje.length} entrega${aprovHoje.length > 1 ? 's' : ''} com confirmação pendente`, desc: 'Aprovados mas restaurante ainda não confirmou a entrega', action: null })
+    if (valorMAnt > 0 && (valorMes - valorMAnt) / valorMAnt > 0.15) alertas.push({ type: 'danger', icon: '📈', title: 'Custo do mês acima do período anterior', desc: `${fmtBRL(valorMes)} vs ${fmtBRL(valorMAnt)} — variação de +${(((valorMes - valorMAnt) / valorMAnt) * 100).toFixed(0)}%`, action: null })
+    if (reprov7.length) alertas.push({ type: 'danger', icon: '❌', title: `${reprov7.length} pedido${reprov7.length > 1 ? 's' : ''} reprovado${reprov7.length > 1 ? 's' : ''} nos últimos 7 dias`, desc: 'Verifique os motivos de reprovação no histórico', action: null })
+    if (divergencias.length) alertas.push({ type: 'warn', icon: '⚠️', title: `${divergencias.length} divergência${divergencias.length > 1 ? 's' : ''} pendente${divergencias.length > 1 ? 's' : ''}`, desc: 'Pedidos com ocorrências aguardando validação', action: null })
 
     // -- Próxima Ação Recomendada ------------------------------------------
     let proximaAcao = null
     if (pendLongos.length > 0) {
       proximaAcao = { cor: '#ef4444', bg: 'rgba(239,68,68,0.10)', borda: 'rgba(239,68,68,0.30)',
-        emoji: '??', msg: `${pendLongos.length} solicitação(ões) aguardando aprovação há mais de 2h`,
+        emoji: '🔴', msg: `${pendLongos.length} solicitação(ões) aguardando aprovação há mais de 2h`,
         acao: 'Aprovar agora', navKey: 'aprovacoes' }
     } else if (pendentes.length > 0) {
       proximaAcao = { cor: '#f59e0b', bg: 'rgba(245,158,11,0.10)', borda: 'rgba(245,158,11,0.30)',
-        emoji: '?', msg: `${pendentes.length} solicitação(ões) aguardando aprovação`,
+        emoji: '⏳', msg: `${pendentes.length} solicitação(ões) aguardando aprovação`,
         acao: 'Ver aprovações', navKey: 'aprovacoes' }
     } else if (divergencias.length > 0) {
       proximaAcao = { cor: '#f97316', bg: 'rgba(249,115,22,0.10)', borda: 'rgba(249,115,22,0.30)',
-        emoji: '??', msg: `${divergencias.length} divergência(s) pendente(s) de validação`,
+        emoji: '⚠️', msg: `${divergencias.length} divergência(s) pendente(s) de validação`,
         acao: 'Resolver', navKey: 'historico' }
     } else if (aguardEnt.length > 0) {
       proximaAcao = { cor: '#8b5cf6', bg: 'rgba(139,92,246,0.10)', borda: 'rgba(139,92,246,0.30)',
-        emoji: '??', msg: `${aguardEnt.length} pedido(s) aprovado(s) aguardando entrega do restaurante`,
+        emoji: '🚚', msg: `${aguardEnt.length} pedido(s) aprovado(s) aguardando entrega do restaurante`,
         acao: 'Monitorar', navKey: null }
     } else {
       proximaAcao = { cor: '#10b981', bg: 'rgba(16,185,129,0.10)', borda: 'rgba(16,185,129,0.25)',
-        emoji: '?', msg: 'Sem pendências críticas no momento' + (valorMes > 0 ? ` — custo acumulado no mês: ${fmtBRL(valorMes)}` : ''),
+        emoji: '✅', msg: 'Sem pendências críticas no momento' + (valorMes > 0 ? ` — custo acumulado no mês: ${fmtBRL(valorMes)}` : ''),
         acao: null, navKey: null }
     }
 
@@ -1495,7 +1495,7 @@ function SecaoDashboard({ sols, onNav }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: isDark ? '#1f2329' : '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px' }}>
             <CalendarDaysIcon style={{ width: 14, height: 14, color: TEXT2, flexShrink: 0 }} />
             <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ border: 'none', background: 'transparent', fontSize: 12, color: TEXT, outline: 'none', cursor: 'pointer', minWidth: 0 }} />
-            {dateFilter && <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1 }}>?</button>}
+            {dateFilter && <button onClick={() => setDateFilter('')} style={{ background: 'none', border: 'none', color: TEXT3, cursor: 'pointer', padding: 0, fontSize: 13, lineHeight: 1 }}>✕</button>}
           </div>
           <div style={{ fontSize: 11, color: TEXT3, background: isDark ? '#1f2329' : '#F8FAFC', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '7px 12px', whiteSpace: 'nowrap' }}>
             {dateFilter ? `Exibindo: ${fmtData(dateFilter)}` : `Hoje: ${fmtData(todayISO())}`}
@@ -1582,8 +1582,8 @@ function SecaoDashboard({ sols, onNav }) {
                   <div style={{ fontSize: k.isText ? 18 : 34, fontWeight: 800, color: TEXT, lineHeight: 1, letterSpacing: '-0.025em' }}>{k.val}</div>
                   {k.ref !== undefined && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
-                      <span style={{ fontSize: 13, color: TEXT2 }}>??? <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Refeições</span></span>
-                      <span style={{ fontSize: 13, color: TEXT2 }}>? <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Cafés</span></span>
+                      <span style={{ fontSize: 13, color: TEXT2 }}>🍽️ <strong style={{ fontSize: 16, color: TEXT }}>{k.ref}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Refeições</span></span>
+                      <span style={{ fontSize: 13, color: TEXT2 }}>☕ <strong style={{ fontSize: 16, color: TEXT }}>{k.caf}</strong> <span style={{ fontSize: 9, fontWeight: 700, color: TEXT3, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Cafés</span></span>
                     </div>
                   )}
                 </div>
@@ -1729,7 +1729,7 @@ function SecaoDashboard({ sols, onNav }) {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                     <thead>
                       <tr style={{ borderBottom: `2px solid ${BORDER}` }}>
-                        {['Restaurante', '???', '?', '?', '??', '??', 'Valor'].map((h, i) => (
+                        {['Restaurante', '🍽️', '☕', '⏳', '📦', '⚠️', 'Valor'].map((h, i) => (
                           <th key={i} style={{ padding: '6px 8px', textAlign: i === 0 ? 'left' : 'center', fontSize: 9, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
                         ))}
                       </tr>
@@ -1917,11 +1917,11 @@ function ModalNovaSolicitacao({ workspaceId, ownerId, onClose, onSaved }) {
           </div>
           <div />
           <div>
-            <label style={lbl}>??? Qtd. Refeições</label>
+            <label style={lbl}>🍽️ Qtd. Refeições</label>
             <input type="number" min="0" className="input" style={{ fontSize: 13 }} placeholder="0" value={form.total_refeicoes} onChange={e => f('total_refeicoes', e.target.value)} />
           </div>
           <div>
-            <label style={lbl}>? Qtd. Cafés</label>
+            <label style={lbl}>☕ Qtd. Cafés</label>
             <input type="number" min="0" className="input" style={{ fontSize: 13 }} placeholder="0" value={form.total_cafes} onChange={e => f('total_cafes', e.target.value)} />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
@@ -2037,7 +2037,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
       {loading && <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 48 }}>Carregando...</div>}
       {!loading && grupos.length === 0 && (
         <div style={{ textAlign: 'center', padding: 64, color: 'var(--text-secondary)' }}>
-          <div style={{ fontSize: 36, marginBottom: 8 }}>???</div>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>🍽️</div>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Nenhuma solicitação encontrada</div>
           <div style={{ fontSize: 13 }}>Ajuste os filtros ou aguarde novos pedidos via WhatsApp.</div>
         </div>
@@ -2056,7 +2056,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
                 <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{equipe.nome}</span>
                 {equipe.cdc && <span className="badge badge-accent" style={{ fontSize: 10 }}>CDC {equipe.cdc}</span>}
                 <span className="badge badge-neutral" style={{ fontSize: 10 }}>{solsGrupo.length} {solsGrupo.length === 1 ? 'pedido' : 'pedidos'}</span>
-                {nPend > 0 && <span className="badge badge-warning" style={{ fontSize: 10 }}>? {nPend} pendente{nPend > 1 ? 's' : ''}</span>}
+                {nPend > 0 && <span className="badge badge-warning" style={{ fontSize: 10 }}>⏳ {nPend} pendente{nPend > 1 ? 's' : ''}</span>}
               </div>
               <div style={{ fontWeight: 800, color: '#00c896', fontSize: 14 }}>{fmtBRL(vTotal)}</div>
             </div>
@@ -2065,7 +2065,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
-                      {['PEDIDO', 'DATA', 'STATUS', 'RESTAURANTE', '???', '?', 'TOTAL', ''].map((h, i) => (
+                      {['PEDIDO', 'DATA', 'STATUS', 'RESTAURANTE', '🍽️', '☕', 'TOTAL', ''].map((h, i) => (
                         <th key={i} style={{ padding: '9px 14px', textAlign: i >= 4 && i <= 6 ? 'center' : 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
@@ -2082,7 +2082,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
                         <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 800, color: '#10b981', whiteSpace: 'nowrap' }}>{fmtBRL(sol.valor_total)}</td>
                         <td style={{ padding: '11px 14px', textAlign: 'right' }} onClick={e => e.stopPropagation()}>
                           {['pendente', 'aguardando_aprovacao'].includes(sol.status) && (
-                            <button title="Reenviar lembrete" disabled={sendingLembrete === sol.id} onClick={async () => { setSendingLembrete(sol.id); try { const r = await fetch('/api/refeicoes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reenviar-supervisor', solicitacaoId: sol.id }) }); const j = await r.json(); if (r.ok) toast.success('Lembrete enviado!'); else toast.error(j.error || 'Erro') } finally { setSendingLembrete(null) } }} style={{ background: 'rgba(245,158,11,0.12)', border: 'none', color: '#f59e0b', borderRadius: 7, padding: '4px 8px', cursor: 'pointer', fontSize: 13, lineHeight: 1, opacity: sendingLembrete === sol.id ? 0.5 : 1 }}>{sendingLembrete === sol.id ? '...' : '??'}</button>
+                            <button title="Reenviar lembrete" disabled={sendingLembrete === sol.id} onClick={async () => { setSendingLembrete(sol.id); try { const r = await fetch('/api/refeicoes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reenviar-supervisor', solicitacaoId: sol.id }) }); const j = await r.json(); if (r.ok) toast.success('Lembrete enviado!'); else toast.error(j.error || 'Erro') } finally { setSendingLembrete(null) } }} style={{ background: 'rgba(245,158,11,0.12)', border: 'none', color: '#f59e0b', borderRadius: 7, padding: '4px 8px', cursor: 'pointer', fontSize: 13, lineHeight: 1, opacity: sendingLembrete === sol.id ? 0.5 : 1 }}>{sendingLembrete === sol.id ? '...' : '🔔'}</button>
                           )}
                         </td>
                       </tr>
@@ -2285,7 +2285,7 @@ function SecaoRelatorios({ sub, sols }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              {[REL_LABEL[sub] || 'Grupo', 'Solicitações', '??? Refeições', '? Cafés', 'Valor Total'].map((h, i) => (
+              {[REL_LABEL[sub] || 'Grupo', 'Solicitações', '🍽️ Refeições', '? Cafés', 'Valor Total'].map((h, i) => (
                 <th key={i} style={{ padding: '9px 14px', textAlign: i > 0 ? 'center' : 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6 }}>{h}</th>
               ))}
             </tr>
@@ -2375,11 +2375,11 @@ export default function Refeicoes() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="??? Refeições" subtitle="Gestão completa de refeições" />
+      <Header title="🍽️ Refeições" subtitle="Gestão completa de refeições" />
       {/* Barra de flow engine quando ativo */}
       {flowEngineOn && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 24px', background: 'rgba(99,102,241,0.08)', borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
-          <span style={{ fontSize: 11, color: '#818cf8', fontWeight: 600 }}>? Flow Engine ativo</span>
+          <span style={{ fontSize: 11, color: '#818cf8', fontWeight: 600 }}>⚡ Flow Engine ativo</span>
           <FlowTaskBell
             userId={ownerId}
             workspaceId={workspaceId}
