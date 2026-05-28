@@ -433,8 +433,13 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
     // ── Relatório via WA — grupo restrito, antes de qualquer outro fluxo ─────
     if ((message.type === 'text' || message.type === 'audio') && text) {
-      const relatorioProcesado = await handleRelatorioWA(text, from, db)
-      if (relatorioProcesado) return res.status(200).end()
+      try {
+        const relatorioProcesado = await handleRelatorioWA(text, from, db)
+        if (relatorioProcesado) return res.status(200).end()
+      } catch (err) {
+        console.error('[relatorio-wa] erro:', err.message)
+        // continua fluxo normal
+      }
     }
 
     // ── Log: atualiza o registro dedup com o conteúdo real ───────────────────

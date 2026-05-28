@@ -83,7 +83,7 @@ export default function LiderEpi() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Header title="?? Controle de EPIs / EPCs" subtitle="Solicitações, catálogo individual e coletivo" />
+      <Header title="🦺 Controle de EPIs / EPCs" subtitle="Solicitações, catálogo individual e coletivo" />
       <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
         {secao === 'solicitacoes' && <SecaoSolicitacoes workspaceId={workspaceId} />}
         {secao === 'catalogo-epi' && <SecaoCatalogoEPI  workspaceId={workspaceId} />}
