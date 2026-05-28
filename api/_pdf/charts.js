@@ -6,8 +6,8 @@
 
 const QC_BASE = 'https://quickchart.io/chart'
 
-// Paleta SmartPro (consistente com o app)
-export const PALETA = ['#6366f1','#10b981','#f59e0b','#ef4444','#06b6d4','#a855f7','#ec4899','#84cc16','#14b8a6','#f97316']
+// Paleta SmartPro Premium — tons indigo/slate/emerald (mais maduro, menos saturado)
+export const PALETA = ['#4f46e5','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0ea5e9','#65a30d','#ea580c']
 
 /**
  * Renderiza um chart.js config para PNG via QuickChart.
