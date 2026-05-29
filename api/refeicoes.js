@@ -350,6 +350,18 @@ export default async function handler(req, res) {
       if (sol.lider_telefone) {
         await sendWA(sol.lider_telefone, `✅ Pedido *${sol.numero_pedido}* aprovado!\nData: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado para preparação.`)
       }
+      // Agenda pesquisa de satisfação (disponível no dia da refeição)
+      await db.from('refei_avaliacoes').upsert({
+        workspace_id:     sol.workspace_id,
+        solicitacao_id:   sol.id,
+        lider_id:         sol.owner_id,
+        equipe_id:        sol.equipe_id,
+        numero_pedido:    sol.numero_pedido,
+        restaurante_nome: rest?.nome || null,
+        data_refeicao:    sol.data_refeicao,
+        disponivel_em:    sol.data_refeicao,
+        status:           'pendente',
+      }, { onConflict: 'solicitacao_id', ignoreDuplicates: true })
     } else {
       // Notifica líder da reprovação
       if (sol.lider_telefone) {
@@ -515,6 +527,18 @@ export default async function handler(req, res) {
         if (sol.lider_telefone) {
           await sendWA(sol.lider_telefone, `✅ Pedido *${sol.numero_pedido}* aprovado!\nData: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado para preparação.`)
         }
+        // Agenda pesquisa de satisfação (disponível no dia da refeição)
+        await db.from('refei_avaliacoes').upsert({
+          workspace_id:     sol.workspace_id,
+          solicitacao_id:   sol.id,
+          lider_id:         sol.owner_id,
+          equipe_id:        sol.equipe_id,
+          numero_pedido:    sol.numero_pedido,
+          restaurante_nome: rest?.nome || null,
+          data_refeicao:    sol.data_refeicao,
+          disponivel_em:    sol.data_refeicao,
+          status:           'pendente',
+        }, { onConflict: 'solicitacao_id', ignoreDuplicates: true })
       } else {
         if (sol.lider_telefone) {
           await sendWA(sol.lider_telefone, `❌ Pedido *${sol.numero_pedido}* reprovado.\nMotivo: ${motivo || '—'}\n\nAcesse o link para editar e reenviar: ${APP_URL}/refeicao/${sol.token_lider}`)
@@ -803,6 +827,46 @@ export default async function handler(req, res) {
     await logEvento(db, { solicitacaoId: sol.id, tipo: 'pedido_finalizado', descricao: resultado === 'correto' ? 'Pedido finalizado com sucesso' : 'Pedido finalizado com ocorrência registrada', ator: 'Sistema', atorTipo: 'sistema' })
 
     return res.status(200).json({ ok: true, mensagem: resultado === 'correto' ? 'Pedido finalizado! 🏁' : 'Pedido finalizado com ocorrência registrada ⚠️' })
+  }
+
+  // ── GET: avaliacao-pendente ────────────────────────────────────────────────
+  // Retorna a avaliação de qualidade mais antiga não respondida do líder,
+  // cujo dia de refeição já passou ou é hoje.
+  if (req.method === 'GET' && action === 'avaliacao-pendente') {
+    const { ownerId, workspaceId } = req.query
+    if (!ownerId || !workspaceId) return res.status(400).json({ error: 'ownerId e workspaceId obrigatórios' })
+    const today = new Date().toISOString().slice(0, 10)
+    const { data: avaliacao } = await db
+      .from('refei_avaliacoes')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .eq('lider_id', ownerId)
+      .eq('status', 'pendente')
+      .lte('disponivel_em', today)
+      .order('data_refeicao', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    return res.status(200).json({ avaliacao: avaliacao || null })
+  }
+
+  // ── POST: responder-avaliacao ──────────────────────────────────────────────
+  if (req.method === 'POST' && action === 'responder-avaliacao') {
+    const { id, nota_geral, quantidade_correta, temperatura_ok, sabor_ok, observacao } = req.body || {}
+    if (!id || !nota_geral) return res.status(400).json({ error: 'id e nota_geral obrigatórios' })
+    if (nota_geral < 1 || nota_geral > 5) return res.status(400).json({ error: 'nota_geral deve ser entre 1 e 5' })
+    const { data: aval } = await db.from('refei_avaliacoes').select('id, status').eq('id', id).maybeSingle()
+    if (!aval) return res.status(404).json({ error: 'Avaliação não encontrada' })
+    if (aval.status === 'respondida') return res.status(409).json({ error: 'Avaliação já respondida' })
+    await db.from('refei_avaliacoes').update({
+      status:             'respondida',
+      nota_geral,
+      quantidade_correta: quantidade_correta ?? null,
+      temperatura_ok:     temperatura_ok ?? null,
+      sabor_ok:           sabor_ok ?? null,
+      observacao:         observacao || null,
+      respondida_em:      new Date().toISOString(),
+    }).eq('id', id)
+    return res.status(200).json({ ok: true })
   }
 
   // ── POST: reabrir ──────────────────────────────────────────────────────────
