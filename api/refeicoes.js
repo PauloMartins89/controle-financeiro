@@ -47,7 +47,7 @@ async function sendWA(to, text) {
   }
 }
 
-const APP_URL = process.env.APP_URL || 'https://dividiai.app.br'
+const APP_URL = process.env.APP_URL || 'https://smartpro.app.br'
 
 function fmtBRL(v) {
   return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
@@ -860,31 +860,24 @@ export default async function handler(req, res) {
       }
     }
     if (supervisorTel) {
-      const { data: equipeData } = await db.from('refei_equipes').select('nome').eq('id', sol.equipe_id).maybeSingle()
-      const itensNormais = (itens || []).filter(i => !i.extra && (i.refeicao || i.cafe))
-      const itensExtras  = (itens || []).filter(i =>  i.extra && (i.refeicao || i.cafe))
-
-      const linhasColab  = itensNormais.map(i => `• ${i.colaborador_nome} — ${[i.refeicao ? '🍽️' : '', i.cafe ? '☕' : ''].filter(Boolean).join(' ')}`)
-      const linhasExtras = itensExtras.map( i => `⚠️ ${i.colaborador_nome} — ${[i.refeicao ? '🍽️' : '', i.cafe ? '☕' : ''].filter(Boolean).join(' ')} — "${i.justificativa}"`)
+      const { data: equipeData } = await db.from('refei_equipes').select('nome, cdc').eq('id', sol.equipe_id).maybeSingle()
+      const colaboradores = (itens || []).map(i => `• ${i.colaborador_nome}`).join('\n')
+      const link = `${APP_URL}/ar/${sol.token_aprovacao}`
 
       const msgSup = [
-        `🍽️ *Solicitação de Refeição — ${sol.numero_pedido}*`,
-        `Equipe: ${equipeData?.nome || '—'}`,
-        `Solicitante: ${sol.lider_nome || '—'}`,
-        `📅 Data: ${fmtData(sol.data_refeicao)}`,
-        `🏪 Restaurante: ${rest?.nome || '—'}`,
+        `🔔 *Nova Solicitação de Refeição*`,
         ``,
-        `👥 *Colaboradores (${linhasColab.length}):*`,
-        ...linhasColab,
-        ...(linhasExtras.length > 0 ? [``, `⚠️ *Extras (${linhasExtras.length}) — com justificativa:*`, ...linhasExtras] : []),
+        `*Pedido:* ${sol.numero_pedido}`,
+        `*Equipe:* ${equipeData?.nome || '—'}${equipeData?.cdc ? ' (CDC ' + equipeData.cdc + ')' : ''}`,
+        `*Solicitante:* ${sol.lider_nome || '—'}`,
+        `*Data:* ${fmtData(sol.data_refeicao)}`,
+        `*Restaurante:* ${rest?.nome || '—'}`,
+        `*Total:* ${fmtBRL(valorTotal)} (${totalRef}🍽️ ${totalCafe}☕)`,
+        colaboradores ? `\n*Colaboradores:*\n${colaboradores}` : '',
         ``,
-        `🍽️ ${totalRef} refeição(ões)  ·  ☕ ${totalCafe} café(s)  ·  *${fmtBRL(valorTotal)}*`,
-        ``,
-        `👇 Toque para aprovar ou reprovar (sem logar):`,
-        `${APP_URL}/ar/${sol.token_aprovacao}`,
-        ``,
-        `Responda *SIM* para aprovar ou *NÃO* para reprovar.`,
-      ].join('\n')
+        `Toque para aprovar ou reprovar:`,
+        link,
+      ].filter(l => l !== null).join('\n')
       await sendWA(supervisorTel, msgSup)
     }
 
