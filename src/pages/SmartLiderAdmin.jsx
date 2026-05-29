@@ -94,7 +94,7 @@ export default function SmartLiderAdmin() {
   const [modalCriar,   setModalCriar]   = useState(false)
   const [modalSenha,   setModalSenha]   = useState(null)  // user obj
   const [modalCelular, setModalCelular] = useState(null)  // user obj
-  const [form,         setForm]         = useState({ matricula: '', nome: '' })
+  const [form,         setForm]         = useState({ matricula: '', nome: '', celular: '' })
   const [novaSenha,    setNovaSenha]    = useState('')
   const [novoCelular,  setNovoCelular]  = useState('')
   const [saving,       setSaving]       = useState(false)
@@ -133,14 +133,14 @@ export default function SmartLiderAdmin() {
     const resp = await fetch('/api/lider-admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ action: 'criar-usuario', workspace_id: wsId, matricula: form.matricula.trim(), nome: form.nome.trim() }),
+      body: JSON.stringify({ action: 'criar-usuario', workspace_id: wsId, matricula: form.matricula.trim(), nome: form.nome.trim(), celular: form.celular.trim() }),
     })
     const json = await resp.json()
     setSaving(false)
     if (json.ok) {
       toast.success(json.ja_existia ? 'Usuário já existia' : `Usuário ${json.email} criado`)
       setModalCriar(false)
-      setForm({ matricula: '', nome: '' })
+      setForm({ matricula: '', nome: '', celular: '' })
       loadUsers(wsId)
     } else {
       toast.error(json.error || 'Erro ao criar usuário')
@@ -450,6 +450,14 @@ export default function SmartLiderAdmin() {
               placeholder="ex: João da Silva"
               value={form.nome}
               onChange={e => setForm(p => ({ ...p, nome: e.target.value }))}
+            />
+          </Field>
+          <Field label="Celular / WhatsApp">
+            <input
+              style={inputStyle}
+              placeholder="5567999990000 (com DDI+DDD)"
+              value={form.celular}
+              onChange={e => setForm(p => ({ ...p, celular: e.target.value }))}
             />
           </Field>
           <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '10px 14px', marginBottom: 18, fontSize: 12, color: '#166534' }}>

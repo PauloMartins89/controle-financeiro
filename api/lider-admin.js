@@ -49,6 +49,8 @@ export default async function handler(req, res) {
   // ── criar-usuario ────────────────────────────────────────────────────────
   if (action === 'criar-usuario') {
     if (!workspace_id || !matricula) return res.status(400).json({ error: 'workspace_id e matricula são obrigatórios' })
+    const { celular } = body
+    const celularFmt = (celular || '').replace(/\D/g, '') || null
     const email    = `${matricula.toLowerCase()}@lider.smartpro`
     const password = matricula
 
@@ -72,9 +74,10 @@ export default async function handler(req, res) {
         if (existingUser) {
           await db.from('lider_perfis').upsert({
             workspace_id,
-            user_id:  existingUser.id,
+            user_id:   existingUser.id,
             matricula: matricula.toLowerCase(),
             nome:      nome || `Líder ${matricula}`,
+            ...(celularFmt ? { celular: celularFmt } : {}),
           }, { onConflict: 'user_id' })
         }
         return res.status(200).json({ ok: true, ja_existia: true, email })
@@ -90,6 +93,7 @@ export default async function handler(req, res) {
         user_id:   newUserId,
         matricula: matricula.toLowerCase(),
         nome:      nome || `Líder ${matricula}`,
+        ...(celularFmt ? { celular: celularFmt } : {}),
       }, { onConflict: 'user_id' })
     }
 
