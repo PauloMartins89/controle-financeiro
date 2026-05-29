@@ -889,7 +889,33 @@ export default async function handler(req, res) {
     }
 
     // WhatsApp → líder (confirmação)
-    if (sol.lider_telefone) {
+    // Prioridade: 1) sol.lider_telefone, 2) lider_perfis.celular, 3) efetivo.celular via matricula
+    let liderTel = sol.lider_telefone
+    if (!liderTel && sol.owner_id && sol.workspace_id) {
+      const { data: lp } = await db
+        .from('lider_perfis')
+        .select('matricula, celular')
+        .eq('user_id', sol.owner_id)
+        .eq('workspace_id', sol.workspace_id)
+        .maybeSingle()
+      if (lp?.celular) {
+        liderTel = lp.celular
+      } else if (lp?.matricula) {
+        // Fallback: busca em efetivo pelo matricula
+        const { data: ef } = await db
+          .from('efetivo')
+          .select('celular')
+          .eq('workspace_id', sol.workspace_id)
+          .eq('matricula', lp.matricula)
+          .maybeSingle()
+        if (ef?.celular) liderTel = ef.celular
+      }
+      if (liderTel) {
+        // Persiste para futuras chamadas
+        await db.from('refei_solicitacoes').update({ lider_telefone: liderTel }).eq('id', sol.id)
+      }
+    }
+    if (liderTel) {
       const msgLider = [
         `✅ *Pedido ${sol.numero_pedido} enviado!*`,
         `Data: ${fmtData(sol.data_refeicao)}`,
@@ -899,7 +925,7 @@ export default async function handler(req, res) {
         ``,
         `Aguardando aprovação do supervisor.`,
       ].join('\n')
-      await sendWA(sol.lider_telefone, msgLider)
+      await sendWA(liderTel, msgLider)
     }
 
     // Flow Engine auto-start

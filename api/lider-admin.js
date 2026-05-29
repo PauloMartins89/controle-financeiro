@@ -103,7 +103,7 @@ export default async function handler(req, res) {
     // Usa lider_perfis diretamente — muito mais rápido que varrer auth.users
     const { data: perfis, error: perfisErr } = await db
       .from('lider_perfis')
-      .select('id, user_id, matricula, nome, equipe_id, ativo, created_at')
+      .select('id, user_id, matricula, nome, equipe_id, ativo, celular, created_at')
       .eq('workspace_id', workspace_id)
       .order('matricula')
 
@@ -116,12 +116,26 @@ export default async function handler(req, res) {
         email:        `${p.matricula}@lider.smartpro`,
         matricula:    p.matricula,
         nome:         p.nome || '',
+        celular:      p.celular || '',
         equipe_id:    p.equipe_id || null,
         workspace_id,
         ativo:        p.ativo,
         created_at:   p.created_at,
       })),
     })
+  }
+
+  // ── atualizar-celular ─────────────────────────────────────────────────────
+  if (action === 'atualizar-celular') {
+    const { perfil_id, celular } = body
+    if (!perfil_id) return res.status(400).json({ error: 'perfil_id é obrigatório' })
+    const cel = (celular || '').replace(/\D/g, '') || null
+    const { error } = await db
+      .from('lider_perfis')
+      .update({ celular: cel })
+      .eq('id', perfil_id)
+    if (error) return res.status(500).json({ error: error.message })
+    return res.status(200).json({ ok: true })
   }
 
   // ── resetar-senha ──────────────────────────────────────────────────────────

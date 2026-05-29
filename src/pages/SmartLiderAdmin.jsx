@@ -93,8 +93,10 @@ export default function SmartLiderAdmin() {
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [modalCriar,   setModalCriar]   = useState(false)
   const [modalSenha,   setModalSenha]   = useState(null)  // user obj
+  const [modalCelular, setModalCelular] = useState(null)  // user obj
   const [form,         setForm]         = useState({ matricula: '', nome: '' })
   const [novaSenha,    setNovaSenha]    = useState('')
+  const [novoCelular,  setNovoCelular]  = useState('')
   const [saving,       setSaving]       = useState(false)
 
   // Carrega workspaces
@@ -181,6 +183,27 @@ export default function SmartLiderAdmin() {
       loadUsers(wsId)
     } else {
       toast.error(json.error || 'Erro ao excluir')
+    }
+  }
+
+  // ── Atualizar celular ──────────────────────────────────────────────────────
+  async function handleAtualizarCelular() {
+    setSaving(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const resp = await fetch('/api/lider-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ action: 'atualizar-celular', perfil_id: modalCelular.perfil_id, celular: novoCelular.trim() }),
+    })
+    const json = await resp.json()
+    setSaving(false)
+    if (json.ok) {
+      toast.success('Celular atualizado')
+      setModalCelular(null)
+      setNovoCelular('')
+      loadUsers(wsId)
+    } else {
+      toast.error(json.error || 'Erro ao atualizar celular')
     }
   }
 
@@ -301,11 +324,11 @@ export default function SmartLiderAdmin() {
                   <div style={{ background: S.card, borderRadius: 12, border: `1px solid ${S.border}`, boxShadow: S.shadow, overflow: 'hidden' }}>
                     {/* Cabeçalho tabela */}
                     <div style={{
-                      display: 'grid', gridTemplateColumns: '2fr 2fr 110px 90px',
+                      display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1.5fr 110px 90px',
                       padding: '10px 16px', background: S.pageBg,
                       borderBottom: `1px solid ${S.border}`,
                     }}>
-                      {['Matrícula / Email', 'Nome', 'Criado em', 'Ações'].map(h => (
+                      {['Matrícula / Email', 'Nome', 'Celular / WA', 'Criado em', 'Ações'].map(h => (
                         <span key={h} style={{ fontSize: 11, fontWeight: 700, color: S.textSub, textTransform: 'uppercase', letterSpacing: 0.6 }}>{h}</span>
                       ))}
                     </div>
@@ -335,7 +358,7 @@ export default function SmartLiderAdmin() {
                           <div
                             key={u.id}
                             style={{
-                              display: 'grid', gridTemplateColumns: '2fr 2fr 110px 90px',
+                              display: 'grid', gridTemplateColumns: '1.5fr 1.5fr 1.5fr 110px 90px',
                               padding: '12px 16px', borderBottom: `1px solid ${S.border}`,
                               alignItems: 'center',
                             }}
@@ -347,10 +370,27 @@ export default function SmartLiderAdmin() {
                             </div>
                             {/* Nome */}
                             <div style={{ fontSize: 13, color: S.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{u.nome || '—'}</div>
+                            {/* Celular */}
+                            <div style={{ fontSize: 12, color: u.celular ? S.text : S.textSub, minWidth: 0 }}>
+                              {u.celular
+                                ? <span>📱 {u.celular}</span>
+                                : <span style={{ fontStyle: 'italic' }}>Sem celular</span>
+                              }
+                            </div>
                             {/* Data */}
                             <div style={{ fontSize: 12, color: S.textSub }}>{fmtDate(u.created_at)}</div>
                             {/* Ações */}
                             <div style={{ display: 'flex', gap: 6 }}>
+                              <button
+                                title="Editar celular/WhatsApp"
+                                onClick={() => { setModalCelular(u); setNovoCelular(u.celular || '') }}
+                                style={{
+                                  padding: '5px 7px', borderRadius: 7, border: `1px solid ${S.border}`,
+                                  background: S.pageBg, cursor: 'pointer', color: S.primary,
+                                }}
+                              >
+                                <DevicePhoneMobileIcon style={{ width: 13, height: 13 }} />
+                              </button>
                               <button
                                 title="Redefinir senha"
                                 onClick={() => { setModalSenha(u); setNovaSenha(u.matricula) }}
@@ -429,6 +469,39 @@ export default function SmartLiderAdmin() {
               style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: S.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
             >
               {saving ? 'Criando…' : 'Criar Usuário'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal: Editar celular ── */}
+      {modalCelular && (
+        <Modal title={`Celular/WhatsApp — ${modalCelular.matricula}`} onClose={() => setModalCelular(null)}>
+          <Field label="Celular / WhatsApp">
+            <input
+              style={inputStyle}
+              placeholder="5567999990000 (com DDI+DDD)"
+              value={novoCelular}
+              onChange={e => setNovoCelular(e.target.value)}
+              autoFocus
+            />
+          </Field>
+          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '8px 12px', marginBottom: 18, fontSize: 12, color: '#1E40AF' }}>
+            Formato: <strong>DDI + DDD + número</strong> — ex: <code>5567999990000</code>
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => setModalCelular(null)}
+              style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${S.border}`, background: S.pageBg, color: S.textSub, fontSize: 13, cursor: 'pointer' }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleAtualizarCelular}
+              disabled={saving}
+              style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: S.primary, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}
+            >
+              {saving ? 'Salvando…' : 'Salvar'}
             </button>
           </div>
         </Modal>
