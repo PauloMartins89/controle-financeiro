@@ -10,19 +10,20 @@ export default function LiderCadastroEquipes() {
   const [records,     setRecords]     = useState([])
   const [frentes,     setFrentes]     = useState([])
   const [liderUsers,  setLiderUsers]  = useState([])
+  const [refeiEquipes, setRefeiEquipes] = useState([])
   const [loading,     setLoading]     = useState(true)
   const [saving,      setSaving]      = useState(false)
   const [busca,       setBusca]       = useState('')
   const [showModal,   setShowModal]   = useState(false)
   const [editId,      setEditId]      = useState(null)
-  const [form,        setForm]        = useState({ nome: '', codigo: '', frente_id: '', lider_id: '', lider_nome: '', lider_email: '', ativo: true })
+  const [form,        setForm]        = useState({ nome: '', codigo: '', frente_id: '', lider_id: '', lider_nome: '', lider_email: '', refei_equipe_id: '', ativo: true })
 
   useEffect(() => { if (workspaceId) load() }, [workspaceId]) // eslint-disable-line
 
   async function load() {
     setLoading(true)
-    const [r1, r2, r3] = await Promise.all([
-      supabase.from('lider_equipes').select('*, lider_frentes(nome)').eq('workspace_id', workspaceId).order('nome'),
+    const [r1, r2, r3, r4] = await Promise.all([
+      supabase.from('lider_equipes').select('*, lider_frentes(nome), refei_equipes(id, nome, cdc)').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('lider_frentes').select('id, nome').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
       supabase
         .from('lider_perfis')
@@ -31,22 +32,24 @@ export default function LiderCadastroEquipes() {
         .eq('ativo', true)
         .order('matricula')
         .then(({ data }) => ({ usuarios: (data || []).map(p => ({ id: p.user_id, matricula: p.matricula, nome: p.nome, equipe_id: p.equipe_id, email: `${p.matricula}@lider.smartpro` })) })),
+      supabase.from('refei_equipes').select('id, nome, cdc').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
     ])
     setRecords(r1.data || [])
     setFrentes(r2.data || [])
     setLiderUsers(r3.usuarios || [])
+    setRefeiEquipes(r4.data || [])
     setLoading(false)
   }
 
   function openNew() {
     setEditId(null)
-    setForm({ nome: '', codigo: '', frente_id: frentes[0]?.id ?? '', lider_id: '', lider_nome: '', lider_email: '', ativo: true })
+    setForm({ nome: '', codigo: '', frente_id: frentes[0]?.id ?? '', lider_id: '', lider_nome: '', lider_email: '', refei_equipe_id: '', ativo: true })
     setShowModal(true)
   }
 
   function openEdit(r) {
     setEditId(r.id)
-    setForm({ nome: r.nome, codigo: r.codigo ?? '', frente_id: r.frente_id ?? '', lider_id: r.lider_id ?? '', lider_nome: r.lider_nome ?? '', lider_email: r.lider_email ?? '', ativo: r.ativo })
+    setForm({ nome: r.nome, codigo: r.codigo ?? '', frente_id: r.frente_id ?? '', lider_id: r.lider_id ?? '', lider_nome: r.lider_nome ?? '', lider_email: r.lider_email ?? '', refei_equipe_id: r.refei_equipe_id ?? '', ativo: r.ativo })
     setShowModal(true)
   }
 
@@ -62,7 +65,7 @@ export default function LiderCadastroEquipes() {
   async function save() {
     if (!form.nome.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
-    const payload = { ...form, workspace_id: workspaceId, frente_id: form.frente_id || null, lider_id: form.lider_id || null }
+    const payload = { ...form, workspace_id: workspaceId, frente_id: form.frente_id || null, lider_id: form.lider_id || null, refei_equipe_id: form.refei_equipe_id || null }
     const { error } = editId
       ? await supabase.from('lider_equipes').update(payload).eq('id', editId)
       : await supabase.from('lider_equipes').insert(payload)
@@ -103,7 +106,7 @@ export default function LiderCadastroEquipes() {
 
         <Toolbar busca={busca} setBusca={setBusca} onRefresh={load} onNovo={openNew} placeholder="Buscar equipes…" />
 
-        <DataTable cols={['Equipe', 'Código', 'Frente', 'Líder', 'Status']} loading={loading} isEmpty={filtrados.length === 0}>
+        <DataTable cols={['Equipe', 'Código', 'Frente', 'Líder', 'Equipe Refeições', 'Status']} loading={loading} isEmpty={filtrados.length === 0}>
           {filtrados.map(r => (
             <TR key={r.id} ativo={r.ativo}
               onEdit={() => openEdit(r)}
@@ -114,6 +117,7 @@ export default function LiderCadastroEquipes() {
                 r.codigo ? <Badge text={r.codigo} /> : '—',
                 r.lider_frentes ? <Badge text={r.lider_frentes.nome} /> : '—',
                 r.lider_nome || (r.lider_email ? r.lider_email.split('@')[0] : '—'),
+                r.refei_equipes ? <Badge text={r.refei_equipes.cdc ? `${r.refei_equipes.cdc} · ${r.refei_equipes.nome}` : r.refei_equipes.nome} /> : <span style={{ color: '#94a3b8' }}>— não vinculada —</span>,
                 <StatusChip key="s" ativo={r.ativo} />,
               ]}
             />
@@ -149,6 +153,20 @@ export default function LiderCadastroEquipes() {
                 {form.lider_email}
               </div>
             )}
+          </Field>
+          <Field label="Equipe de Refeições (vínculo p/ pedidos)">
+            <Sel
+              value={form.refei_equipe_id}
+              onChange={v => setForm(p => ({ ...p, refei_equipe_id: v }))}
+              options={[
+                { value: '', label: '— Sem vínculo —' },
+                ...refeiEquipes.map(e => ({ value: e.id, label: e.cdc ? `${e.cdc} · ${e.nome}` : e.nome }))
+              ]}
+            />
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+              Vincula esta equipe operacional à equipe do módulo Refeições.
+              Quando o líder solicitar refeição pelo app, a lista de colaboradores virá deste vínculo.
+            </div>
           </Field>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             <input type="checkbox" checked={form.ativo} onChange={e => setForm(p => ({ ...p, ativo: e.target.checked }))} /> Ativo

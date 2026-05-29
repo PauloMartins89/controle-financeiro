@@ -279,6 +279,10 @@ export default function App() {
     }
 
     const load = async () => {
+      // IMPORTANTE: pegar o user_id ANTES da query de workspace_members
+      // (RLS pode estar permissiva e retornar rows de outros usuários)
+      const { data: { user: _authUser } } = await supabase.auth.getUser()
+      const _authUserId = _authUser?.id || null
       const [
         { data: pessoas },
         { data: grupos },
@@ -302,7 +306,9 @@ export default function App() {
         supabase.from('negocios').select('*'),
         supabase.from('proventos').select('*').order('data', { ascending: false }),
         supabase.from('closures').select('*').order('mes', { ascending: true }),
-        supabase.from('workspace_members').select('workspace_id, perfil_id, ativo, user_id').limit(10),
+        _authUserId
+          ? supabase.from('workspace_members').select('workspace_id, perfil_id, ativo, user_id').eq('user_id', _authUserId).eq('ativo', true)
+          : Promise.resolve({ data: [] }),
       ])
       // Usa o workspace com mais módulos configurados (usuário pode ter múltiplos)
       const allWorkspaceIds = (wsMembers || []).map(m => m.workspace_id).filter(Boolean)
