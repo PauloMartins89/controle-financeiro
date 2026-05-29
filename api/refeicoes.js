@@ -849,18 +849,39 @@ export default async function handler(req, res) {
     await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_aprovacao', descricao: 'Enviado para aprovação do supervisor',                                  ator: sol.lider_nome, atorTipo: 'lider' })
 
     // WhatsApp → supervisor
-    // Se o pedido não tem supervisor_telefone, buscar da equipe diretamente
+    // Prioridade: 1) sol.supervisor_telefone, 2) refei_equipes via equipe_id,
+    //             3) lider_equipes via owner_id → refei_equipe_id
     let supervisorTel = sol.supervisor_telefone
-    if (!supervisorTel && sol.equipe_id) {
-      const { data: eq } = await db.from('refei_equipes').select('supervisor_telefone').eq('id', sol.equipe_id).maybeSingle()
+    let refeiEquipeId  = sol.equipe_id
+    if (!supervisorTel && refeiEquipeId) {
+      const { data: eq } = await db.from('refei_equipes').select('supervisor_telefone').eq('id', refeiEquipeId).maybeSingle()
       supervisorTel = eq?.supervisor_telefone || null
-      // Atualiza o pedido para futuras consultas
-      if (supervisorTel) {
-        await db.from('refei_solicitacoes').update({ supervisor_telefone: supervisorTel }).eq('id', sol.id)
+    }
+    if (!supervisorTel && sol.owner_id) {
+      // Fallback: busca via lider_equipes → refei_equipe_id
+      const { data: le } = await db
+        .from('lider_equipes')
+        .select('refei_equipe_id')
+        .eq('workspace_id', sol.workspace_id)
+        .eq('lider_id', sol.owner_id)
+        .not('refei_equipe_id', 'is', null)
+        .limit(1)
+        .maybeSingle()
+      if (le?.refei_equipe_id) {
+        refeiEquipeId = le.refei_equipe_id
+        const { data: eq2 } = await db.from('refei_equipes').select('supervisor_telefone').eq('id', refeiEquipeId).maybeSingle()
+        supervisorTel = eq2?.supervisor_telefone || null
       }
     }
+    // Persiste para futuras consultas
+    if (supervisorTel || refeiEquipeId) {
+      const upd = {}
+      if (supervisorTel && !sol.supervisor_telefone) upd.supervisor_telefone = supervisorTel
+      if (refeiEquipeId  && !sol.equipe_id)          upd.equipe_id = refeiEquipeId
+      if (Object.keys(upd).length) await db.from('refei_solicitacoes').update(upd).eq('id', sol.id)
+    }
     if (supervisorTel) {
-      const { data: equipeData } = await db.from('refei_equipes').select('nome, cdc').eq('id', sol.equipe_id).maybeSingle()
+      const { data: equipeData } = await db.from('refei_equipes').select('nome, cdc').eq('id', refeiEquipeId).maybeSingle()
       const colaboradores = (itens || []).map(i => `• ${i.colaborador_nome}`).join('\n')
       const link = `${APP_URL}/ar/${sol.token_aprovacao}`
 
