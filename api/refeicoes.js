@@ -239,6 +239,20 @@ export default async function handler(req, res) {
       await sendWA(supervisorTel, msgSup)
     }
 
+    // Confirma para o líder (fluxo WA — app mostra confirmação na própria UI)
+    if (sol.lider_telefone) {
+      const msgLider = [
+        `✅ *Pedido ${numeroPedido} enviado!*`,
+        `Data: ${fmtData(dataRefeicao)}`,
+        `Restaurante: ${rest.nome}`,
+        `${totalRef} refeição(ões)` + (totalCafe > 0 ? ` · ${totalCafe} café(s)` : ''),
+        `*Total: ${fmtBRL(valorTotal)}*`,
+        ``,
+        `Aguardando aprovação do supervisor.`,
+      ].join('\n')
+      await sendWA(sol.lider_telefone, msgLider)
+    }
+
     // Auto-iniciar instância no Flow Engine (sempre que existir definição ativa)
     try {
       const { data: flowDef } = await db
