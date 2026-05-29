@@ -239,20 +239,6 @@ export default async function handler(req, res) {
       await sendWA(supervisorTel, msgSup)
     }
 
-    // Confirma para o líder
-    if (sol.lider_telefone) {
-      const msgLider = [
-        `✅ *Pedido ${numeroPedido} enviado!*`,
-        `Data: ${fmtData(dataRefeicao)}`,
-        `Restaurante: ${rest.nome}`,
-        `${totalRef} refeição(ões)` + (totalCafe > 0 ? ` · ${totalCafe} café(s)` : ''),
-        `*Total: ${fmtBRL(valorTotal)}*`,
-        ``,
-        `Aguardando aprovação do supervisor.`,
-      ].join('\n')
-      await sendWA(sol.lider_telefone, msgLider)
-    }
-
     // Auto-iniciar instância no Flow Engine (sempre que existir definição ativa)
     try {
       const { data: flowDef } = await db
@@ -929,19 +915,6 @@ export default async function handler(req, res) {
         await db.from('refei_solicitacoes').update({ lider_telefone: liderTel }).eq('id', sol.id)
       }
     }
-    if (liderTel) {
-      const msgLider = [
-        `✅ *Pedido ${sol.numero_pedido} enviado!*`,
-        `Data: ${fmtData(sol.data_refeicao)}`,
-        `Restaurante: ${rest?.nome || '—'}`,
-        `${totalRef} refeição(ões)` + (totalCafe > 0 ? ` · ${totalCafe} café(s)` : ''),
-        `*Total: ${fmtBRL(valorTotal)}*`,
-        ``,
-        `Aguardando aprovação do supervisor.`,
-      ].join('\n')
-      await sendWA(liderTel, msgLider)
-    }
-
     // Flow Engine auto-start
     try {
       const { data: flowDef } = await db
