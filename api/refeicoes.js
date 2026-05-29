@@ -350,6 +350,18 @@ export default async function handler(req, res) {
       if (sol.lider_telefone) {
         await sendWA(sol.lider_telefone, `✅ Pedido *${sol.numero_pedido}* aprovado!\nData: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado para preparação.`)
       }
+      // Agenda pesquisa de satisfação — disponível no dia da refeição
+      await db.from('refei_avaliacoes').upsert({
+        workspace_id:     sol.workspace_id,
+        solicitacao_id:   sol.id,
+        lider_id:         sol.owner_id,
+        equipe_id:        sol.equipe_id,
+        numero_pedido:    sol.numero_pedido,
+        restaurante_nome: rest?.nome || null,
+        data_refeicao:    sol.data_refeicao,
+        disponivel_em:    sol.data_refeicao,
+        status:           'pendente',
+      }, { onConflict: 'solicitacao_id', ignoreDuplicates: true })
     } else {
       // Notifica líder da reprovação
       if (sol.lider_telefone) {
@@ -515,6 +527,18 @@ export default async function handler(req, res) {
         if (sol.lider_telefone) {
           await sendWA(sol.lider_telefone, `✅ Pedido *${sol.numero_pedido}* aprovado!\nData: ${fmtData(sol.data_refeicao)}\n\nO restaurante foi notificado para preparação.`)
         }
+        // Agenda pesquisa de satisfação — disponível no dia da refeição
+        await db.from('refei_avaliacoes').upsert({
+          workspace_id:     sol.workspace_id,
+          solicitacao_id:   sol.id,
+          lider_id:         sol.owner_id,
+          equipe_id:        sol.equipe_id,
+          numero_pedido:    sol.numero_pedido,
+          restaurante_nome: rest?.nome || null,
+          data_refeicao:    sol.data_refeicao,
+          disponivel_em:    sol.data_refeicao,
+          status:           'pendente',
+        }, { onConflict: 'solicitacao_id', ignoreDuplicates: true })
       } else {
         if (sol.lider_telefone) {
           await sendWA(sol.lider_telefone, `❌ Pedido *${sol.numero_pedido}* reprovado.\nMotivo: ${motivo || '—'}\n\nAcesse o link para editar e reenviar: ${APP_URL}/refeicao/${sol.token_lider}`)
