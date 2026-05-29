@@ -45,4 +45,5 @@ CREATE POLICY "workspace members refei_avaliacoes" ON refei_avaliacoes
     workspace_id IN (
       SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid()
     )
+    OR lider_id = auth.uid()  -- líderes acessam as próprias avaliações
   );
