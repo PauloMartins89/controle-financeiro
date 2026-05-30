@@ -1287,7 +1287,7 @@ export default function LotesCliente() {
             { label: 'APROVADOS',        value: counts.aprovado_cliente || 0, color: '#10b981' },
             { label: 'RECUSADOS',        value: counts.recusado_cliente || 0, color: '#ef4444' },
           ].map(c => (
-            <div key={c.label} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)', borderTop: `3px solid ${c.color}` }}>
+            <div key={c.label} style={{ background: `linear-gradient(135deg, ${c.color}14 0%, var(--bg-card) 55%)`, boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 18px', border: `1px solid ${c.color}28`, borderTop: `3px solid ${c.color}` }}>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: c.color }}>{c.value}</div>
             </div>
