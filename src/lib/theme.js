@@ -54,7 +54,7 @@ export const LC = {
  *         // Cards de resumo
  *         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 24 }}>
  *           {cards.map(c => (
- *             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderTop: `3px solid ${c.color}`, borderRadius: 14, padding: '18px 20px', boxShadow: 'var(--shadow-card)' }}>
+ *             <div style={{ background: `linear-gradient(135deg, ${c.color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${c.color}28`, borderTop: `3px solid ${c.color}`, borderRadius: 14, padding: '18px 20px', boxShadow: 'var(--shadow-card)' }}>
  *               ...
  *             </div>
  *           ))}
