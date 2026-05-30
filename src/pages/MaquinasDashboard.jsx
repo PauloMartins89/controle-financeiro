@@ -23,8 +23,9 @@ const utilColor = p => p == null ? '#6b7280' : p >= 85 ? '#10b981' : p >= 55 ? '
 function KPICard({ label, value, sub, color, bg, icon: Icon }) {
   return (
     <div style={{
-      background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '14px 16px',
-      border: '1px solid var(--border)', borderTop: `3px solid ${color}`,
+      background: `linear-gradient(135deg, ${color}14 0%, var(--bg-card) 55%)`,
+      boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '14px 16px',
+      border: `1px solid ${color}28`, borderTop: `3px solid ${color}`,
       display: 'flex', flexDirection: 'column', gap: 4,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

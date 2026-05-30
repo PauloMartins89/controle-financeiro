@@ -114,7 +114,7 @@ export default function LiderDashboard() {
               {kpiCards.map(k => {
                 const Icon = k.Icon
                 return (
-                  <div key={k.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
+                  <div key={k.label} style={{ background: `linear-gradient(135deg, ${k.color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${k.color}28`, borderTop: `3px solid ${k.color}`, borderRadius: 14, padding: 18 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <div style={{ width: 34, height: 34, borderRadius: 9, background: k.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Icon style={{ width: 17, height: 17, color: k.color }} />

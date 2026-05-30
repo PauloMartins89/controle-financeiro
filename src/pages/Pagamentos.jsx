@@ -113,7 +113,7 @@ function ConfirmarRecebimentoModal({ pagamento, onClose, onSaved }) {
             type="date"
             value={dataRecebimento}
             onChange={e => setDataRecebimento(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
+            style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
           />
         </div>
 
@@ -470,7 +470,7 @@ export default function Pagamentos() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por NF, descrição, data..."
-            style={{ width: '100%', paddingLeft: 34, padding: '9px 12px 9px 34px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', paddingLeft: 34, padding: '9px 12px 9px 34px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
 

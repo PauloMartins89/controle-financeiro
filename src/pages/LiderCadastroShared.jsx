@@ -43,8 +43,10 @@ export function StatusChip({ ativo }) {
 export function KpiCard({ label, value, icon, color = '#3b82f6' }) {
   return (
     <div style={{
-      background: 'var(--bg-card)', borderRadius: 12, padding: '18px 20px',
-      border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14,
+      background: `linear-gradient(135deg, ${color}14 0%, var(--bg-card) 55%)`,
+      borderRadius: 12, padding: '18px 20px',
+      border: `1px solid ${color}28`, borderTop: `3px solid ${color}`,
+      display: 'flex', alignItems: 'center', gap: 14,
     }}>
       <div style={{
         width: 44, height: 44, borderRadius: 10,

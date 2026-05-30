@@ -63,7 +63,7 @@ function StatusBadge({ status }) {
 
 // --- Estilos compartilhados (formulários) -------------------------------------
 const lbl = { display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 }
-const inp = { width: '100%', padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: 13, boxSizing: 'border-box', outline: 'none' }
+const inp = { width: '100%', padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13, boxSizing: 'border-box', outline: 'none' }
 
 // --- Modal genérico -----------------------------------------------------------
 function Modal({ title, onClose, children, maxWidth = 560 }) {
@@ -1538,12 +1538,8 @@ function SecaoDashboard({ sols, onNav }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(185px, 1fr))', gap: 14 }}>
           {dash.kpis.map((k, i) => {
             if (k.secondary !== undefined) return (
-              <div key={i} onClick={() => k.items?.length && setKpiDetalhe(k)} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: k.items?.length ? 'pointer' : 'default', transition: 'box-shadow 0.15s' }} onMouseEnter={e => { if (k.items?.length) e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.12)' }} onMouseLeave={e => e.currentTarget.style.boxShadow = SHADOW}>
-                {/* accent top bar */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
-                {/* soft gradient wash */}
-                <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${k.color}0a 0%, transparent 60%)`, borderRadius: 16, pointerEvents: 'none' }} />
-                {/* header row */}
+              <div key={i} onClick={() => k.items?.length && setKpiDetalhe(k)} style={{ ...cardStyle, background: `linear-gradient(135deg, ${k.color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${k.color}28`, borderTop: `3px solid ${k.color}`, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: k.items?.length ? 'pointer' : 'default', transition: 'box-shadow 0.15s' }} onMouseEnter={e => { if (k.items?.length) e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.12)' }} onMouseLeave={e => e.currentTarget.style.boxShadow = SHADOW}>
+                {/* header row */}}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, position: 'relative' }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{k.label}</span>
                   <div style={{ width: 32, height: 32, borderRadius: 10, background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{k.icon}</div>
@@ -1572,8 +1568,7 @@ function SecaoDashboard({ sols, onNav }) {
               </div>
             )
             return (
-              <div key={i} onClick={() => k.items?.length && setKpiDetalhe(k)} style={{ ...cardStyle, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: k.items?.length ? 'pointer' : 'default', transition: 'box-shadow 0.15s' }} onMouseEnter={e => { if (k.items?.length) e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.12)' }} onMouseLeave={e => e.currentTarget.style.boxShadow = SHADOW}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: k.color, borderRadius: '16px 16px 0 0' }} />
+              <div key={i} onClick={() => k.items?.length && setKpiDetalhe(k)} style={{ ...cardStyle, background: `linear-gradient(135deg, ${k.color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${k.color}28`, borderTop: `3px solid ${k.color}`, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: k.items?.length ? 'pointer' : 'default', transition: 'box-shadow 0.15s' }} onMouseEnter={e => { if (k.items?.length) e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.12)' }} onMouseLeave={e => e.currentTarget.style.boxShadow = SHADOW}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1.5, maxWidth: '72%' }}>{k.label}</span>
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, flexShrink: 0 }}>{k.icon}</div>
