@@ -2058,13 +2058,14 @@ export default function Lancamentos() {
     }
     // Filtros por coluna
     const d = l.dados_extras || {}
-    if (colFilters.data && !(l.data || '').startsWith(colFilters.data)) return false
-    if (colFilters.numDm && (d.numero_diario || '') !== colFilters.numDm) return false
-    if (colFilters.cliente && (d.cliente || d.empresa || l.descricao || '') !== colFilters.cliente) return false
-    if (colFilters.placa && (d.placa || '') !== colFilters.placa) return false
-    if (colFilters.origem && (d.local_origem || '') !== colFilters.origem) return false
-    if (colFilters.destino && (d.local_destino || '') !== colFilters.destino) return false
-    if (colFilters.status && l.status !== colFilters.status) return false
+    const ci = (v) => (v || '').toLowerCase()
+    if (colFilters.data    && !ci(l.data).includes(ci(colFilters.data))) return false
+    if (colFilters.numDm   && !ci(d.numero_diario).includes(ci(colFilters.numDm))) return false
+    if (colFilters.cliente && !ci(d.cliente || d.empresa || l.descricao).includes(ci(colFilters.cliente))) return false
+    if (colFilters.placa   && !ci(d.placa).includes(ci(colFilters.placa))) return false
+    if (colFilters.origem  && !ci(d.local_origem).includes(ci(colFilters.origem))) return false
+    if (colFilters.destino && !ci(d.local_destino).includes(ci(colFilters.destino))) return false
+    if (colFilters.status  && l.status !== colFilters.status) return false
     return true
   })
 
@@ -2275,17 +2276,17 @@ export default function Lancamentos() {
                   <th style={{ padding: '9px 12px', width: 80, background: LC.secondary, borderBottom: `1px solid ${LC.border}` }} />
                 </tr>
                 {/* Linha de filtros por coluna */}
-                <tr style={{ background: '#fafbff', borderBottom: `2px solid ${LC.borderStrong}` }}>
+                <tr style={{ background: LC.secondary, borderBottom: `1px solid ${LC.border}` }}>
                   <td style={{ padding: '4px 8px' }}></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.data} onChange={e => setColFilter('data', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.numDm} onChange={e => setColFilter('numDm', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.cliente} onChange={e => setColFilter('cliente', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.origem} onChange={e => setColFilter('origem', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.destino} onChange={e => setColFilter('destino', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.placa} onChange={e => setColFilter('placa', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.data} onChange={e => setColFilter('data', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.numDm} onChange={e => setColFilter('numDm', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.cliente} onChange={e => setColFilter('cliente', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.origem} onChange={e => setColFilter('origem', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.destino} onChange={e => setColFilter('destino', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.placa} onChange={e => setColFilter('placa', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
                   <td colSpan={3} style={{ padding: '4px 8px' }}></td>
                   <td style={{ padding: '4px 8px' }}></td>
-                  <td style={{ padding: '4px 8px' }}><select value={colFilters.status} onChange={e => setColFilter('status', e.target.value)} style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtSecondary, borderRadius: 5, padding: '3px 5px', fontSize: 11, outline: 'none' }}><option value="">todos</option>{colDistinct.status.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></td>
+                  <td style={{ padding: '4px 8px' }}><select value={colFilters.status} onChange={e => setColFilter('status', e.target.value)} style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtSecondary, borderRadius: 5, padding: '3px 5px', fontSize: 11, outline: 'none' }}><option value="">todos</option>{colDistinct.status.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></td>
                   <td style={{ padding: '4px 8px' }}></td>
                 </tr>
               </thead>
