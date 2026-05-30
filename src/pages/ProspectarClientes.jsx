@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { waLink } from '../lib/utils'
@@ -18,7 +18,7 @@ const METODOS = [
   {
     id: 'b2b',
     label: 'B2B Direto',
-    emoji: '??',
+    emoji: '🎯',
     cor: '#6366f1',
     bg: 'rgba(99,102,241,0.08)',
     border: 'rgba(99,102,241,0.25)',
@@ -31,12 +31,12 @@ const METODOS = [
       'Se positivo, envie proposta formal com ROI estimado',
     ],
     template: (nome, cat, servico) =>
-      `Olá! Sou [seu nome], da [sua empresa].\n\nIdentificamos que a *${nome}* atua ${cat ? `em *${cat}*` : 'no setor'} e acreditamos que podemos agregar valor ao negócio de vocês.\n\nTrabalhamos com *${servico || 'nossa soluçÃo'}* e atendemos empresas com perfil similar com resultados comprovados.\n\nPodemos agendar uma conversa rápida de 15 min? ??`,
+      `Olá! Sou [seu nome], da [sua empresa].\n\nIdentificamos que a *${nome}* atua ${cat ? `em *${cat}*` : 'no setor'} e acreditamos que podemos agregar valor ao negócio de vocês.\n\nTrabalhamos com *${servico || 'nossa soluçÃo'}* e atendemos empresas com perfil similar com resultados comprovados.\n\nPodemos agendar uma conversa rápida de 15 min? 🤝`,
   },
   {
     id: 'inside_sales',
     label: 'Inside Sales',
-    emoji: '??',
+    emoji: '📞',
     cor: '#0ea5e9',
     bg: 'rgba(14,165,233,0.08)',
     border: 'rgba(14,165,233,0.25)',
@@ -49,12 +49,12 @@ const METODOS = [
       'Envie WhatsApp de confirmaçÃo logo após a ligaçÃo',
     ],
     template: (nome, cat, servico) =>
-      `Olá! Acabei de ligar para a *${nome}*.\n\nConforme combinado, seguem mais detalhes sobre como podemos ajudar ${cat ? `empresas de *${cat}*` : 'o seu negócio'} com *${servico || 'nossa soluçÃo'}*.\n\nAguardo sua confirmaçÃo para a apresentaçÃo! ???`,
+      `Olá! Acabei de ligar para a *${nome}*.\n\nConforme combinado, seguem mais detalhes sobre como podemos ajudar ${cat ? `empresas de *${cat}*` : 'o seu negócio'} com *${servico || 'nossa soluçÃo'}*.\n\nAguardo sua confirmaçÃo para a apresentaçÃo! 📅`,
   },
   {
     id: 'social_selling',
     label: 'Social Selling',
-    emoji: '??',
+    emoji: '💡',
     cor: '#ec4899',
     bg: 'rgba(236,72,153,0.08)',
     border: 'rgba(236,72,153,0.25)',
@@ -67,12 +67,12 @@ const METODOS = [
       'Migre para WhatsApp para acelerar o processo',
     ],
     template: (nome, cat, servico) =>
-      `Olá! Vi o trabalho da *${nome}* ${cat ? `em *${cat}*` : ''} e fiquei muito impressionado.\n\nTrabalhamos com *${servico || 'nossa soluçÃo'}* e tenho ajudado empresas do seu perfil a crescerem. Posso compartilhar algo que acredito que vai te interessar? ??`,
+      `Olá! Vi o trabalho da *${nome}* ${cat ? `em *${cat}*` : ''} e fiquei muito impressionado.\n\nTrabalhamos com *${servico || 'nossa soluçÃo'}* e tenho ajudado empresas do seu perfil a crescerem. Posso compartilhar algo que acredito que vai te interessar? 😊`,
   },
   {
     id: 'parceria',
     label: 'Parceria Comercial',
-    emoji: '??',
+    emoji: '🤝',
     cor: '#10b981',
     bg: 'rgba(16,185,129,0.08)',
     border: 'rgba(16,185,129,0.25)',
@@ -85,7 +85,7 @@ const METODOS = [
       'Revise a parceria a cada 30 dias com dados reais',
     ],
     template: (nome, cat, servico) =>
-      `Olá! Tudo bem?\n\nVi que a *${nome}* atende um pÚblico muito parecido com o nosso. Trabalhamos com *${servico || 'nossa soluçÃo'}* e acredito que uma parceria entre nós poderia gerar resultados para os dois lados.\n\nA ideia seria uma indicaçÃo mÚtua com benefícios claros. Faz sentido conversar? ??`,
+      `Olá! Tudo bem?\n\nVi que a *${nome}* atende um pÚblico muito parecido com o nosso. Trabalhamos com *${servico || 'nossa soluçÃo'}* e acredito que uma parceria entre nós poderia gerar resultados para os dois lados.\n\nA ideia seria uma indicaçÃo mÚtua com benefícios claros. Faz sentido conversar? 🤝`,
   },
 ]
 
@@ -94,7 +94,7 @@ const STATUS_LEAD = [
   { id: 'nao_contatado', label: 'NÃo contatado', cor: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
   { id: 'contatado',     label: 'Contatado',     cor: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
   { id: 'negociando',    label: 'Em negociaçÃo', cor: '#0ea5e9', bg: 'rgba(14,165,233,0.1)'  },
-  { id: 'fechado',       label: 'Fechado ?',     cor: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  { id: 'fechado',       label: 'Fechado ✅',     cor: '#10b981', bg: 'rgba(16,185,129,0.1)' },
   { id: 'recusado',      label: 'Recusado',      cor: '#ef4444', bg: 'rgba(239,68,68,0.1)'  },
 ]
 
@@ -647,7 +647,7 @@ export default function ProspectarClientes() {
       if (error) throw new Error(error.message || 'Erro ao buscar')
       const lista = data?.fornecedores || []
       setResultados(lista)
-      if (lista.length === 0) toast('Nenhum resultado. Tente outro segmento ou cidade.', { icon: '??' })
+      if (lista.length === 0) toast('Nenhum resultado. Tente outro segmento ou cidade.', { icon: '🔍' })
     } catch (err) { toast.error(err.message || 'Erro ao buscar') }
     finally { setLoading(false) }
   }
@@ -665,8 +665,8 @@ export default function ProspectarClientes() {
         {/* Abas */}
         <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
           {[
-            { id: 'buscar', label: '?? Buscar Prospectos' },
-            { id: 'grupos', label: `?? Grupos${totalGrupos > 0 ? ` (${totalGrupos})` : ''}` },
+            { id: 'buscar', label: '🔍 Buscar Prospectos' },
+            { id: 'grupos', label: `👥 Grupos${totalGrupos > 0 ? ` (${totalGrupos})` : ''}` },
           ].map(t => (
             <button key={t.id} onClick={() => setAba(t.id)}
               style={{ padding: '10px 18px', fontSize: 13, fontWeight: aba === t.id ? 700 : 500, color: aba === t.id ? 'var(--text-primary)' : 'var(--text-secondary)', background: 'none', border: 'none', borderBottom: `2px solid ${aba === t.id ? '#6366f1' : 'transparent'}`, cursor: 'pointer', marginBottom: -1 }}>
