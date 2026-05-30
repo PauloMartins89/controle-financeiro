@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { formatCurrency } from '../lib/utils'
@@ -76,7 +76,7 @@ function NegocioModal({ negocio, onClose, onSave }) {
               <label className="label">Ícone</label>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {ICONS_NEG.map(ic => (
-                  <button key={ic} type="button" onClick={() => setForm(f => ({ ...f, icone: ic }))} style={{ width: 36, height: 36, borderRadius: 8, fontSize: 18, cursor: 'pointer', background: form.icone === ic ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)', border: form.icone === ic ? '1px solid #6366f1' : '1px solid var(--border)' }}>{ic}</button>
+                  <button key={ic} type="button" onClick={() => setForm(f => ({ ...f, icone: ic }))} style={{ width: 36, height: 36, borderRadius: 8, fontSize: 18, cursor: 'pointer', background: form.icone === ic ? 'rgba(99,102,241,0.2)' : 'var(--bg-secondary)', border: form.icone === ic ? '1px solid #6366f1' : '1px solid var(--border)' }}>{ic}</button>
                 ))}
               </div>
             </div>
@@ -115,7 +115,7 @@ function NegocioModal({ negocio, onClose, onSave }) {
                     <option value="">Selecionar pessoa...</option>
                     {people.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                   </select>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 10, padding: '6px 10px', width: 90 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '6px 10px', width: 90 }}>
                     <input
                       type="number" min="0" max="100"
                       value={s.percentual}
@@ -244,7 +244,7 @@ export default function Negocios() {
                             <div style={{ fontSize: 13, fontWeight: 600 }}>{pessoa.nome}</div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <div style={{ height: 6, width: 80, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{ height: 6, width: 80, background: 'rgba(0,0,0,0.05)', borderRadius: 3, overflow: 'hidden' }}>
                               <div style={{ height: '100%', width: `${s.percentual}%`, background: neg.cor, borderRadius: 3 }} />
                             </div>
                             <span style={{ fontSize: 13, fontWeight: 700, color: neg.cor, width: 36, textAlign: 'right' }}>{s.percentual}%</span>
@@ -257,7 +257,7 @@ export default function Negocios() {
 
                 {/* Receita summary */}
                 <div style={{ padding: '14px 22px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                  <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Proventos</div>
                     <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{negProventos.length}</div>
                   </div>

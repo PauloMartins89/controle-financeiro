@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
@@ -119,7 +119,7 @@ function BarChart({ data, colorFn }) {
             <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>{categoria}</span>
             <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)' }}>{fmtCurrency(valor)}</span>
           </div>
-          <div style={{ height: 6, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+          <div style={{ height: 6, borderRadius: 4, background: 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 4,
               width: `${max > 0 ? (valor / max) * 100 : 0}%`,

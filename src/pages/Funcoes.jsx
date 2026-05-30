@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
@@ -64,7 +64,7 @@ function FuncaoModal({ funcao, workspaceId, onClose, onSaved }) {
             <label className="label" style={{ marginBottom: 10 }}>Capacidades padrão desta função</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {FLAGS.map(flag => (
-                <label key={flag.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: form[flag.key] ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)', cursor: 'pointer' }}>
+                <label key={flag.key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: form[flag.key] ? 'rgba(99,102,241,0.08)' : 'var(--bg-secondary)', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={!!form[flag.key]}
@@ -169,7 +169,7 @@ export default function Funcoes() {
               </thead>
               <tbody>
                 {funcoes.map(f => (
-                  <tr key={f.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <tr key={f.id} style={{ borderBottom: '1px solid var(--bg-secondary)' }}>
                     <td style={{ padding: '12px 12px' }}>
                       <div style={{ fontWeight: 600 }}>{f.nome}</div>
                       {f.descricao && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{f.descricao}</div>}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -18,6 +18,7 @@ import {
 const TABS_CONFIG = {
   clientes: {
     label: 'Clientes',
+    singular: 'Cliente',
     icon: BuildingOffice2Icon,
     table: 'cadastros_clientes',
     color: '#6366f1',
@@ -46,12 +47,13 @@ const TABS_CONFIG = {
   },
   fornecedores: {
     label: 'Fornecedores',
+    singular: 'Fornecedor',
     icon: BuildingOffice2Icon,
     table: 'cadastros_fornecedores',
     color: '#f59e0b',
     fields: [
       { key: 'nome',        label: 'Nome',        required: true,  span: 2 },
-      { key: 'razao_social',label: 'Razão Social', span: 2 },
+      { key: 'razao_social',label: 'Razão Social', span: 2, listHide: true },
       { key: 'cnpj',        label: 'CNPJ' },
       { key: 'categoria',   label: 'Categoria' },
       { key: 'contato',     label: 'Contato' },
@@ -63,6 +65,7 @@ const TABS_CONFIG = {
   },
   solicitantes: {
     label: 'Solicitantes',
+    singular: 'Solicitante',
     icon: UsersIcon,
     table: 'cadastros_solicitantes',
     color: '#10b981',
@@ -77,6 +80,7 @@ const TABS_CONFIG = {
   },
   condutores: {
     label: 'Condutores',
+    singular: 'Condutor',
     icon: TruckIcon,
     table: 'cadastros_condutores',
     color: '#3b82f6',
@@ -199,6 +203,13 @@ function CadastroTab({ tipo, config, ownerId }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
+  const [colFilters, setColFilters] = useState({})
+  const [statusFiltro, setStatusFiltro] = useState('todos')
+  const [catFiltro, setCatFiltro] = useState('')
+  const [sortKey, setSortKey] = useState('nome')
+  const [sortDir, setSortDir] = useState('asc')
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(25)
   const [editing, setEditing] = useState(null)  // null = fechado, {} = novo, objeto = editar
   const [showModal, setShowModal] = useState(false)
   const [importando, setImportando] = useState(false)
@@ -300,102 +311,327 @@ function CadastroTab({ tipo, config, ownerId }) {
     setImportando(false)
   }
 
-  const filtered = items.filter(i =>
-    !busca || i.nome?.toLowerCase().includes(busca.toLowerCase()) ||
-    i.cnpj?.includes(busca) || i.email?.toLowerCase().includes(busca.toLowerCase())
-  )
+  // Colunas visíveis na listagem (até 5 campos, exceto multiline e divider)
+  const listCols = config.fields.filter(f => !f.multiline && !f.divider && !f.listHide).slice(0, 5)
 
-  // Colunas visíveis na listagem (primeiras 4 fields exceto observações)
-  const listCols = config.fields.filter(f => !f.multiline).slice(0, 4)
+  // Categorias únicas (para chips de filtro rápido)
+  const categorias = useMemo(() => {
+    if (!config.fields.find(f => f.key === 'categoria')) return []
+    return [...new Set(items.map(i => i.categoria).filter(Boolean))].sort()
+  }, [items, config])
+
+  // Itens filtrados + ordenados
+  const filtered = useMemo(() => {
+    return items.filter(item => {
+      if (busca) {
+        const q = busca.toLowerCase()
+        const str = listCols.map(f => String(item[f.key] || '')).join(' ').toLowerCase()
+        if (!str.includes(q)) return false
+      }
+      if (statusFiltro === 'ativo' && item.ativo === false) return false
+      if (statusFiltro === 'inativo' && item.ativo !== false) return false
+      if (catFiltro && item.categoria !== catFiltro) return false
+      for (const [k, v] of Object.entries(colFilters)) {
+        if (v && !String(item[k] || '').toLowerCase().includes(v.toLowerCase())) return false
+      }
+      return true
+    }).sort((a, b) => {
+      const av = String(a[sortKey] || '').toLowerCase()
+      const bv = String(b[sortKey] || '').toLowerCase()
+      return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+    })
+  }, [items, busca, statusFiltro, catFiltro, colFilters, sortKey, sortDir, listCols])
+
+  const totalPages = Math.ceil(filtered.length / perPage) || 1
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage)
+  const hasColFilters = Object.values(colFilters).some(v => v)
+
+  // Paleta light-theme
+  const C = {
+    bg: '#f4f6fa', card: '#fff', secondary: '#f0f2f8', hover: '#f7f8fd',
+    border: '#e2e6f0', borderStrong: '#d0d5e8',
+    txtPrimary: '#1a1f36', txtSecondary: '#4a5580', txtMuted: '#9aa3bf',
+    green: '#059669', greenBg: '#ecfdf5', greenBorder: '#6ee7b733',
+    red: '#dc2626', redBg: '#fef2f2', redBorder: '#fca5a533',
+    blue: '#2563eb', blueBg: '#eff6ff',
+    accent: config.color,
+  }
+  const btnGhost = {
+    display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px',
+    borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer',
+    background: '#fff', border: `1px solid ${C.border}`, color: C.txtSecondary,
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)', whiteSpace: 'nowrap',
+  }
+  const btnPrimary = {
+    display: 'flex', alignItems: 'center', gap: 5, padding: '7px 15px',
+    borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+    background: C.accent, border: 'none', color: '#fff',
+    boxShadow: `0 1px 3px ${C.accent}55`, whiteSpace: 'nowrap',
+  }
+  const inputLight = {
+    background: '#fff', border: `1px solid ${C.border}`, color: C.txtPrimary,
+    borderRadius: 7, padding: '7px 10px', fontSize: 13, outline: 'none',
+    width: '100%', boxSizing: 'border-box',
+  }
+
+  function exportarXLSX() {
+    const headers = listCols.map(c => c.label).concat(['Status'])
+    const rows = filtered.map(item => [
+      ...listCols.map(c => String(item[c.key] || '')),
+      item.ativo !== false ? 'Ativo' : 'Inativo',
+    ])
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
+    ws['!cols'] = headers.map(() => ({ wch: 22 }))
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, config.label)
+    XLSX.writeFile(wb, `${tipo}_${new Date().toISOString().slice(0,10)}.xlsx`)
+    toast.success(`${filtered.length} registro(s) exportado(s)!`)
+  }
 
   return (
-    <div style={{ padding: '0 28px 28px' }}>
-      {/* Barra de ações */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ flex: 1, position: 'relative', minWidth: 200 }}>
-          <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 16, color: 'var(--text-secondary)' }} />
+    <div style={{ padding: '0 24px 28px' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+          <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 15, color: C.txtMuted }} />
           <input
             value={busca}
-            onChange={e => setBusca(e.target.value)}
+            onChange={e => { setBusca(e.target.value); setPage(1) }}
             placeholder={`Buscar em ${config.label.toLowerCase()}...`}
-            style={{ ...inputStyle, paddingLeft: 34 }}
+            style={{ ...inputLight, paddingLeft: 34 }}
           />
         </div>
-
-        {/* Botão Baixar Modelo */}
-        <button onClick={baixarModelo} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
-          <ArrowDownTrayIcon style={{ width: 16 }} />
-          Baixar Modelo
+        <button onClick={baixarModelo} style={btnGhost}>
+          <ArrowDownTrayIcon style={{ width: 15 }} /> Modelo
         </button>
-
-        {/* Botão Importar */}
-        <button onClick={() => fileRef.current?.click()} disabled={importando} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', color: '#f59e0b', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap', opacity: importando ? 0.7 : 1 }}>
-          <ArrowUpTrayIcon style={{ width: 16 }} />
-          {importando ? 'Importando...' : 'Importar Planilha'}
+        <button onClick={() => fileRef.current?.click()} disabled={importando}
+          style={{ ...btnGhost, color: '#d97706', borderColor: '#fde68a', background: '#fffbeb' }}>
+          <ArrowUpTrayIcon style={{ width: 15 }} />
+          {importando ? 'Importando...' : 'Importar'}
         </button>
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={handleImport} />
-
-        {/* Botão Novo */}
-        <button onClick={() => { setEditing({}); setShowModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: config.color, border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
-          <PlusIcon style={{ width: 16 }} />
-          Novo
+        <button onClick={exportarXLSX} style={btnGhost}>
+          <ArrowDownTrayIcon style={{ width: 15 }} /> Exportar
+        </button>
+        <button onClick={() => { setEditing({}); setShowModal(true) }} style={btnPrimary}>
+          <PlusIcon style={{ width: 15 }} /> Novo {config.singular || config.label.replace(/es$/, '').replace(/s$/, '')}
         </button>
       </div>
 
-      {/* Contador */}
-      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>
-        {filtered.length} de {items.length} registro(s)
-        {items.filter(i => !i.ativo).length > 0 && <span style={{ marginLeft: 8, color: '#64748b' }}>· {items.filter(i => !i.ativo).length} inativo(s)</span>}
+      {/* Filtros rápidos (chips) */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: C.txtMuted, marginRight: 2 }}>Filtrar:</span>
+        {[
+          { key: 'todos', label: `Todos (${items.length})` },
+          { key: 'ativo', label: `Ativos (${items.filter(i => i.ativo !== false).length})` },
+          { key: 'inativo', label: `Inativos (${items.filter(i => i.ativo === false).length})` },
+        ].map(chip => (
+          <button key={chip.key} onClick={() => { setStatusFiltro(chip.key); setPage(1) }}
+            style={{
+              padding: '4px 11px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+              cursor: 'pointer', border: `1px solid ${statusFiltro === chip.key ? C.accent + '55' : C.border}`,
+              color: statusFiltro === chip.key ? C.accent : C.txtSecondary,
+              background: statusFiltro === chip.key ? C.accent + '12' : '#fff',
+            }}>
+            {chip.label}
+          </button>
+        ))}
+        {categorias.map(cat => (
+          <button key={cat} onClick={() => { setCatFiltro(catFiltro === cat ? '' : cat); setPage(1) }}
+            style={{
+              padding: '4px 11px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+              cursor: 'pointer', border: `1px solid ${catFiltro === cat ? C.blue + '55' : C.border}`,
+              color: catFiltro === cat ? C.blue : C.txtSecondary,
+              background: catFiltro === cat ? C.blueBg : '#fff',
+            }}>
+            {cat}
+          </button>
+        ))}
+        {hasColFilters && (
+          <button onClick={() => setColFilters({})}
+            style={{ padding: '4px 11px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${C.redBorder}`, color: C.red, background: C.redBg }}>
+            ✕ Limpar filtros
+          </button>
+        )}
       </div>
 
       {/* Tabela */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Carregando...</div>
-      ) : filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-secondary)', background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 13 }}>Nenhum registro encontrado.</div>
-          <div style={{ fontSize: 12, marginTop: 6 }}>Clique em "Novo" ou importe uma planilha.</div>
-        </div>
+        <div style={{ textAlign: 'center', padding: 40, color: C.txtMuted }}>Carregando...</div>
       ) : (
-        <div style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
-          {/* Cabeçalho da tabela */}
-          <div style={{ display: 'grid', gridTemplateColumns: `1fr ${listCols.slice(1).map(() => '1fr').join(' ')} 90px`, padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.03)' }}>
-            {listCols.map(f => (
-              <div key={f.key} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{f.label}</div>
-            ))}
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'right' }}>AÇÕES</div>
+        <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+          {/* Info bar */}
+          <div style={{ padding: '7px 14px', borderBottom: `1px solid ${C.border}`, background: C.secondary, display: 'flex', alignItems: 'center', gap: 12, fontSize: 11.5, color: C.txtMuted }}>
+            <span>
+              <strong style={{ color: C.txtSecondary }}>{Math.min((page - 1) * perPage + 1, Math.max(filtered.length, 1))}–{Math.min(page * perPage, filtered.length)}</strong> de <strong style={{ color: C.txtSecondary }}>{filtered.length}</strong> registros
+            </span>
+            <span style={{ color: C.green }}>· {items.filter(i => i.ativo !== false).length} ativos</span>
+            {items.filter(i => i.ativo === false).length > 0 &&
+              <span>· {items.filter(i => i.ativo === false).length} inativos</span>
+            }
           </div>
-
-          {/* Linhas */}
-          {filtered.map((item, idx) => (
-            <div key={item.id} style={{ display: 'grid', gridTemplateColumns: `1fr ${listCols.slice(1).map(() => '1fr').join(' ')} 90px`, padding: '10px 16px', borderBottom: idx < filtered.length - 1 ? '1px solid var(--border)' : 'none', alignItems: 'center', opacity: item.ativo ? 1 : 0.5, transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-
-              {listCols.map((f, fi) => (
-                <div key={f.key} style={{ fontSize: 13, color: fi === 0 ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: fi === 0 ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
-                  {item[f.key] || <span style={{ color: '#475569' }}>—</span>}
-                </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                {/* Cabeçalho clicável para ordenação */}
+                <tr style={{ background: C.secondary }}>
+                  <th style={{ width: 20, padding: '9px 10px 9px 14px', borderBottom: `1px solid ${C.border}` }}></th>
+                  {listCols.map(col => (
+                    <th key={col.key}
+                      onClick={() => { setSortKey(col.key); setSortDir(sortKey === col.key && sortDir === 'asc' ? 'desc' : 'asc') }}
+                      style={{
+                        padding: '9px 12px', textAlign: 'left', fontSize: 10.5, fontWeight: 700,
+                        color: sortKey === col.key ? C.accent : C.txtMuted,
+                        textTransform: 'uppercase', letterSpacing: 0.6,
+                        borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap',
+                        cursor: 'pointer', userSelect: 'none',
+                      }}>
+                      {col.label} {sortKey === col.key ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                    </th>
+                  ))}
+                  <th style={{ padding: '9px 12px', borderBottom: `1px solid ${C.border}`, fontSize: 10.5, fontWeight: 700, color: C.txtMuted, textTransform: 'uppercase', letterSpacing: 0.6 }}>Status</th>
+                  <th style={{ padding: '9px 12px', borderBottom: `1px solid ${C.border}`, textAlign: 'right', fontSize: 10.5, fontWeight: 700, color: C.txtMuted, textTransform: 'uppercase', letterSpacing: 0.6 }}>Ações</th>
+                </tr>
+                {/* Linha de filtros por coluna */}
+                <tr style={{ background: '#fafbff', borderBottom: `2px solid ${C.borderStrong}` }}>
+                  <td style={{ padding: '4px 10px 4px 14px' }}></td>
+                  {listCols.map(col => (
+                    <td key={col.key} style={{ padding: '4px 8px' }}>
+                      <input
+                        value={colFilters[col.key] || ''}
+                        onChange={e => { setColFilters(f => ({ ...f, [col.key]: e.target.value })); setPage(1) }}
+                        placeholder="filtrar..."
+                        style={{ width: '100%', background: '#fff', border: `1px solid ${C.border}`, color: C.txtPrimary, borderRadius: 5, padding: '3px 7px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </td>
+                  ))}
+                  <td style={{ padding: '4px 8px' }}>
+                    <select
+                      value={colFilters.__status || ''}
+                      onChange={e => { setColFilters(f => ({ ...f, __status: e.target.value })); setPage(1) }}
+                      style={{ width: '100%', background: '#fff', border: `1px solid ${C.border}`, color: C.txtSecondary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none' }}>
+                      <option value="">todos</option>
+                      <option value="ativo">ativo</option>
+                      <option value="inativo">inativo</option>
+                    </select>
+                  </td>
+                  <td style={{ padding: '4px 8px' }}></td>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={listCols.length + 3} style={{ textAlign: 'center', padding: 40, color: C.txtMuted, fontSize: 13 }}>
+                      Nenhum registro encontrado.
+                    </td>
+                  </tr>
+                ) : paginated.map(item => (
+                  <tr key={item.id}
+                    style={{ borderBottom: `1px solid ${C.border}`, opacity: item.ativo === false ? 0.55 : 1, transition: 'background 0.1s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = C.hover}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    {/* Bolinha indicadora */}
+                    <td style={{ padding: '9px 10px 9px 14px' }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: item.ativo !== false ? C.green : C.borderStrong }} />
+                    </td>
+                    {listCols.map((col, ci) => (
+                      <td key={col.key} style={{
+                        padding: '9px 12px', fontSize: 13, maxWidth: 200,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        color: ci === 0 ? C.txtPrimary : C.txtSecondary,
+                        fontWeight: ci === 0 ? 600 : 400,
+                        fontFamily: ['cnpj', 'cpf', 'cnh'].includes(col.key) ? 'monospace' : 'inherit',
+                        fontSize: ['cnpj', 'cpf', 'cnh'].includes(col.key) ? 12 : 13,
+                      }}>
+                        {col.key === 'categoria' && item[col.key] ? (
+                          <span style={{
+                            display: 'inline-flex', padding: '2px 8px', borderRadius: 20,
+                            fontSize: 11, fontWeight: 600, background: C.blueBg, color: C.blue,
+                            border: `1px solid ${C.blue}33`,
+                          }}>
+                            {item[col.key]}
+                          </span>
+                        ) : (
+                          item[col.key] || <span style={{ color: C.txtMuted }}>—</span>
+                        )}
+                      </td>
+                    ))}
+                    {/* Badge de status */}
+                    <td style={{ padding: '9px 12px' }}>
+                      {item.ativo !== false ? (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px',
+                          borderRadius: 20, fontSize: 11, fontWeight: 600,
+                          background: C.greenBg, color: C.green, border: `1px solid ${C.greenBorder}`,
+                        }}>
+                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.green }} />
+                          Ativo
+                        </span>
+                      ) : (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px',
+                          borderRadius: 20, fontSize: 11, fontWeight: 600,
+                          background: C.redBg, color: C.red, border: `1px solid ${C.redBorder}`,
+                        }}>
+                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: C.red }} />
+                          Inativo
+                        </span>
+                      )}
+                    </td>
+                    {/* Ações */}
+                    <td style={{ padding: '9px 12px' }}>
+                      <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                        <button onClick={() => toggleAtivo(item)} title={item.ativo !== false ? 'Inativar' : 'Ativar'}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
+                          {item.ativo !== false
+                            ? <CheckCircleIcon style={{ width: 15, color: C.green }} />
+                            : <XCircleIcon style={{ width: 15, color: C.txtMuted }} />}
+                        </button>
+                        <button onClick={() => { setEditing(item); setShowModal(true) }} title="Editar"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
+                          <PencilIcon style={{ width: 15, color: C.txtMuted }} />
+                        </button>
+                        <button onClick={() => handleDelete(item)} title="Excluir"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 5px', borderRadius: 5, display: 'flex', alignItems: 'center' }}>
+                          <TrashIcon style={{ width: 15, color: '#fca5a5' }} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div style={{ padding: '9px 14px', borderTop: `1px solid ${C.border}`, background: C.secondary, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 11.5, color: C.txtMuted, marginRight: 2 }}>Por página:</span>
+              <select value={perPage} onChange={e => { setPerPage(Number(e.target.value)); setPage(1) }}
+                style={{ background: '#fff', border: `1px solid ${C.border}`, color: C.txtSecondary, borderRadius: 6, padding: '3px 7px', fontSize: 12, outline: 'none' }}>
+                {[25, 50, 100].map(n => <option key={n}>{n}</option>)}
+              </select>
+              <span style={{ fontSize: 11.5, color: C.txtMuted, flex: 1, marginLeft: 6 }}>
+                {Math.min((page - 1) * perPage + 1, filtered.length)}–{Math.min(page * perPage, filtered.length)} de {filtered.length}
+              </span>
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                style={{ background: '#fff', border: `1px solid ${C.border}`, color: C.txtSecondary, borderRadius: 6, padding: '4px 10px', cursor: page === 1 ? 'default' : 'pointer', fontSize: 12, opacity: page === 1 ? 0.35 : 1 }}>
+                ‹ Ant.
+              </button>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(n => (
+                <button key={n} onClick={() => setPage(n)}
+                  style={{ background: page === n ? C.accent : '#fff', border: `1px solid ${page === n ? C.accent : C.border}`, color: page === n ? '#fff' : C.txtSecondary, borderRadius: 6, padding: '4px 9px', cursor: 'pointer', fontSize: 12, fontWeight: page === n ? 700 : 400, minWidth: 30 }}>
+                  {n}
+                </button>
               ))}
-
-              {/* Ações */}
-              <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                <button onClick={() => toggleAtivo(item)} title={item.ativo ? 'Inativar' : 'Ativar'} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 5, color: item.ativo ? '#10b981' : '#64748b' }}>
-                  {item.ativo ? <CheckCircleIcon style={{ width: 16 }} /> : <XCircleIcon style={{ width: 16 }} />}
-                </button>
-                <button onClick={() => { setEditing(item); setShowModal(true) }} title="Editar" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 5, color: 'var(--text-secondary)' }}>
-                  <PencilIcon style={{ width: 16 }} />
-                </button>
-                <button onClick={() => handleDelete(item)} title="Excluir" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 5, color: '#ef4444' }}>
-                  <TrashIcon style={{ width: 16 }} />
-                </button>
-              </div>
+              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                style={{ background: '#fff', border: `1px solid ${C.border}`, color: C.txtSecondary, borderRadius: 6, padding: '4px 10px', cursor: page === totalPages ? 'default' : 'pointer', fontSize: 12, opacity: page === totalPages ? 0.35 : 1 }}>
+                Próx. ›
+              </button>
             </div>
-          ))}
+          )}
         </div>
       )}
 
-      {/* Modal */}
       {showModal && (
         <CadastroModal
           config={config}
@@ -943,57 +1179,83 @@ export default function Cadastros() {
   const [aba, setAba] = useState(() => searchParams.get('aba') || 'clientes')
   const { currentUser, workspaceId } = useStore()
   const ownerId = currentUser?.owner_id || currentUser?.id
+  const [tabCounts, setTabCounts] = useState({})
+
+  useEffect(() => {
+    if (!ownerId) return
+    Promise.all(
+      Object.entries(TABS_CONFIG).map(async ([key, cfg]) => {
+        const { count } = await supabase
+          .from(cfg.table)
+          .select('*', { count: 'exact', head: true })
+          .eq('owner_id', ownerId)
+        return [key, count ?? 0]
+      })
+    ).then(entries => setTabCounts(Object.fromEntries(entries)))
+  }, [ownerId])
 
   const tabKeys = Object.keys(TABS_CONFIG)
+  const C = { border: '#e2e6f0', txtMuted: '#9aa3bf' }
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto' }}>
+    <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
       <Header
         title="Cadastros"
         subtitle="Gerencie clientes, fornecedores, solicitantes, condutores e máquinas"
       />
 
-      {/* Abas */}
-      <div style={{ display: 'flex', gap: 4, padding: '0 28px 20px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
-        {tabKeys.map(key => {
-          const cfg = TABS_CONFIG[key]
-          const Icon = cfg.icon
-          const ativo = aba === key
-          return (
-            <button
-              key={key}
-              onClick={() => setAba(key)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '8px 16px', borderRadius: 8,
-                background: ativo ? cfg.color + '22' : 'transparent',
-                border: `1px solid ${ativo ? cfg.color + '55' : 'var(--border)'}`,
-                color: ativo ? cfg.color : 'var(--text-secondary)',
-                cursor: 'pointer', fontSize: 13, fontWeight: ativo ? 700 : 400,
-                transition: 'all 0.15s',
-              }}
-            >
-              <Icon style={{ width: 16 }} />
-              {cfg.label}
-            </button>
-          )
-        })}
-        {/* Aba Máquinas — tratamento especial */}
-        <button
-          onClick={() => setAba('maquinas')}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            padding: '8px 16px', borderRadius: 8,
-            background: aba === 'maquinas' ? '#10b98122' : 'transparent',
-            border: `1px solid ${aba === 'maquinas' ? '#10b98155' : 'var(--border)'}`,
-            color: aba === 'maquinas' ? '#10b981' : 'var(--text-secondary)',
-            cursor: 'pointer', fontSize: 13, fontWeight: aba === 'maquinas' ? 700 : 400,
-            transition: 'all 0.15s',
-          }}
-        >
-          <WrenchScrewdriverIcon style={{ width: 16 }} />
-          Máquinas
-        </button>
+      {/* Abas estilo tab-underline */}
+      <div style={{ background: '#fff', borderBottom: `2px solid ${C.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', padding: '0 24px' }}>
+        <div style={{ display: 'flex', gap: 0, flexWrap: 'wrap' }}>
+          {tabKeys.map(key => {
+            const cfg = TABS_CONFIG[key]
+            const Icon = cfg.icon
+            const ativo = aba === key
+            return (
+              <button
+                key={key}
+                onClick={() => setAba(key)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '11px 16px', borderRadius: 0,
+                  background: 'transparent', border: 'none',
+                  borderBottom: ativo ? `2px solid ${cfg.color}` : '2px solid transparent',
+                  color: ativo ? cfg.color : C.txtMuted,
+                  cursor: 'pointer', fontSize: 13, fontWeight: ativo ? 700 : 400,
+                  transition: 'all 0.15s', marginBottom: -2,
+                }}
+              >
+                <Icon style={{ width: 15 }} />
+                {cfg.label}
+                {tabCounts[key] !== undefined && (
+                  <span style={{
+                    background: ativo ? cfg.color + '22' : '#f0f2f8',
+                    color: ativo ? cfg.color : C.txtMuted,
+                    border: `1px solid ${ativo ? cfg.color + '44' : C.border}`,
+                    fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 20, marginLeft: 2,
+                  }}>
+                    {tabCounts[key]}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+          <button
+            onClick={() => setAba('maquinas')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '11px 16px', borderRadius: 0,
+              background: 'transparent', border: 'none',
+              borderBottom: aba === 'maquinas' ? '2px solid #10b981' : '2px solid transparent',
+              color: aba === 'maquinas' ? '#10b981' : C.txtMuted,
+              cursor: 'pointer', fontSize: 13, fontWeight: aba === 'maquinas' ? 700 : 400,
+              transition: 'all 0.15s', marginBottom: -2,
+            }}
+          >
+            <WrenchScrewdriverIcon style={{ width: 15 }} />
+            Máquinas
+          </button>
+        </div>
       </div>
 
       <div style={{ paddingTop: 20 }}>

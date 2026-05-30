@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
@@ -266,7 +266,7 @@ export default function ComprasCatalogo() {
           ))}
         </div>
         <button onClick={baixarModelo}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px', height: 38, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px', height: 38, borderRadius: 8, background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, whiteSpace: 'nowrap' }}>
           <ArrowDownTrayIcon style={{ width: 15, height: 15 }} />
           Baixar Template
         </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { PencilIcon, TrashIcon, XMarkIcon, TruckIcon } from '@heroicons/react/24/outline'
@@ -150,7 +150,7 @@ export default function Veiculos() {
                       </button>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: 8, marginBottom: 8 }}>
                     {dono && (
                       <>
                         <div style={{ width: 26, height: 26, borderRadius: '50%', background: dono.cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white' }}>
@@ -164,11 +164,11 @@ export default function Veiculos() {
                     )}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px' }}>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Lançamentos</div>
                       <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{stats.qtd}</div>
                     </div>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px' }}>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Total gasto</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#10b981', marginTop: 2 }}>{formatCurrency(stats.total)}</div>
                     </div>

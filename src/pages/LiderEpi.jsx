@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
@@ -276,7 +276,7 @@ function SecaoSolicitacoes({ workspaceId }) {
                 {rowsFiltrados.map((row, i) => {
                   const turno = row.lider_turnos
                   return (
-                    <tr key={row.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                    <tr key={row.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
                       <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtDt(row.solicitado_em)}</td>
                       <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>{row.colaborador_nome}</td>
                       <td style={{ padding: '10px 14px', color: 'var(--text-primary)' }}>{row.epi_nome}</td>
@@ -500,7 +500,7 @@ function SecaoCatalogoEPI({ workspaceId }) {
                       background: 'transparent',
                       transition: 'background 0.1s',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
@@ -315,7 +315,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
           {colabForm.id && <button onClick={() => setColabForm({})} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 10 }}>✕ Cancelar edição</button>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 280, overflowY: 'auto' }}>
             {colabs.map(c => (
-              <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)' }}>
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
                 <div>
                   <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{c.nome}</span>
                   {c.cargo && <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 8 }}>{c.cargo}</span>}
@@ -1472,7 +1472,7 @@ function SecaoDashboard({ sols, onNav }) {
   const REST_CL = ['#14B8A6', '#8B5CF6', '#4F6EF7', '#F59E0B', '#10B981']
   const BG     = isDark ? '#0d0f12'                : '#EEF2F8'
   const CARD   = isDark ? '#1a1d22'                : '#FFFFFF'
-  const BORDER = isDark ? 'rgba(255,255,255,0.08)' : '#E5EAF2'
+  const BORDER = isDark ? 'var(--border)' : '#E5EAF2'
   const SHADOW = isDark
     ? '0 1px 4px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.25)'
     : '0 1px 4px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.05)'
@@ -1746,7 +1746,7 @@ function SecaoDashboard({ sols, onNav }) {
                           <td style={{ padding: '9px 8px', textAlign: 'right', fontWeight: 700, color: '#14B8A6', whiteSpace: 'nowrap', fontSize: 11 }}>{fmtBRL(r.valor)}</td>
                         </tr>
                       ))}
-                      <tr style={{ borderTop: `2px solid ${BORDER}`, background: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC' }}>
+                      <tr style={{ borderTop: `2px solid ${BORDER}`, background: isDark ? 'var(--bg-secondary)' : '#F8FAFC' }}>
                         <td style={{ padding: '9px 8px', fontWeight: 800, color: TEXT, fontSize: 11 }}>TOTAL GERAL</td>
                         <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#4F6EF7' }}>{dash.painelHoje.reduce((a, r) => a + r.ref, 0)}</td>
                         <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 800, color: '#F59E0B' }}>{dash.painelHoje.reduce((a, r) => a + r.caf, 0)}</td>
@@ -1812,7 +1812,7 @@ function SecaoDashboard({ sols, onNav }) {
                     {kpiDetalhe.items.map((s, idx) => {
                       const cfg = STATUS[s.status] || STATUS.rascunho
                       return (
-                        <tr key={s.id} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)') }}>
+                        <tr key={s.id} style={{ borderBottom: '1px solid var(--border)', background: idx % 2 === 0 ? 'transparent' : (isDark ? 'var(--bg-secondary)' : 'rgba(0,0,0,0.015)') }}>
                           <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{s.numero_pedido || '—'}</td>
                           <td style={{ padding: '8px 10px', color: 'var(--text-primary)' }}>{s.lider_nome || '—'}</td>
                           <td style={{ padding: '8px 10px', color: 'var(--text-secondary)' }}>{s.refei_equipes?.nome || '—'}</td>
@@ -2023,7 +2023,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
           {FILTROS.map(s => {
             const cfg = STATUS[s]; const isAll = s === 'todos'; const active = filtroStatus === s
             return (
-              <button key={s} onClick={() => setFiltroStatus(s)} style={{ padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: active ? (isAll ? 'var(--accent)' : cfg.bg) : 'rgba(255,255,255,0.05)', color: active ? (isAll ? '#fff' : cfg.color) : 'var(--text-secondary)', transition: 'all 0.15s' }}>
+              <button key={s} onClick={() => setFiltroStatus(s)} style={{ padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', background: active ? (isAll ? 'var(--accent)' : cfg.bg) : 'rgba(0,0,0,0.05)', color: active ? (isAll ? '#fff' : cfg.color) : 'var(--text-secondary)', transition: 'all 0.15s' }}>
                 {isAll ? 'Todos' : cfg.label}
               </button>
             )
@@ -2049,7 +2049,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
         const nPend = solsGrupo.filter(s => ['pendente', 'aguardando_aprovacao'].includes(s.status)).length
         return (
           <div key={key} className="card" style={{ marginBottom: 16, overflow: 'hidden' }}>
-            <div onClick={() => toggleGroup(key)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', cursor: 'pointer', borderBottom: isOpen ? '1px solid var(--border)' : 'none', background: 'rgba(255,255,255,0.02)' }}>
+            <div onClick={() => toggleGroup(key)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', cursor: 'pointer', borderBottom: isOpen ? '1px solid var(--border)' : 'none', background: 'var(--bg-secondary)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {isOpen ? <ChevronDownIcon style={{ width: 16, height: 16, color: 'var(--text-secondary)' }} /> : <ChevronRightIcon style={{ width: 16, height: 16, color: 'var(--text-secondary)' }} />}
                 <UserGroupIcon style={{ width: 16, height: 16, color: 'var(--accent)' }} />
@@ -2064,7 +2064,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+                    <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
                       {['PEDIDO', 'DATA', 'STATUS', 'RESTAURANTE', '🍽️', '☕', 'TOTAL', ''].map((h, i) => (
                         <th key={i} style={{ padding: '9px 14px', textAlign: i >= 4 && i <= 6 ? 'center' : 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
@@ -2072,7 +2072,7 @@ function SecaoSolicitacoes({ sols, workspaceId, ownerId, onReload, loading, useF
                   </thead>
                   <tbody>
                     {solsGrupo.map(sol => (
-                      <tr key={sol.id} onClick={() => setDetailSol(sol)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.12s' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <tr key={sol.id} onClick={() => setDetailSol(sol)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer', transition: 'background 0.12s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{sol.numero_pedido || '—'}</td>
                         <td style={{ padding: '11px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtData(sol.data_refeicao)}</td>
                         <td style={{ padding: '11px 14px' }}><StatusBadge status={sol.status} /></td>
@@ -2117,7 +2117,7 @@ function SecaoAprovacoes({ sols, onReload, useFlowEngine, userId, workspaceId })
     <div>
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, flexWrap: 'wrap' }}>
         {SUB_TABS.map(t => (
-          <button key={t.id} onClick={() => setSubFiltro(t.id)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', background: subFiltro === t.id ? 'var(--accent)' : 'rgba(255,255,255,0.05)', color: subFiltro === t.id ? '#fff' : 'var(--text-secondary)' }}>{t.label}</button>
+          <button key={t.id} onClick={() => setSubFiltro(t.id)} style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', background: subFiltro === t.id ? 'var(--accent)' : 'rgba(0,0,0,0.05)', color: subFiltro === t.id ? '#fff' : 'var(--text-secondary)' }}>{t.label}</button>
         ))}
       </div>
       {filtrado.length === 0 && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 40, fontSize: 13 }}>Nenhuma solicitação nesse status.</p>}
@@ -2132,7 +2132,7 @@ function SecaoAprovacoes({ sols, onReload, useFlowEngine, userId, workspaceId })
           </thead>
           <tbody>
             {filtrado.map(sol => (
-              <tr key={sol.id} onClick={() => setDetailSol(sol)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+              <tr key={sol.id} onClick={() => setDetailSol(sol)} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 <td style={{ padding: '11px 14px', fontWeight: 700, color: 'var(--accent)' }}>{sol.numero_pedido || '—'}</td>
                 <td style={{ padding: '11px 14px', color: 'var(--text-secondary)' }}>{fmtData(sol.data_refeicao)}</td>
                 <td style={{ padding: '11px 14px', color: 'var(--text-primary)' }}>{sol.refei_equipes?.nome || '—'}</td>
@@ -2301,7 +2301,7 @@ function SecaoRelatorios({ sub, sols }) {
               </tr>
             ))}
             {grupos.length > 1 && (
-              <tr style={{ borderTop: '2px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+              <tr style={{ borderTop: '2px solid var(--border)', background: 'var(--bg-secondary)' }}>
                 <td style={{ padding: '11px 14px', fontWeight: 800, color: 'var(--text-primary)' }}>TOTAL</td>
                 <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 800 }}>{totais.count}</td>
                 <td style={{ padding: '11px 14px', textAlign: 'center', fontWeight: 800 }}>{totais.refeicoes}</td>

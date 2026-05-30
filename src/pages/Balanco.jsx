@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { formatCurrency, getCategoryIcon, CATEGORIAS } from '../lib/utils'
@@ -119,7 +119,7 @@ function BarH({ data, max, format = formatCurrency }) {
             </div>
             <div style={{ fontSize: 12, fontWeight: 700, color: d.color || '#a855f7' }}>{format(d.value)}</div>
           </div>
-          <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: 8, background: 'rgba(0,0,0,0.05)', borderRadius: 4, overflow: 'hidden' }}>
             <div style={{ width: `${(d.value / maxV) * 100}%`, height: '100%', background: d.color || '#a855f7', borderRadius: 4, transition: 'width 0.4s' }} />
           </div>
         </div>
@@ -461,7 +461,7 @@ export default function Balanco() {
                       {row.d.pct.toFixed(1)}% {ok ? '✓' : '⚠'}
                     </div>
                   </div>
-                  <div style={{ position: 'relative', height: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 6, overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', height: 12, background: 'rgba(0,0,0,0.05)', borderRadius: 6, overflow: 'hidden' }}>
                     <div style={{ width: `${Math.min(100, row.d.pct)}%`, height: '100%', background: row.color, transition: 'width 0.4s' }} />
                     {/* Marca do ideal */}
                     <div style={{ position: 'absolute', left: `${row.d.ideal}%`, top: -2, bottom: -2, width: 2, background: 'rgba(255,255,255,0.5)' }} title={`Ideal: ${row.d.ideal}%`} />
@@ -531,7 +531,7 @@ export default function Balanco() {
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 14 }}>Categorias com mudança ≥20% ou ≥R$ 200</div>
             <div style={{ display: 'grid', gap: 6 }}>
               {alertasCategoria.map((a, i) => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 100px 80px', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 100px 80px', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
                     <span style={{ fontSize: 16 }}>{getCategoryIcon(a.cat)}</span>
                     {a.cat}
@@ -563,7 +563,7 @@ export default function Balanco() {
             <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 14 }}>Histórico de Fechamentos</h3>
             <div style={{ display: 'grid', gap: 6 }}>
               {[...closures].sort((a, b) => b.mes.localeCompare(a.mes)).map(c => (
-                <div key={c.id} onClick={() => setMes(c.mes)} style={{ cursor: 'pointer', padding: '10px 12px', background: c.mes === mes ? 'rgba(168,85,247,0.1)' : 'rgba(255,255,255,0.02)', border: '1px solid ' + (c.mes === mes ? 'rgba(168,85,247,0.3)' : 'transparent'), borderRadius: 8 }}>
+                <div key={c.id} onClick={() => setMes(c.mes)} style={{ cursor: 'pointer', padding: '10px 12px', background: c.mes === mes ? 'rgba(168,85,247,0.1)' : 'var(--bg-secondary)', border: '1px solid ' + (c.mes === mes ? 'rgba(168,85,247,0.3)' : 'transparent'), borderRadius: 8 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 100px 120px', alignItems: 'center', gap: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'capitalize' }}>{fmtMes(c.mes)}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{c.qtd_despesas} despesas · fechado em {new Date(c.data_fechamento).toLocaleDateString('pt-BR')}</div>

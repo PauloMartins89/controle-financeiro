@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
 import toast from 'react-hot-toast'
@@ -741,7 +741,7 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
                   return (
                     <div key={c.id} style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.05)', gap: 8,
+                      padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.05)', gap: 8,
                       opacity: isPerdeu ? 0.45 : 1,
                     }}>
                       <div style={{ flex: 1, minWidth: 0 }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
@@ -507,19 +507,19 @@ export default function ManutencaoAPIPlanos() {
 
           {/* Status indicators */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '6px 12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-secondary)', borderRadius: 8, padding: '6px 12px', border: '1px solid var(--border)' }}>
               <ApiIcon style={{ width: 13, height: 13, color: apiCfg.color }} />
               <span style={{ fontSize: 11, color: apiCfg.color, fontWeight: 600 }}>{apiCfg.label}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
               <ClockIcon style={{ width: 12, height: 12, color: '#64748b' }} />
               <span style={{ fontSize: 10, color: '#64748b' }}>Sync: {lastSync}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
               <ShieldCheckIcon style={{ width: 12, height: 12, color: '#64748b' }} />
               <span style={{ fontSize: 10, color: '#64748b' }}>{resultDocumentos.length > 0 ? `${resultDocumentos.length} doc${resultDocumentos.length > 1 ? 's' : ''} vinculados` : 'sem docs vinculados'}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
               <DocumentTextIcon style={{ width: 12, height: 12, color: '#64748b' }} />
               <span style={{ fontSize: 10, color: '#64748b' }}>{resultPlanos.length > 0 ? `${resultPlanos.length} intervalo${resultPlanos.length > 1 ? 's' : ''} no plano` : 'plano via IA'}</span>
             </div>
@@ -533,15 +533,15 @@ export default function ManutencaoAPIPlanos() {
             <ArrowPathIcon style={{ width: 13, height: 13 }} /> Atualizar
           </button>
           <button onClick={() => toast('Funcionalidade de importação em breve', { icon: '📥' })}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
             <ArrowUpTrayIcon style={{ width: 13, height: 13 }} /> Importar Fonte Oficial
           </button>
           <button onClick={() => toast('Biblioteca técnica em desenvolvimento', { icon: '📚' })}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
             <BookOpenIcon style={{ width: 13, height: 13 }} /> Ver Biblioteca
           </button>
           <button onClick={() => toast('Configuração de integração em breve', { icon: '⚙️' })}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.05)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer' }}>
             <Cog6ToothIcon style={{ width: 13, height: 13 }} /> Configurar Integração
           </button>
         </div>

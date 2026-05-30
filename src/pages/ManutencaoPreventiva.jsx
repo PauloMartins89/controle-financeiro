@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
@@ -211,7 +211,7 @@ export default function ManutencaoPreventiva() {
                   <tbody>
                     {ativos.map(p => (
                       <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <td style={tdStyle}>

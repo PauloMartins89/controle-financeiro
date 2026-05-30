@@ -1289,7 +1289,7 @@ export default function Faturamento() {
                   const fmtKm = v => v > 0 ? v.toLocaleString('pt-BR') : '—'
                   return (
                     <tr key={l.id} style={{ borderBottom: `1px solid ${l.status === 'pendente' ? 'rgba(245,158,11,0.15)' : 'var(--border)'}`, transition: 'background 0.15s', background: selectedIds.has(l.id) ? 'rgba(139,92,246,0.06)' : '' }}
-                      onMouseEnter={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = 'rgba(255,255,255,0.025)' }}
+                      onMouseEnter={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = '#f7f8fd' }}
                       onMouseLeave={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = '' }}
                     >
                       {/* CHECKBOX */}

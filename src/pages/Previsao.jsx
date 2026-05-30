@@ -39,7 +39,7 @@ function CurrencyInput({ value, onChange }) {
         onBlur={() => setFocused(false)}
         onChange={e => onChange(e.target.value)}
         style={{
-          background: focused ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+          background: focused ? 'rgba(16,185,129,0.08)' : 'var(--bg-secondary)',
           border: `1px solid ${focused ? '#10b981' : 'var(--border)'}`,
           borderRadius: 10, padding: '8px 12px 8px 36px', color: 'var(--text-primary)',
           fontSize: 18, fontWeight: 800, width: 180, outline: 'none', transition: 'all 0.2s',
@@ -330,7 +330,7 @@ export default function Previsao() {
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)', background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border)' }}>🔁 Nenhuma conta recorrente ativa.</div>
           ) : (
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px 150px 130px', padding: '10px 20px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px 150px 130px', padding: '10px 20px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
                 {['Conta', 'Valor', 'Vencimento', 'Status', 'Ação'].map(h => (
                   <span key={h} style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
                 ))}
@@ -400,7 +400,7 @@ export default function Previsao() {
                           : <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 20, background: urg.bg, color: urg.color, border: `1px solid ${urg.border}` }}>{urg.dot} {urg.label}</span>
                         }
                       </div>
-                      <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: 5, background: 'rgba(0,0,0,0.05)', borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${row.pago ? 100 : row.antes > 0 ? Math.max((row.depois/row.antes)*100,0) : 0}%`, background: row.pago ? '#10b981' : row.depois >= 0 ? '#6366f1' : '#ef4444', borderRadius: 3, transition: 'width 0.4s' }} />
                       </div>
                     </div>

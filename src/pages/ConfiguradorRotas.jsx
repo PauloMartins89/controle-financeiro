@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
@@ -108,7 +108,7 @@ function TabMapa({ workspaceId }) {
           { label: 'Rotas operacionais', value: totalOk, cor: '#10b981' },
           { label: 'Com problema',       value: totalRotas - totalOk, cor: totalRotas - totalOk > 0 ? '#ef4444' : '#6b7280' },
         ].map(s => (
-          <div key={s.label} style={{ padding: '12px 18px', borderRadius: 10, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', minWidth: 140 }}>
+          <div key={s.label} style={{ padding: '12px 18px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)', minWidth: 140 }}>
             <div style={{ fontSize: 22, fontWeight: 800, color: s.cor }}>{s.value}</div>
             <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{s.label}</div>
           </div>
@@ -118,7 +118,7 @@ function TabMapa({ workspaceId }) {
       {/* Module trees */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {MODULOS.map(mod => (
-          <div key={mod.key} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+          <div key={mod.key} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, background: `${mod.cor}10` }}>
               <span style={{ fontSize: 18 }}>{mod.icon}</span>
               <span style={{ fontWeight: 700, fontSize: 15, color: mod.cor }}>{mod.label}</span>
@@ -130,7 +130,7 @@ function TabMapa({ workspaceId }) {
               {mod.eventos.map((ev, i) => {
                 const atores = rotas.filter(r => r.modulo === mod.key && r.evento === ev.key)
                 return (
-                  <div key={ev.key} style={{ display: 'flex', alignItems: 'flex-start', padding: '10px 18px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                  <div key={ev.key} style={{ display: 'flex', alignItems: 'flex-start', padding: '10px 18px', borderTop: i > 0 ? '1px solid var(--bg-secondary)' : 'none' }}>
                     <div style={{ width: 210, flexShrink: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{ev.label}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{ev.descricao}</div>
@@ -289,7 +289,7 @@ function TabConfiguracao({ workspaceId }) {
             {rotasFiltradas.map(r => {
               const ev = MODULOS.find(m => m.key === r.modulo)?.eventos.find(e => e.key === r.evento)
               return (
-                <tr key={r.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                <tr key={r.id} style={{ borderBottom: '1px solid var(--bg-secondary)' }}>
                   <td style={{ padding: '10px 12px', fontWeight: 600 }}>{ev?.label || r.evento}</td>
                   <td style={{ padding: '10px 12px' }}>{r.efetivo?.nome || '—'}</td>
                   <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{r.efetivo?.funcoes_efetivo?.nome || '—'}</td>
@@ -379,7 +379,7 @@ function TabPendentes({ workspaceId, onCountChange }) {
             const elapsed = Math.floor((Date.now() - new Date(p.created_at).getTime()) / 1000)
             const urgente = elapsed > 3600
             return (
-              <div key={p.id} style={{ padding: '14px 16px', borderRadius: 10, border: `1px solid ${urgente ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`, background: urgente ? 'rgba(239,68,68,0.04)' : 'rgba(255,255,255,0.02)' }}>
+              <div key={p.id} style={{ padding: '14px 16px', borderRadius: 10, border: `1px solid ${urgente ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`, background: urgente ? 'rgba(239,68,68,0.04)' : 'var(--bg-secondary)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
@@ -619,7 +619,7 @@ function TabMetricas({ workspaceId }) {
         {metricas.map(m => {
           const modInfo = MODULOS.find(mod => mod.key === m.modulo)
           return (
-            <div key={m.modulo} style={{ padding: '16px', borderRadius: 10, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+            <div key={m.modulo} style={{ padding: '16px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ fontWeight: 700, fontSize: 14 }}>
                   {modInfo?.icon || '📨'} {modInfo?.label || m.modulo}
@@ -633,11 +633,11 @@ function TabMetricas({ workspaceId }) {
                 </div>
               </div>
               {/* Volume bar */}
-              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 6, overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ background: 'rgba(0,0,0,0.05)', borderRadius: 4, height: 6, overflow: 'hidden', marginBottom: 4 }}>
                 <div style={{ height: '100%', borderRadius: 4, background: modInfo?.cor || '#6366f1', width: `${(m.total / maxTotal) * 100}%`, transition: 'width 0.5s ease' }} />
               </div>
               {/* Response rate bar */}
-              <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 4, height: 4, overflow: 'hidden' }}>
+              <div style={{ background: 'var(--bg-secondary)', borderRadius: 4, height: 4, overflow: 'hidden' }}>
                 <div style={{ height: '100%', borderRadius: 4, background: '#10b981', width: `${m.taxaResposta}%`, transition: 'width 0.5s ease' }} />
               </div>
               <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
@@ -763,7 +763,7 @@ function TabSimulador({ workspaceId }) {
           ) : (
             <>
               {/* Summary */}
-              <div style={{ padding: '10px 18px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', gap: 16, fontSize: 13 }}>
+              <div style={{ padding: '10px 18px', borderBottom: '1px solid var(--bg-secondary)', display: 'flex', gap: 16, fontSize: 13 }}>
                 <span style={{ color: '#6ee7b7' }}><strong>{resultado.atores.filter(a => a.ok).length}</strong> enviariam com sucesso</span>
                 {resultado.atores.some(a => !a.ok) && (
                   <span style={{ color: '#fca5a5' }}><strong>{resultado.atores.filter(a => !a.ok).length}</strong> com bloqueio</span>
@@ -771,7 +771,7 @@ function TabSimulador({ workspaceId }) {
               </div>
               {/* Actor rows */}
               {resultado.atores.map((a, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 18px', borderTop: i > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 18px', borderTop: i > 0 ? '1px solid var(--bg-secondary)' : 'none' }}>
                   <div style={{ width: 24, height: 24, borderRadius: '50%', background: a.ok ? '#10b981' : '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
                     {a.ok
                       ? <CheckCircleIcon style={{ width: 14, height: 14, color: 'white' }} />

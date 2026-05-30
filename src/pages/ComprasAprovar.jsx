@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
 import toast from 'react-hot-toast'
@@ -418,7 +418,7 @@ function CardAprovador({ s, cotacoes, onRefresh }) {
                   const link = `${window.location.origin}/cotacao/${c.token_acesso}`
                   const msgWA = `Olá ${c.fornecedor_nome}! Por favor envie sua cotação para *${s.titulo}* pelo link abaixo:\n${link}`
                   return (
-                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', gap: 8 }}>
+                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, padding: '5px 0', borderBottom: '1px solid var(--bg-secondary)', gap: 8 }}>
                       <span style={{ color: 'var(--text-secondary)', flex: 1 }}>{c.fornecedor_nome}</span>
                       <span style={{ fontWeight: 700, color: c.status === 'enviado' ? '#10b981' : c.status === 'visualizado' ? '#6366f1' : '#94a3b8', flexShrink: 0 }}>
                         {c.status === 'enviado' ? fmtCurrency(c.valor_total) : c.status === 'visualizado' ? '👁 Visualizou' : 'Aguardando...'}

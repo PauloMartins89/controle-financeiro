@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+﻿import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
@@ -23,7 +23,7 @@ function StepBar({ current }) {
             <div style={{
               width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontWeight: 800, fontSize: 13,
-              background: i < current ? '#10b981' : i === current ? '#6366f1' : 'rgba(255,255,255,0.06)',
+              background: i < current ? '#10b981' : i === current ? '#6366f1' : 'rgba(0,0,0,0.05)',
               color: i <= current ? 'white' : 'var(--text-secondary)',
               border: i === current ? '2px solid #818cf8' : '2px solid transparent',
               transition: 'all 0.3s',
@@ -33,7 +33,7 @@ function StepBar({ current }) {
             <span style={{ fontSize: 13, fontWeight: i === current ? 700 : 500, color: i === current ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{s}</span>
           </div>
           {i < STEPS.length - 1 && (
-            <div style={{ flex: 1, height: 2, background: i < current ? '#10b981' : 'rgba(255,255,255,0.07)', margin: '0 12px', transition: 'background 0.3s' }} />
+            <div style={{ flex: 1, height: 2, background: i < current ? '#10b981' : 'rgba(0,0,0,0.04)', margin: '0 12px', transition: 'background 0.3s' }} />
           )}
         </div>
       ))}
@@ -78,9 +78,9 @@ function UploadZone({ onParsed, onDemo }) {
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
         style={{
-          border: `2px dashed ${dragging ? '#6366f1' : error ? '#ef4444' : 'rgba(255,255,255,0.12)'}`,
+          border: `2px dashed ${dragging ? '#6366f1' : error ? '#ef4444' : 'var(--border)'}`,
           borderRadius: 20, padding: '56px 32px', textAlign: 'center', cursor: 'pointer',
-          background: dragging ? 'rgba(99,102,241,0.06)' : 'rgba(255,255,255,0.02)',
+          background: dragging ? 'rgba(99,102,241,0.06)' : 'var(--bg-secondary)',
           transition: 'all 0.2s',
         }}
       >
@@ -137,7 +137,7 @@ function UploadZone({ onParsed, onDemo }) {
           { bank: '🟢 Nubank Crédito', how: 'Fatura → Baixar planilha' },
           { bank: '📄 PDF (qualquer banco)', how: 'Extrato digital → Salvar como PDF — lemos automaticamente as linhas com data e valor' },
         ].map(b => (
-          <div key={b.bank} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
+          <div key={b.bank} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>{b.bank}</div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{b.how}</div>
           </div>
@@ -195,7 +195,7 @@ function ReviewTable({ rows, onRowsChange, people, currentUser }) {
       <div style={{ overflowX: 'auto', borderRadius: 14, border: '1px solid var(--border)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)' }}>
+            <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
               <th style={{ padding: '10px 14px', textAlign: 'left' }}>
                 <input type="checkbox" checked={allChecked} onChange={e => toggleAll(e.target.checked)} style={{ width: 15, height: 15, accentColor: '#6366f1', cursor: 'pointer' }} />
               </th>
@@ -258,7 +258,7 @@ function ReviewTable({ rows, onRowsChange, people, currentUser }) {
                   <select
                     value={row._cat}
                     onChange={e => updateRow(row.id, '_cat', e.target.value)}
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 8px', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }}
+                    style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 8px', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }}
                   >
                     {IMPORT_CATEGORIAS.map(c => <option key={c} value={c}>{CAT_ICONS[c]} {c}</option>)}
                   </select>
@@ -274,7 +274,7 @@ function ReviewTable({ rows, onRowsChange, people, currentUser }) {
                   <select
                     value={row._rateio}
                     onChange={e => updateRow(row.id, '_rateio', e.target.value)}
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 8px', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }}
+                    style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 8px', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }}
                   >
                     {RATEIO_OPCOES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
@@ -311,7 +311,7 @@ function ConfirmStep({ rows, people, currentUser, onConfirm, saving }) {
           { label: 'Rateadas (casal/grupo)', value: incluidos.filter(r => r._rateio !== 'pessoal').length, isCur: false, color: '#10b981', icon: '🤝' },
           { label: 'Pessoais', value: incluidos.filter(r => r._rateio === 'pessoal').length, isCur: false, color: '#8b5cf6', icon: '👤' },
         ].map(s => (
-          <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', position: 'relative' }}>
+          <div key={s.label} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', position: 'relative' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: s.color, borderRadius: '14px 14px 0 0' }} />
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>{s.label}</div>
             <div style={{ fontSize: 22, fontWeight: 800 }}>{s.isCur ? formatCurrency(s.value) : s.value}</div>
@@ -347,7 +347,7 @@ function ConfirmStep({ rows, people, currentUser, onConfirm, saving }) {
                     <span style={{ fontSize: 13 }}>{o.label}</span>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{count} ({pct.toFixed(0)}%)</span>
                   </div>
-                  <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: 4, background: 'rgba(0,0,0,0.05)', borderRadius: 2, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: '#6366f1', borderRadius: 2 }} />
                   </div>
                 </div>

@@ -172,7 +172,7 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
             />
             {clienteId && <span style={{ position: 'absolute', right: 12, top: 32, fontSize: 12, color: '#818cf8', fontWeight: 700 }}>✓</span>}
             {showDrop && clientesFiltrados.length > 0 && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', maxHeight: 180, overflowY: 'auto', marginTop: 2 }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', maxHeight: 180, overflowY: 'auto', marginTop: 2 }}>
                 {clientesFiltrados.map(c => (
                   <div key={c.id} onMouseDown={() => selecionarCliente(c)}
                     style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 13, color: 'var(--text-primary)', borderBottom: '1px solid var(--border)' }}
@@ -184,7 +184,7 @@ function CriarLoteModal({ workspaceId, userId, onClose, onSaved }) {
               </div>
             )}
             {showDrop && clienteSearch.trim() && clientesFiltrados.length === 0 && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 14px', fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                 Nenhum cliente encontrado — será criado como texto livre
               </div>
             )}
@@ -1287,7 +1287,7 @@ export default function LotesCliente() {
             { label: 'APROVADOS',        value: counts.aprovado_cliente || 0, color: '#10b981' },
             { label: 'RECUSADOS',        value: counts.recusado_cliente || 0, color: '#ef4444' },
           ].map(c => (
-            <div key={c.label} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)' }}>
+            <div key={c.label} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 18px', border: '1px solid var(--border)', borderTop: `3px solid ${c.color}` }}>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
               <div style={{ fontSize: 24, fontWeight: 800, color: c.color }}>{c.value}</div>
             </div>
@@ -1297,9 +1297,9 @@ export default function LotesCliente() {
         {/* Barra de ações */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por cliente..."
-            style={{ flex: 1, minWidth: 160, padding: '9px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+            style={{ flex: 1, minWidth: 160, padding: '9px 12px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            style={{ padding: '9px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, cursor: 'pointer' }}>
+            style={{ padding: '9px 12px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, cursor: 'pointer' }}>
             <option value="todos">Todos os status</option>
             <option value="rascunho">Rascunho</option>
             <option value="enviado_cliente">Aguardando Cliente</option>

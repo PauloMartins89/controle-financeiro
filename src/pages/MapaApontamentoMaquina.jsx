@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+﻿import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
@@ -85,7 +85,7 @@ function MultiSelect({ label, options, value, onChange }) {
       {open && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setOpen(false)} />
-          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', maxHeight: 220, overflowY: 'auto', marginTop: 2 }}>
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', maxHeight: 220, overflowY: 'auto', marginTop: 2 }}>
             {options.length === 0 && <div style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>Sem opções</div>}
             {options.map(opt => (
               <div key={opt} onClick={() => toggle(opt)} style={{ padding: '8px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-primary)', background: value.includes(opt) ? 'rgba(99,102,241,0.12)' : 'transparent' }}>
@@ -205,7 +205,7 @@ function BoletimModal({ boletim, workspaceId, ownerId, onClose, onSaved }) {
           </div>
           {/* Preview % */}
           {pct != null && (
-            <div style={{ borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: color ? `${color.bg}22` : 'rgba(255,255,255,0.04)', border: `1px solid ${color ? color.bg : 'var(--border)'}55` }}>
+            <div style={{ borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: color ? `${color.bg}22` : 'var(--bg-secondary)', border: `1px solid ${color ? color.bg : 'var(--border)'}55` }}>
               <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{hTrab}h trabalhadas / {hDisp}h disponíveis</span>
               <span style={{ fontSize: 20, fontWeight: 900, color: color?.bg || '#fff' }}>{pct.toFixed(2)}%</span>
             </div>
@@ -234,7 +234,7 @@ function BoletimPanel({ records, equipKey, date, onClose, onEdit, onNew }) {
   const allRecs = records
 
   return (
-    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 380, zIndex: 800, display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', borderLeft: '1px solid var(--border)', boxShadow: '-8px 0 32px rgba(0,0,0,0.35)', animation: 'slideInRight 0.2s ease' }}>
+    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 380, zIndex: 800, display: 'flex', flexDirection: 'column', background: 'var(--bg-card)', borderLeft: '1px solid var(--border)', boxShadow: '-8px 0 32px rgba(0,0,0,0.35)', animation: 'slideInRight 0.2s ease' }}>
       {/* Header */}
       <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
@@ -273,7 +273,7 @@ function BoletimPanel({ records, equipKey, date, onClose, onEdit, onNew }) {
               )}
               {/* KPI de utilização */}
               {pct != null && (
-                <div style={{ borderRadius: 14, padding: '16px 20px', marginBottom: 16, background: col ? `${col.bg}22` : 'rgba(255,255,255,0.04)', border: `2px solid ${col ? col.bg + '88' : 'var(--border)'}`, textAlign: 'center' }}>
+                <div style={{ borderRadius: 14, padding: '16px 20px', marginBottom: 16, background: col ? `${col.bg}22` : 'var(--bg-secondary)', border: `2px solid ${col ? col.bg + '88' : 'var(--border)'}`, textAlign: 'center' }}>
                   <div style={{ fontSize: 36, fontWeight: 900, color: col?.bg || 'var(--text-primary)' }}>{pct.toFixed(2)}%</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Utilização</div>
                 </div>
@@ -285,14 +285,14 @@ function BoletimPanel({ records, equipKey, date, onClose, onEdit, onNew }) {
                   { label: 'Trabalhadas', value: ex.horas_trabalhadas, unit: 'h', color: '#10b981' },
                   { label: 'Em Espera',   value: ex.horas_espera,      unit: 'h', color: '#f59e0b' },
                 ].map(k => (
-                  <div key={k.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                  <div key={k.label} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
                     <div style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.value != null ? `${Number(k.value).toFixed(1)}${k.unit}` : '—'}</div>
                     <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{k.label}</div>
                   </div>
                 ))}
               </div>
               {/* Detalhes */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: 16 }}>
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: 16 }}>
                 {[
                   { label: 'Modelo',             value: ex.modelo },
                   { label: 'Equipamento',        value: ex.equipamento },
@@ -307,13 +307,13 @@ function BoletimPanel({ records, equipKey, date, onClose, onEdit, onNew }) {
                 ))}
               </div>
               {ex.observacoes && (
-                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: 'var(--text-secondary)' }}>
                   📝 {ex.observacoes}
                 </div>
               )}
               {/* Ações */}
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => onEdit(rec)} style={{ flex: 1, padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <button onClick={() => onEdit(rec)} style={{ flex: 1, padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <PencilIcon style={{ width: 14, height: 14 }} /> Editar
                 </button>
               </div>
@@ -545,7 +545,7 @@ export default function MapaApontamentoMaquina() {
             )}
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
               {/* Legenda */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', gap: 10 }}>
                 <span>Indicadores:</span>
                 {[
                   { bg: '#ef4444', label: '0%' },
@@ -625,7 +625,7 @@ export default function MapaApontamentoMaquina() {
                     {/* expand button */}
                     <td style={{ width: 36, padding: '6px 8px', position: 'sticky', left: 0, zIndex: 10, background: 'var(--bg-card)', borderRight: '1px solid var(--border)', textAlign: 'center' }}>
                       <button onClick={() => setExpanded(p => ({ ...p, [row.key]: !p[row.key] }))}
-                        style={{ width: 22, height: 22, borderRadius: 5, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.06)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900 }}>
+                        style={{ width: 22, height: 22, borderRadius: 5, border: '1px solid var(--border)', background: 'rgba(0,0,0,0.05)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900 }}>
                         {isOpen ? '−' : '+'}
                       </button>
                     </td>

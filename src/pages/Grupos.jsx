@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { formatCurrency, getCategoryIcon } from '../lib/utils'
@@ -60,12 +60,12 @@ function GroupModal({ group, onClose, onSave }) {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '9px 10px',
                       borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-                      background: form.nome === t.nome ? `${t.cor}18` : 'rgba(255,255,255,0.03)',
+                      background: form.nome === t.nome ? `${t.cor}18` : 'var(--bg-secondary)',
                       border: `1px solid ${form.nome === t.nome ? t.cor + '50' : 'var(--border)'}`,
                       transition: 'all 0.15s',
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = `${t.cor}14`}
-                    onMouseLeave={e => e.currentTarget.style.background = form.nome === t.nome ? `${t.cor}18` : 'rgba(255,255,255,0.03)'}
+                    onMouseLeave={e => e.currentTarget.style.background = form.nome === t.nome ? `${t.cor}18` : 'var(--bg-secondary)'}
                   >
                     <div style={{ width: 32, height: 32, borderRadius: 8, background: `${t.cor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{t.icone}</div>
                     <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>{t.nome}</span>
@@ -91,7 +91,7 @@ function GroupModal({ group, onClose, onSave }) {
             <label className="label">Ícone</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {ICONS.map(ic => (
-                <button key={ic} type="button" onClick={() => setForm(f => ({ ...f, icone: ic }))} style={{ width: 38, height: 38, borderRadius: 8, fontSize: 20, cursor: 'pointer', background: form.icone === ic ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)', border: form.icone === ic ? '1px solid #6366f1' : '1px solid var(--border)' }}>
+                <button key={ic} type="button" onClick={() => setForm(f => ({ ...f, icone: ic }))} style={{ width: 38, height: 38, borderRadius: 8, fontSize: 20, cursor: 'pointer', background: form.icone === ic ? 'rgba(99,102,241,0.2)' : 'var(--bg-secondary)', border: form.icone === ic ? '1px solid #6366f1' : '1px solid var(--border)' }}>
                   {ic}
                 </button>
               ))}
@@ -168,15 +168,15 @@ export default function Grupos() {
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Despesas</div>
                       <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginTop: 2 }}>{stats.count}</div>
                     </div>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Total</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#6366f1', marginTop: 2 }}>{formatCurrency(stats.total)}</div>
                     </div>
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>
+                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px', textAlign: 'center' }}>
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Pendente</div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b', marginTop: 2 }}>{formatCurrency(stats.pendente)}</div>
                     </div>

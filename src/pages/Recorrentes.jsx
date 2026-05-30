@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { formatCurrency, CATEGORIAS } from '../lib/utils'
@@ -115,7 +115,7 @@ export default function Recorrentes() {
                   <div style={{ fontSize: 11, color: items.length ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: items.length ? 700 : 400, marginBottom: 4 }}>
                     {dia}
                   </div>
-                  <div style={{ height: 4, borderRadius: 2, background: items.length ? '#6366f1' : 'rgba(255,255,255,0.06)' }} />
+                  <div style={{ height: 4, borderRadius: 2, background: items.length ? '#6366f1' : 'rgba(0,0,0,0.05)' }} />
                   {items.length > 0 && (
                     <div style={{ marginTop: 4, fontSize: 10, color: '#818cf8', fontWeight: 600 }}>{items.length}</div>
                   )}
@@ -128,7 +128,7 @@ export default function Recorrentes() {
         {/* List */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           {/* Header */}
-          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '2.5fr 130px 130px 150px 140px 90px', background: 'rgba(255,255,255,0.02)', alignItems: 'center' }}>
+          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '2.5fr 130px 130px 150px 140px 90px', background: 'var(--bg-secondary)', alignItems: 'center' }}>
             {['Descrição','Valor','Vencimento','Categoria','Grupo','Ações'].map(h => (
               <span key={h} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
             ))}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
@@ -246,7 +246,7 @@ export default function ManutencaoEquipamentos() {
                       const tc = TIPOS_EQUIP.find(t => t.value === eq.tipo) || { label: eq.tipo || '—' }
                       return (
                         <tr key={eq.id} style={{ borderBottom: '1px solid var(--border)', opacity: eq.ativo ? 1 : 0.55 }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                           <td style={tdStyle}><span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{eq.nome}</span></td>
@@ -308,7 +308,7 @@ export default function ManutencaoEquipamentos() {
                     ? <tr><td colSpan={6} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum técnico cadastrado</td></tr>
                     : filtradoTec.map(t => (
                       <tr key={t.id} style={{ borderBottom: '1px solid var(--border)', opacity: t.ativo ? 1 : 0.55 }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <td style={tdStyle}><span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{t.nome}</span></td>

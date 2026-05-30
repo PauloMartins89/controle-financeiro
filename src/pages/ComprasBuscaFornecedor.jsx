@@ -100,7 +100,7 @@ function AutocompleteInput({ value, onChange, onSelect, sugestoes, placeholder, 
         autoComplete="off"
       />
       {open && filtered.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.35)', marginTop: 3, maxHeight: 220, overflowY: 'auto' }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.35)', marginTop: 3, maxHeight: 220, overflowY: 'auto' }}>
           {filtered.map((s, i) => {
             const label = typeof s === 'string' ? s : s.label
             const sub   = typeof s === 'string' ? null : s.sub

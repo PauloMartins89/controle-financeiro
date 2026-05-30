@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import useStore from '../store/useStore'
 import { formatCurrency } from '../lib/utils'
 import { toast } from 'react-hot-toast'
@@ -367,7 +367,7 @@ export default function NotasFiscais() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-              background: selected.size > 0 ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
+              background: selected.size > 0 ? 'rgba(99,102,241,0.2)' : 'rgba(0,0,0,0.05)',
               border: selected.size > 0 ? '1px solid #6366f1' : '1px solid var(--border)',
               color: selected.size > 0 ? '#818cf8' : 'var(--text-secondary)',
               fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
@@ -380,7 +380,7 @@ export default function NotasFiscais() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
-              background: selected.size > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.05)',
+              background: selected.size > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(0,0,0,0.05)',
               border: selected.size > 0 ? '1px solid #ef4444' : '1px solid var(--border)',
               color: selected.size > 0 ? '#f87171' : 'var(--text-secondary)',
               fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
@@ -399,7 +399,7 @@ export default function NotasFiscais() {
             onClick={() => { setFiltroOrigem(f.key); setSelected(new Set()) }}
             style={{
               padding: '6px 14px', borderRadius: 20, cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
-              background: filtroOrigem === f.key ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)',
+              background: filtroOrigem === f.key ? 'rgba(99,102,241,0.2)' : 'var(--bg-secondary)',
               border: filtroOrigem === f.key ? '1px solid #6366f1' : '1px solid var(--border)',
               color: filtroOrigem === f.key ? '#818cf8' : 'var(--text-secondary)',
             }}
@@ -418,9 +418,9 @@ export default function NotasFiscais() {
           <table style={{ width: totalWidth + 40, borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             {/* Head */}
             <thead>
-              <tr style={{ background: 'rgba(255,255,255,0.03)', position: 'sticky', top: 0, zIndex: 2 }}>
+              <tr style={{ background: 'var(--bg-secondary)', position: 'sticky', top: 0, zIndex: 2 }}>
                 {/* Checkbox */}
-                <th style={{ width: 40, minWidth: 40, padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border)', borderRight: '1px solid rgba(255,255,255,0.04)', background: 'var(--bg-secondary)' }}>
+                <th style={{ width: 40, minWidth: 40, padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--bg-secondary)', background: 'var(--bg-secondary)' }}>
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{ accentColor: '#6366f1', width: 14, height: 14, cursor: 'pointer' }} />
                 </th>
                 <th style={{
@@ -429,7 +429,7 @@ export default function NotasFiscais() {
                   fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
                   textTransform: 'uppercase', letterSpacing: '0.05em',
                   borderBottom: '1px solid var(--border)',
-                  borderRight: '1px solid rgba(255,255,255,0.04)',
+                  borderRight: '1px solid var(--bg-secondary)',
                   background: 'var(--bg-secondary)',
                 }}>IMG</th>
                 {COLS.map(col => (
@@ -439,7 +439,7 @@ export default function NotasFiscais() {
                     fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)',
                     textTransform: 'uppercase', letterSpacing: '0.05em',
                     borderBottom: '1px solid var(--border)',
-                    borderRight: '1px solid rgba(255,255,255,0.04)',
+                    borderRight: '1px solid var(--bg-secondary)',
                     whiteSpace: 'nowrap', background: 'var(--bg-secondary)',
                   }}>
                     {col.label}
@@ -468,7 +468,7 @@ export default function NotasFiscais() {
                     outline: isSel ? '1px solid rgba(99,102,241,0.3)' : 'none',
                   }}>
                     {/* Checkbox */}
-                    <td style={{ width: 40, padding: '6px 8px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.04)', verticalAlign: 'middle' }}>
+                    <td style={{ width: 40, padding: '6px 8px', textAlign: 'center', borderRight: '1px solid var(--bg-secondary)', verticalAlign: 'middle' }}>
                       <input type="checkbox" checked={isSel} onChange={() => toggleOne(exp.id)}
                         style={{ accentColor: '#6366f1', width: 14, height: 14, cursor: 'pointer' }} />
                     </td>
@@ -476,7 +476,7 @@ export default function NotasFiscais() {
                     <td style={{
                       width: IMG_WIDTH, minWidth: IMG_WIDTH,
                       padding: '6px 8px', textAlign: 'center',
-                      borderRight: '1px solid rgba(255,255,255,0.04)',
+                      borderRight: '1px solid var(--bg-secondary)',
                       verticalAlign: 'middle',
                     }}>
                       {exp.comprovante_url
@@ -506,7 +506,7 @@ export default function NotasFiscais() {
                           fontSize: 12, fontFamily: col.key === 'origem' ? 'inherit' : 'monospace',
                           color: isEmpty ? 'var(--text-secondary)' : 'var(--text-primary)',
                           opacity: isEmpty ? 0.35 : 1,
-                          borderRight: '1px solid rgba(255,255,255,0.04)',
+                          borderRight: '1px solid var(--bg-secondary)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           verticalAlign: 'middle',
                         }}>

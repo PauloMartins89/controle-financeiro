@@ -74,7 +74,7 @@ function InstanceRow({ inst, onAction }) {
       <tr
         style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
         onClick={() => setExpanded(e => !e)}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       >
         {/* Processo */}
@@ -381,7 +381,7 @@ export default function FlowCenter() {
               <button key={t.id} onClick={() => setFiltroStatus(t.id)} style={{
                 padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
                 border: 'none', cursor: 'pointer',
-                background: filtroStatus === t.id ? (t.warn ? '#ef4444' : 'var(--accent)') : 'rgba(255,255,255,0.05)',
+                background: filtroStatus === t.id ? (t.warn ? '#ef4444' : 'var(--accent)') : 'rgba(0,0,0,0.05)',
                 color: filtroStatus === t.id ? '#fff' : (t.warn ? '#ef4444' : 'var(--text-secondary)'),
               }}>{t.label}</button>
             ))}

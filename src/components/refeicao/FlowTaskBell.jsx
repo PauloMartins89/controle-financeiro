@@ -80,7 +80,7 @@ export default function FlowTaskBell({ userId, workspaceId, onSelectTask }) {
           color: count > 0 ? (vencidas > 0 ? '#ef4444' : '#f59e0b') : 'var(--text-secondary)',
           transition: 'background 0.15s',
         }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
         onMouseLeave={e => e.currentTarget.style.background = 'none'}
       >
         <BellIcon style={{ width: 20, height: 20 }} />
@@ -101,7 +101,7 @@ export default function FlowTaskBell({ userId, workspaceId, onSelectTask }) {
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', right: 0,
           width: 320, maxHeight: 400, overflowY: 'auto',
-          background: 'var(--surface)', border: '1px solid var(--border)',
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
           borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 9999,
         }}>
           {/* Header dropdown */}
@@ -150,7 +150,7 @@ export default function FlowTaskBell({ userId, workspaceId, onSelectTask }) {
                   cursor: onSelectTask ? 'pointer' : 'default',
                   transition: 'background 0.1s',
                 }}
-                onMouseEnter={e => { if (onSelectTask) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                onMouseEnter={e => { if (onSelectTask) e.currentTarget.style.background = 'rgba(0,0,0,0.04)' }}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>

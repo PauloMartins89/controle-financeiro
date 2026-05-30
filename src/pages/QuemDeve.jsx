@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import Header from '../components/Header'
 import Avatar from '../components/Avatar'
 import useStore from '../store/useStore'
@@ -50,7 +50,7 @@ function SplitInsights({ expenses, people }) {
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>paga {pct}% das vezes</div>
               </div>
             </div>
-            <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)' }}>
+            <div style={{ height: 4, borderRadius: 2, background: 'var(--border)' }}>
               <div style={{ height: '100%', width: `${pct}%`, background: pct > 80 ? '#ef4444' : '#f59e0b', borderRadius: 2 }} />
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{formatCurrency(total)} histórico</div>
@@ -146,7 +146,7 @@ export default function QuemDeve() {
                           : <ChevronDownIcon style={{ width: 18, height: 18, color: 'var(--text-secondary)' }} />}
                       </div>
                       {isOpen && (
-                        <div style={{ background: 'rgba(0,0,0,0.18)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                        <div style={{ background: 'rgba(0,0,0,0.18)', borderTop: '1px solid var(--bg-secondary)' }}>
                           {/* Resumo por veículo (se houver despesas com placa) */}
                           {(() => {
                             const porVeic = {}
@@ -159,7 +159,7 @@ export default function QuemDeve() {
                             const placas = Object.entries(porVeic)
                             if (placas.length === 0) return null
                             return (
-                              <div style={{ padding: '12px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                              <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--bg-secondary)', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: 4 }}>Por veículo:</span>
                                 {placas.map(([placa, agg]) => (
                                   <div key={placa} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: 8 }}>
@@ -175,7 +175,7 @@ export default function QuemDeve() {
                             Composição da dívida
                           </div>
                           {dev.despesas.map(exp => (
-                            <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 24px', borderBottom: '1px solid var(--bg-secondary)' }}>
                               <span style={{ fontSize: 18 }}>{getCategoryIcon(exp.categoria)}</span>
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: 13, fontWeight: 600 }}>
@@ -319,7 +319,7 @@ export default function QuemDeve() {
                           share = valorParcela / np
                         }
                         return (
-                          <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 24px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <div key={exp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 24px', borderBottom: '1px solid var(--bg-secondary)' }}>
                             <span style={{ fontSize: 18 }}>{getCategoryIcon(exp.categoria)}</span>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 13, fontWeight: 600 }}>{exp.descricao}</div>

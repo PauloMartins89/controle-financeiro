@@ -79,13 +79,13 @@ export default function ProspectarDashboard() {
     .sort((a, b) => b.leads.length - a.leads.length)
     .slice(0, 5)
 
-  const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px' }
+  const cardStyle = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', boxShadow: 'var(--shadow-card)' }
 
   return (
-    <div>
+    <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
       <Header title="Dashboard — Prospectar" subtitle="Visão geral da sua prospecção de clientes" />
 
-      <div style={{ padding: '0 24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 40px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* ── KPIs ──────────────────────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
@@ -97,7 +97,7 @@ export default function ProspectarDashboard() {
             { label: 'Contratos', value: totalContratos, icon: DocumentTextIcon, cor: '#8b5cf6', sub: `${contratosAtivos} em andamento` },
             { label: 'Valor contratos', value: fmtBRL(valorTotalContratos), icon: ArrowTrendingUpIcon, cor: '#10b981', sub: 'receita prospectada', isText: true },
           ].map((k, i) => (
-            <div key={i} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div key={i} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10, borderTop: `3px solid ${k.cor}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{k.label}</span>
                 <div style={{ width: 32, height: 32, borderRadius: 9, background: `${k.cor}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

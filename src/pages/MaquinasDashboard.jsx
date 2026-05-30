@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
@@ -47,7 +47,7 @@ function BarRow({ label, value, max, color, right }) {
         <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>{label}</span>
         <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)', flexShrink: 0, marginLeft: 8 }}>{right}</span>
       </div>
-      <div style={{ height: 6, borderRadius: 4, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+      <div style={{ height: 6, borderRadius: 4, background: 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
         <div style={{ height: '100%', borderRadius: 4, width: `${pct}%`, background: color, transition: 'width 0.5s ease' }} />
       </div>
     </div>
@@ -502,7 +502,7 @@ export default function MaquinasDashboard() {
               </>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.04)', borderRadius: 11, padding: 3 }}>
+          <div style={{ display: 'flex', gap: 2, background: 'var(--bg-secondary)', borderRadius: 11, padding: 3 }}>
             {TABS.map(t => {
               const Icon = t.icon
               const active = tab === t.id
@@ -575,7 +575,7 @@ export default function MaquinasDashboard() {
                           <td style={{ padding: '9px 10px', textAlign: 'right', color: '#10b981', fontWeight: 700 }}>{fmtH(e.hT)}</td>
                           <td style={{ padding: '9px 10px', textAlign: 'right' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
-                              <div style={{ width: 56, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                              <div style={{ width: 56, height: 5, borderRadius: 3, background: 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
                                 <div style={{ height: '100%', borderRadius: 3, width: `${Math.min(100, e.util || 0)}%`, background: utilColor(e.util), transition: 'width 0.5s' }} />
                               </div>
                               <span style={{ fontWeight: 900, color: utilColor(e.util), minWidth: 44, textAlign: 'right' }}>{fmtPct(e.util)}</span>
@@ -605,7 +605,7 @@ export default function MaquinasDashboard() {
                   <SectionTitle label="Por Turno" icon={CalendarDaysIcon} color="#8b5cf6" />
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
                     {porTurno.map(t => (
-                      <div key={t.turno} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                      <div key={t.turno} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
                         <div style={{ fontSize: 16, marginBottom: 4 }}>
                           {t.turno === 'dia' ? '??' : t.turno === 'noite' ? '??' : t.turno === 'integral' ? '??' : '??'}
                         </div>

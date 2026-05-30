@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { waLink } from '../lib/utils'
 import Header from '../components/Header'
@@ -256,7 +256,7 @@ function LeilaoCard({ sol, cotacoesDaSol, onRefresh }) {
               const msg  = `Olá ${c.fornecedor_nome}! Envie sua cotação para *${sol.titulo}*:\n${link}`
               const isSent = c.status === 'enviado' || c.status === 'ganhou'
               return (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: i % 2 === 0 ? 'rgba(139,92,246,0.03)' : 'transparent', borderBottom: '1px solid rgba(255,255,255,0.04)', gap: 8 }}>
+                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: i % 2 === 0 ? 'rgba(139,92,246,0.03)' : 'transparent', borderBottom: '1px solid var(--bg-secondary)', gap: 8 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                       {c.status === 'ganhou' ? '🏆 ' : ''}{c.fornecedor_nome}

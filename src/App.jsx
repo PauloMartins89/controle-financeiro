@@ -262,7 +262,7 @@ export default function App() {
 
   // Inicializa o tema antes de qualquer página renderizar
   useEffect(() => {
-    const theme = localStorage.getItem('theme') || 'dark'
+    const theme = localStorage.getItem('theme') || 'light'
     document.documentElement.setAttribute('data-theme', theme)
   }, [])
 

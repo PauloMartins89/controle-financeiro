@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+﻿import { useState, useRef } from 'react'
 import {
   MagnifyingGlassIcon,
   ShoppingCartIcon,
@@ -251,7 +251,7 @@ export default function ComprasPesquisaPrecos({ produto: produtoProp, onBenchmar
           ) : resultado ? (
             <>
               {/* Filtros de fonte + ordenação */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', gap: 8, flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)', gap: 8, flexWrap: 'wrap', background: 'var(--bg-secondary)' }}>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {FONTES.map(f => {
                     const count = f.key === 'todos' ? resultado.resultados.length : resultado.resultados.filter(r => r.fonte === f.key).length
@@ -286,7 +286,7 @@ export default function ComprasPesquisaPrecos({ produto: produtoProp, onBenchmar
                 <>
                   {listaFiltrada.map((item, i) => (
                     <div key={i} style={{ borderBottom: i < listaFiltrada.length - 1 ? '1px solid var(--border)' : 'none' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                       onMouseLeave={e => e.currentTarget.style.background = ''}>
                       <CardResultado item={item} menorPreco={resultado.resumo.menor}
                         onBenchmark={onBenchmark ? handleUsarBenchmark : null} />

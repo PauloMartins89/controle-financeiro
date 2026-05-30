@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline'
@@ -50,7 +50,7 @@ function PersonModal({ person, onClose, onSave }) {
             <label className="label">Avatar (emoji)</label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {AVATARS.map(a => (
-                <button key={a} type="button" onClick={() => setForm(f => ({ ...f, avatar: a }))} style={{ width: 36, height: 36, borderRadius: 8, fontSize: 18, cursor: 'pointer', background: form.avatar === a ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)', border: form.avatar === a ? '1px solid #6366f1' : '1px solid var(--border)' }}>
+                <button key={a} type="button" onClick={() => setForm(f => ({ ...f, avatar: a }))} style={{ width: 36, height: 36, borderRadius: 8, fontSize: 18, cursor: 'pointer', background: form.avatar === a ? 'rgba(99,102,241,0.2)' : 'var(--bg-secondary)', border: form.avatar === a ? '1px solid #6366f1' : '1px solid var(--border)' }}>
                   {a}
                 </button>
               ))}
@@ -167,13 +167,13 @@ export default function Pessoas() {
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
+                  <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px' }}>
                     <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Pagou</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#10b981', marginTop: 2 }}>
                       {expenses.filter(e => e.pago_por === person.id).length} despesas
                     </div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 12px' }}>
+                  <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '8px 12px' }}>
                     <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Participa</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#6366f1', marginTop: 2 }}>
                       {stats.participates} despesas

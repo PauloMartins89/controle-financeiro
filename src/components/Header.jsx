@@ -3,7 +3,7 @@ import { PlusIcon, MagnifyingGlassIcon, SunIcon, MoonIcon } from '@heroicons/rea
 import useStore from '../store/useStore'
 
 function useTheme() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)

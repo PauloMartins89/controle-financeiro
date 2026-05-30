@@ -179,7 +179,7 @@ export default function GlobalSearch() {
               <XMarkIcon style={{ width: 18, height: 18 }} />
             </button>
           )}
-          <kbd onClick={() => setOpen(false)} style={{ fontSize: 11, background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '2px 6px', color: 'var(--text-secondary)', cursor: 'pointer' }}>Esc</kbd>
+          <kbd onClick={() => setOpen(false)} style={{ fontSize: 11, background: 'var(--border)', borderRadius: 4, padding: '2px 6px', color: 'var(--text-secondary)', cursor: 'pointer' }}>Esc</kbd>
         </div>
 
         {/* Label quando sem query */}

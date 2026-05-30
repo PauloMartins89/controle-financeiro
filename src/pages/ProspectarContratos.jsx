@@ -135,13 +135,13 @@ export default function ProspectarContratos() {
 
   const totalValor = filtrados.reduce((s, c) => s + (Number(c.valor) || 0), 0)
 
-  const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px' }
+  const cardStyle = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 20px', boxShadow: 'var(--shadow-card)' }
 
   return (
-    <div>
+    <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
       <Header title="Contratos" subtitle="Registro de contratos fechados e em andamento" />
 
-      <div style={{ padding: '0 24px 40px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 40px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* ── KPIs rápidos ──────────────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
@@ -149,7 +149,7 @@ export default function ProspectarContratos() {
             const count = contratos.filter(c => c.status === s.id).length
             const valor = contratos.filter(c => c.status === s.id).reduce((sum, c) => sum + (Number(c.valor) || 0), 0)
             return (
-              <div key={s.id} style={{ ...cardStyle, cursor: 'pointer', borderColor: filtroStatus === s.id ? s.cor : 'var(--border)' }}
+              <div key={s.id} style={{ ...cardStyle, cursor: 'pointer', borderTop: `3px solid ${s.cor}`, outline: filtroStatus === s.id ? `2px solid ${s.cor}` : 'none', outlineOffset: 2 }}
                 onClick={() => setFiltroStatus(filtroStatus === s.id ? 'todos' : s.id)}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                   <s.icon style={{ width: 16, height: 16, color: s.cor }} />
@@ -166,9 +166,9 @@ export default function ProspectarContratos() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <input value={busca} onChange={e => setBusca(e.target.value)}
             placeholder="Buscar empresa ou serviço..."
-            style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, fontSize: 13, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none' }} />
+            style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none' }} />
           <select value={filtroMetodo} onChange={e => setFiltroMetodo(e.target.value)}
-            style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+            style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer' }}>
             <option value="todos">Todos os métodos</option>
             {METODOS.map(m => <option key={m.id} value={m.id}>{m.emoji} {m.label}</option>)}
           </select>
@@ -200,7 +200,7 @@ export default function ProspectarContratos() {
                   const m = METODOS.find(x => x.id === c.metodo) || METODOS[0]
                   const st = STATUS_CONTRATO.find(x => x.id === c.status) || STATUS_CONTRATO[0]
                   return (
-                    <div key={c.id} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                    <div key={c.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: `3px solid ${st.cor}`, borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 14, boxShadow: 'var(--shadow-card)' }}>
                       <span style={{ fontSize: 22, flexShrink: 0, paddingTop: 2 }}>{m.emoji}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>

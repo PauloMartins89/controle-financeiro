@@ -153,7 +153,7 @@ function FlowMapTab({ workspaceId }) {
                         <div style={{ borderTop: `1px solid ${sc.border}30`, paddingTop: 8, marginTop: 2 }}>
                           <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>👤 RESPONSÁVEL</div>
                           {resps.map((r, ri) => (
-                            <div key={ri} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '3px 7px', marginBottom: 3 }}>
+                            <div key={ri} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 6, padding: '3px 7px', marginBottom: 3 }}>
                               {r.tipo === 'supervisor_equipe' ? '👔 Supervisor' :
                                r.tipo === 'lider_equipe' ? '👷 Líder' :
                                r.tipo === 'solicitante' ? '🙋 Solicitante' :

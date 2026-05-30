@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { isAdmin } from '../lib/admin'
@@ -159,7 +159,7 @@ function WorkspaceNotifSection({ workspaceId }) {
                     <PhoneIcon style={{ width: 14, height: 14, color: r.ativo ? '#818cf8' : 'var(--text-secondary)', flexShrink: 0 }} />
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{r.nome_destinatario}</span>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>+{r.phone_number}</span>
-                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: r.ativo ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.05)', color: r.ativo ? '#818cf8' : 'var(--text-secondary)', fontWeight: 700 }}>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: r.ativo ? 'rgba(99,102,241,0.1)' : 'rgba(0,0,0,0.05)', color: r.ativo ? '#818cf8' : 'var(--text-secondary)', fontWeight: 700 }}>
                       {r.ativo ? 'Ativo' : 'Pausado'}
                     </span>
                     <button onClick={() => handleToggle(r.id, !r.ativo)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 11 }}>

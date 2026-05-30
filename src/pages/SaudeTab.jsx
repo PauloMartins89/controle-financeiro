@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+﻿import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import {
@@ -81,7 +81,7 @@ function Gargalo({ color, bg, icon: Icon, title, desc, badge, action }) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
         <span style={{ padding: '2px 8px', borderRadius: 20, background: `${color}22`, color, fontSize: 11, fontWeight: 800 }}>{badge}</span>
         {action && (
-          <button onClick={action.fn} style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+          <button onClick={action.fn} style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
             {action.label}
           </button>
         )}
@@ -94,7 +94,7 @@ function Gargalo({ color, bg, icon: Icon, title, desc, badge, action }) {
 function TabelaRow({ cells, acoes }) {
   return (
     <tr style={{ borderBottom: '1px solid var(--border)' }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
       onMouseLeave={e => e.currentTarget.style.background = ''}
     >
       {cells.map((c, i) => (
@@ -105,7 +105,7 @@ function TabelaRow({ cells, acoes }) {
           <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}>
             {acoes.map((a, i) => (
               <button key={i} onClick={a.fn} title={a.title}
-                style={{ padding: '4px 8px', borderRadius: 6, background: a.bg || 'rgba(255,255,255,0.06)', border: `1px solid ${a.borderColor || 'var(--border)'}`, cursor: 'pointer', color: a.color || 'var(--text-secondary)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                style={{ padding: '4px 8px', borderRadius: 6, background: a.bg || 'rgba(0,0,0,0.05)', border: `1px solid ${a.borderColor || 'var(--border)'}`, cursor: 'pointer', color: a.color || 'var(--text-secondary)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
                 {a.icon && <a.icon style={{ width: 13, height: 13 }} />}
                 {a.label}
               </button>
@@ -120,7 +120,7 @@ function TabelaRow({ cells, acoes }) {
 function TabelaHeader({ cols, comAcoes }) {
   return (
     <thead>
-      <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+      <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
         {cols.map(c => (
           <th key={c} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, whiteSpace: 'nowrap' }}>{c}</th>
         ))}

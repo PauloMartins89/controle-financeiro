@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+﻿import { useState, useCallback, useRef } from 'react'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { formatCurrency, BANDEIRAS } from '../lib/utils'
@@ -304,7 +304,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
           <div style={{ display: 'flex', gap: 6 }}>
             {['Arquivo', 'Revisão', 'Confirmar'].map((s, i) => (
               <div key={i} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20,
-                background: i < step ? '#10b981' : i === step ? '#6366f1' : 'rgba(255,255,255,0.06)',
+                background: i < step ? '#10b981' : i === step ? '#6366f1' : 'rgba(0,0,0,0.05)',
                 color: i <= step ? 'white' : 'var(--text-secondary)' }}>
                 {i < step ? '✓ ' : ''}{s}
               </div>
@@ -325,9 +325,9 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                 onDragOver={e => e.preventDefault()}
                 onDrop={onDrop}
                 onClick={() => inputRef.current?.click()}
-                style={{ border: '2px dashed rgba(255,255,255,0.12)', borderRadius: 18, padding: '52px 32px', textAlign: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', transition: 'all 0.2s' }}
+                style={{ border: '2px dashed var(--border)', borderRadius: 18, padding: '52px 32px', textAlign: 'center', cursor: 'pointer', background: 'var(--bg-secondary)', transition: 'all 0.2s' }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = '#6366f1'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
                 <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.xlsx,.xls,.pdf" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
                 {loading ? (
@@ -394,7 +394,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                   </button>
                   <select onChange={e => e.target.value && bulkSetMode('pessoa', e.target.value)}
                     defaultValue=""
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }}>
+                    style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }}>
                     <option value="">100% para…</option>
                     {others.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                   </select>
@@ -416,7 +416,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
               {/* Table */}
               <div style={{ borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
                 {/* Header */}
-                <div style={{ display: 'grid', gridTemplateColumns: '40px 90px 1fr 130px 110px 200px', padding: '9px 14px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '40px 90px 1fr 130px 110px 200px', padding: '9px 14px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', alignItems: 'center' }}>
                   {['', 'Data', 'Descrição', 'Categoria', 'Valor', 'De quem é?'].map((h, i) => (
                     <span key={i} style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</span>
                   ))}
@@ -454,7 +454,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                                 value={row._nome}
                                 onChange={e => update(row.id, '_nome', e.target.value)}
                                 style={{ background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, width: '100%', cursor: 'text' }}
-                                onFocus={e => e.target.style.background = 'rgba(255,255,255,0.05)'}
+                                onFocus={e => e.target.style.background = 'rgba(0,0,0,0.05)'}
                                 onBlur={e => e.target.style.background = 'transparent'}
                               />
                               {row._duplicada && (
@@ -471,7 +471,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
 
                           {/* Category */}
                           <select value={row._cat} onChange={e => update(row.id, '_cat', e.target.value)}
-                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 6px', color: 'var(--text-primary)', fontSize: 11, cursor: 'pointer', width: '100%' }}>
+                            style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)', borderRadius: 7, padding: '4px 6px', color: 'var(--text-primary)', fontSize: 11, cursor: 'pointer', width: '100%' }}>
                             {IMPORT_CATEGORIAS.map(c => <option key={c} value={c}>{CAT_ICONS[c]} {c}</option>)}
                           </select>
 
@@ -484,7 +484,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                           <button
                             onClick={() => setExpandedRow(isExp ? null : row.id)}
                             style={{
-                              background: 'rgba(255,255,255,0.04)',
+                              background: 'var(--bg-secondary)',
                               border: `1px solid ${isExp ? summary.color : 'var(--border)'}`,
                               borderRadius: 8, padding: '5px 8px',
                               color: 'var(--text-primary)', fontSize: 11, fontWeight: 600,
@@ -499,7 +499,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
 
                         {/* Expanded — atribuição editor */}
                         {isExp && (
-                          <div style={{ padding: '12px 16px 14px 64px', background: 'rgba(0,0,0,0.18)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                          <div style={{ padding: '12px 16px 14px 64px', background: 'rgba(0,0,0,0.18)', borderTop: '1px solid var(--bg-secondary)' }}>
                             {/* Mode selector */}
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                               {[
@@ -511,7 +511,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                                 <button key={m.v} onClick={() => update(row.id, '_modo', m.v)}
                                   style={{
                                     padding: '6px 12px', borderRadius: 8,
-                                    background: row._modo === m.v ? m.c : 'rgba(255,255,255,0.04)',
+                                    background: row._modo === m.v ? m.c : 'var(--bg-secondary)',
                                     border: `1px solid ${row._modo === m.v ? m.c : 'var(--border)'}`,
                                     color: row._modo === m.v ? 'white' : 'var(--text-primary)',
                                     fontSize: 11, fontWeight: 700, cursor: 'pointer',
@@ -530,7 +530,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Quem deve {formatCurrency(row.valor)}:</span>
                                 <select value={row._pessoa} onChange={e => update(row.id, '_pessoa', e.target.value)}
-                                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}>
+                                  style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer' }}>
                                   {others.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                                 </select>
                               </div>
@@ -552,7 +552,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                                       }}
                                         style={{
                                           padding: '6px 12px', borderRadius: 20,
-                                          background: checked ? p.cor : 'rgba(255,255,255,0.04)',
+                                          background: checked ? p.cor : 'var(--bg-secondary)',
                                           border: `1px solid ${checked ? p.cor : 'var(--border)'}`,
                                           color: checked ? 'white' : 'var(--text-primary)',
                                           fontSize: 11, fontWeight: 700, cursor: 'pointer',
@@ -585,7 +585,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                                         type="number" step="0.01" placeholder="0,00"
                                         value={row._valores?.[p.id] ?? ''}
                                         onChange={e => update(row.id, '_valores', { ...(row._valores || {}), [p.id]: e.target.value })}
-                                        style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)', fontSize: 12, width: '100%' }}
+                                        style={{ flex: 1, background: 'rgba(0,0,0,0.05)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', color: 'var(--text-primary)', fontSize: 12, width: '100%' }}
                                       />
                                     </div>
                                   ))}
@@ -624,7 +624,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
                   { label: 'Total', value: total, color: '#ef4444', fmt: true },
                   { label: 'Cartão', value: card.nome, color: card.cor, fmt: false },
                 ].map(s => (
-                  <div key={s.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', position: 'relative', overflow: 'hidden' }}>
+                  <div key={s.label} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: s.color, borderRadius: '12px 12px 0 0' }} />
                     <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 4 }}>{s.label}</div>
                     <div style={{ fontSize: 20, fontWeight: 800 }}>{s.fmt ? formatCurrency(s.value) : s.value}</div>
@@ -1020,14 +1020,14 @@ export default function Cartoes() {
               <div key={card.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 {/* Card visual — proporção real (1.586:1, padrão ISO/IEC 7810 ID-1) */}
                 <div style={{ padding: '6% 7% 6%', background: cardBg, position: 'relative', overflow: 'hidden', aspectRatio: '2.636 / 1', borderRadius: '12px 12px 0 0' }}>
-                  <div style={{ position: 'absolute', top: '-15%', right: '-10%', width: '40%', aspectRatio: '1', borderRadius: '50%', background: txt === 'white' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }} />
-                  <div style={{ position: 'absolute', bottom: '-10%', left: '8%', width: '28%', aspectRatio: '1', borderRadius: '50%', background: txt === 'white' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }} />
+                  <div style={{ position: 'absolute', top: '-15%', right: '-10%', width: '40%', aspectRatio: '1', borderRadius: '50%', background: txt === 'white' ? 'var(--border)' : 'rgba(0,0,0,0.05)' }} />
+                  <div style={{ position: 'absolute', bottom: '-10%', left: '8%', width: '28%', aspectRatio: '1', borderRadius: '50%', background: txt === 'white' ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.04)' }} />
                   {isPreset && banco.watermark && (
                     <div style={{
                       position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       pointerEvents: 'none', whiteSpace: 'pre-line', textAlign: 'center',
                       fontSize: 56, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2,
-                      color: 'rgba(255,255,255,0.06)', textTransform: 'uppercase',
+                      color: 'rgba(0,0,0,0.05)', textTransform: 'uppercase',
                       fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
                     }}>{banco.watermark}</div>
                   )}
@@ -1043,7 +1043,7 @@ export default function Cartoes() {
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
                       <path d="M105 -10 L60 110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" fill="none" />
                       <path d="M150 -10 L105 110" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" fill="none" />
-                      <path d="M125 -10 Q110 50 80 110" stroke="rgba(255,255,255,0.12)" strokeWidth="1" fill="none" />
+                      <path d="M125 -10 Q110 50 80 110" stroke="var(--border)" strokeWidth="1" fill="none" />
                     </svg>
                   )}
                   {isPreset && banco.id === 'havan' && (
@@ -1107,7 +1107,7 @@ export default function Cartoes() {
                       </div>
                     </div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 4, height: 5, overflow: 'hidden', marginBottom: 12 }}>
+                  <div style={{ background: 'rgba(0,0,0,0.05)', borderRadius: 4, height: 5, overflow: 'hidden', marginBottom: 12 }}>
                     <div style={{ height: '100%', borderRadius: 4, width: `${Math.min(usage.percentual, 100)}%`, background: usage.percentual > 80 ? '#ef4444' : usage.percentual > 50 ? '#f59e0b' : card.cor, transition: 'width 0.5s' }} />
                   </div>
 
@@ -1121,7 +1121,7 @@ export default function Cartoes() {
                           { label: 'A receber', value: usage.totalReceber, color: '#10b981' },
                           { label: 'Sua parte', value: usage.parteReal, color: '#6366f1' },
                         ].map(m => (
-                          <div key={m.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
+                          <div key={m.label} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px' }}>
                             <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>{m.label}</div>
                             <div style={{ fontSize: 12, fontWeight: 800, color: m.color }}>{formatCurrency(m.value)}</div>
                           </div>
@@ -1140,7 +1140,7 @@ export default function Cartoes() {
                               <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{owner.apelido || owner.nome}</div>
                               <div style={{ fontSize: 11, fontWeight: 700, color: '#6366f1', minWidth: 56, textAlign: 'right' }}>{formatCurrency(usage.parteReal)}</div>
                               <div style={{ fontSize: 10, color: 'var(--text-secondary)', minWidth: 36, textAlign: 'right' }}>{usage.ownerPercentual.toFixed(0)}%</div>
-                              <div style={{ width: 50, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', flexShrink: 0 }}>
+                              <div style={{ width: 50, height: 4, borderRadius: 2, background: 'rgba(0,0,0,0.05)', overflow: 'hidden', flexShrink: 0 }}>
                                 <div style={{ height: '100%', width: `${usage.ownerPercentual}%`, background: '#6366f1', borderRadius: 2 }} />
                               </div>
                             </div>
@@ -1156,7 +1156,7 @@ export default function Cartoes() {
                                 <div style={{ flex: 1, fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{p?.apelido || p?.nome || 'Desconhecido'}</div>
                                 <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', minWidth: 56, textAlign: 'right' }}>{formatCurrency(valor)}</div>
                                 <div style={{ fontSize: 10, color: 'var(--text-secondary)', minWidth: 36, textAlign: 'right' }}>{percentual.toFixed(0)}%</div>
-                                <div style={{ width: 50, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', flexShrink: 0 }}>
+                                <div style={{ width: 50, height: 4, borderRadius: 2, background: 'rgba(0,0,0,0.05)', overflow: 'hidden', flexShrink: 0 }}>
                                   <div style={{ height: '100%', width: `${percentual}%`, background: p?.cor || '#f59e0b', borderRadius: 2 }} />
                                 </div>
                               </div>

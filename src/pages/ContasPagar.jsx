@@ -729,7 +729,7 @@ export default function ContasPagar() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
+                    <tr style={{ background: '#f0f2f8', borderBottom: '1px solid var(--border)' }}>
                       {['FONTE', 'DESCRIÇÃO', 'FORNECEDOR', 'CATEGORIA', 'DATA / VENC.', 'VALOR', 'STATUS', 'AÇÕES'].map(h => (
                         <th key={h} style={{ padding: '12px 14px', textAlign: h === 'VALOR' ? 'right' : h === 'AÇÕES' ? 'center' : 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
@@ -744,7 +744,7 @@ export default function ContasPagar() {
                       return (
                         <tr key={`${item._source}-${item.id}`}
                           style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none', opacity: isPago ? 0.65 : 1 }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f7f8fd'}
                           onMouseLeave={e => e.currentTarget.style.background = ''}
                         >
                           <td style={{ padding: '11px 14px', whiteSpace: 'nowrap' }}>
@@ -845,7 +845,7 @@ export default function ContasPagar() {
               </div>
 
               {/* Rodapé */}
-              <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', flexWrap: 'wrap', gap: 8 }}>
+              <div style={{ borderTop: '1px solid var(--border)', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f0f2f8', flexWrap: 'wrap', gap: 8 }}>
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                   {filtered.length} item(s) —&nbsp;
                   <span style={{ color: '#25d366' }}>{filtered.filter(c => c._source === 'whatsapp').length} WhatsApp</span>

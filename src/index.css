@@ -35,9 +35,9 @@
   }
 
   :root[data-theme="light"] {
-    --bg-primary: #EEF2F8;
-    --bg-secondary: #FFFFFF;
-    --bg-card: #FFFFFF;
+    --bg-primary: #f4f6fa;
+    --bg-secondary: #eef2f8;
+    --bg-card: #ffffff;
     --bg-card-hover: #F8FAFC;
     --bg-muted: #F8FAFC;
     --bg-input: #F4F7FB;

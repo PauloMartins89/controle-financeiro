@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+﻿import { useState, useRef, useCallback, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
@@ -244,7 +244,7 @@ function FormTransporte({ dados, onChange }) {
       {/* Tabela KM/HORAS */}
       <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: 14 }}>
         {/* Cabeçalho da tabela */}
-        <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr', background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 1fr', background: 'rgba(0,0,0,0.05)', borderBottom: '1px solid var(--border)' }}>
           {['KM/HORAS', 'SAÍDA', 'ENTRADA', 'TOTAL/KM'].map(h => (
             <div key={h} style={{ padding: '7px 8px', fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textAlign: 'center', letterSpacing: 0.5 }}>{h}</div>
           ))}
@@ -310,7 +310,7 @@ function FormTransporte({ dados, onChange }) {
       </div>
 
       {/* ── Composição do Valor ── */}
-      <div style={{ padding: '6px 10px', borderRadius: 7, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', marginBottom: 10 }}>
+      <div style={{ padding: '6px 10px', borderRadius: 7, background: 'var(--bg-secondary)', border: '1px solid var(--border)', marginBottom: 10 }}>
         <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Composição do Valor</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
@@ -335,7 +335,7 @@ function FormTransporte({ dados, onChange }) {
       </div>
 
       {/* ── Documentos Fiscais ── */}
-      <div style={{ padding: '6px 10px', borderRadius: 7, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', marginBottom: 10 }}>
+      <div style={{ padding: '6px 10px', borderRadius: 7, background: 'var(--bg-secondary)', border: '1px solid var(--border)', marginBottom: 10 }}>
         <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Documentos Fiscais</span>
       </div>
       <div style={{ marginBottom: 10 }}>
@@ -1101,7 +1101,7 @@ function TransporteDetail({ d = {} }) {
       )}
       {kmRows.length > 0 && (
         <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
             {['', 'SAÍDA', 'ENTRADA', 'TOTAL/KM'].map(h => (
               <div key={h} style={{ padding: '5px 8px', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textAlign: 'center' }}>{h}</div>
             ))}
@@ -1240,14 +1240,14 @@ function WhatsAppPanel({ workspaceId }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {motoristas.map(m => (
             <div key={m.id} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: `1px solid ${m.ativo ? 'rgba(37,211,102,0.2)' : 'var(--border)'}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: m.ativo ? 'rgba(37,211,102,0.12)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: m.ativo ? 'rgba(37,211,102,0.12)' : 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <PhoneIcon style={{ width: 17, height: 17, color: m.ativo ? '#25d366' : 'var(--text-secondary)' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{m.nome_motorista}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>+{m.phone_number}</div>
               </div>
-              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: m.ativo ? 'rgba(37,211,102,0.1)' : 'rgba(255,255,255,0.05)', color: m.ativo ? '#25d366' : 'var(--text-secondary)' }}>
+              <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: m.ativo ? 'rgba(37,211,102,0.1)' : 'rgba(0,0,0,0.05)', color: m.ativo ? '#25d366' : 'var(--text-secondary)' }}>
                 {m.ativo ? 'Ativo' : 'Inativo'}
               </span>
               <button onClick={() => handleToggle(m.id, !m.ativo)} style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12 }}>
@@ -1408,14 +1408,14 @@ function StatusNotifPanel({ workspaceId }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {grupo.items.map(r => (
                   <div key={r.id} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 10, border: `1px solid ${r.ativo ? 'rgba(129,140,248,0.2)' : 'var(--border)'}`, padding: '11px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 9, background: r.ativo ? 'rgba(129,140,248,0.1)' : 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 9, background: r.ativo ? 'rgba(129,140,248,0.1)' : 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <PhoneIcon style={{ width: 16, height: 16, color: r.ativo ? '#818cf8' : 'var(--text-secondary)' }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{r.nome_destinatario}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'monospace' }}>+{r.phone_number}</div>
                     </div>
-                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: r.ativo ? 'rgba(129,140,248,0.1)' : 'rgba(255,255,255,0.05)', color: r.ativo ? '#818cf8' : 'var(--text-secondary)' }}>
+                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: r.ativo ? 'rgba(129,140,248,0.1)' : 'rgba(0,0,0,0.05)', color: r.ativo ? '#818cf8' : 'var(--text-secondary)' }}>
                       {r.ativo ? 'Ativo' : 'Inativo'}
                     </span>
                     <button onClick={() => handleToggle(r.id, !r.ativo)} style={{ padding: '5px 12px', borderRadius: 7, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12 }}>
@@ -1468,7 +1468,7 @@ function EditFieldModal({ editState, onSave, onCancel, saving }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)' }}
       onMouseDown={e => { if (e.target === e.currentTarget) onCancel() }}>
-      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 380, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 380, boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1486,7 +1486,7 @@ function EditFieldModal({ editState, onSave, onCancel, saving }) {
         {/* Valor anterior */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Valor atual</div>
-          <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-secondary)', fontFamily: field === 'placa' ? 'monospace' : undefined }}>
+          <div style={{ padding: '8px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-secondary)', fontFamily: field === 'placa' ? 'monospace' : undefined }}>
             {origValue || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>(vazio)</span>}
           </div>
         </div>
@@ -1538,7 +1538,7 @@ function ColFilterPopover({ label, values, current, onSelect, onClose }) {
 
   return (
     <div ref={ref} onClick={e => e.stopPropagation()}
-      style={{ position: 'absolute', top: '100%', left: 0, zIndex: 3000, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 200, maxWidth: 280, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+      style={{ position: 'absolute', top: '100%', left: 0, zIndex: 3000, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 200, maxWidth: 280, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
       <div style={{ padding: '10px 10px 6px', borderBottom: '1px solid var(--border)', background: 'rgba(99,102,241,0.06)' }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{label}</div>
         <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…"
@@ -1548,7 +1548,7 @@ function ColFilterPopover({ label, values, current, onSelect, onClose }) {
         {/* Opção "Todos" */}
         <div onClick={() => { onSelect(''); onClose() }}
           style={{ padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: current === '' ? 700 : 400, color: current === '' ? '#818cf8' : 'var(--text-primary)', background: current === '' ? 'rgba(99,102,241,0.12)' : 'transparent', display: 'flex', alignItems: 'center', gap: 8 }}
-          onMouseEnter={e => { if (current !== '') e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+          onMouseEnter={e => { if (current !== '') e.currentTarget.style.background = 'rgba(0,0,0,0.05)' }}
           onMouseLeave={e => { if (current !== '') e.currentTarget.style.background = 'transparent' }}>
           <span style={{ width: 14, textAlign: 'center', fontSize: 11 }}>{current === '' ? '✓' : ''}</span>
           <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>(Todos)</span>
@@ -1560,7 +1560,7 @@ function ColFilterPopover({ label, values, current, onSelect, onClose }) {
           return (
             <div key={i} onClick={() => { onSelect(val); onClose() }}
               style={{ padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400, color: active ? '#818cf8' : 'var(--text-primary)', background: active ? 'rgba(99,102,241,0.12)' : 'transparent', display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(0,0,0,0.05)' }}
               onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
               <span style={{ width: 14, textAlign: 'center', fontSize: 11, flexShrink: 0 }}>{active ? '✓' : ''}</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lbl || '(vazio)'}</span>
@@ -2104,6 +2104,14 @@ export default function Lancamentos() {
     status:  Object.entries(STATUS_CONF).filter(([,v]) => v.label !== v.color).map(([k, v]) => ({ value: k, label: v.label })).filter((v, i, arr) => arr.findIndex(x => x.value === v.value) === i),
   }
 
+  // Light-theme palette (scoped to this component)
+  const LC = {
+    bg: '#f4f6fa', card: '#fff', secondary: '#f0f2f8', hover: '#f7f8fd',
+    border: '#e2e6f0', borderStrong: '#d0d5e8',
+    txtPrimary: '#1a1f36', txtSecondary: '#4a5580', txtMuted: '#9aa3bf',
+    accent: '#6366f1', accentLight: '#eef0fe',
+  }
+
   // Helper: cabeçalho de coluna com ordenação crescente/decrescente
   function ColHead({ colKey, label, align = 'left' }) {
     const isSorted = sortKey === colKey
@@ -2116,15 +2124,16 @@ export default function Lancamentos() {
     }
     return (
       <th onClick={handleSort}
-        style={{ padding: '10px 8px 10px 12px', textAlign: align, fontSize: 11, fontWeight: 700,
-          color: isSorted ? '#818cf8' : 'var(--text-secondary)', textTransform: 'uppercase',
-          letterSpacing: 0.5, whiteSpace: 'nowrap', position: 'relative', userSelect: 'none',
-          cursor: 'pointer', background: isSorted ? 'rgba(99,102,241,0.06)' : undefined }}>
+        style={{ padding: '9px 8px 9px 12px', textAlign: align, fontSize: 10.5, fontWeight: 700,
+          color: isSorted ? LC.accent : LC.txtMuted, textTransform: 'uppercase',
+          letterSpacing: 0.6, whiteSpace: 'nowrap', userSelect: 'none',
+          cursor: 'pointer', background: isSorted ? LC.accentLight : LC.secondary,
+          borderBottom: `1px solid ${LC.border}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
           <span>{label}</span>
-          {isAsc  && <span style={{ fontSize: 10, lineHeight: 1 }}>↑</span>}
-          {isDesc && <span style={{ fontSize: 10, lineHeight: 1 }}>↓</span>}
-          {!isSorted && <ArrowsUpDownIcon style={{ width: 10, height: 10, opacity: 0.35, flexShrink: 0 }} />}
+          {isAsc  && <span style={{ fontSize: 10, lineHeight: 1 }}>▲</span>}
+          {isDesc && <span style={{ fontSize: 10, lineHeight: 1 }}>▼</span>}
+          {!isSorted && <ArrowsUpDownIcon style={{ width: 10, height: 10, opacity: 0.3, flexShrink: 0 }} />}
         </div>
       </th>
     )
@@ -2134,17 +2143,17 @@ export default function Lancamentos() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-primary)' }}>
       <Header title="Lançamentos" subtitle="Diário do Motorista e documentos financeiros" />
 
-      {/* Abas */}
-      <div style={{ display: 'flex', gap: 4, padding: '0 24px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+      {/* Abas estilo underline */}
+      <div style={{ background: '#fff', borderBottom: `2px solid ${LC.border}`, padding: '0 24px' }}>
         {[
           { key: 'lancamentos', label: 'Lançamentos', Icon: DocumentTextIcon },
         ].map(({ key, label, Icon }) => (
           <button key={key} onClick={() => setTab(key)} style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '12px 16px',
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '11px 16px',
             background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700,
-            color: tab === key ? '#818cf8' : 'var(--text-secondary)',
-            borderBottom: `2px solid ${tab === key ? '#818cf8' : 'transparent'}`,
-            marginBottom: -1,
+            color: tab === key ? LC.accent : LC.txtMuted,
+            borderBottom: `2px solid ${tab === key ? LC.accent : 'transparent'}`,
+            marginBottom: -2,
           }}>
             <Icon style={{ width: 15, height: 15 }} />{label}
           </button>
@@ -2157,38 +2166,41 @@ export default function Lancamentos() {
         {tab === 'lancamentos' && <>
 
         {/* Cards de resumo */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
           {[
-            { label: 'RECEITAS',  value: fmtCurrency(totalReceitas),  color: '#10b981' },
-            { label: 'DESPESAS',  value: fmtCurrency(totalDespesas),  color: '#ef4444' },
-            { label: 'SALDO',     value: fmtCurrency(totalReceitas - totalDespesas), color: totalReceitas - totalDespesas >= 0 ? '#10b981' : '#ef4444' },
-            { label: 'PENDENTES', value: pendentes, color: pendentes > 0 ? '#f59e0b' : 'var(--text-primary)' },
+            { label: 'RECEITAS',  value: fmtCurrency(totalReceitas),  color: '#059669' },
+            { label: 'DESPESAS',  value: fmtCurrency(totalDespesas),  color: '#dc2626' },
+            { label: 'SALDO',     value: fmtCurrency(totalReceitas - totalDespesas), color: totalReceitas - totalDespesas >= 0 ? '#059669' : '#dc2626' },
+            { label: 'PENDENTES', value: pendentes, color: pendentes > 0 ? '#d97706' : LC.txtSecondary },
           ].map(c => (
-            <div key={c.label} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: c.color }}>{c.value}</div>
+            <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)', borderTop: `3px solid ${c.color}`, boxShadow: 'var(--shadow-card)' }}>
+              <div style={{ fontSize: 10.5, color: LC.txtMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{c.label}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
             </div>
           ))}
         </div>
 
         {/* Barra de ações */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
-            <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: 'var(--text-secondary)' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar Nº, placa, empresa, solicitante..." style={{ width: '100%', paddingLeft: 34, padding: '9px 12px 9px 34px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
+            <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: LC.txtMuted, pointerEvents: 'none' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar Nº, placa, empresa, solicitante..." style={{ width: '100%', paddingLeft: 34, padding: '9px 12px 9px 34px', borderRadius: 9, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
           </div>
-          <select value={filterForm} onChange={e => setFilterForm(e.target.value)} style={{ padding: '9px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, cursor: 'pointer' }}>
+          {/* Select formulário */}
+          <select value={filterForm} onChange={e => setFilterForm(e.target.value)}
+            style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 160 }}>
             <option value="todos">Todos formulários</option>
             <option value="transporte">Diário Motorista</option>
             <option value="padrao">Padrão</option>
           </select>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: '9px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, cursor: 'pointer' }}>
+          {/* Select status */}
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 170 }}>
             <option value="meus">Meus lançamentos</option>
-            <option value="em_revisao">Em revisão (Faturamento)</option>
+            <option value="em_revisao">Em revisão</option>
             <option value="aprovado">Aprovados</option>
             <option value="faturado">Faturados</option>
             <option value="reprovado">Reprovados</option>
-            <option value="cancelado">Cancelados</option>
             <option value="todos">Todos</option>
           </select>
           {selectedIds.size > 0 && (
@@ -2213,33 +2225,40 @@ export default function Lancamentos() {
             <DocumentArrowUpIcon style={{ width: 16, height: 16 }} /> Digitalizar
           </button>
           {hasColFilters && (
-            <button onClick={clearColFilters} title="Limpar filtros de coluna" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.35)', color: '#f59e0b', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
-              <XMarkIcon style={{ width: 14, height: 14 }} /> Limpar filtros
+            <button onClick={clearColFilters} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 20, background: '#fef2f2', border: '1px solid #fca5a533', color: '#dc2626', cursor: 'pointer', fontSize: 11.5, fontWeight: 600, whiteSpace: 'nowrap' }}>
+              <XMarkIcon style={{ width: 13, height: 13 }} /> Limpar filtros
             </button>
           )}
-          <button onClick={() => { setEditItem(null); setShowModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#059669,#10b981)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
-            <PlusIcon style={{ width: 16, height: 16 }} /> Novo
+          <button onClick={() => { setEditItem(null); setShowModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 15px', borderRadius: 8, background: '#059669', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', boxShadow: '0 1px 3px #05996955' }}>
+            <PlusIcon style={{ width: 15, height: 15 }} /> Novo
           </button>
+        </div>
+        {/* Resumo de resultados */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, fontSize: 11.5, color: LC.txtMuted }}>
+          <span><strong style={{ color: LC.txtSecondary }}>{filtered.length}</strong> registro(s)</span>
+          {hasColFilters && <span style={{ color: LC.accent }}>· filtros de coluna ativos</span>}
         </div>
 
         {/* Lista */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>Carregando...</div>
+          <div style={{ textAlign: 'center', padding: 60, color: LC.txtMuted }}>Carregando...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
-            <TruckIcon style={{ width: 52, height: 52, color: 'var(--text-secondary)', margin: '0 auto 16px' }} />
-            <p style={{ color: 'var(--text-secondary)', fontSize: 15 }}>Nenhum lançamento encontrado.</p>
+            <TruckIcon style={{ width: 52, height: 52, color: LC.txtMuted, margin: '0 auto 16px' }} />
+            <p style={{ color: LC.txtSecondary, fontSize: 15 }}>Nenhum lançamento encontrado.</p>
           </div>
         ) : (
+          <div style={{ background: '#fff', border: `1px solid ${LC.border}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-muted)' }}>
-                  <th style={{ padding: '10px 12px', width: 36, textAlign: 'center' }}>
+                {/* Linha de cabeçalhos com ordenação */}
+                <tr>
+                  <th style={{ padding: '9px 12px', width: 36, textAlign: 'center', background: LC.secondary, borderBottom: `1px solid ${LC.border}` }}>
                     <input type="checkbox"
                       checked={filtered.length > 0 && filtered.every(l => selectedIds.has(l.id))}
                       onChange={toggleSelectAll}
-                      style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#818cf8' }}
+                      style={{ cursor: 'pointer', width: 13, height: 13, accentColor: LC.accent }}
                     />
                   </th>
                   <ColHead colKey="data" label="DATA" />
@@ -2252,8 +2271,22 @@ export default function Lancamentos() {
                   <ColHead colKey="kmTer" label="KM TER" align="right" />
                   <ColHead colKey="kmTotal" label="KM TOTAL" align="right" />
                   <ColHead colKey="valor" label="VALOR" align="right" />
-                  <ColHead colKey="status" label="STATUS">{colDistinct.status}</ColHead>
-                  <th style={{ padding: '10px 12px', width: 80 }} />
+                  <ColHead colKey="status" label="STATUS" />
+                  <th style={{ padding: '9px 12px', width: 80, background: LC.secondary, borderBottom: `1px solid ${LC.border}` }} />
+                </tr>
+                {/* Linha de filtros por coluna */}
+                <tr style={{ background: '#fafbff', borderBottom: `2px solid ${LC.borderStrong}` }}>
+                  <td style={{ padding: '4px 8px' }}></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.data} onChange={e => setColFilter('data', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.numDm} onChange={e => setColFilter('numDm', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.cliente} onChange={e => setColFilter('cliente', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.origem} onChange={e => setColFilter('origem', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.destino} onChange={e => setColFilter('destino', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td style={{ padding: '4px 8px' }}><input value={colFilters.placa} onChange={e => setColFilter('placa', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
+                  <td colSpan={3} style={{ padding: '4px 8px' }}></td>
+                  <td style={{ padding: '4px 8px' }}></td>
+                  <td style={{ padding: '4px 8px' }}><select value={colFilters.status} onChange={e => setColFilter('status', e.target.value)} style={{ width: '100%', background: '#fff', border: `1px solid ${LC.border}`, color: LC.txtSecondary, borderRadius: 5, padding: '3px 5px', fontSize: 11, outline: 'none' }}><option value="">todos</option>{colDistinct.status.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></td>
+                  <td style={{ padding: '4px 8px' }}></td>
                 </tr>
               </thead>
               <tbody>
@@ -2276,8 +2309,8 @@ export default function Lancamentos() {
                   )
 
                   return (
-                    <tr key={l.id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s', background: selectedIds.has(l.id) ? 'rgba(99,102,241,0.07)' : '' }}
-                      onMouseEnter={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = 'rgba(255,255,255,0.025)' }}
+                    <tr key={l.id} style={{ borderBottom: `1px solid ${LC.border}`, transition: 'background 0.1s', background: selectedIds.has(l.id) ? LC.accentLight : '' }}
+                      onMouseEnter={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = LC.hover }}
                       onMouseLeave={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = '' }}
                     >
                       {/* CHECKBOX */}
@@ -2291,54 +2324,54 @@ export default function Lancamentos() {
                       </td>
                       {/* DATA */}
                       {EDITABLE_TD('data', l.data, (
-                        <span style={{ padding: '10px 12px', display: 'block', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 12 }}>{fmtDate(l.data)}</span>
+                        <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
                       ))}
                       {/* Nº DM */}
                       {EDITABLE_TD('numero_diario', d.numero_diario, (
-                        <span style={{ padding: '10px 12px', display: 'block', whiteSpace: 'nowrap' }}>
+                        <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap' }}>
                           {isTransporte && d.numero_diario
-                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>{d.numero_diario}</span>
-                            : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#eef0fe', color: LC.accent }}>{d.numero_diario}</span>
+                            : <span style={{ color: LC.txtMuted }}>—</span>}
                         </span>
                       ))}
                       {/* CLIENTE */}
                       {EDITABLE_TD('cliente', d.cliente || d.empresa || l.descricao, (
-                        <div style={{ padding: '10px 12px', maxWidth: 180 }}>
-                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <div style={{ padding: '9px 12px', maxWidth: 180 }}>
+                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: LC.txtPrimary }}>
                             {isTransporte ? (d.cliente || d.empresa || l.descricao) : l.descricao}
                           </div>
-                          {d.condutor && <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor}</div>}
+                          {d.condutor && <div style={{ fontSize: 11, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor}</div>}
                         </div>
                       ))}
                       {/* ORIGEM */}
                       {EDITABLE_TD('local_origem', d.local_origem, (
-                        <span style={{ padding: '10px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ padding: '9px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {isTransporte ? (d.local_origem || '—') : '—'}
                         </span>
                       ))}
                       {/* DESTINO */}
                       {EDITABLE_TD('local_destino', d.local_destino, (
-                        <span style={{ padding: '10px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ padding: '9px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {isTransporte ? (d.local_destino || '—') : '—'}
                         </span>
                       ))}
                       {/* PLACA */}
                       {EDITABLE_TD('placa', d.placa, (
-                        <span style={{ padding: '10px 12px', display: 'block', fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap', letterSpacing: 0.5 }}>{d.placa || '—'}</span>
+                        <span style={{ padding: '9px 12px', display: 'block', fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap', letterSpacing: 0.5, color: LC.txtPrimary }}>{d.placa || <span style={{ color: LC.txtMuted }}>—</span>}</span>
                       ))}
                       {/* KM ASF */}
                       {isTransporte ? EDITABLE_TD('km_asfalto', km?.asfalto, (
-                        <span style={{ padding: '10px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.asfalto > 0 ? 700 : 400, color: km?.asfalto > 0 ? '#818cf8' : 'var(--text-secondary)', fontSize: 12 }}>{fmtKm(km?.asfalto)}</span>
-                      ), { textAlign: 'right' }) : <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: 12 }}>—</td>}
+                        <span style={{ padding: '9px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.asfalto > 0 ? 700 : 400, color: km?.asfalto > 0 ? LC.accent : LC.txtMuted, fontSize: 12 }}>{fmtKm(km?.asfalto)}</span>
+                      ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>}
                       {/* KM TER */}
                       {isTransporte ? EDITABLE_TD('km_terra', km?.terra, (
-                        <span style={{ padding: '10px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.terra > 0 ? 700 : 400, color: km?.terra > 0 ? '#f59e0b' : 'var(--text-secondary)', fontSize: 12 }}>{fmtKm(km?.terra)}</span>
-                      ), { textAlign: 'right' }) : <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--text-secondary)', fontSize: 12 }}>—</td>}
+                        <span style={{ padding: '9px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.terra > 0 ? 700 : 400, color: km?.terra > 0 ? '#d97706' : LC.txtMuted, fontSize: 12 }}>{fmtKm(km?.terra)}</span>
+                      ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>}
                       {/* KM TOTAL */}
-                      <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.total > 0 ? 800 : 400, color: km?.total > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: 13 }}>{fmtKm(km?.total)}</td>
+                      <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.total > 0 ? 800 : 400, color: km?.total > 0 ? LC.txtPrimary : LC.txtMuted, fontSize: 13 }}>{fmtKm(km?.total)}</td>
                       {/* VALOR */}
                       {EDITABLE_TD('valor', l.valor, (
-                        <span style={{ padding: '10px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#10b981' : l.tipo === 'despesa' ? '#ef4444' : '#818cf8' }}>
+                        <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
                           {fmtCurrency(l.valor)}
                         </span>
                       ), { textAlign: 'right' })}
@@ -2346,13 +2379,13 @@ export default function Lancamentos() {
                       <td style={{ padding: '10px 12px' }}>
                         <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
                         {l.lote_cliente_id && lotesMap[l.lote_cliente_id] && (
-                          <div style={{ marginTop: 3, fontSize: 10, color: 'var(--text-secondary)' }}>
+                          <div style={{ marginTop: 3, fontSize: 10, color: LC.txtMuted }}>
                             {lotesMap[l.lote_cliente_id].cliente.length > 18 ? lotesMap[l.lote_cliente_id].cliente.slice(0, 18) + '…' : lotesMap[l.lote_cliente_id].cliente}
                           </div>
                         )}
                       </td>
                       {/* AÇÕES */}
-                      <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                           {(() => {
                             const podeEditar = l.status === 'rascunho' || l.status === 'devolvido'
@@ -2367,8 +2400,8 @@ export default function Lancamentos() {
                                   </button>
                                 ) : podeEditar ? (
                                   <button title="Editar" onClick={() => { setEditItem(l); setShowModal(true) }}
-                                    style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
+                                    style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: LC.txtMuted, display: 'flex', alignItems: 'center' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.05)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                     <PencilIcon style={{ width: 15, height: 15 }} />
                                   </button>
@@ -2409,6 +2442,7 @@ export default function Lancamentos() {
                 })}
               </tbody>
             </table>
+          </div>
           </div>
         )}
         </>}

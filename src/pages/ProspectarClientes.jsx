@@ -216,7 +216,7 @@ function MetodoSelector({ metodoAtivo, onChange }) {
         {METODOS.map(met => (
           <button key={met.id} onClick={() => { onChange(met.id); setGuiaAberto(false) }}
             style={{ padding: '8px 14px', borderRadius: 24, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              background: metodoAtivo === met.id ? met.bg : 'var(--bg-secondary)',
+              background: metodoAtivo === met.id ? met.bg : 'var(--bg-card)',
               border: `1.5px solid ${metodoAtivo === met.id ? met.border : 'var(--border)'}`,
               color: metodoAtivo === met.id ? met.cor : 'var(--text-secondary)',
               boxShadow: metodoAtivo === met.id ? `0 0 0 3px ${met.bg}` : 'none',
@@ -328,12 +328,12 @@ function PropostaModal({ empresa, servico, metodoId, onClose }) {
             value={msg}
             onChange={e => setMsg(e.target.value)}
             rows={8}
-            style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', padding: '10px 12px', fontSize: 13, resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+            style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '10px 12px', fontSize: 13, resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
           />
 
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={copiar}
-              style={{ flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: copiado ? 'rgba(16,185,129,0.1)' : 'var(--bg-secondary)', border: '1px solid var(--border)', color: copiado ? '#10b981' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              style={{ flex: 1, padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: copiado ? 'rgba(16,185,129,0.1)' : 'var(--bg-card)', border: '1px solid var(--border)', color: copiado ? '#10b981' : 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               {copiado ? <CheckIcon style={{ width: 15, height: 15 }} /> : <ClipboardDocumentIcon style={{ width: 15, height: 15 }} />}
               {copiado ? 'Copiado!' : 'Copiar'}
             </button>
@@ -407,7 +407,7 @@ function SalvarGrupoModal({ empresa, metodoId, servico, segmento, cidade, onClos
               <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Ou adicionar a grupo existente</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
                 {gruposDoMetodo.map(g => (
-                  <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${grupoSelecionado === g.id ? metodo.border : 'var(--border)'}`, background: grupoSelecionado === g.id ? metodo.bg : 'var(--bg-secondary)', cursor: 'pointer' }}>
+                  <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, border: `1.5px solid ${grupoSelecionado === g.id ? metodo.border : 'var(--border)'}`, background: grupoSelecionado === g.id ? metodo.bg : 'var(--bg-card)', cursor: 'pointer' }}>
                     <input type="radio" name="grupo" value={g.id} checked={grupoSelecionado === g.id} onChange={() => setGrupoSelecionado(g.id)} style={{ accentColor: metodo.cor }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{g.nome}</div>
@@ -420,7 +420,7 @@ function SalvarGrupoModal({ empresa, metodoId, servico, segmento, cidade, onClos
           )}
 
           <button onClick={salvarLead} disabled={!grupoSelecionado}
-            style={{ padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: grupoSelecionado ? metodo.cor : 'var(--bg-secondary)', color: grupoSelecionado ? '#fff' : 'var(--text-secondary)', border: 'none', cursor: grupoSelecionado ? 'pointer' : 'default' }}>
+            style={{ padding: '10px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: grupoSelecionado ? metodo.cor : 'rgba(0,0,0,0.06)', color: grupoSelecionado ? '#fff' : 'var(--text-secondary)', border: 'none', cursor: grupoSelecionado ? 'pointer' : 'default' }}>
             <BookmarkIcon style={{ width: 14, height: 14, display: 'inline', marginRight: 6 }} />
             Salvar Lead
           </button>
@@ -534,7 +534,7 @@ function AbaGrupos() {
           const totalLeads = grupo.leads.length
 
           return (
-            <div key={grupo.id} style={{ background: 'var(--bg-secondary)', border: `1px solid ${aberto ? m.border : 'var(--border)'}`, borderRadius: 12, overflow: 'hidden' }}>
+            <div key={grupo.id} style={{ background: 'var(--bg-card)', border: `1px solid ${aberto ? m.border : 'var(--border)'}`, borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
               <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', background: aberto ? m.bg : 'transparent' }}
                 onClick={() => setGrupoAberto(aberto ? null : grupo.id)}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flex: 1, minWidth: 0 }}>
@@ -657,10 +657,10 @@ export default function ProspectarClientes() {
   const metodoAtual = METODOS.find(m => m.id === metodoAtivo) || METODOS[0]
 
   return (
-    <div>
+    <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)' }}>
       <Header title="Prospectar Clientes" subtitle="Encontre empresas e aplique sua estratégia de venda" />
 
-      <div style={{ padding: '0 24px 32px' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 24px 32px' }}>
 
         {/* Abas */}
         <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>

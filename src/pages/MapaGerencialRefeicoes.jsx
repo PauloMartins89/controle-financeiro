@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+﻿import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   TableCellsIcon, ChevronLeftIcon, ChevronRightIcon,
   XMarkIcon, ArrowPathIcon, FunnelIcon,
@@ -115,7 +115,7 @@ function MultiSelect({ label, options, value, onChange }) {
       {open && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setOpen(false)} />
-          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', maxHeight: 220, overflowY: 'auto', marginTop: 2 }}>
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.35)', maxHeight: 220, overflowY: 'auto', marginTop: 2 }}>
             {options.length === 0 && (
               <div style={{ padding: '10px 14px', color: 'var(--text-secondary)', fontSize: 13 }}>Sem opções</div>
             )}
@@ -249,7 +249,7 @@ function SidePanel({ cell, onClose, isDark }) {
 
   const BG   = isDark ? '#13161a' : '#FFFFFF'
   const BG2  = isDark ? '#1a1d22' : '#F8FAFC'
-  const BORD = isDark ? 'rgba(255,255,255,0.08)' : '#E8EAF2'
+  const BORD = isDark ? 'var(--border)' : '#E8EAF2'
   const T    = isDark ? '#e8eaed' : '#1A2332'
   const T2   = isDark ? '#8a9099' : '#6B7A99'
   const T3   = isDark ? '#555d6e' : '#A0AEC0'
@@ -269,7 +269,7 @@ function SidePanel({ cell, onClose, isDark }) {
             <div style={{ fontSize: 18, fontWeight: 800, color: T, letterSpacing: '-0.02em', lineHeight: 1 }}>{dow}, {d}/{m}</div>
             <div style={{ fontSize: 12, color: T2, marginTop: 3 }}>{groupLabel}</div>
           </div>
-          <button onClick={onClose} style={{ background: isDark ? 'rgba(255,255,255,0.07)' : '#F1F5F9', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T2 }}>
+          <button onClick={onClose} style={{ background: isDark ? 'rgba(0,0,0,0.04)' : '#F1F5F9', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T2 }}>
             <XMarkIcon style={{ width: 16, height: 16 }} />
           </button>
         </div>

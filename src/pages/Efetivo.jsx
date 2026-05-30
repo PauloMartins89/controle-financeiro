@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
@@ -134,7 +134,7 @@ function EfetivoModal({ item, workspaceId, funcoes, equipes, onClose, onSaved })
             <label className="label" style={{ marginBottom: 10 }}>Capacidades individuais</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {FLAGS.map(flag => (
-                <label key={flag.key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 20, border: '1px solid var(--border)', background: form[flag.key] ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)', cursor: 'pointer', fontSize: 13 }}>
+                <label key={flag.key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 20, border: '1px solid var(--border)', background: form[flag.key] ? 'rgba(99,102,241,0.12)' : 'var(--bg-secondary)', cursor: 'pointer', fontSize: 13 }}>
                   <input
                     type="checkbox"
                     checked={!!form[flag.key]}
@@ -254,7 +254,7 @@ export default function Efetivo() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {lista.map(e => (
-              <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', flexWrap: 'wrap' }}>
+              <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 16px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg-secondary)', flexWrap: 'wrap' }}>
                 {/* Avatar */}
                 <div style={{ width: 40, height: 40, borderRadius: '50%', background: e.ativo ? '#6366f1' : '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: 'white', flexShrink: 0 }}>
                   {e.nome?.[0]?.toUpperCase() || '?'}

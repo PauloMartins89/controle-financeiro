@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
 import Header from '../components/Header'
@@ -284,7 +284,7 @@ export default function LiderInsumo() {
                   {rowsFiltrados.map((row, i) => {
                     const turno = row.lider_turnos
                     return (
-                      <tr key={row.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                      <tr key={row.id} style={{ borderBottom: '1px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
                         <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtDt(row.solicitado_em)}</td>
                         <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
                           {row.produto_nome}

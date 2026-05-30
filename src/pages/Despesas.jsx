@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Header from '../components/Header'
 import Avatar from '../components/Avatar'
@@ -199,7 +199,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label className="label">Pago por</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', opacity: 0.85, userSelect: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border)', opacity: 0.85, userSelect: 'none' }}>
                 {owner && (
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: owner.cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0 }}>{owner.avatar}</div>
                 )}
@@ -228,7 +228,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
                     onClick={() => setForm(f => ({ ...f, participantes: toggle(f.participantes, p.id) }))}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
-                      background: sel ? `${p.cor}44` : 'rgba(255,255,255,0.04)',
+                      background: sel ? `${p.cor}44` : 'var(--bg-secondary)',
                       border: sel ? `2px solid ${p.cor}` : '1px solid var(--border)',
                       color: sel ? '#fff' : 'var(--text-secondary)',
                       outline: sel ? `3px solid ${p.cor}55` : 'none',
@@ -323,7 +323,7 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
         {/* Top row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
               {getCategoryIcon(exp.categoria)}
             </div>
             <div style={{ minWidth: 0 }}>
@@ -570,7 +570,7 @@ export default function Despesas() {
           )}
 
           {/* View toggle */}
-          <div style={{ display: 'flex', gap: 2, background: 'rgba(255,255,255,0.04)', borderRadius: 9, padding: 3, border: '1px solid var(--border)', marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', gap: 2, background: 'var(--bg-secondary)', borderRadius: 9, padding: 3, border: '1px solid var(--border)', marginLeft: 'auto' }}>
             <button onClick={() => setViewMode('byCard')} title="Agrupado por cartão" style={{ width: 30, height: 30, borderRadius: 7, background: viewMode === 'byCard' ? 'rgba(99,102,241,0.2)' : 'transparent', border: viewMode === 'byCard' ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: viewMode === 'byCard' ? '#818cf8' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CreditCardIcon style={{ width: 16, height: 16 }} />
             </button>
@@ -611,7 +611,7 @@ export default function Despesas() {
               return (
                 <div key={key} className="card" style={{ padding: 0, overflow: 'hidden', borderLeft: `4px solid ${cor}` }}>
                   {/* Header do cartão */}
-                  <div onClick={() => toggleCardCollapse(key)} style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', background: 'rgba(255,255,255,0.02)', borderBottom: collapsed ? 'none' : '1px solid var(--border)' }}>
+                  <div onClick={() => toggleCardCollapse(key)} style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', background: 'var(--bg-secondary)', borderBottom: collapsed ? 'none' : '1px solid var(--border)' }}>
                     <div style={{ width: 40, height: 40, borderRadius: 10, background: `${cor}22`, border: `1px solid ${cor}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {isCard
                         ? <CreditCardIcon style={{ width: 20, height: 20, color: cor }} />
@@ -655,7 +655,7 @@ export default function Despesas() {
                             onMouseLeave={e => e.currentTarget.style.background = exp.status === 'pago' ? 'rgba(16,185,129,0.02)' : 'transparent'}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                                 {getCategoryIcon(exp.categoria)}
                               </div>
                               <div style={{ minWidth: 0 }}>
@@ -743,7 +743,7 @@ export default function Despesas() {
                   const totalGeral = filtered.reduce((s, e) => s + valorEfetivo(e), 0)
                   const pct = totalGeral ? (sub / totalGeral) * 100 : 0
                   return (
-                    <div key={card?.id || 'none'} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 1fr 1fr 1fr', padding: '10px 12px', alignItems: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 8, borderLeft: `3px solid ${cor}` }}>
+                    <div key={card?.id || 'none'} style={{ display: 'grid', gridTemplateColumns: '2fr 80px 1fr 1fr 1fr', padding: '10px 12px', alignItems: 'center', background: 'var(--bg-secondary)', borderRadius: 8, borderLeft: `3px solid ${cor}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 28, height: 28, borderRadius: 7, background: `${cor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {card ? <CreditCardIcon style={{ width: 14, height: 14, color: cor }} /> : <BanknotesIcon style={{ width: 14, height: 14, color: cor }} />}
@@ -796,7 +796,7 @@ export default function Despesas() {
         {viewMode === 'list' && filtered.length > 0 && (
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 130px 100px 130px 120px 110px 120px', padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 130px 100px 130px 120px 110px 120px', padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
               {['Descrição','Valor','Data','Categoria','Grupo','Status','Ações'].map(h => (
                 <span key={h} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
               ))}
@@ -819,7 +819,7 @@ export default function Despesas() {
                 >
                   {/* Description */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
                       {getCategoryIcon(exp.categoria)}
                     </div>
                     <div style={{ minWidth: 0 }}>

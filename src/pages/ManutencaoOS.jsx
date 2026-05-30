@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
@@ -314,7 +314,7 @@ export default function ManutencaoOS() {
                       : null
                     return (
                       <tr key={os.id} style={{ borderBottom: '1px solid var(--border)' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <td style={tdStyle}>
