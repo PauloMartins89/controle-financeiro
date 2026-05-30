@@ -1070,24 +1070,16 @@ export default function Compras() {
 
         {/* KPIs */}
         <div style={{ display: 'flex', gap: 14, marginBottom: 24, flexWrap: 'wrap' }}>
-          <div style={kpiStyle}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Total este mês</div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#6366f1' }}>{total}</div>
+          <div style={{ ...kpiStyle, background: 'linear-gradient(135deg, #6366f114 0%, var(--bg-card) 55%)', border: '1px solid #6366f128', borderTop: '3px solid #6366f1' }}>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>solicitações</div>
           </div>
-          <div style={kpiStyle}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Aguardando</div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#f59e0b' }}>{pendentes}</div>
+          <div style={{ ...kpiStyle, background: 'linear-gradient(135deg, #f59e0b14 0%, var(--bg-card) 55%)', border: '1px solid #f59e0b28', borderTop: '3px solid #f59e0b' }}>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>aguardando aprovação</div>
           </div>
-          <div style={kpiStyle}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Aprovadas</div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981' }}>{aprovadas}</div>
+          <div style={{ ...kpiStyle, background: 'linear-gradient(135deg, #10b98114 0%, var(--bg-card) 55%)', border: '1px solid #10b98128', borderTop: '3px solid #10b981' }}>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>para executar</div>
           </div>
-          <div style={kpiStyle}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Gasto no mês</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{fmtCurrency(valorMes)}</div>
+          <div style={{ ...kpiStyle, background: 'linear-gradient(135deg, #10b98114 0%, var(--bg-card) 55%)', border: '1px solid #10b98128', borderTop: '3px solid #10b981' }}>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{pagas} compra(s) paga(s)</div>
           </div>
         </div>

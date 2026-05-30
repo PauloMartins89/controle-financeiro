@@ -537,7 +537,7 @@ function AbaCnpj({ onAdicionar, adicionados, hint, hintCidade }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hint])
 
-  const inpStyle = {padding:'9px 12px',borderRadius:8,fontSize:13,background:'var(--bg-primary)',border:'1px solid var(--border)',color:'var(--text-primary)',outline:'none',boxSizing:'border-box',width:'100%'}
+  const inpStyle = {padding:'9px 12px',borderRadius:8,fontSize:13,background:'var(--bg-card)',border:'1px solid var(--border)',color:'var(--text-primary)',outline:'none',boxSizing:'border-box',width:'100%'}
 
   return (
     <div>
@@ -589,7 +589,7 @@ function AbaCnpj({ onAdicionar, adicionados, hint, hintCidade }) {
             <label style={{fontSize:11,fontWeight:700,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:.4,marginBottom:5,display:'block'}}>CNPJ</label>
             <input value={cnpj} onChange={e=>handleInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&consultar()}
               placeholder="00.000.000/0001-00" maxLength={18}
-              style={{width:'100%',padding:'10px 14px',borderRadius:9,fontSize:15,fontFamily:'monospace',letterSpacing:1,background:'var(--bg-primary)',border:'1px solid var(--border)',color:'var(--text-primary)',outline:'none',boxSizing:'border-box'}}/>
+              style={{width:'100%',padding:'10px 14px',borderRadius:9,fontSize:15,fontFamily:'monospace',letterSpacing:1,background:'var(--bg-card)',border:'1px solid var(--border)',color:'var(--text-primary)',outline:'none',boxSizing:'border-box'}}/>
           </div>
           <button onClick={consultar} disabled={loading}
             style={{padding:'10px 24px',borderRadius:9,background:'#0ea5e9',border:'none',cursor:loading?'not-allowed':'pointer',color:'#fff',fontSize:13,fontWeight:800,display:'flex',alignItems:'center',gap:7,opacity:loading?.7:1,height:42}}>
@@ -628,7 +628,7 @@ function AbaBusca({
   onAdicionar, adicionados, onIrParaCnpj, cidades,
 }) {
   const [loading, setLoading] = useState(false)
-  const inp = { width:'100%', padding:'9px 12px', borderRadius:8, fontSize:13, background:'var(--bg-primary)', border:'1px solid var(--border)', color:'var(--text-primary)', outline:'none', boxSizing:'border-box' }
+  const inp = { width:'100%', padding:'9px 12px', borderRadius:8, fontSize:13, background:'var(--bg-card)', border:'1px solid var(--border)', color:'var(--text-primary)', outline:'none', boxSizing:'border-box' }
   const cidadeSugestoes = cidades.map(c => ({ label: c.nome, sub: c.uf, uf: c.uf }))
 
   async function buscar(produtoOverride) {
@@ -697,7 +697,7 @@ function AbaBusca({
           <div>
             <label style={{fontSize:11,fontWeight:700,color:'var(--text-secondary)',textTransform:'uppercase',letterSpacing:.4,marginBottom:5,display:'block'}}>UF</label>
             <select value={uf} onChange={e=>setUf(e.target.value)}
-              style={{width:'100%',padding:'9px 12px',borderRadius:8,fontSize:13,background:'var(--bg-primary)',border:'1px solid var(--border)',color:'var(--text-primary)',outline:'none',boxSizing:'border-box'}}>
+              style={{width:'100%',padding:'9px 12px',borderRadius:8,fontSize:13,background:'var(--bg-card)',border:'1px solid var(--border)',color:'var(--text-primary)',outline:'none',boxSizing:'border-box'}}>
               <option value="">Todos</option>
               {ESTADOS.map(e=><option key={e} value={e}>{e}</option>)}
             </select>

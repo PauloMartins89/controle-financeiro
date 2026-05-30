@@ -36,7 +36,7 @@ function phoneInfo(raw) {
 }
 
 const EMPTY = { nome: '', telefone: '', email: '', cnpj: '', contato: '', observacoes: '', ativo: true }
-const inp   = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+const inp   = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 const lbl   = { fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 5, display: 'block' }
 
 function ModalFornecedor({ forn, onClose, onSaved, workspaceId }) {
@@ -168,7 +168,7 @@ export default function ComprasFornecedores() {
           <div style={{ position: 'relative', flex: 1, maxWidth: 340 }}>
             <MagnifyingGlassIcon style={{ width: 14, height: 14, position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
             <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por nome ou e-mail..."
-              style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 8, fontSize: 13, background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+              style={{ width: '100%', padding: '8px 10px 8px 30px', borderRadius: 8, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
           </div>
           <button onClick={load} style={{ padding: '8px 13px', borderRadius: 8, fontSize: 12, background: 'var(--bg-secondary)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <ArrowPathIcon style={{ width: 14, height: 14 }} />

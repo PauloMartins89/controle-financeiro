@@ -94,7 +94,7 @@ export default function ComprasRelEconomia() {
                 { label: 'Savings via leilão',  value: fmtCurrency(ecoLeilao),     color: '#8b5cf6' },
                 { label: 'Solicitações analis.', value: comValores.length,         color: '#f59e0b' },
               ].map((k, i) => (
-                <div key={i} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
+                <div key={i} style={{ background: `linear-gradient(135deg, ${k.color}14 0%, var(--bg-card) 55%)`, boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px', border: `1px solid ${k.color}28`, borderTop: `3px solid ${k.color}` }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>{k.label}</div>
                   <div style={{ fontSize: 18, fontWeight: 900, color: k.color }}>{k.value}</div>
                 </div>

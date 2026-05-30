@@ -39,7 +39,7 @@ function ModalAddFornecedor({ solicitacao, onClose, onSaved }) {
   const [prazo, setPrazo] = useState('')
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
   const lbl = { fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 5, display: 'block' }
 
   async function handleSave() {
@@ -158,7 +158,7 @@ function ModalVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
               const isFirst   = enviadas[0]?.id === c.id
               return (
                 <div key={c.id} onClick={() => isEnviada && setSelecionado(c.id)}
-                  style={{ padding: '14px 16px', borderRadius: 10, cursor: isEnviada ? 'pointer' : 'default', border: `2px solid ${selecionado === c.id ? '#10b981' : isEnviada ? 'var(--border)' : 'rgba(148,163,184,0.12)'}`, background: selecionado === c.id ? 'rgba(16,185,129,0.06)' : 'var(--bg-primary)', opacity: isEnviada ? 1 : 0.45 }}>
+                  style={{ padding: '14px 16px', borderRadius: 10, cursor: isEnviada ? 'pointer' : 'default', border: `2px solid ${selecionado === c.id ? '#10b981' : isEnviada ? 'var(--border)' : 'rgba(148,163,184,0.12)'}`, background: selecionado === c.id ? 'rgba(16,185,129,0.06)' : 'var(--bg-card)', opacity: isEnviada ? 1 : 0.45 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 14 }}>

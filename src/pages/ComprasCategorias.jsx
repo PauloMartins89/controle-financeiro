@@ -13,7 +13,7 @@ const CORES_PADRAO = [
 ]
 
 const EMPTY = { nome: '', descricao: '', cor: '#6366f1', ativo: true }
-const inp   = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+const inp   = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 const lbl   = { fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 5, display: 'block' }
 
 function ModalCategoria({ cat, onClose, onSaved, workspaceId }) {

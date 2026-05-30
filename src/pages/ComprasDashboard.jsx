@@ -186,7 +186,7 @@ export default function ComprasDashboard() {
         {/* KPI Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 14, marginBottom: 24 }}>
           {kpis.map((k, i) => (
-            <div key={i} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
+            <div key={i} style={{ background: `linear-gradient(135deg, ${k.color}14 0%, var(--bg-card) 55%)`, boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '16px 18px', border: `1px solid ${k.color}28`, borderTop: `3px solid ${k.color}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, lineHeight: 1.4 }}>{k.label}</div>
                 <k.icon style={{ width: 18, height: 18, color: k.color, flexShrink: 0, opacity: 0.8 }} />

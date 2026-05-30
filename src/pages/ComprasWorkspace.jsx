@@ -287,7 +287,7 @@ export default function ComprasWorkspace() {
               const I = item.icon
               return (
                 <button key={item.path} onClick={() => navigate(item.path)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 9, cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 9, cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
                   <div style={{ width: 36, height: 36, borderRadius: 8, background: item.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <I style={{ width: 18, height: 18, color: item.color }} />
                   </div>

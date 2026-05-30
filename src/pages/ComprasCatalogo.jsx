@@ -227,7 +227,7 @@ export default function ComprasCatalogo() {
         ].map(c => {
           const I = c.icon
           return (
-            <div key={c.label} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, display: 'flex', gap: 14, alignItems: 'center' }}>
+            <div key={c.label} style={{ background: `linear-gradient(135deg, ${c.color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${c.color}28`, borderTop: `3px solid ${c.color}`, borderRadius: 12, padding: 20, display: 'flex', gap: 14, alignItems: 'center', boxShadow: 'var(--shadow-card)' }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: c.color + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <I style={{ width: 22, height: 22, color: c.color }} />
               </div>

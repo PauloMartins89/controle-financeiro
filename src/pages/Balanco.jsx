@@ -51,7 +51,7 @@ function offsetMes(yyyymm, off) {
 // ─── KPI Card ───────────────────────────────────────────────────────────────
 function KPI({ label, value, sub, color = '#6366f1', trend, icon }) {
   return (
-    <div className="card" style={{ padding: 16, borderTop: `3px solid ${color}` }}>
+    <div style={{ background: `linear-gradient(135deg, ${color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${color}28`, borderTop: `3px solid ${color}`, borderRadius: 12, padding: 16, boxShadow: 'var(--shadow-card)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
         {icon && <div style={{ color, opacity: 0.6 }}>{icon}</div>}

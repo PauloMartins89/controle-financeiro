@@ -644,7 +644,7 @@ export default function ContasPagar() {
           ].map(card => {
             const Icon = card.icon
             return (
-              <div key={card.label} style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '18px 20px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14, boxShadow: 'var(--shadow-card)' }}>
+              <div key={card.label} style={{ background: `linear-gradient(135deg, ${card.color}14 0%, var(--bg-card) 55%)`, borderRadius: 14, padding: '18px 20px', border: `1px solid ${card.color}28`, borderTop: `3px solid ${card.color}`, display: 'flex', alignItems: 'center', gap: 14, boxShadow: 'var(--shadow-card)' }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, background: card.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Icon style={{ width: 22, height: 22, color: card.color }} />
                 </div>

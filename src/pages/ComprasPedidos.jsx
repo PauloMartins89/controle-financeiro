@@ -32,7 +32,7 @@ const URGENCIA_CFG = {
 function ModalEmitirPedido({ sol, onClose, onSaved }) {
   const [obs, setObs]       = useState('')
   const [saving, setSaving] = useState(false)
-  const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
   async function handleSave() {
     setSaving(true)
@@ -69,7 +69,7 @@ function ModalEmitirPedido({ sol, onClose, onSaved }) {
 function ModalRecebido({ sol, onClose, onSaved }) {
   const [obs, setObs] = useState('')
   const [saving, setSaving] = useState(false)
-  const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
   async function handleSave() {
     setSaving(true)
@@ -107,7 +107,7 @@ function ModalPago({ sol, onClose, onSaved }) {
   const [valor, setValor] = useState(sol.valor_aprovado || sol.valor_estimado || '')
   const [obs, setObs]     = useState('')
   const [saving, setSaving] = useState(false)
-  const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+  const inp = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
   async function handleSave() {
     setSaving(true)

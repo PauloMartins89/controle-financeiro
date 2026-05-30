@@ -2,9 +2,8 @@ import { formatCurrency } from '../lib/utils'
 
 export default function StatCard({ icon, label, value, sub, color = '#6366f1', isCurrency = true, trend }) {
   return (
-    <div className="stat-card">
-      {/* top accent line */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${color}, ${color}88)`, borderRadius: '16px 16px 0 0' }} />
+    <div className="stat-card" style={{ background: `linear-gradient(135deg, ${color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${color}28`, borderTop: `3px solid ${color}` }}>
+      {/* top accent line — substituído pelo borderTop e gradiente */}
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div style={{ flex: 1 }}>

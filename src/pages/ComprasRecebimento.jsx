@@ -164,7 +164,7 @@ export default function ComprasRecebimento() {
             { label: 'Atrasados',          value: atrasados.length,    color: '#ef4444', icon: ExclamationTriangleIcon },
             { label: 'Total a pagar',      value: fmtCurrency(data.reduce((a, s) => a + (s.valor_aprovado || s.valor_estimado || 0), 0)), color: '#f59e0b', isText: true, icon: CheckCircleIcon },
           ].map((k, i) => (
-            <div key={i} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 16px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}` }}>
+            <div key={i} style={{ background: `linear-gradient(135deg, ${k.color}14 0%, var(--bg-card) 55%)`, boxShadow: 'var(--shadow-card)', borderRadius: 12, padding: '14px 16px', border: `1px solid ${k.color}28`, borderTop: `3px solid ${k.color}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>{k.label}</div>
                 <k.icon style={{ width: 16, height: 16, color: k.color, opacity: 0.8 }} />

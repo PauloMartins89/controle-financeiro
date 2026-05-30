@@ -1000,7 +1000,7 @@ export default function Faturamento() {
             { label: 'FATURADO',  value: fmtCurrency(totalFaturado),  color: '#8b5cf6', sub: null },
             { label: 'REPROVADO', value: fmtCurrency(totalReprovado), color: '#ef4444', sub: null },
           ].map(c => (
-            <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 12, padding: '16px 20px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+            <div key={c.label} style={{ background: `linear-gradient(135deg, ${c.color}14 0%, var(--bg-card) 55%)`, borderRadius: 12, padding: '16px 20px', border: `1px solid ${c.color}28`, borderTop: `3px solid ${c.color}`, boxShadow: 'var(--shadow-card)' }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, marginBottom: 4 }}>{c.label}</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: c.color }}>{c.value}</div>
               {c.sub && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>{c.sub}</div>}

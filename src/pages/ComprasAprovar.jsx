@@ -537,21 +537,13 @@ export default function ComprasAprovar() {
       <div style={{ padding: '0 24px 32px' }}>
         {/* KPIs */}
         <div style={{ display: 'flex', gap: 14, marginBottom: 24, flexWrap: 'wrap' }}>
-          <div style={kpiStyle}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Aguardando decisão</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: '#f59e0b' }}>{aguardando.length}</div>
+          <div style={{ ...kpiStyle, background: 'linear-gradient(135deg, #f59e0b14 0%, var(--bg-card) 55%)', border: '1px solid #f59e0b28', borderTop: '3px solid #f59e0b' }}>
           </div>
-          <div style={kpiStyle}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Leilões ativos</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: '#8b5cf6' }}>{leiloesAbertos.length}</div>
+          <div style={{ ...kpiStyle, background: 'linear-gradient(135deg, #8b5cf614 0%, var(--bg-card) 55%)', border: '1px solid #8b5cf628', borderTop: '3px solid #8b5cf6' }}>
           </div>
-          <div style={kpiStyle}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Pedidos este mês</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: '#6366f1' }}>{totalMes}</div>
+          <div style={{ ...kpiStyle, background: 'linear-gradient(135deg, #6366f114 0%, var(--bg-card) 55%)', border: '1px solid #6366f128', borderTop: '3px solid #6366f1' }}>
           </div>
-          <div style={kpiStyle}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Economia gerada</div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{fmtCurrency(savings)}</div>
+          <div style={{ ...kpiStyle, background: 'linear-gradient(135deg, #10b98114 0%, var(--bg-card) 55%)', border: '1px solid #10b98128', borderTop: '3px solid #10b981' }}>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>via leilões</div>
           </div>
         </div>
