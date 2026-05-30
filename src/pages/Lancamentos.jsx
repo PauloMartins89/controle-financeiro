@@ -1521,58 +1521,6 @@ function EditFieldModal({ editState, onSave, onCancel, saving }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ColFilterPopover — dropdown estilo Excel AutoFilter
-// ─────────────────────────────────────────────────────────────────────────────
-function ColFilterPopover({ label, values, current, onSelect, onClose }) {
-  const [search, setSearch] = useState('')
-  const ref = useRef(null)
-
-  useEffect(() => {
-    function handle(e) { if (ref.current && !ref.current.contains(e.target)) onClose() }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
-  }, [onClose])
-
-  const shown = values.filter(v => !search || String(v.label || v).toLowerCase().includes(search.toLowerCase()))
-
-  return (
-    <div ref={ref} onClick={e => e.stopPropagation()}
-      style={{ position: 'absolute', top: '100%', left: 0, zIndex: 3000, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, minWidth: 200, maxWidth: 280, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-      <div style={{ padding: '10px 10px 6px', borderBottom: '1px solid var(--border)', background: 'rgba(99,102,241,0.06)' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{label}</div>
-        <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…"
-          style={{ width: '100%', padding: '6px 8px', borderRadius: 6, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
-      </div>
-      <div style={{ maxHeight: 240, overflowY: 'auto', padding: 4 }}>
-        {/* Opção "Todos" */}
-        <div onClick={() => { onSelect(''); onClose() }}
-          style={{ padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: current === '' ? 700 : 400, color: current === '' ? '#818cf8' : 'var(--text-primary)', background: current === '' ? 'rgba(99,102,241,0.12)' : 'transparent', display: 'flex', alignItems: 'center', gap: 8 }}
-          onMouseEnter={e => { if (current !== '') e.currentTarget.style.background = 'rgba(0,0,0,0.05)' }}
-          onMouseLeave={e => { if (current !== '') e.currentTarget.style.background = 'transparent' }}>
-          <span style={{ width: 14, textAlign: 'center', fontSize: 11 }}>{current === '' ? '✓' : ''}</span>
-          <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>(Todos)</span>
-        </div>
-        {shown.map((v, i) => {
-          const val = typeof v === 'object' ? v.value : v
-          const lbl = typeof v === 'object' ? v.label : v
-          const active = current === val
-          return (
-            <div key={i} onClick={() => { onSelect(val); onClose() }}
-              style={{ padding: '7px 10px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: active ? 700 : 400, color: active ? '#818cf8' : 'var(--text-primary)', background: active ? 'rgba(99,102,241,0.12)' : 'transparent', display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(0,0,0,0.05)' }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}>
-              <span style={{ width: 14, textAlign: 'center', fontSize: 11, flexShrink: 0 }}>{active ? '✓' : ''}</span>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lbl || '(vazio)'}</span>
-            </div>
-          )
-        })}
-        {shown.length === 0 && <div style={{ padding: '10px', fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>Sem resultados</div>}
-      </div>
-    </div>
-  )
-}
-
 export default function Lancamentos() {
   const { workspaceId } = useStore()
   const [tab, setTab]                   = useState('lancamentos')
@@ -1595,16 +1543,10 @@ export default function Lancamentos() {
   const [criarLoteDivModal, setCriarLoteDivModal] = useState(false)
   const [criarLoteDivNomes, setCriarLoteDivNomes] = useState([])
   const [loteConflito, setLoteConflito] = useState(null) // itens com lote já atribuído
-  const [colFilters, setColFilters] = useState({ data: '', numDm: '', cliente: '', placa: '', origem: '', destino: '', status: '' })
-  const [activeColFilter, setActiveColFilter] = useState(null)
   const [sortKey, setSortKey] = useState(null)   // colKey ativo
   const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
   const [inlineEdit, setInlineEdit] = useState({ id: null, field: null, value: '', origValue: '' })
   const [inlineSaving, setInlineSaving] = useState(false)
-
-  function setColFilter(key, val) { setColFilters(prev => ({ ...prev, [key]: val })) }
-  function clearColFilters() { setColFilters({ data: '', numDm: '', cliente: '', placa: '', origem: '', destino: '', status: '' }) }
-  const hasColFilters = Object.values(colFilters).some(v => v !== '')
 
   function toggleSelect(id) {
     setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -2056,16 +1998,6 @@ export default function Lancamentos() {
         !d.solicitante?.toLowerCase().includes(q)
       ) return false
     }
-    // Filtros por coluna
-    const d = l.dados_extras || {}
-    const ci = (v) => (v || '').toLowerCase()
-    if (colFilters.data    && !ci(l.data).includes(ci(colFilters.data))) return false
-    if (colFilters.numDm   && !ci(d.numero_diario).includes(ci(colFilters.numDm))) return false
-    if (colFilters.cliente && !ci(d.cliente || d.empresa || l.descricao).includes(ci(colFilters.cliente))) return false
-    if (colFilters.placa   && !ci(d.placa).includes(ci(colFilters.placa))) return false
-    if (colFilters.origem  && !ci(d.local_origem).includes(ci(colFilters.origem))) return false
-    if (colFilters.destino && !ci(d.local_destino).includes(ci(colFilters.destino))) return false
-    if (colFilters.status  && l.status !== colFilters.status) return false
     return true
   })
 
@@ -2093,17 +2025,6 @@ export default function Lancamentos() {
   const totalReceitas  = filtered.filter(l => l.tipo === 'receita'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const totalDespesas  = filtered.filter(l => l.tipo === 'despesa'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const pendentes = filtered.filter(l => ['rascunho','aguardando_aprovacao','devolvido','corrigido'].includes(l.status)).length
-
-  // Valores distintos para AutoFilter (calculados do dataset completo)
-  const colDistinct = {
-    data:    [...new Set(lancamentos.map(l => l.data?.slice(0, 7)).filter(Boolean))].sort().reverse(),
-    numDm:   [...new Set(lancamentos.map(l => l.dados_extras?.numero_diario).filter(Boolean))].sort((a,b) => Number(a)-Number(b) || a.localeCompare(b)),
-    cliente: [...new Set(lancamentos.map(l => l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao).filter(Boolean))].sort(),
-    placa:   [...new Set(lancamentos.map(l => l.dados_extras?.placa).filter(Boolean))].sort(),
-    origem:  [...new Set(lancamentos.map(l => l.dados_extras?.local_origem).filter(Boolean))].sort(),
-    destino: [...new Set(lancamentos.map(l => l.dados_extras?.local_destino).filter(Boolean))].sort(),
-    status:  Object.entries(STATUS_CONF).filter(([,v]) => v.label !== v.color).map(([k, v]) => ({ value: k, label: v.label })).filter((v, i, arr) => arr.findIndex(x => x.value === v.value) === i),
-  }
 
   // Light-theme palette (scoped to this component)
   const LC = {
@@ -2225,11 +2146,6 @@ export default function Lancamentos() {
           <button onClick={() => setShowDigital(true)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
             <DocumentArrowUpIcon style={{ width: 16, height: 16 }} /> Digitalizar
           </button>
-          {hasColFilters && (
-            <button onClick={clearColFilters} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 20, background: '#fef2f2', border: '1px solid #fca5a533', color: '#dc2626', cursor: 'pointer', fontSize: 11.5, fontWeight: 600, whiteSpace: 'nowrap' }}>
-              <XMarkIcon style={{ width: 13, height: 13 }} /> Limpar filtros
-            </button>
-          )}
           <button onClick={() => { setEditItem(null); setShowModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 15px', borderRadius: 8, background: '#059669', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', boxShadow: '0 1px 3px #05996955' }}>
             <PlusIcon style={{ width: 15, height: 15 }} /> Novo
           </button>
@@ -2237,7 +2153,6 @@ export default function Lancamentos() {
         {/* Resumo de resultados */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, fontSize: 11.5, color: LC.txtMuted }}>
           <span><strong style={{ color: LC.txtSecondary }}>{filtered.length}</strong> registro(s)</span>
-          {hasColFilters && <span style={{ color: LC.accent }}>· filtros de coluna ativos</span>}
         </div>
 
         {/* Lista */}
@@ -2274,20 +2189,6 @@ export default function Lancamentos() {
                   <ColHead colKey="valor" label="VALOR" align="right" />
                   <ColHead colKey="status" label="STATUS" />
                   <th style={{ padding: '9px 12px', width: 80, background: LC.secondary, borderBottom: `1px solid ${LC.border}` }} />
-                </tr>
-                {/* Linha de filtros por coluna */}
-                <tr style={{ background: LC.secondary, borderBottom: `1px solid ${LC.border}` }}>
-                  <td style={{ padding: '4px 8px' }}></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.data} onChange={e => setColFilter('data', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.numDm} onChange={e => setColFilter('numDm', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.cliente} onChange={e => setColFilter('cliente', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.origem} onChange={e => setColFilter('origem', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.destino} onChange={e => setColFilter('destino', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td style={{ padding: '4px 8px' }}><input value={colFilters.placa} onChange={e => setColFilter('placa', e.target.value)} placeholder="filtrar..." style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtPrimary, borderRadius: 5, padding: '3px 6px', fontSize: 11, outline: 'none', boxSizing: 'border-box' }} /></td>
-                  <td colSpan={3} style={{ padding: '4px 8px' }}></td>
-                  <td style={{ padding: '4px 8px' }}></td>
-                  <td style={{ padding: '4px 8px' }}><select value={colFilters.status} onChange={e => setColFilter('status', e.target.value)} style={{ width: '100%', background: LC.card, border: `1px solid ${LC.border}`, color: LC.txtSecondary, borderRadius: 5, padding: '3px 5px', fontSize: 11, outline: 'none' }}><option value="">todos</option>{colDistinct.status.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}</select></td>
-                  <td style={{ padding: '4px 8px' }}></td>
                 </tr>
               </thead>
               <tbody>
