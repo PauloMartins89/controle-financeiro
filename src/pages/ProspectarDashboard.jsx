@@ -97,7 +97,7 @@ export default function ProspectarDashboard() {
             { label: 'Contratos', value: totalContratos, icon: DocumentTextIcon, cor: '#8b5cf6', sub: `${contratosAtivos} em andamento` },
             { label: 'Valor contratos', value: fmtBRL(valorTotalContratos), icon: ArrowTrendingUpIcon, cor: '#10b981', sub: 'receita prospectada', isText: true },
           ].map((k, i) => (
-            <div key={i} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 10, borderTop: `3px solid ${k.cor}` }}>
+            <div key={i} style={{ ...cardStyle, background: `linear-gradient(135deg, ${k.cor}14 0%, var(--bg-card) 55%)`, border: `1px solid ${k.cor}28`, display: 'flex', flexDirection: 'column', gap: 10, borderTop: `3px solid ${k.cor}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>{k.label}</span>
                 <div style={{ width: 32, height: 32, borderRadius: 9, background: `${k.cor}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

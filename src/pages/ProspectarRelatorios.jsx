@@ -133,7 +133,7 @@ export default function ProspectarRelatorios() {
             { label: 'Contratos', value: totalContratos, cor: '#8b5cf6', icon: FunnelIcon },
             { label: 'Valor contratos', value: valorTotal > 0 ? fmtBRL(valorTotal) : '—', cor: '#10b981', icon: ArrowTrendingUpIcon, isText: true },
           ].map((k, i) => (
-            <div key={i} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 8, borderTop: `3px solid ${k.cor}` }}>
+            <div key={i} style={{ ...cardStyle, background: `linear-gradient(135deg, ${k.cor}14 0%, var(--bg-card) 55%)`, border: `1px solid ${k.cor}28`, display: 'flex', flexDirection: 'column', gap: 8, borderTop: `3px solid ${k.cor}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{k.label}</span>
                 <k.icon style={{ width: 14, height: 14, color: k.cor }} />

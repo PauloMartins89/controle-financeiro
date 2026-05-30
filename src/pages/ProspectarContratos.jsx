@@ -149,7 +149,7 @@ export default function ProspectarContratos() {
             const count = contratos.filter(c => c.status === s.id).length
             const valor = contratos.filter(c => c.status === s.id).reduce((sum, c) => sum + (Number(c.valor) || 0), 0)
             return (
-              <div key={s.id} style={{ ...cardStyle, cursor: 'pointer', borderTop: `3px solid ${s.cor}`, outline: filtroStatus === s.id ? `2px solid ${s.cor}` : 'none', outlineOffset: 2 }}
+              <div key={s.id} style={{ ...cardStyle, background: `linear-gradient(135deg, ${s.cor}14 0%, var(--bg-card) 55%)`, border: `1px solid ${s.cor}28`, cursor: 'pointer', borderTop: `3px solid ${s.cor}`, outline: filtroStatus === s.id ? `2px solid ${s.cor}` : 'none', outlineOffset: 2 }}
                 onClick={() => setFiltroStatus(filtroStatus === s.id ? 'todos' : s.id)}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                   <s.icon style={{ width: 16, height: 16, color: s.cor }} />
