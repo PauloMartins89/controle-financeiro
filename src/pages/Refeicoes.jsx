@@ -1539,7 +1539,6 @@ function SecaoDashboard({ sols, onNav }) {
           {dash.kpis.map((k, i) => {
             if (k.secondary !== undefined) return (
               <div key={i} onClick={() => k.items?.length && setKpiDetalhe(k)} style={{ ...cardStyle, background: `linear-gradient(135deg, ${k.color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${k.color}28`, borderTop: `3px solid ${k.color}`, padding: '18px 20px', position: 'relative', overflow: 'hidden', cursor: k.items?.length ? 'pointer' : 'default', transition: 'box-shadow 0.15s' }} onMouseEnter={e => { if (k.items?.length) e.currentTarget.style.boxShadow = isDark ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.12)' }} onMouseLeave={e => e.currentTarget.style.boxShadow = SHADOW}>
-                {/* header row */}}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, position: 'relative' }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: TEXT2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{k.label}</span>
                   <div style={{ width: 32, height: 32, borderRadius: 10, background: `${k.color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>{k.icon}</div>
