@@ -10,7 +10,7 @@ import {
   PlusIcon, DocumentArrowUpIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XCircleIcon, ClockIcon, PencilIcon,
   TrashIcon, XMarkIcon, PhotoIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon,
-  DocumentTextIcon, TruckIcon, SparklesIcon,
+  DocumentTextIcon, TruckIcon, SparklesIcon, ClipboardDocumentListIcon,
   Cog6ToothIcon, PhoneIcon, UserPlusIcon, QrCodeIcon,
   PaperAirplaneIcon, ArrowUturnLeftIcon, WrenchScrewdriverIcon,
   NoSymbolIcon, BanknotesIcon, ArrowPathIcon, MapPinIcon,
@@ -47,8 +47,24 @@ const STATUS_CONF = {
 }
 
 const FORM_TYPES = {
-  padrao:     { label: 'Padrão',     icon: DocumentTextIcon },
-  transporte: { label: 'Transporte', icon: TruckIcon },
+  padrao:     { label: 'Padrão',          icon: DocumentTextIcon,           moduleKey: 'lancamentos_form_padrao'     },
+  transporte: { label: 'Transporte',      icon: TruckIcon,                  moduleKey: 'lancamentos_form_transporte' },
+  diario:     { label: 'Diário de Campo', icon: ClipboardDocumentListIcon,  moduleKey: 'lancamentos_form_diario'     },
+}
+
+// Retorna os form types habilitados para o workspace
+// enabledModules = null → sem restrição → mostra todos
+// enabledModules = array → se NENHUM form_key está na lista, mostra todos (retrocompatível)
+//                          se ao menos 1 form_key está, usa whitelist
+function getFormTypesParaWorkspace(enabledModules) {
+  if (!enabledModules) return FORM_TYPES
+  const formKeys = Object.entries(FORM_TYPES).filter(([, v]) => enabledModules.includes(v.moduleKey))
+  // Nenhum configurado explicitamente → retrocompatível: mostra padrão e transporte
+  if (formKeys.length === 0) {
+    const { diario: _d, ...resto } = FORM_TYPES
+    return resto
+  }
+  return Object.fromEntries(formKeys)
 }
 
 const DEFAULT_KM_ROWS = [
@@ -356,8 +372,12 @@ function FormTransporte({ dados, onChange }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Modal principal — cria / edita lançamento
 // ─────────────────────────────────────────────────────────────────────────────
-function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
-  const [tipoForm, setTipoForm] = useState(item?.tipo_formulario || 'padrao')
+function LancamentoModal({ item, workspaceId, userId, enabledModules, onClose, onSaved }) {
+  const formTypesDisponiveis = getFormTypesParaWorkspace(enabledModules)
+  const [tipoForm, setTipoForm] = useState(() => {
+    const prev = item?.tipo_formulario || 'padrao'
+    return formTypesDisponiveis[prev] ? prev : Object.keys(formTypesDisponiveis)[0]
+  })
   const [form, setForm] = useState({
     tipo: 'receita',
     descricao: '',
@@ -498,7 +518,7 @@ function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
     }
   }
 
-  const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
+  const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -527,8 +547,8 @@ function LancamentoModal({ item, workspaceId, userId, onClose, onSaved }) {
         {/* Seletor de tipo de formulário */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>TIPO DE FORMULÁRIO</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {Object.entries(FORM_TYPES).map(([k, v]) => {
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {Object.entries(formTypesDisponiveis).map(([k, v]) => {
               const Icon = v.icon
               return (
                 <button key={k} onClick={() => setTipoForm(k)} style={{
@@ -954,7 +974,7 @@ function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
     }
   }
 
-  const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
+  const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -1180,7 +1200,7 @@ function WhatsAppPanel({ workspaceId }) {
   }
 
   const webhookUrl = `https://dividiai.app.br/api/webhook-whatsapp`
-  const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
+  const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }
 
   return (
     <div>
@@ -1522,7 +1542,7 @@ function EditFieldModal({ editState, onSave, onCancel, saving }) {
 }
 
 export default function Lancamentos() {
-  const { workspaceId } = useStore()
+  const { workspaceId, enabledModules } = useStore()
   const [tab, setTab]                   = useState('lancamentos')
   const [lancamentos, setLancamentos]   = useState([])
   const [loading, setLoading]           = useState(true)
@@ -2355,6 +2375,7 @@ export default function Lancamentos() {
           item={editItem}
           workspaceId={workspaceId}
           userId={userId}
+          enabledModules={enabledModules}
           onClose={() => { setShowModal(false); setEditItem(null) }}
           onSaved={() => { setShowModal(false); setEditItem(null); loadData() }}
         />

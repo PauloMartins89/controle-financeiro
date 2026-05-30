@@ -36,8 +36,9 @@ function KPICard({ label, value, sub, color, bg, icon: Icon, onClick, trend }) {
   return (
     <div onClick={onClick}
       style={{
-        background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '18px 20px',
-        border: '1px solid var(--border)', borderTop: `3px solid ${color}`,
+        background: `linear-gradient(135deg, ${color}14 0%, var(--bg-card) 55%)`,
+        boxShadow: 'var(--shadow-card)', borderRadius: 14, padding: '18px 20px',
+        border: `1px solid ${color}28`, borderTop: `3px solid ${color}`,
         cursor: onClick ? 'pointer' : 'default', transition: 'box-shadow 0.15s',
         display: 'flex', flexDirection: 'column', gap: 6,
       }}

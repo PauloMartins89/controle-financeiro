@@ -1,0 +1,30 @@
+-- ═══════════════════════════════════════════════════════════
+-- Adiciona module_keys de formulários de lançamento
+-- Workspaces que já têm 'lancamentos' habilitado NÃO são
+-- afetados — a lógica em getFormTypesParaWorkspace() usa
+-- retrocompatibilidade: se nenhum form_key estiver na lista,
+-- mostra padrao + transporte (comportamento antigo).
+--
+-- Para habilitar o novo formulário "Diário de Campo" para um
+-- workspace específico, execute:
+--
+--   INSERT INTO workspace_modules (workspace_id, module_key, enabled)
+--   VALUES ('<uuid>', 'lancamentos_form_diario', true)
+--   ON CONFLICT (workspace_id, module_key) DO UPDATE SET enabled = true;
+--
+-- Para restringir um workspace a apenas o form padrão:
+--
+--   INSERT INTO workspace_modules (workspace_id, module_key, enabled)
+--   VALUES ('<uuid>', 'lancamentos_form_padrao',     true),
+--          ('<uuid>', 'lancamentos_form_transporte',  false),
+--          ('<uuid>', 'lancamentos_form_diario',      false)
+--   ON CONFLICT (workspace_id, module_key) DO UPDATE SET enabled = EXCLUDED.enabled;
+-- ═══════════════════════════════════════════════════════════
+
+-- Sem DDL necessário — workspace_modules já suporta qualquer module_key.
+-- Este arquivo serve como documentação e referência para o admin.
+
+-- Exemplo: habilitar diário de campo para um workspace (substitua o UUID):
+-- INSERT INTO workspace_modules (workspace_id, module_key, enabled)
+-- VALUES ('00000000-0000-0000-0000-000000000000', 'lancamentos_form_diario', true)
+-- ON CONFLICT (workspace_id, module_key) DO UPDATE SET enabled = true;

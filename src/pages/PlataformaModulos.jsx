@@ -19,9 +19,13 @@ const TODOS_MODULOS = [
   { key: 'proventos',     label: 'Proventos',             descricao: 'Receitas e proventos' },
   { key: 'negocios',      label: 'Negócios',              descricao: 'CRM e oportunidades' },
   // ── Gerencial ─────────────────────────────────────────────
-  { key: 'central',       label: 'Central Gerencial',     descricao: 'Visão gerencial consolidada' },
-  { key: 'lancamentos',   label: 'Lançamentos',           descricao: 'Lançamentos financeiros gerencial' },
-  { key: 'cadastros',     label: 'Cadastros',             descricao: 'Cadastros gerenciais' },
+  { key: 'central',                    label: 'Central Gerencial',               descricao: 'Visão gerencial consolidada' },
+  { key: 'lancamentos',                label: 'Lançamentos',                     descricao: 'Lançamentos financeiros gerencial' },
+  { key: 'cadastros',                  label: 'Cadastros',                       descricao: 'Cadastros gerenciais' },
+  // ── Formulários de Lançamento (por cliente) ───────────────
+  { key: 'lancamentos_form_padrao',    label: '  └ Form: Padrão',                descricao: 'Formulário padrão de lançamento (valor, categoria, descrição)' },
+  { key: 'lancamentos_form_transporte',label: '  └ Form: Transporte / KM',       descricao: 'Formulário de diário de viagem com tabela de km asfalto/terra' },
+  { key: 'lancamentos_form_diario',    label: '  └ Form: Diário de Campo',       descricao: 'Formulário para registro de atividades de campo (personalizável por cliente)' },
   // ── Financeiro ────────────────────────────────────────────
   { key: 'faturamento',   label: 'Faturamento',           descricao: 'Notas fiscais, contas a receber/pagar' },
   // ── Módulos especializados ────────────────────────────────
