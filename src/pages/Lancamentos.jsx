@@ -2388,7 +2388,24 @@ export default function Lancamentos() {
                         const hTotal = d.total_horas_dia != null ? d.total_horas_dia
                                      : (d.jornada_total_horas != null ? d.jornada_total_horas
                                      : (ocr.jornada_total_horas ? Number(ocr.jornada_total_horas) : null))
-                        const { diurno, noturno } = calcHorasDiurnoNoturno(d.linhas_jornada || [])
+                        const linhasJ = d.linhas_jornada || []
+                        let diurno, noturno
+                        if (linhasJ.length > 0 && linhasJ.some(lj => lj.e1 || lj.s1)) {
+                          // linhas com horários → cálculo preciso por intervalo
+                          ;({ diurno, noturno } = calcHorasDiurnoNoturno(linhasJ))
+                        } else {
+                          // fallback: intervalo único jornada_inicio → jornada_fim
+                          const ini = d.jornada_inicio || ocr.jornada_inicio || ocr.entrada || ''
+                          const fim = d.jornada_fim    || ocr.jornada_fim    || ocr.saida   || ''
+                          if (ini && fim) {
+                            const r = _intervaloHoras(ini, fim)
+                            diurno  = parseFloat(r.diurno.toFixed(2))
+                            noturno = parseFloat(r.noturno.toFixed(2))
+                          } else {
+                            diurno  = null
+                            noturno = null
+                          }
+                        }
                         const fmtH = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + 'h'
                         return (<>
                           <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
