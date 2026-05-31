@@ -237,7 +237,7 @@ async function processarBoletim(boletimId) {
     .select(`
       *,
       maquinas_colaboradores (id, nome, telefone_wa, workspace_id),
-      maquinas_boletim_tipos (id, nome, campos_json, imagem_url)
+      maquinas_boletim_tipos (id, nome, campos_json, imagem_url, modulo_destino)
     `)
     .eq('id', boletimId)
     .single()
@@ -395,6 +395,7 @@ Retorne APENAS o JSON, sem comentários.`
   // ── Resultado final ──────────────────────────────────────────────────────
   if (!temPendente) {
     // ✅ Todos os campos ok → cria lançamento
+    const isGerencial = boletimTipo?.modulo_destino === 'gerencial'
     const { data: lancamento, error: lancErr } = await supabase
       .from('lancamentos')
       .insert({
@@ -404,11 +405,11 @@ Retorne APENAS o JSON, sem comentários.`
         descricao:       `Boletim ${bol.numero} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
         valor:           0,       // horas; custo calculado em relatório separado
         data:            dataBoletim || new Date().toISOString().slice(0, 10),
-        categoria:       'Máquinas',
+        categoria:       isGerencial ? 'Campo' : 'Máquinas',
         centro_custo:    '',
         status:          'pendente',
         observacoes:     ocrRaw.observacao || ocrRaw.observacoes || '',
-        tipo_formulario: 'maquina',
+        tipo_formulario: isGerencial ? 'diario' : 'maquina',
         dados_extras:    { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) },
         comprovante_url: bol.imagem_url || '',
       })

@@ -781,6 +781,7 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
   const [frenteId,      setFrenteId]      = useState(item?.frente_id      || '')
   const [descricao,     setDescricao]     = useState(item?.descricao      || '')
   const [boletimTipoId, setBoletimTipoId] = useState(item?.boletim_tipo_id || '')
+  const [moduloDestino, setModuloDestino] = useState(item?.modulo_destino || '')
   const [imagemFile,    setImagemFile]    = useState(null)
   const [saving,        setSaving]        = useState(false)
 
@@ -826,7 +827,7 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
         imagemUrl = publicUrl
       }
       table   = 'maquinas_boletim_tipos'
-      payload = { workspace_id: workspaceId, nome: nome.trim(), descricao: descricao.trim() || null, imagem_url: imagemUrl }
+      payload = { workspace_id: workspaceId, nome: nome.trim(), descricao: descricao.trim() || null, imagem_url: imagemUrl, modulo_destino: moduloDestino || null }
     }
 
     setSaving(true)
@@ -981,6 +982,16 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
                   value={descricao}
                   onChange={e => setDescricao(e.target.value)}
                 />
+              </div>
+              <div>
+                <label style={labelStyle}>Módulo Destino</label>
+                <select value={moduloDestino} onChange={e => setModuloDestino(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                  <option value="">— Máquinas (padrão) —</option>
+                  <option value="gerencial">Gerencial — Diário de Campo</option>
+                </select>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Define em qual módulo o lançamento é criado após o OCR processar o boletim
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>Imagem do boletim em branco (template)</label>
