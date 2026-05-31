@@ -168,7 +168,7 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
       setNomeSearching(true)
       try {
         // Chamada direta do browser — Cloudflare permite requests reais de browser
-        const res = await fetch('https://api.casadosdados.com.br/v2/public/cnpj/pesquisa', {
+        const res = await fetch('https://api.casadosdados.com.br/v3/public/cnpj/pesquisa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
