@@ -2256,7 +2256,8 @@ export default function Lancamentos() {
                   <ColHead colKey="origem" label={isDiarioView ? 'SERVIÇO' : 'ORIGEM'} />
                   {!isDiarioView && <ColHead colKey="destino" label="DESTINO" />}
                   <ColHead colKey="placa" label="PLACA" />
-                  {isDiarioView && <ColHead colKey="jornada" label="JORNADA" />}
+                  {isDiarioView && <ColHead colKey="jornadaInicio" label="INÍCIO" />}
+                  {isDiarioView && <ColHead colKey="jornadaFim" label="FIM" />}
                   {isDiarioView && <ColHead colKey="totalJornada" label="H. TOTAL" align="right" />}
                   {isDiarioView && <ColHead colKey="hDiurnas" label="H. DIURNAS" align="right" />}
                   {isDiarioView && <ColHead colKey="hNoturnas" label="H. NOTURNAS" align="right" />}
@@ -2362,16 +2363,16 @@ export default function Lancamentos() {
                       ))}
                       {/* JORNADA */}
                       {isDiarioView && (() => {
-                        // Lê dos campos processados (d) com fallback para o OCR bruto
-                        const jIni   = d.jornada_inicio   || ocr.jornada_inicio   || ''
-                        const jFimV  = d.jornada_fim      || ocr.jornada_fim      || ''
-                        return (
-                          <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtPrimary }}>
-                            {jIni && jFimV
-                              ? <span style={{ color: LC.txtSecondary }}>{jIni} → {jFimV}</span>
-                              : <span style={{ color: LC.txtMuted }}>—</span>}
+                        const jIni  = d.jornada_inicio || ocr.jornada_inicio || ''
+                        const jFimV = d.jornada_fim    || ocr.jornada_fim    || ''
+                        return (<>
+                          <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtSecondary, textAlign: 'center' }}>
+                            {jIni  ? <span>{jIni}</span>  : <span style={{ color: LC.txtMuted }}>—</span>}
                           </td>
-                        )
+                          <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtSecondary, textAlign: 'center' }}>
+                            {jFimV ? <span>{jFimV}</span> : <span style={{ color: LC.txtMuted }}>—</span>}
+                          </td>
+                        </>)
                       })()}
                       {/* H. TOTAL / H. DIURNAS / H. NOTURNAS */}
                       {isDiarioView && (() => {
