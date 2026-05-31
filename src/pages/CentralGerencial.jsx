@@ -166,7 +166,7 @@ function catColor(c) { return CAT_COLORS[c] || '#94a3b8' }
 // ─── Página Principal ─────────────────────────────────────────────────────────
 export default function CentralGerencial() {
   const navigate = useNavigate()
-  const { workspaceId } = useStore(s => ({ workspaceId: s.workspaceId }))
+  const workspaceId = useStore(s => s.workspaceId)
   const [loading, setLoading] = useState(true)
   const [data,    setData]    = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
