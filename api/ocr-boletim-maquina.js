@@ -245,9 +245,22 @@ async function processarBoletim(boletimId) {
   if (bolErr || !bol) throw new Error(`boletim não encontrado: ${bolErr?.message}`)
 
   const colaborador   = bol.maquinas_colaboradores
-  const boletimTipo   = bol.maquinas_boletim_tipos
+  let   boletimTipo   = bol.maquinas_boletim_tipos
   const workspaceId   = bol.workspace_id
   const waPhone       = bol.wa_from
+
+  // Fallback: se o join PostgREST não trouxe o tipo, busca separadamente
+  if (!boletimTipo && bol.boletim_tipo_id) {
+    const { data: tipoFallback } = await supabase
+      .from('maquinas_boletim_tipos')
+      .select('id, nome, campos_json, imagem_url, modulo_destino')
+      .eq('id', bol.boletim_tipo_id)
+      .single()
+    boletimTipo = tipoFallback || null
+    console.log('[ocr-boletim] boletimTipo via fallback:', boletimTipo?.nome, '| modulo_destino:', boletimTipo?.modulo_destino)
+  } else {
+    console.log('[ocr-boletim] boletimTipo via join:', boletimTipo?.nome, '| modulo_destino:', boletimTipo?.modulo_destino)
+  }
 
   // Atualiza status para 'processando'
   await supabase.from('maquinas_boletins').update({ status: 'processando' }).eq('id', boletimId)
@@ -394,6 +407,7 @@ Retorne APENAS o JSON, sem comentários.`
 
   // ── Resultado final ──────────────────────────────────────────────────────
   const isGerencial = boletimTipo?.modulo_destino === 'gerencial'
+  console.log(`[ocr-boletim] isGerencial=${isGerencial} | boletim_tipo_id=${bol.boletim_tipo_id} | modulo_destino=${boletimTipo?.modulo_destino} | temPendente=${temPendente}`)
 
   if (isGerencial) {
     // ── Fluxo Gerencial ──────────────────────────────────────────────────
