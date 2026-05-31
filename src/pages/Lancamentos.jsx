@@ -2365,20 +2365,10 @@ export default function Lancamentos() {
                         // Lê dos campos processados (d) com fallback para o OCR bruto
                         const jIni   = d.jornada_inicio   || ocr.jornada_inicio   || ''
                         const jFimV  = d.jornada_fim      || ocr.jornada_fim      || ''
-                        // Total calculado no backend (parseHHMM diff) tem prioridade sobre o bruto do Groq
-                        const jTotal = d.jornada_total_horas != null ? d.jornada_total_horas
-                                     : (ocr.jornada_total_horas ? Number(ocr.jornada_total_horas) : null)
                         return (
                           <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtPrimary }}>
-                            {jIni || jFimV || jTotal != null
-                              ? <span>
-                                  {jIni && jFimV
-                                    ? <span style={{ color: LC.txtSecondary }}>{jIni} → {jFimV} </span>
-                                    : null}
-                                  {jTotal != null
-                                    ? <span style={{ fontWeight: 700, color: LC.accent }}>({Number(jTotal).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h)</span>
-                                    : null}
-                                </span>
+                            {jIni && jFimV
+                              ? <span style={{ color: LC.txtSecondary }}>{jIni} → {jFimV}</span>
                               : <span style={{ color: LC.txtMuted }}>—</span>}
                           </td>
                         )
