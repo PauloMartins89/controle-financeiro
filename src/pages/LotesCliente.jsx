@@ -1216,12 +1216,13 @@ export default function LotesCliente() {
   }, [])
 
   const loadData = useCallback(async () => {
-    if (!supabase) return
+    if (!supabase || !workspaceId) return
     setLoading(true)
     // Busca lotes com contagem e total
     const { data, error } = await supabase
       .from('lotes_cliente')
       .select('*')
+      .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
     if (error) { toast.error('Erro ao carregar lotes'); setLoading(false); return }
 
@@ -1245,7 +1246,7 @@ export default function LotesCliente() {
 
     setLotes(enriched)
     setLoading(false)
-  }, [])
+  }, [workspaceId])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -1263,6 +1264,7 @@ export default function LotesCliente() {
     const { data, error } = await supabase
       .from('lancamentos')
       .select('id, data, descricao, valor, dados_extras, lote_cliente_id, status')
+      .eq('workspace_id', workspaceId)
       .eq('status', 'rascunho')
       .is('lote_cliente_id', null)
       .order('data', { ascending: false })
