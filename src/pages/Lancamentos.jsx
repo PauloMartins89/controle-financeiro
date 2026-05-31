@@ -2218,6 +2218,7 @@ export default function Lancamentos() {
                   <ColHead colKey="origem" label={isDiarioView ? 'SERVIÇO' : 'ORIGEM'} />
                   {!isDiarioView && <ColHead colKey="destino" label="DESTINO" />}
                   <ColHead colKey="placa" label="PLACA" />
+                  {isDiarioView && <ColHead colKey="jornada" label="JORNADA" />}
                   {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
                   {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
                   {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
@@ -2309,6 +2310,21 @@ export default function Lancamentos() {
                           {(isDiario ? ocr.veiculo_placa : d.placa) || <span style={{ color: LC.txtMuted }}>—</span>}
                         </span>
                       ))}
+                      {/* JORNADA */}
+                      {isDiarioView && (
+                        <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtPrimary }}>
+                          {ocr.jornada_inicio || ocr.jornada_fim || ocr.jornada_total_horas
+                            ? <span>
+                                {ocr.jornada_inicio && ocr.jornada_fim
+                                  ? <>{ocr.jornada_inicio} → {ocr.jornada_fim} </>  
+                                  : null}
+                                {ocr.jornada_total_horas
+                                  ? <span style={{ fontWeight: 700, color: LC.accent }}>({Number(ocr.jornada_total_horas).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h)</span>
+                                  : null}
+                              </span>
+                            : <span style={{ color: LC.txtMuted }}>—</span>}
+                        </td>
+                      )}
                       {/* RESP. BIRIGUI */}
                       {isDiarioView && (
                         <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

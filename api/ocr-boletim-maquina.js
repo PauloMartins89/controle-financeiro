@@ -203,6 +203,14 @@ function mapOcrToExtras(ocr, data) {
   const hDisp = parseFloat(r.horas_disponiveis || r.horas_totais || 0) ||
                 (hIni != null && hFin != null ? parseFloat((hFin - hIni).toFixed(2)) : null)
   const pct   = hDisp && hTrab ? parseFloat((hTrab / hDisp * 100).toFixed(2)) : null
+  // Jornada: calcula total a partir dos horários HH:MM ou usa campo direto
+  const parseHHMM = s => { if (!s) return null; const m = String(s).match(/^(\d{1,2}):(\d{2})$/); return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : null }
+  const jInicio  = r.jornada_inicio || null
+  const jFim     = r.jornada_fim    || null
+  const jCalc    = parseHHMM(jInicio) != null && parseHHMM(jFim) != null
+    ? parseFloat(((parseHHMM(jFim) - parseHHMM(jInicio) + 24) % 24).toFixed(2))
+    : null
+  const jTotal   = parseFloat(r.jornada_total_horas || 0) || jCalc || hTrab || null
   return {
     // Identificação
     equipamento:           (r.equipamento || '').toUpperCase(),
@@ -229,6 +237,10 @@ function mapOcrToExtras(ocr, data) {
     produtividade_hora:    parseFloat(r.produtividade_por_hora || 0) || null,
     // Unidade da empresa
     unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || '',
+    // Jornada
+    jornada_inicio:        jInicio || '',
+    jornada_fim:           jFim    || '',
+    jornada_total_horas:   jTotal,
   }
 }
 
@@ -306,6 +318,9 @@ async function processarBoletim(boletimId) {
 - produtividade_unidade: unidade de medida da produção (ex: m3, ton)
 - produtividade_por_hora: produtividade por hora (número)
 - unidade_empresa: unidade/filial/localidade da empresa cliente onde o serviço foi executado (ex: Três Lagoas, Birigui, Araçatuba)
+- jornada_inicio: horário de início do serviço/jornada (formato HH:MM, ex: 07:00)
+- jornada_fim: horário de encerramento do serviço/jornada (formato HH:MM, ex: 17:00)
+- jornada_total_horas: total de horas corridas da jornada (número decimal, ex: 10.0)
 Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}
