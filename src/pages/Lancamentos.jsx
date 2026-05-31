@@ -2270,7 +2270,7 @@ export default function Lancamentos() {
                         <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
                       ))}
                       {/* Nº FICHA (só diário) */}
-                      {isDiario && (
+                      {isDiarioView && isDiario && (
                         <td style={{ padding: '9px 12px', whiteSpace: 'nowrap', textAlign: 'center' }}>
                           {(d.numero_documento || ocr.numero_documento)
                             ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#fef9c3', color: '#854d0e' }}>{d.numero_documento || ocr.numero_documento}</span>
@@ -2295,9 +2295,9 @@ export default function Lancamentos() {
                         </div>
                       ))}
                       {/* UNIDADE EMPRESA (só diário) */}
-                      {isDiario && (
+                      {isDiarioView && isDiario && (
                         <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtSecondary, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {ocr.unidade_empresa || <span style={{ color: LC.txtMuted }}>—</span>}
+                          {d.unidade_empresa || ocr.unidade_empresa || <span style={{ color: LC.txtMuted }}>—</span>}
                         </td>
                       )}
                       {/* ORIGEM / SERVIÇO */}
@@ -2345,29 +2345,33 @@ export default function Lancamentos() {
                       {/* RESP. BIRIGUI */}
                       {isDiarioView && (
                         <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {ocr.responsavel_birigui_nome
-                            ? <span>{ocr.responsavel_birigui_nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({ocr.responsavel_birigui_matricula || '—'})</span></span>
-                            : <span style={{ color: LC.txtMuted }}>—</span>}
+                          {(() => {
+                            const nome = d.responsavel_birigui_nome || ocr.responsavel_birigui_nome
+                            const mat  = d.responsavel_birigui_matricula || ocr.responsavel_birigui_matricula
+                            return nome
+                              ? <span>{nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({mat || '—'})</span></span>
+                              : <span style={{ color: LC.txtMuted }}>—</span>
+                          })()}
                         </td>
                       )}
                       {/* RESP. CLIENTE */}
-                      {isDiarioView && (
-                        <td
-                          style={{
+                      {isDiarioView && (() => {
+                        const nome = d.responsavel_cliente_nome || ocr.responsavel_cliente_nome
+                        const mat  = d.responsavel_cliente_matricula || ocr.responsavel_cliente_matricula
+                        const semMatricula = nome && (!mat || mat === '—')
+                        return EDITABLE_TD(
+                          'responsavel_cliente_nome',
+                          nome,
+                          nome
+                            ? <span>{nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({mat || '—'})</span></span>
+                            : <span style={{ color: LC.txtMuted }}>—</span>,
+                          {
                             padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            background: ocr.responsavel_cliente_nome && (!ocr.responsavel_cliente_matricula || ocr.responsavel_cliente_matricula === '—') ? '#fff7e6' : undefined
-                          }}
-                        >
-                          {EDITABLE_TD(
-                            'responsavel_cliente_nome',
-                            ocr.responsavel_cliente_nome,
-                            ocr.responsavel_cliente_nome
-                              ? <span>{ocr.responsavel_cliente_nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({ocr.responsavel_cliente_matricula || '—'})</span></span>
-                              : <span style={{ color: LC.txtMuted }}>—</span>
-                          )}
-                        </td>
-                      )}
+                            background: semMatricula ? '#fff7e6' : undefined,
+                          }
+                        )
+                      })()}
                       {/* KM ASF */}
                       {!isDiarioView && (isTransporte ? EDITABLE_TD('km_asfalto', km?.asfalto, (
                         <span style={{ padding: '9px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.asfalto > 0 ? 700 : 400, color: km?.asfalto > 0 ? LC.accent : LC.txtMuted, fontSize: 12 }}>{fmtKm(km?.asfalto)}</span>
