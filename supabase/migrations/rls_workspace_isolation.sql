@@ -161,3 +161,27 @@ CREATE POLICY "workspace_insert_eventos" ON lancamento_eventos FOR INSERT WITH C
   )
   OR EXISTS (SELECT 1 FROM platform_admins WHERE user_id = auth.uid())
 );
+
+-- ── solicitacoes_compra — acesso público via token ─────────────
+-- Necessário para páginas públicas (sem login):
+--   AprovarPublica.jsx  → acessa via token_aprovador
+--   CotacaoPublica.jsx  → acessa via id linkado a cotacoes_compra
+-- Escrita nunca é pública — UPDATE/INSERT/DELETE permanecem restritos ao workspace.
+
+DROP POLICY IF EXISTS "public_token_aprovador_select"      ON solicitacoes_compra;
+DROP POLICY IF EXISTS "public_cotacao_solicitacao_select"  ON solicitacoes_compra;
+
+-- Permite leitura de solicitações que possuem token de aprovação
+-- (gestor acessa via link de email sem precisar logar no app)
+CREATE POLICY "public_token_aprovador_select" ON solicitacoes_compra FOR SELECT USING (
+  token_aprovador IS NOT NULL
+);
+
+-- Permite leitura de solicitações que já têm cotações abertas
+-- (fornecedor externo precisa ver os detalhes do item para cotar)
+CREATE POLICY "public_cotacao_solicitacao_select" ON solicitacoes_compra FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM cotacoes_compra
+    WHERE cotacoes_compra.solicitacao_id = solicitacoes_compra.id
+  )
+);
