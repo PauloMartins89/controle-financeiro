@@ -393,23 +393,70 @@ Retorne APENAS o JSON, sem comentários.`
   const updateData = dataBoletim ? { data_boletim: dataBoletim } : {}
 
   // ── Resultado final ──────────────────────────────────────────────────────
-  if (!temPendente) {
-    // ✅ Todos os campos ok → cria lançamento
-    const isGerencial = boletimTipo?.modulo_destino === 'gerencial'
+  const isGerencial = boletimTipo?.modulo_destino === 'gerencial'
+
+  if (isGerencial) {
+    // ── Fluxo Gerencial ──────────────────────────────────────────────────
+    // Cria o lançamento SEMPRE, independente de campos pendentes.
+    // O lançamento com status 'pendente' é o próprio documento de revisão:
+    // o usuário abre no Gerencial, corrige o que o OCR errou e salva.
     const { data: lancamento, error: lancErr } = await supabase
       .from('lancamentos')
       .insert({
         workspace_id:    workspaceId,
-        user_id:         null,    // system-generated
+        user_id:         null,
         tipo:            'despesa',
         descricao:       `Boletim ${bol.numero} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
-        valor:           0,       // horas; custo calculado em relatório separado
+        valor:           0,
         data:            dataBoletim || new Date().toISOString().slice(0, 10),
-        categoria:       isGerencial ? 'Campo' : 'Máquinas',
+        categoria:       'Campo',
         centro_custo:    '',
         status:          'pendente',
         observacoes:     ocrRaw.observacao || ocrRaw.observacoes || '',
-        tipo_formulario: isGerencial ? 'diario' : 'maquina',
+        tipo_formulario: 'diario',
+        dados_extras:    { boletim_id: boletimId, ocr: ocrRaw, campos_pendentes: temPendente, ...mapOcrToExtras(ocrRaw, dataBoletim) },
+        comprovante_url: bol.imagem_url || '',
+      })
+      .select('id')
+      .single()
+
+    if (lancErr) {
+      console.error('[ocr-boletim] lancamento gerencial insert error:', lancErr.message)
+    }
+
+    await supabase.from('maquinas_boletins').update({
+      status:        'processado',
+      processado_em: new Date().toISOString(),
+      lancamento_id: lancamento?.id || null,
+      ...updateData,
+    }).eq('id', boletimId)
+
+    if (waPhone) {
+      const dataFmt = dataBoletim
+        ? dataBoletim.split('-').reverse().join('/')
+        : new Date().toLocaleDateString('pt-BR')
+      const msg = temPendente
+        ? `📋 *Boletim ${bol.numero}* do dia ${dataFmt} recebido!\n\n_Alguns campos precisam de revisão. Acesse o sistema para validar._`
+        : `✅ *Boletim ${bol.numero}* do dia ${dataFmt} processado com sucesso!`
+      await zapiSendText(waPhone, msg)
+    }
+
+  } else if (!temPendente) {
+    // ── Fluxo Máquinas — todos os campos ok → cria lançamento ────────────
+    const { data: lancamento, error: lancErr } = await supabase
+      .from('lancamentos')
+      .insert({
+        workspace_id:    workspaceId,
+        user_id:         null,
+        tipo:            'despesa',
+        descricao:       `Boletim ${bol.numero} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
+        valor:           0,
+        data:            dataBoletim || new Date().toISOString().slice(0, 10),
+        categoria:       'Máquinas',
+        centro_custo:    '',
+        status:          'pendente',
+        observacoes:     ocrRaw.observacao || ocrRaw.observacoes || '',
+        tipo_formulario: 'maquina',
         dados_extras:    { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) },
         comprovante_url: bol.imagem_url || '',
       })
@@ -437,7 +484,7 @@ Retorne APENAS o JSON, sem comentários.`
       )
     }
   } else {
-    // ⚠️ Há campos pendentes → enfileira para revisão do admin
+    // ── Fluxo Máquinas — campos pendentes → revisão do admin ─────────────
     await supabase.from('maquinas_boletins').update({
       status:  'pendente_revisao',
       ...updateData,
@@ -450,7 +497,6 @@ Retorne APENAS o JSON, sem comentários.`
       )
     }
 
-    // Notifica admin/supervisor do workspace (via workspace notification se disponível)
     console.log(`[ocr-boletim] boletim ${bol.numero} (${boletimId}) aguarda revisão admin — ${registrosCampos.filter(c => c.status_match !== 'ok' && c.status_match !== 'ignorado').length} campo(s) pendente(s)`)
   }
 }
