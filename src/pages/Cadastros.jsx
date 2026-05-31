@@ -116,11 +116,10 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
   const emptyForm = () => Object.fromEntries(config.fields.filter(f => !f.divider).map(f => [f.key, '']))
   const [form, setForm] = useState(item ? { ...item } : emptyForm())
   const [saving, setSaving] = useState(false)
-  const [cnpjLoading, setCnpjLoading]   = useState(false)
-  const [nomeResults, setNomeResults]   = useState([])
-  const [nomeSearching, setNomeSearching] = useState(false)
-  const [showNomeDrop, setShowNomeDrop] = useState(false)
-  const nomeTimer = useRef(null)
+  const [cnpjLoading, setCnpjLoading] = useState(false)
+  const [nomeBusca, setNomeBusca]     = useState('')
+  const [cidadeBusca, setCidadeBusca] = useState('')
+  const [buscandoNome, setBuscandoNome] = useState(false)
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
 
@@ -156,15 +155,24 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
 
   const hasCnpj = config.fields.some(f => f.key === 'cnpj')
 
-  async function handleNomeChange(val) {
-    set('nome', val)
-  }
-
-  async function selectNomeResult(r) {
-    setShowNomeDrop(false)
-    setNomeResults([])
-    setForm(f => ({ ...f, nome: r.razao_social || f.nome, razao_social: r.razao_social || f.razao_social }))
-    await handleCnpjChange(r.cnpj)
+  async function buscarPorNome() {
+    if (!nomeBusca.trim()) { toast.error('Informe o nome da empresa'); return }
+    setBuscandoNome(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
+        body: { mode: 'cnpj_search', nome: nomeBusca.trim(), cidade: cidadeBusca.trim() },
+      })
+      if (error || !data?.cnpjs?.length) {
+        toast.error('CNPJ não encontrado. Tente o nome completo ou inclua a cidade.')
+        return
+      }
+      const first = data.cnpjs[0].replace(/\D/g, '')
+      await handleCnpjChange(first)
+    } catch {
+      toast.error('Erro ao buscar CNPJ')
+    } finally {
+      setBuscandoNome(false)
+    }
   }
 
   async function handleSave() {
@@ -199,6 +207,40 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
           </button>
         </div>
 
+        {/* Buscar por nome — só ao criar novo registro com CNPJ */}
+        {hasCnpj && !item && (
+          <div style={{ padding: '12px 22px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Buscar pelo nome da empresa</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 8, alignItems: 'flex-end' }}>
+              <input
+                value={nomeBusca}
+                onChange={e => setNomeBusca(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && buscarPorNome()}
+                placeholder="Ex: Acme Distribuidora..."
+                style={inputStyle}
+              />
+              <input
+                value={cidadeBusca}
+                onChange={e => setCidadeBusca(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && buscarPorNome()}
+                placeholder="Cidade (opcional)"
+                style={inputStyle}
+              />
+              <button
+                onClick={buscarPorNome}
+                disabled={buscandoNome}
+                style={{ padding: '8px 14px', borderRadius: 7, background: buscandoNome ? '#6b7280' : '#0ea5e9', border: 'none', cursor: buscandoNome ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', height: 36 }}
+              >
+                {buscandoNome
+                  ? <span style={{ fontSize: 12 }}>⏳</span>
+                  : <MagnifyingGlassIcon style={{ width: 14, height: 14 }} />}
+                {buscandoNome ? 'Buscando...' : 'Buscar'}
+              </button>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>Preenche automaticamente via Serper + Receita Federal</div>
+          </div>
+        )}
+
         {/* Fields */}
         <div style={{ padding: '18px 22px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {config.fields.map(f => (
@@ -221,7 +263,7 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
                   type="text"
                   value={form.nome ?? ''}
                   placeholder="Nome fantasia"
-                  onChange={e => handleNomeChange(e.target.value)}
+                  onChange={e => set('nome', e.target.value)}
                   style={inputStyle}
                 />
               ) : f.key === 'cnpj' ? (
