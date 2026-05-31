@@ -2214,6 +2214,7 @@ export default function Lancamentos() {
                   <ColHead colKey="data" label="DATA" />
                   <ColHead colKey="numDm" label={isDiarioView ? 'EQUIPAMENTO' : 'Nº DM'} />
                   <ColHead colKey="cliente" label={isDiarioView ? 'EMPRESA' : 'CLIENTE / DESCRIÇÃO'} />
+                  {isDiarioView && <ColHead colKey="unidadeEmpresa" label="UNIDADE" />}
                   <ColHead colKey="origem" label={isDiarioView ? 'SERVIÇO' : 'ORIGEM'} />
                   {!isDiarioView && <ColHead colKey="destino" label="DESTINO" />}
                   <ColHead colKey="placa" label="PLACA" />
@@ -2283,6 +2284,12 @@ export default function Lancamentos() {
                           {!isDiario && d.condutor && <div style={{ fontSize: 11, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor}</div>}
                         </div>
                       ))}
+                      {/* UNIDADE EMPRESA (só diário) */}
+                      {isDiario && (
+                        <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtSecondary, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {ocr.unidade_empresa || <span style={{ color: LC.txtMuted }}>—</span>}
+                        </td>
+                      )}
                       {/* ORIGEM / SERVIÇO */}
                       {EDITABLE_TD('local_origem', isDiario ? ocr.servico_executado : d.local_origem, (
                         <span title={isDiario ? (ocr.servico_executado || '') : ''}

@@ -227,6 +227,8 @@ function mapOcrToExtras(ocr, data) {
     produtividade_qtd:     parseFloat(r.produtividade_quantidade || r.produtividade || 0) || null,
     produtividade_un:      r.produtividade_unidade || r.unidade_medida || '',
     produtividade_hora:    parseFloat(r.produtividade_por_hora || 0) || null,
+    // Unidade da empresa
+    unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || '',
   }
 }
 
@@ -303,6 +305,7 @@ async function processarBoletim(boletimId) {
 - produtividade_quantidade: quantidade produzida (número)
 - produtividade_unidade: unidade de medida da produção (ex: m3, ton)
 - produtividade_por_hora: produtividade por hora (número)
+- unidade_empresa: unidade/filial/localidade da empresa cliente onde o serviço foi executado (ex: Três Lagoas, Birigui, Araçatuba)
 Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}
