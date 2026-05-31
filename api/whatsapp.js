@@ -133,40 +133,34 @@ async function identificarBoletimPorImagem(base64, db) {
 
   let headerText = ''
   try {
+    // Passa os identificadores direto ao Groq — mais confiável do que extrair texto livre
+    const opcoes = tipos.map((t, i) => `${i + 1}. "${t.identificador_visual}"`).join('\n')
     const groqRes = await new Groq({ apiKey: process.env.GROQ_API_KEY }).chat.completions.create({
       model: 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [{
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
-          { type: 'text', text: 'Leia TODO o texto impresso nesta imagem. Retorne APENAS o texto encontrado, linha por linha, sem explicação e sem markdown. Inclua o nome da empresa, endereço, cabeçalho e título.' },
+          { type: 'text', text: `Olhe com atenção esta imagem. Algum dos seguintes identificadores aparece nela (no cabeçalho, logotipo, nome da empresa ou qualquer parte do documento)?\n\n${opcoes}\n\nResponda APENAS com o número do identificador encontrado (ex: "1", "2"), ou "0" se nenhum aparecer. Não explique.` },
         ],
       }],
-      max_tokens: 400,
+      max_tokens: 10,
     })
-    headerText = (groqRes.choices[0]?.message?.content || '').toLowerCase()
+    headerText = (groqRes.choices[0]?.message?.content || '').trim()
   } catch (e) {
     console.error('[WA] identificarBoletim groq error:', e.message)
     return null
   }
 
-  if (!headerText) return null
-  console.log('[WA] header texto extraído:', headerText.slice(0, 200))
+  console.log('[WA] identificarBoletim resposta Groq:', headerText)
 
-  // Normaliza acentos para comparação robusta (NFC→NFD → strip diacríticos)
-  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-  const headerNorm = norm(headerText)
-
-  for (const tipo of tipos) {
-    const id = norm(tipo.identificador_visual || '')
-    if (id && headerNorm.includes(id)) {
-      console.log('[WA] boletim tipo identificado:', tipo.nome, '(workspace:', tipo.workspace_id, ')')
-      console.log('[WA] header normalizado:', headerNorm.slice(0, 120))
-      console.log('[WA] identificador normalizado:', id)
-      return tipo
-    }
+  const idx = parseInt(headerText, 10)
+  if (idx >= 1 && idx <= tipos.length) {
+    const tipo = tipos[idx - 1]
+    console.log('[WA] boletim tipo identificado:', tipo.nome, '(workspace:', tipo.workspace_id, ')')
+    return tipo
   }
-  console.log('[WA] nenhum boletim tipo matched. Identificadores:', tipos.map(t => norm(t.identificador_visual || '')).join(' | '))
+  console.log('[WA] nenhum boletim tipo matched. Groq respondeu:', headerText)
   return null
 }
 

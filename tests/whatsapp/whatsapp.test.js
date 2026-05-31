@@ -157,7 +157,57 @@ describe('POST /api/whatsapp — mensagem fromMe ignorada', () => {
   })
 })
 
-// ─── identificarBoletimPorImagem — lógica de matching ────────────────────────
+// ─── identificarBoletimPorImagem — parse da resposta numérica do Groq ─────────
+// A nova abordagem passa os identificadores ao Groq e pede o número do match.
+// Esta função replica o parse: parseInt(resposta) → tipos[idx-1]
+
+function parseRespostaGroq(resposta, tipos) {
+  if (!tipos?.length) return null
+  const idx = parseInt((resposta || '').trim(), 10)
+  if (idx >= 1 && idx <= tipos.length) return tipos[idx - 1]
+  return null
+}
+
+describe('identificarBoletimPorImagem — parse da resposta numérica', () => {
+  const tipos = [
+    { id: 'uuid-birigui', nome: 'Boletim BIRIGUI', workspace_id: 'ws-1', identificador_visual: 'BIRIGUI SOLUÇÕES' },
+    { id: 'uuid-carpelo', nome: 'Boletim CARPELO', workspace_id: 'ws-2', identificador_visual: 'CARPELO SERVIÇOS FLORESTAIS' },
+  ]
+
+  it('"1" → retorna primeiro tipo', () => {
+    expect(parseRespostaGroq('1', tipos)?.id).toBe('uuid-birigui')
+  })
+
+  it('"2" → retorna segundo tipo', () => {
+    expect(parseRespostaGroq('2', tipos)?.id).toBe('uuid-carpelo')
+  })
+
+  it('"0" → null (nenhum match)', () => {
+    expect(parseRespostaGroq('0', tipos)).toBeNull()
+  })
+
+  it('resposta vazia → null', () => {
+    expect(parseRespostaGroq('', tipos)).toBeNull()
+  })
+
+  it('índice fora do range → null', () => {
+    expect(parseRespostaGroq('5', tipos)).toBeNull()
+  })
+
+  it('texto não-numérico → null', () => {
+    expect(parseRespostaGroq('none', tipos)).toBeNull()
+  })
+
+  it('"1" com espaços extras → funciona', () => {
+    expect(parseRespostaGroq('  1  ', tipos)?.id).toBe('uuid-birigui')
+  })
+
+  it('lista vazia → null', () => {
+    expect(parseRespostaGroq('1', [])).toBeNull()
+  })
+})
+
+// ─── casaIdentificador (legado — mantido para compatibilidade de testes) ──────
 // Replica a lógica de casamento do identificador_visual (caso-insensitivo, includes)
 
 function casaIdentificador(headerText, tipos) {
