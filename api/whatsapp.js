@@ -139,10 +139,10 @@ async function identificarBoletimPorImagem(base64, db) {
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
-          { type: 'text', text: 'Leia todo o texto visível no cabeçalho e título principal deste formulário. Retorne APENAS o texto encontrado, sem explicação, sem markdown.' },
+          { type: 'text', text: 'Leia TODO o texto impresso nesta imagem. Retorne APENAS o texto encontrado, linha por linha, sem explicação e sem markdown. Inclua o nome da empresa, endereço, cabeçalho e título.' },
         ],
       }],
-      max_tokens: 200,
+      max_tokens: 400,
     })
     headerText = (groqRes.choices[0]?.message?.content || '').toLowerCase()
   } catch (e) {
