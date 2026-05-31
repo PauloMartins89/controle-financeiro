@@ -121,7 +121,6 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
   const [nomeSearching, setNomeSearching] = useState(false)
   const [showNomeDrop, setShowNomeDrop] = useState(false)
   const nomeTimer = useRef(null)
-  const hasCnpj   = config.fields.some(f => f.key === 'cnpj')
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
 
@@ -155,62 +154,10 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
     }
   }
 
+  const hasCnpj = config.fields.some(f => f.key === 'cnpj')
+
   async function handleNomeChange(val) {
     set('nome', val)
-    if (!hasCnpj || val.trim().length < 3) {
-      clearTimeout(nomeTimer.current)
-      setNomeResults([])
-      setShowNomeDrop(false)
-      return
-    }
-    clearTimeout(nomeTimer.current)
-    nomeTimer.current = setTimeout(async () => {
-      setNomeSearching(true)
-      try {
-        // Chamada direta do browser — Cloudflare permite requests reais de browser
-        const res = await fetch('https://api.casadosdados.com.br/v3/public/cnpj/pesquisa', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: {
-              termo: [val.trim()],
-              atividade_principal: [],
-              situacao_cadastral: 'ATIVA',
-            },
-            extras: {
-              somente_mei: false,
-              excluir_mei: false,
-              com_contato_telefonico: false,
-              somente_fixo: false,
-              somente_celular: false,
-              somente_matriz: true,
-            },
-            page: 1,
-          }),
-        })
-        if (!res.ok) throw new Error(`status ${res.status}`)
-        const data = await res.json()
-        const cnpjs = (data.data?.cnpj || []).map(item => {
-          const c = (item.cnpj || '').replace(/\D/g, '')
-          if (c.length !== 14) return null
-          return {
-            cnpj:         `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`,
-            razao_social: item.razao_social || item.nome_fantasia || '',
-            municipio:    item.municipio    || '',
-            uf:           item.uf           || '',
-          }
-        }).filter(Boolean)
-        setNomeResults(cnpjs)
-        setShowNomeDrop(cnpjs.length > 0)
-        if (cnpjs.length === 0) toast('Nenhuma empresa encontrada', { icon: '🔍' })
-      } catch (err) {
-        setNomeResults([])
-        setShowNomeDrop(false)
-        toast.error('Busca por nome indisponível. Digite o CNPJ para preenchimento automático.')
-      } finally {
-        setNomeSearching(false)
-      }
-    }, 600)
   }
 
   async function selectNomeResult(r) {
@@ -270,33 +217,13 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
               ) : f.key === 'nome' && hasCnpj ? (
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    value={form.nome ?? ''}
-                    placeholder="Digite para buscar empresa..."
-                    onChange={e => handleNomeChange(e.target.value)}
-                    onBlur={() => setTimeout(() => setShowNomeDrop(false), 200)}
-                    style={{ ...inputStyle, paddingRight: nomeSearching ? 32 : 10 }}
-                  />
-                  {nomeSearching && (
-                    <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-secondary)' }}>⏳</span>
-                  )}
-                  {showNomeDrop && nomeResults.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: '0 4px 16px rgba(0,0,0,0.18)', marginTop: 2 }}>
-                      {nomeResults.map((r, i) => (
-                        <div
-                          key={i}
-                          onMouseDown={() => selectNomeResult(r)}
-                          style={{ padding: '9px 12px', cursor: 'pointer', borderBottom: i < nomeResults.length - 1 ? '1px solid var(--border)' : 'none' }}
-                        >
-                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{r.razao_social}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{r.cnpj}{r.municipio ? ` · ${r.municipio}/${r.uf}` : ''}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <input
+                  type="text"
+                  value={form.nome ?? ''}
+                  placeholder="Nome fantasia"
+                  onChange={e => handleNomeChange(e.target.value)}
+                  style={inputStyle}
+                />
               ) : f.key === 'cnpj' ? (
                 <div style={{ position: 'relative' }}>
                   <input
