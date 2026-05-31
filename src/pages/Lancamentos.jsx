@@ -2217,6 +2217,8 @@ export default function Lancamentos() {
                   <ColHead colKey="origem" label={isDiarioView ? 'SERVIÇO' : 'ORIGEM'} />
                   <ColHead colKey="destino" label={isDiarioView ? 'EQUIPE DIURNA' : 'DESTINO'} />
                   <ColHead colKey="placa" label="PLACA" />
+                  {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
+                  {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
                   {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
                   {!isDiarioView && <ColHead colKey="kmTer" label="KM TER" align="right" />}
                   {!isDiarioView && <ColHead colKey="kmTotal" label="KM TOTAL" align="right" />}
@@ -2301,6 +2303,22 @@ export default function Lancamentos() {
                           {(isDiario ? ocr.veiculo_placa : d.placa) || <span style={{ color: LC.txtMuted }}>—</span>}
                         </span>
                       ))}
+                      {/* RESP. BIRIGUI */}
+                      {isDiarioView && (
+                        <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {ocr.responsavel_birigui_nome
+                            ? <span>{ocr.responsavel_birigui_nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({ocr.responsavel_birigui_matricula || '—'})</span></span>
+                            : <span style={{ color: LC.txtMuted }}>—</span>}
+                        </td>
+                      )}
+                      {/* RESP. CLIENTE */}
+                      {isDiarioView && (
+                        <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {ocr.responsavel_cliente_nome
+                            ? <span>{ocr.responsavel_cliente_nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({ocr.responsavel_cliente_matricula || '—'})</span></span>
+                            : <span style={{ color: LC.txtMuted }}>—</span>}
+                        </td>
+                      )}
                       {/* KM ASF */}
                       {!isDiarioView && (isTransporte ? EDITABLE_TD('km_asfalto', km?.asfalto, (
                         <span style={{ padding: '9px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.asfalto > 0 ? 700 : 400, color: km?.asfalto > 0 ? LC.accent : LC.txtMuted, fontSize: 12 }}>{fmtKm(km?.asfalto)}</span>
