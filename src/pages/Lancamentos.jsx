@@ -81,6 +81,38 @@ const DEFAULT_KM_ROWS = [
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Diário de Obra: cálculo horas diurnas/noturnas ─────────────────────────
+// Diurno: 05:00 – 22:00 | Noturno: 22:00 – 05:00
+function _parseMin(hhmm) {
+  if (!hhmm || typeof hhmm !== 'string') return null
+  const [h, m] = hhmm.split(':').map(Number)
+  if (isNaN(h)) return null
+  return h * 60 + (m || 0)
+}
+function _intervaloHoras(startStr, endStr) {
+  const s = _parseMin(startStr)
+  const e = _parseMin(endStr)
+  if (s == null || e == null) return { diurno: 0, noturno: 0 }
+  const endAdj = e <= s ? e + 1440 : e   // cruzou meia-noite
+  const total  = endAdj - s
+  if (total <= 0) return { diurno: 0, noturno: 0 }
+  const D1 = 5 * 60, D2 = 22 * 60
+  const ov1 = Math.min(endAdj, D2)        - Math.max(s, D1)
+  const ov2 = Math.min(endAdj, D2 + 1440) - Math.max(s, D1 + 1440)
+  const diurnoMin = Math.max(0, ov1) + Math.max(0, ov2)
+  return { diurno: diurnoMin / 60, noturno: Math.max(0, total - diurnoMin) / 60 }
+}
+function calcHorasDiurnoNoturno(linhas) {
+  if (!Array.isArray(linhas) || linhas.length === 0) return { diurno: null, noturno: null }
+  let d = 0, n = 0, temDados = false
+  for (const lj of linhas) {
+    if (lj.e1 && lj.s1) { const r = _intervaloHoras(lj.e1, lj.s1); d += r.diurno; n += r.noturno; temDados = true }
+    if (lj.e2 && lj.s2) { const r = _intervaloHoras(lj.e2, lj.s2); d += r.diurno; n += r.noturno; temDados = true }
+  }
+  if (!temDados) return { diurno: null, noturno: null }
+  return { diurno: parseFloat(d.toFixed(2)), noturno: parseFloat(n.toFixed(2)) }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 function fmtCurrency(v) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 }
@@ -2226,6 +2258,8 @@ export default function Lancamentos() {
                   <ColHead colKey="placa" label="PLACA" />
                   {isDiarioView && <ColHead colKey="jornada" label="JORNADA" />}
                   {isDiarioView && <ColHead colKey="totalJornada" label="H. TOTAL" align="right" />}
+                  {isDiarioView && <ColHead colKey="hDiurnas" label="H. DIURNAS" align="right" />}
+                  {isDiarioView && <ColHead colKey="hNoturnas" label="H. NOTURNAS" align="right" />}
                   {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
                   {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
                   {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
@@ -2349,20 +2383,30 @@ export default function Lancamentos() {
                           </td>
                         )
                       })()}
-                      {/* H. TOTAL */}
+                      {/* H. TOTAL / H. DIURNAS / H. NOTURNAS */}
                       {isDiarioView && (() => {
                         const hTotal = d.total_horas_dia != null ? d.total_horas_dia
                                      : (d.jornada_total_horas != null ? d.jornada_total_horas
                                      : (ocr.jornada_total_horas ? Number(ocr.jornada_total_horas) : null))
-                        return (
+                        const { diurno, noturno } = calcHorasDiurnoNoturno(d.linhas_jornada || [])
+                        const fmtH = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + 'h'
+                        return (<>
                           <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             {hTotal != null
-                              ? <span style={{ fontWeight: 800, fontSize: 13, color: LC.accent }}>
-                                  {Number(hTotal).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h
-                                </span>
+                              ? <span style={{ fontWeight: 800, fontSize: 13, color: LC.accent }}>{fmtH(hTotal)}</span>
                               : <span style={{ color: LC.txtMuted }}>—</span>}
                           </td>
-                        )
+                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {diurno != null
+                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#d97706' }}>{fmtH(diurno)}</span>
+                              : <span style={{ color: LC.txtMuted }}>—</span>}
+                          </td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {noturno != null
+                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{fmtH(noturno)}</span>
+                              : <span style={{ color: LC.txtMuted }}>—</span>}
+                          </td>
+                        </>)
                       })()}
                       {/* RESP. BIRIGUI */}
                       {isDiarioView && (
