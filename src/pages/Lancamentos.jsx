@@ -2272,8 +2272,8 @@ export default function Lancamentos() {
                       {/* Nº FICHA (só diário) */}
                       {isDiario && (
                         <td style={{ padding: '9px 12px', whiteSpace: 'nowrap', textAlign: 'center' }}>
-                          {ocr.numero_documento
-                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#fef9c3', color: '#854d0e' }}>{ocr.numero_documento}</span>
+                          {(d.numero_documento || ocr.numero_documento)
+                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#fef9c3', color: '#854d0e' }}>{d.numero_documento || ocr.numero_documento}</span>
                             : <span style={{ color: LC.txtMuted }}>—</span>}
                         </td>
                       )}
@@ -2320,20 +2320,28 @@ export default function Lancamentos() {
                         </span>
                       ))}
                       {/* JORNADA */}
-                      {isDiarioView && (
-                        <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtPrimary }}>
-                          {ocr.jornada_inicio || ocr.jornada_fim || ocr.jornada_total_horas
-                            ? <span>
-                                {ocr.jornada_inicio && ocr.jornada_fim
-                                  ? <>{ocr.jornada_inicio} → {ocr.jornada_fim} </>  
-                                  : null}
-                                {ocr.jornada_total_horas
-                                  ? <span style={{ fontWeight: 700, color: LC.accent }}>({Number(ocr.jornada_total_horas).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h)</span>
-                                  : null}
-                              </span>
-                            : <span style={{ color: LC.txtMuted }}>—</span>}
-                        </td>
-                      )}
+                      {isDiarioView && (() => {
+                        // Lê dos campos processados (d) com fallback para o OCR bruto
+                        const jIni   = d.jornada_inicio   || ocr.jornada_inicio   || ''
+                        const jFimV  = d.jornada_fim      || ocr.jornada_fim      || ''
+                        // Total calculado no backend (parseHHMM diff) tem prioridade sobre o bruto do Groq
+                        const jTotal = d.jornada_total_horas != null ? d.jornada_total_horas
+                                     : (ocr.jornada_total_horas ? Number(ocr.jornada_total_horas) : null)
+                        return (
+                          <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtPrimary }}>
+                            {jIni || jFimV || jTotal != null
+                              ? <span>
+                                  {jIni && jFimV
+                                    ? <span style={{ color: LC.txtSecondary }}>{jIni} → {jFimV} </span>
+                                    : null}
+                                  {jTotal != null
+                                    ? <span style={{ fontWeight: 700, color: LC.accent }}>({Number(jTotal).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h)</span>
+                                    : null}
+                                </span>
+                              : <span style={{ color: LC.txtMuted }}>—</span>}
+                          </td>
+                        )
+                      })()}
                       {/* RESP. BIRIGUI */}
                       {isDiarioView && (
                         <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
