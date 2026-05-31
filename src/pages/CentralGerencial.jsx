@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
+import useStore from '../store/useStore'
 import {
   ArrowPathIcon, BanknotesIcon, ClockIcon, ExclamationCircleIcon,
   CheckCircleIcon, DocumentTextIcon, TruckIcon, UserGroupIcon,
@@ -165,12 +166,13 @@ function catColor(c) { return CAT_COLORS[c] || '#94a3b8' }
 // ─── Página Principal ─────────────────────────────────────────────────────────
 export default function CentralGerencial() {
   const navigate = useNavigate()
+  const { workspaceId } = useStore(s => ({ workspaceId: s.workspaceId }))
   const [loading, setLoading] = useState(true)
   const [data,    setData]    = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
 
   const load = useCallback(async () => {
-    if (!supabase) return
+    if (!supabase || !workspaceId) return
     setLoading(true)
     try {
       const hoje    = todayISO()
@@ -188,11 +190,11 @@ export default function CentralGerencial() {
         resContasPagar,
         resCompras,
       ] = await Promise.all([
-        supabase.from('lancamentos').select('id,tipo,status,valor,data,categoria,descricao,created_at,dados_extras').order('created_at', { ascending: false }).limit(500),
-        supabase.from('lotes_cliente').select('id,status,cliente,created_at,updated_at').order('created_at', { ascending: false }).limit(200),
-        supabase.from('pagamentos').select('id,descricao,valor_total,data_pagamento,numero_nf,created_at').order('created_at', { ascending: false }).limit(200),
-        supabase.from('contas_pagar').select('id,status,valor,vencimento,data_pagamento,categoria,descricao,fornecedor,created_at').order('created_at', { ascending: false }).limit(500),
-        supabase.from('solicitacoes_compra').select('id,status,titulo,valor_estimado,valor_aprovado,economia,urgencia,created_at,data_aprovacao').order('created_at', { ascending: false }).limit(200),
+        supabase.from('lancamentos').select('id,tipo,status,valor,data,categoria,descricao,created_at,dados_extras').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(500),
+        supabase.from('lotes_cliente').select('id,status,cliente,created_at,updated_at').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(200),
+        supabase.from('pagamentos').select('id,descricao,valor_total,data_pagamento,numero_nf,created_at').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(200),
+        supabase.from('contas_pagar').select('id,status,valor,vencimento,data_pagamento,categoria,descricao,fornecedor,created_at').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(500),
+        supabase.from('solicitacoes_compra').select('id,status,titulo,valor_estimado,valor_aprovado,economia,urgencia,created_at,data_aprovacao').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(200),
       ])
 
       const lancs     = resLanc.data     || []
@@ -340,7 +342,7 @@ export default function CentralGerencial() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [workspaceId])
 
   useEffect(() => { load() }, [load])
 

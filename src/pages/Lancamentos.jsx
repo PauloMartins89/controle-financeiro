@@ -1953,11 +1953,12 @@ export default function Lancamentos() {
   }, [])
 
   const loadData = useCallback(async () => {
-    if (!supabase) return
+    if (!supabase || !workspaceId) return
     setLoading(true)
     const { data, error } = await supabase
       .from('lancamentos')
       .select('*')
+      .eq('workspace_id', workspaceId)
       .order('data', { ascending: false })
       .order('created_at', { ascending: false })
     if (error) { toast.error('Erro ao carregar lançamentos'); setLoading(false); return }
@@ -1976,7 +1977,7 @@ export default function Lancamentos() {
       setLotesMap({})
     }
     setLoading(false)
-  }, [])
+  }, [workspaceId])
 
   useEffect(() => { loadData() }, [loadData])
 
