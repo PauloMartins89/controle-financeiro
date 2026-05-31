@@ -58,24 +58,28 @@ async function zapiSendText(phone, message) {
       `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
       {
         method:  'POST',
-        headers: {
+          ? `Analise este boletim de apontamento. O formulário tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}, responsavel_birigui_nome, responsavel_birigui_matricula, responsavel_cliente_nome, responsavel_cliente_matricula.`
           'Content-Type': 'application/json',
-          ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
-        },
-        body: JSON.stringify({ phone, message }),
-      }
-    )
-  } catch (e) {
-    console.error('[ocr-boletim] zapiSendText error:', e.message)
-  }
-}
-
-// Normaliza texto para lookup de alias (trim + upper + colapsa espaços)
-function normalizeAlias(s) {
-  return (s || '').trim().toUpperCase().replace(/\s+/g, ' ')
-}
-
-// Distância de Levenshtein simples (para fuzzy matching)
+      data: data do boletim (DD/MM/YYYY)
+      turno: "dia", "noite" ou "integral" conforme marcado
+      colaborador: nome do operador/colaborador
+      equipamento: código ou nome do equipamento (ex: EH-22, CAD 320)
+      classe_operacional: classe/tipo do equipamento
+      frente: local ou frente de trabalho
+      cdc: centro de custo
+      atividade_realizada: atividade ou serviço realizado (resumo curto)
+      descritivo_trabalho: descrição detalhada do trabalho executado
+      observacoes: observações, ocorrências ou anomalias registradas
+      horimetro_inicial: leitura inicial do horímetro (número)
+      horimetro_final: leitura final do horímetro (número)
+      horas_trabalhadas: total de horas trabalhadas (número)
+      horas_disponiveis: horas disponíveis ou horas totais do turno (número, se informado)
+      horas_espera: horas em espera, ociosas ou de manutenção (número)
+      produtividade_quantidade: quantidade produzida (número)
+      responsavel_birigui_nome: nome do responsável Birigui pela execução do serviço
+      responsavel_birigui_matricula: matrícula do responsável Birigui
+      responsavel_cliente_nome: nome do responsável Cliente pela liberação/validação
+      responsavel_cliente_matricula: matrícula do responsável Cliente`
 function levenshtein(a, b) {
   const m = a.length, n = b.length
   const dp = Array.from({ length: m + 1 }, (_, i) =>
@@ -344,6 +348,13 @@ Retorne APENAS o JSON, sem comentários.`
 
   const registrosCampos = []
   let   temPendente     = false
+    // Validação obrigatória: se vier nome do responsável cliente e matrícula vazia, marcar pendente
+    if (
+      ocrRaw.responsavel_cliente_nome &&
+      (!ocrRaw.responsavel_cliente_matricula || String(ocrRaw.responsavel_cliente_matricula).trim() === '' || ocrRaw.responsavel_cliente_matricula === '—')
+    ) {
+      temPendente = true
+    }
   let   dataBoletim     = null
 
   for (const campoKey of camposTiposAtivos) {

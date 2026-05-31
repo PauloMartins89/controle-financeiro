@@ -2313,10 +2313,20 @@ export default function Lancamentos() {
                       )}
                       {/* RESP. CLIENTE */}
                       {isDiarioView && (
-                        <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {ocr.responsavel_cliente_nome
-                            ? <span>{ocr.responsavel_cliente_nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({ocr.responsavel_cliente_matricula || '—'})</span></span>
-                            : <span style={{ color: LC.txtMuted }}>—</span>}
+                        <td
+                          style={{
+                            padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            background: ocr.responsavel_cliente_nome && (!ocr.responsavel_cliente_matricula || ocr.responsavel_cliente_matricula === '—') ? '#fff7e6' : undefined
+                          }}
+                        >
+                          {EDITABLE_TD(
+                            'responsavel_cliente_nome',
+                            ocr.responsavel_cliente_nome,
+                            ocr.responsavel_cliente_nome
+                              ? <span>{ocr.responsavel_cliente_nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({ocr.responsavel_cliente_matricula || '—'})</span></span>
+                              : <span style={{ color: LC.txtMuted }}>—</span>
+                          )}
                         </td>
                       )}
                       {/* KM ASF */}
