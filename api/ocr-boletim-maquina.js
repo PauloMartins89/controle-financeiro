@@ -79,7 +79,8 @@ async function zapiSendText(phone, message) {
       responsavel_birigui_nome: nome do responsável Birigui pela execução do serviço
       responsavel_birigui_matricula: matrícula do responsável Birigui
       responsavel_cliente_nome: nome do responsável Cliente pela liberação/validação
-      responsavel_cliente_matricula: matrícula do responsável Cliente`
+      responsavel_cliente_matricula: matrícula do responsável Cliente
+      numero_documento: número de controle pré-impresso da ficha/formulário (geralmente no canto superior direito, ex: 2351)`
 function levenshtein(a, b) {
   const m = a.length, n = b.length
   const dp = Array.from({ length: m + 1 }, (_, i) =>
@@ -235,6 +236,8 @@ function mapOcrToExtras(ocr, data) {
     produtividade_qtd:     parseFloat(r.produtividade_quantidade || r.produtividade || 0) || null,
     produtividade_un:      r.produtividade_unidade || r.unidade_medida || '',
     produtividade_hora:    parseFloat(r.produtividade_por_hora || 0) || null,
+    // Identificação do documento
+    numero_documento:      r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || '',
     // Unidade da empresa
     unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || '',
     // Jornada
@@ -321,6 +324,7 @@ async function processarBoletim(boletimId) {
 - jornada_inicio: horário de início do serviço/jornada (formato HH:MM, ex: 07:00)
 - jornada_fim: horário de encerramento do serviço/jornada (formato HH:MM, ex: 17:00)
 - jornada_total_horas: total de horas corridas da jornada (número decimal, ex: 10.0)
+- numero_documento: número de controle pré-impresso da ficha/formulário, geralmente no canto superior direito da folha em destaque (ex: 2351)
 Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}

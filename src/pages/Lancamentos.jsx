@@ -2212,6 +2212,7 @@ export default function Lancamentos() {
                     />
                   </th>
                   <ColHead colKey="data" label="DATA" />
+                  {isDiarioView && <ColHead colKey="numDoc" label="Nº FICHA" />}
                   <ColHead colKey="numDm" label={isDiarioView ? 'EQUIPAMENTO' : 'Nº DM'} />
                   <ColHead colKey="cliente" label={isDiarioView ? 'EMPRESA' : 'CLIENTE / DESCRIÇÃO'} />
                   {isDiarioView && <ColHead colKey="unidadeEmpresa" label="UNIDADE" />}
@@ -2268,6 +2269,14 @@ export default function Lancamentos() {
                       {EDITABLE_TD('data', l.data, (
                         <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
                       ))}
+                      {/* Nº FICHA (só diário) */}
+                      {isDiario && (
+                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                          {ocr.numero_documento
+                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#fef9c3', color: '#854d0e' }}>{ocr.numero_documento}</span>
+                            : <span style={{ color: LC.txtMuted }}>—</span>}
+                        </td>
+                      )}
                       {/* Nº DM / EQUIPAMENTO */}
                       {EDITABLE_TD('numero_diario', isDiario ? ocr.equipamento : d.numero_diario, (
                         <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap' }}>
