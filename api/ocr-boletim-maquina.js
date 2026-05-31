@@ -259,7 +259,7 @@ function mapOcrToExtras(ocr, data) {
       return parseFloat(totalRaw) || parseHHMM(String(totalRaw)) || jCalc || linhasSum || hTrabVal || null
     })(),
     // Número do documento (ficha pré-impressa)
-    numero_documento: r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || '',
+    numero_documento: r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || r.ficha || r.numero || r.n_doc || r.ndoc || r.n_ficha || '',
     // ── Campos Relatório Diário de Obra ──────────────────────────────────────
     cliente:            r.cliente || r.empresa || '',
     solicitante:        r.solicitante || '',
@@ -337,7 +337,7 @@ async function processarBoletim(boletimId) {
   const userPrompt = boletimTipo?.imagem_url
     ? `Analise este boletim de apontamento. O formul├írio tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}, responsavel_birigui_nome, responsavel_birigui_matricula, responsavel_cliente_nome, responsavel_cliente_matricula, numero_documento.`
     : `Extraia TODOS os dados deste formulário de apontamento. Retorne um JSON com as seguintes chaves (use null se o campo não existir ou estiver ilegível):
-- numero_documento: número de controle pré-impresso da ficha/formulário, geralmente no canto superior direito da folha em destaque (ex: 2351)
+- numero_documento: OBRIGATÓRIO — número sequencial pré-impresso no canto superior direito do documento, dentro de um quadro/caixa isolada, sem rótulo (ex: 2351, 1872, 3040). Procure um número de 3 a 5 dígitos em destaque no canto superior direito antes de qualquer outra informação.
 - data: data do boletim (DD/MM/YYYY)
 - turno: "dia", "noite" ou "integral" conforme marcado
 - colaborador: nome do operador/colaborador principal
