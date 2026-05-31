@@ -167,22 +167,50 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
     nomeTimer.current = setTimeout(async () => {
       setNomeSearching(true)
       try {
-        const res = await fetch('/api/cnpj', {
+        // Chamada direta do browser — Cloudflare permite requests reais de browser
+        const res = await fetch('https://api.casadosdados.com.br/v2/public/cnpj/pesquisa', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mode: 'cnpj_search', nome: val.trim() }),
+          body: JSON.stringify({
+            query: {
+              termo: [val.trim()],
+              atividade_principal: [],
+              situacao_cadastral: 'ATIVA',
+            },
+            extras: {
+              somente_mei: false,
+              excluir_mei: false,
+              com_contato_telefonico: false,
+              somente_fixo: false,
+              somente_celular: false,
+              somente_matriz: true,
+            },
+            page: 1,
+          }),
         })
-        if (!res.ok) throw new Error()
+        if (!res.ok) throw new Error(`status ${res.status}`)
         const data = await res.json()
-        setNomeResults(data.cnpjs || [])
-        setShowNomeDrop((data.cnpjs || []).length > 0)
-      } catch {
+        const cnpjs = (data.data?.cnpj || []).map(item => {
+          const c = (item.cnpj || '').replace(/\D/g, '')
+          if (c.length !== 14) return null
+          return {
+            cnpj:         `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`,
+            razao_social: item.razao_social || item.nome_fantasia || '',
+            municipio:    item.municipio    || '',
+            uf:           item.uf           || '',
+          }
+        }).filter(Boolean)
+        setNomeResults(cnpjs)
+        setShowNomeDrop(cnpjs.length > 0)
+        if (cnpjs.length === 0) toast('Nenhuma empresa encontrada', { icon: '🔍' })
+      } catch (err) {
         setNomeResults([])
         setShowNomeDrop(false)
+        toast.error('Busca por nome indisponível. Digite o CNPJ para preenchimento automático.')
       } finally {
         setNomeSearching(false)
       }
-    }, 500)
+    }, 600)
   }
 
   async function selectNomeResult(r) {
