@@ -118,6 +118,51 @@ async function sendWA(to, text) {
   return res.ok
 }
 
+// ── Identifica boletim pelo texto do cabeçalho (identificador_visual) ────────
+// Faz uma leitura rápida de texto via Groq e compara contra todos os
+// identificadores cadastrados em maquinas_boletim_tipos.
+// Retorna o registro do boletim_tipo correspondente, ou null.
+async function identificarBoletimPorImagem(base64, db) {
+  const { data: tipos } = await db
+    .from('maquinas_boletim_tipos')
+    .select('id, nome, workspace_id, modulo_destino, identificador_visual')
+    .not('identificador_visual', 'is', null)
+    .neq('identificador_visual', '')
+
+  if (!tipos?.length) return null
+
+  let headerText = ''
+  try {
+    const groqRes = await new Groq({ apiKey: process.env.GROQ_API_KEY }).chat.completions.create({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
+          { type: 'text', text: 'Leia todo o texto visível no cabeçalho e título principal deste formulário. Retorne APENAS o texto encontrado, sem explicação, sem markdown.' },
+        ],
+      }],
+      max_tokens: 200,
+    })
+    headerText = (groqRes.choices[0]?.message?.content || '').toLowerCase()
+  } catch (e) {
+    console.error('[WA] identificarBoletim groq error:', e.message)
+    return null
+  }
+
+  if (!headerText) return null
+  console.log('[WA] header texto extraído:', headerText.slice(0, 120))
+
+  for (const tipo of tipos) {
+    const id = tipo.identificador_visual.toLowerCase().trim()
+    if (id && headerText.includes(id)) {
+      console.log('[WA] boletim tipo identificado:', tipo.nome, '(workspace:', tipo.workspace_id, ')')
+      return tipo
+    }
+  }
+  return null
+}
+
 // ── Monta texto de confirmação de despesa (reutilizado em confirmação e edição)
 function montarConfirmacao(p) {
   const n = (v) => v || '—'
@@ -293,6 +338,60 @@ export default async function handler(req, res) {
           comprovanteUrl = urlData?.publicUrl || null
         }
       } catch (_) {}
+
+      // ── Check de boletim por identificador_visual (antes do condutor) ─────────
+      // Identifica o formulário pelo texto do cabeçalho, independente do telefone.
+      // Resolve o problema de operadores que trocam de empresa.
+      const boletimTipoMatch = await identificarBoletimPorImagem(base64, getDb())
+      if (boletimTipoMatch) {
+        // Tenta localizar colaborador pelo telefone dentro desse workspace
+        const _bNorm = from.replace(/\D/g, '')
+        const _bSem55 = _bNorm.replace(/^55/, '')
+        const _bCom9  = _bSem55.length === 10 ? _bSem55.slice(0, 2) + '9' + _bSem55.slice(2) : _bSem55
+        const _bSem9  = _bSem55.length === 11 && _bSem55[2] === '9' ? _bSem55.slice(0, 2) + _bSem55.slice(3) : _bSem55
+        let colaboradorId = null
+        for (const v of [...new Set([_bSem55, _bCom9, _bSem9])]) {
+          const { data: colab } = await getDb()
+            .from('maquinas_colaboradores')
+            .select('id')
+            .eq('workspace_id', boletimTipoMatch.workspace_id)
+            .ilike('telefone_wa', `%${v}%`)
+            .maybeSingle()
+          if (colab?.id) { colaboradorId = colab.id; break }
+        }
+
+        const numero = `BOL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
+        const { data: boletimRec, error: bolErr } = await getDb()
+          .from('maquinas_boletins')
+          .insert({
+            workspace_id:    boletimTipoMatch.workspace_id,
+            boletim_tipo_id: boletimTipoMatch.id,
+            colaborador_id:  colaboradorId,
+            wa_from:         from,
+            imagem_url:      comprovanteUrl || '',
+            numero,
+            status:          'recebido',
+          })
+          .select('id')
+          .single()
+
+        if (!bolErr && boletimRec?.id) {
+          // Dispara OCR em background (fire-and-forget)
+          const selfBase = `https://${req.headers.host}`
+          fetch(`${selfBase}/api/ocr-boletim-maquina`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ boletimId: boletimRec.id }),
+          }).catch(e => console.error('[WA] ocr-boletim-maquina call error:', e.message))
+
+          await sendWA(from, `📋 *Boletim recebido!*\n\nEstamos processando automaticamente. Em breve você receberá a confirmação.\n_Protocolo: ${numero}_`)
+        } else {
+          console.error('[WA] maquinas_boletins insert error:', bolErr?.message)
+          await sendWA(from, '❌ Erro ao registrar o boletim. Por favor, tente reenviar a imagem.')
+        }
+
+        return res.status(200).end()
+      }
 
       // ── Check de condutor antecipado — se for condutor, pula classificação ──
       const _norm = from.replace(/\D/g, '')

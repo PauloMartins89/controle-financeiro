@@ -781,8 +781,9 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
   const [frenteId,      setFrenteId]      = useState(item?.frente_id      || '')
   const [descricao,     setDescricao]     = useState(item?.descricao      || '')
   const [boletimTipoId, setBoletimTipoId] = useState(item?.boletim_tipo_id || '')
-  const [moduloDestino, setModuloDestino] = useState(item?.modulo_destino || '')
-  const [imagemFile,    setImagemFile]    = useState(null)
+  const [moduloDestino,       setModuloDestino]       = useState(item?.modulo_destino        || '')
+  const [identificadorVisual, setIdentificadorVisual] = useState(item?.identificador_visual || '')
+  const [imagemFile,          setImagemFile]          = useState(null)
   const [saving,        setSaving]        = useState(false)
 
   const modelosFiltrados = classeId
@@ -827,7 +828,7 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
         imagemUrl = publicUrl
       }
       table   = 'maquinas_boletim_tipos'
-      payload = { workspace_id: workspaceId, nome: nome.trim(), descricao: descricao.trim() || null, imagem_url: imagemUrl, modulo_destino: moduloDestino || null }
+      payload = { workspace_id: workspaceId, nome: nome.trim(), descricao: descricao.trim() || null, imagem_url: imagemUrl, modulo_destino: moduloDestino || null, identificador_visual: identificadorVisual.trim() || null }
     }
 
     setSaving(true)
@@ -991,6 +992,19 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
                 </select>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
                   Define em qual módulo o lançamento é criado após o OCR processar o boletim
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Identificador Visual (WhatsApp)</label>
+                <input
+                  style={{ ...inputStyle, marginTop: 4 }}
+                  placeholder="Ex: BIRIGUI SOLUÇÕES"
+                  value={identificadorVisual}
+                  onChange={e => setIdentificadorVisual(e.target.value)}
+                />
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Texto que aparece no cabeçalho do formulário físico. Usado para identificar automaticamente
+                  de qual cliente é o boletim recebido via WhatsApp, sem depender do número de telefone.
                 </div>
               </div>
               <div>
