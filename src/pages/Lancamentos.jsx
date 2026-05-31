@@ -2001,8 +2001,14 @@ export default function Lancamentos() {
   }
 
   const filtered = lancamentos.filter(l => {
+    const isDiario = l.tipo_formulario === 'diario'
     if (filterStatus === 'meus') {
-      if (l.status !== 'rascunho' && l.status !== 'devolvido') return false
+      if (isDiario) {
+        // Boletins diários criados por OCR: mostrar pendentes/aguardando aprovação
+        if (l.status !== 'pendente' && l.status !== 'aguardando_aprovacao' && l.status !== 'rascunho' && l.status !== 'devolvido') return false
+      } else {
+        if (l.status !== 'rascunho' && l.status !== 'devolvido') return false
+      }
     } else if (filterStatus === 'em_revisao') {
       if (l.status !== 'aguardando_aprovacao' && l.status !== 'corrigido') return false
     } else if (filterStatus !== 'todos' && l.status !== filterStatus) return false
@@ -2010,13 +2016,17 @@ export default function Lancamentos() {
     if (search) {
       const q = search.toLowerCase()
       const d = l.dados_extras || {}
+      const ocr = d.ocr || {}
       if (
         !l.descricao?.toLowerCase().includes(q) &&
         !l.centro_custo?.toLowerCase().includes(q) &&
         !d.numero_diario?.toLowerCase().includes(q) &&
         !d.empresa?.toLowerCase().includes(q) &&
         !d.placa?.toLowerCase().includes(q) &&
-        !d.solicitante?.toLowerCase().includes(q)
+        !d.solicitante?.toLowerCase().includes(q) &&
+        !ocr.empresa?.toLowerCase().includes(q) &&
+        !ocr.equipamento?.toLowerCase().includes(q) &&
+        !ocr.veiculo_placa?.toLowerCase().includes(q)
       ) return false
     }
     return true
@@ -2133,6 +2143,7 @@ export default function Lancamentos() {
           <select value={filterForm} onChange={e => setFilterForm(e.target.value)}
             style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 160 }}>
             <option value="todos">Todos formulários</option>
+            <option value="diario">Diário de Campo</option>
             <option value="transporte">Diário Motorista</option>
             <option value="padrao">Padrão</option>
           </select>
