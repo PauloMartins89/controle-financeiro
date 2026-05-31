@@ -229,19 +229,21 @@ function mapOcrToExtras(ocr, data) {
     responsavel_cliente_nome:       r.responsavel_cliente_nome || '',
     responsavel_cliente_matricula:  r.responsavel_cliente_matricula || '',
     // Unidade da empresa
-    unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || '',
-    // Jornada
-    jornada_inicio:      (() => { const v = r.jornada_inicio || null; return v || '' })(),
-    jornada_fim:         (() => { const v = r.jornada_fim    || null; return v || '' })(),
+    unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || r.cidade_estado || '',
+    // Jornada (aceita aliases: entrada/saida usados em boletins HJ e similares)
+    jornada_inicio:      (() => { const v = r.jornada_inicio || r.entrada || null; return v || '' })(),
+    jornada_fim:         (() => { const v = r.jornada_fim    || r.saida   || null; return v || '' })(),
     jornada_total_horas: (() => {
       const parseHHMM = s => { if (!s) return null; const m = String(s).match(/^(\d{1,2}):(\d{2})$/); return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : null }
-      const jIni = r.jornada_inicio || null
-      const jFim = r.jornada_fim    || null
+      const jIni = r.jornada_inicio || r.entrada || null
+      const jFim = r.jornada_fim    || r.saida   || null
       const jCalc = parseHHMM(jIni) != null && parseHHMM(jFim) != null
         ? parseFloat(((parseHHMM(jFim) - parseHHMM(jIni) + 24) % 24).toFixed(2))
         : null
       const hTrabVal = parseFloat(r.horas_trabalhadas || r.horas_produtivas || 0) || null
-      return parseFloat(r.jornada_total_horas || 0) || jCalc || hTrabVal || null
+      // r.total pode ser número ou string HH:MM (boletins HJ)
+      const totalRaw = r.jornada_total_horas || r.total || 0
+      return parseFloat(totalRaw) || parseHHMM(String(totalRaw)) || jCalc || hTrabVal || null
     })(),
     // N├║mero do documento (ficha pr├®-impressa)
     numero_documento: r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || '',
