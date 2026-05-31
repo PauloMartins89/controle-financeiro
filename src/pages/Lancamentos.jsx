@@ -2053,6 +2053,8 @@ export default function Lancamentos() {
     return 0
   }) : filtered
 
+  const isDiarioView = filterForm === 'diario'
+
   const totalReceitas  = filtered.filter(l => l.tipo === 'receita'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const totalDespesas  = filtered.filter(l => l.tipo === 'despesa'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const pendentes = filtered.filter(l => ['rascunho','aguardando_aprovacao','devolvido','corrigido'].includes(l.status)).length
@@ -2210,14 +2212,14 @@ export default function Lancamentos() {
                     />
                   </th>
                   <ColHead colKey="data" label="DATA" />
-                  <ColHead colKey="numDm" label="Nº DM" />
-                  <ColHead colKey="cliente" label="CLIENTE / DESCRIÇÃO" />
-                  <ColHead colKey="origem" label="ORIGEM" />
-                  <ColHead colKey="destino" label="DESTINO" />
+                  <ColHead colKey="numDm" label={isDiarioView ? 'EQUIPAMENTO' : 'Nº DM'} />
+                  <ColHead colKey="cliente" label={isDiarioView ? 'EMPRESA' : 'CLIENTE / DESCRIÇÃO'} />
+                  <ColHead colKey="origem" label={isDiarioView ? 'SERVIÇO' : 'ORIGEM'} />
+                  <ColHead colKey="destino" label={isDiarioView ? 'EQUIPE DIURNA' : 'DESTINO'} />
                   <ColHead colKey="placa" label="PLACA" />
-                  <ColHead colKey="kmAsf" label="KM ASF" align="right" />
-                  <ColHead colKey="kmTer" label="KM TER" align="right" />
-                  <ColHead colKey="kmTotal" label="KM TOTAL" align="right" />
+                  {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
+                  {!isDiarioView && <ColHead colKey="kmTer" label="KM TER" align="right" />}
+                  {!isDiarioView && <ColHead colKey="kmTotal" label="KM TOTAL" align="right" />}
                   <ColHead colKey="valor" label="VALOR" align="right" />
                   <ColHead colKey="status" label="STATUS" />
                   <th style={{ padding: '9px 12px', width: 80, background: LC.secondary, borderBottom: `1px solid ${LC.border}` }} />
@@ -2226,7 +2228,9 @@ export default function Lancamentos() {
               <tbody>
                 {sortedFiltered.map(l => {
                   const isTransporte = (l.tipo_formulario || 'padrao') === 'transporte'
+                  const isDiario = l.tipo_formulario === 'diario'
                   const d = l.dados_extras || {}
+                  const ocr = isDiario ? (d.ocr || {}) : {}
                   const km = isTransporte ? calcKmTotais(d) : null
                   const fmtKm = v => v > 0 ? v.toLocaleString('pt-BR') : '—'
 
@@ -2260,49 +2264,53 @@ export default function Lancamentos() {
                       {EDITABLE_TD('data', l.data, (
                         <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
                       ))}
-                      {/* Nº DM */}
-                      {EDITABLE_TD('numero_diario', d.numero_diario, (
+                      {/* Nº DM / EQUIPAMENTO */}
+                      {EDITABLE_TD('numero_diario', isDiario ? ocr.equipamento : d.numero_diario, (
                         <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap' }}>
-                          {isTransporte && d.numero_diario
-                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#eef0fe', color: LC.accent }}>{d.numero_diario}</span>
-                            : <span style={{ color: LC.txtMuted }}>—</span>}
+                          {isDiario
+                            ? (ocr.equipamento ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#dcfce7', color: '#16a34a' }}>{ocr.equipamento}</span> : <span style={{ color: LC.txtMuted }}>—</span>)
+                            : (isTransporte && d.numero_diario ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#eef0fe', color: LC.accent }}>{d.numero_diario}</span> : <span style={{ color: LC.txtMuted }}>—</span>)}
                         </span>
                       ))}
-                      {/* CLIENTE */}
-                      {EDITABLE_TD('cliente', d.cliente || d.empresa || l.descricao, (
+                      {/* CLIENTE / EMPRESA */}
+                      {EDITABLE_TD('cliente', isDiario ? ocr.empresa : (d.cliente || d.empresa || l.descricao), (
                         <div style={{ padding: '9px 12px', maxWidth: 180 }}>
                           <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: LC.txtPrimary }}>
-                            {isTransporte ? (d.cliente || d.empresa || l.descricao) : l.descricao}
+                            {isDiario ? (ocr.empresa || l.descricao) : (isTransporte ? (d.cliente || d.empresa || l.descricao) : l.descricao)}
                           </div>
-                          {d.condutor && <div style={{ fontSize: 11, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor}</div>}
+                          {!isDiario && d.condutor && <div style={{ fontSize: 11, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor}</div>}
                         </div>
                       ))}
-                      {/* ORIGEM */}
-                      {EDITABLE_TD('local_origem', d.local_origem, (
-                        <span style={{ padding: '9px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {isTransporte ? (d.local_origem || '—') : '—'}
+                      {/* ORIGEM / SERVIÇO */}
+                      {EDITABLE_TD('local_origem', isDiario ? ocr.servico_executado : d.local_origem, (
+                        <span title={isDiario ? (ocr.servico_executado || '') : ''}
+                          style={{ padding: '9px 12px', display: 'block', maxWidth: 200, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isDiario ? (ocr.servico_executado || '—') : (isTransporte ? (d.local_origem || '—') : '—')}
                         </span>
                       ))}
-                      {/* DESTINO */}
-                      {EDITABLE_TD('local_destino', d.local_destino, (
-                        <span style={{ padding: '9px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {isTransporte ? (d.local_destino || '—') : '—'}
+                      {/* DESTINO / EQUIPE */}
+                      {EDITABLE_TD('local_destino', isDiario ? ocr.equipe_diurna : d.local_destino, (
+                        <span title={isDiario ? (ocr.equipe_diurna || '') : ''}
+                          style={{ padding: '9px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isDiario ? (ocr.equipe_diurna || '—') : (isTransporte ? (d.local_destino || '—') : '—')}
                         </span>
                       ))}
                       {/* PLACA */}
-                      {EDITABLE_TD('placa', d.placa, (
-                        <span style={{ padding: '9px 12px', display: 'block', fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap', letterSpacing: 0.5, color: LC.txtPrimary }}>{d.placa || <span style={{ color: LC.txtMuted }}>—</span>}</span>
+                      {EDITABLE_TD('placa', isDiario ? ocr.veiculo_placa : d.placa, (
+                        <span style={{ padding: '9px 12px', display: 'block', fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap', letterSpacing: 0.5, color: LC.txtPrimary }}>
+                          {(isDiario ? ocr.veiculo_placa : d.placa) || <span style={{ color: LC.txtMuted }}>—</span>}
+                        </span>
                       ))}
                       {/* KM ASF */}
-                      {isTransporte ? EDITABLE_TD('km_asfalto', km?.asfalto, (
+                      {!isDiarioView && (isTransporte ? EDITABLE_TD('km_asfalto', km?.asfalto, (
                         <span style={{ padding: '9px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.asfalto > 0 ? 700 : 400, color: km?.asfalto > 0 ? LC.accent : LC.txtMuted, fontSize: 12 }}>{fmtKm(km?.asfalto)}</span>
-                      ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>}
+                      ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>)}
                       {/* KM TER */}
-                      {isTransporte ? EDITABLE_TD('km_terra', km?.terra, (
+                      {!isDiarioView && (isTransporte ? EDITABLE_TD('km_terra', km?.terra, (
                         <span style={{ padding: '9px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.terra > 0 ? 700 : 400, color: km?.terra > 0 ? '#d97706' : LC.txtMuted, fontSize: 12 }}>{fmtKm(km?.terra)}</span>
-                      ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>}
+                      ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>)}
                       {/* KM TOTAL */}
-                      <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.total > 0 ? 800 : 400, color: km?.total > 0 ? LC.txtPrimary : LC.txtMuted, fontSize: 13 }}>{fmtKm(km?.total)}</td>
+                      {!isDiarioView && <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.total > 0 ? 800 : 400, color: km?.total > 0 ? LC.txtPrimary : LC.txtMuted, fontSize: 13 }}>{fmtKm(km?.total)}</td>}
                       {/* VALOR */}
                       {EDITABLE_TD('valor', l.valor, (
                         <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
