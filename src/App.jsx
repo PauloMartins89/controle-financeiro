@@ -69,6 +69,7 @@ import AgendaServicos from './pages/AgendaServicos'
 import MapaApontamentoMaquina from './pages/MapaApontamentoMaquina'
 import MaquinasDashboard from './pages/MaquinasDashboard'
 import BoletinsPendencias from './pages/BoletinsPendencias'
+import BoletinsDiarios from './pages/BoletinsDiarios'
 import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
@@ -621,6 +622,7 @@ export default function App() {
                   <Route path="/mapa-maquina" element={<MapaApontamentoMaquina />} />
                   <Route path="/maquinas/dashboard" element={<MaquinasDashboard />} />
                   <Route path="/maquinas/pendencias" element={<BoletinsPendencias />} />
+                  <Route path="/gerencial/boletins-diarios" element={<BoletinsDiarios />} />
                 </Routes>
               </main>
             </div>
