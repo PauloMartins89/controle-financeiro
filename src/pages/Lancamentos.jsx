@@ -2215,7 +2215,7 @@ export default function Lancamentos() {
                   <ColHead colKey="numDm" label={isDiarioView ? 'EQUIPAMENTO' : 'Nº DM'} />
                   <ColHead colKey="cliente" label={isDiarioView ? 'EMPRESA' : 'CLIENTE / DESCRIÇÃO'} />
                   <ColHead colKey="origem" label={isDiarioView ? 'SERVIÇO' : 'ORIGEM'} />
-                  <ColHead colKey="destino" label={isDiarioView ? 'EQUIPE DIURNA' : 'DESTINO'} />
+                  {!isDiarioView && <ColHead colKey="destino" label="DESTINO" />}
                   <ColHead colKey="placa" label="PLACA" />
                   {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
                   {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
@@ -2290,11 +2290,10 @@ export default function Lancamentos() {
                           {isDiario ? (ocr.servico_executado || '—') : (isTransporte ? (d.local_origem || '—') : '—')}
                         </span>
                       ))}
-                      {/* DESTINO / EQUIPE */}
-                      {EDITABLE_TD('local_destino', isDiario ? ocr.equipe_diurna : d.local_destino, (
-                        <span title={isDiario ? (ocr.equipe_diurna || '') : ''}
-                          style={{ padding: '9px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {isDiario ? (ocr.equipe_diurna || '—') : (isTransporte ? (d.local_destino || '—') : '—')}
+                      {/* DESTINO (só para não-diário) */}
+                      {!isDiario && EDITABLE_TD('local_destino', d.local_destino, (
+                        <span style={{ padding: '9px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {isTransporte ? (d.local_destino || '—') : '—'}
                         </span>
                       ))}
                       {/* PLACA */}
