@@ -19,19 +19,19 @@ async function callGroq(apiKey, messages) {
   return json.choices?.[0]?.message?.content || ''
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // ocr-boletim-maquina.js
 // Engine de OCR template-based para boletins de campo
 //
 // Fluxo:
 //   1. Carrega o boletim + colaborador + frente + boletim_tipo (campos_json)
 //   2. Chama GPT-4 Vision com imagem do template + campos + imagem real
-//   3. Para cada campo extraído: verifica aliases → match fuzzy nas tabelas
-//      - ≥ 90% → status 'ok'  → cria lançamento se todos ok
-//      - 60–89% → 'pendente'  → aguarda revisão admin
-//      - < 60%  → 'nao_encontrado'
+//   3. Para cada campo extra├¡do: verifica aliases ÔåÆ match fuzzy nas tabelas
+//      - ÔëÑ 90% ÔåÆ status 'ok'  ÔåÆ cria lan├ºamento se todos ok
+//      - 60ÔÇô89% ÔåÆ 'pendente'  ÔåÆ aguarda revis├úo admin
+//      - < 60%  ÔåÆ 'nao_encontrado'
 //   4. Notifica colaborador via WhatsApp
-// ─────────────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 
 const supabaseUrl        = process.env.SUPABASE_URL        || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
@@ -40,8 +40,8 @@ const zapiInstanceId     = process.env.ZAPI_INSTANCE_ID
 const zapiToken          = process.env.ZAPI_TOKEN
 const APP_URL            = process.env.APP_URL || 'https://smartpro.app.br'
 
-const CONF_AUTO  = 90   // ≥ 90% → ok automático
-const CONF_PEND  = 60   // 60–89% → pendente revisão
+const CONF_AUTO  = 90   // ÔëÑ 90% ÔåÆ ok autom├ítico
+const CONF_PEND  = 60   // 60ÔÇô89% ÔåÆ pendente revis├úo
 
 function getSupabase() {
   if (!supabaseUrl || !supabaseServiceKey) return null
@@ -58,29 +58,24 @@ async function zapiSendText(phone, message) {
       `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
       {
         method:  'POST',
-          ? `Analise este boletim de apontamento. O formulário tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}, responsavel_birigui_nome, responsavel_birigui_matricula, responsavel_cliente_nome, responsavel_cliente_matricula.`
+        headers: {
           'Content-Type': 'application/json',
-      data: data do boletim (DD/MM/YYYY)
-      turno: "dia", "noite" ou "integral" conforme marcado
-      colaborador: nome do operador/colaborador
-      equipamento: código ou nome do equipamento (ex: EH-22, CAD 320)
-      classe_operacional: classe/tipo do equipamento
-      frente: local ou frente de trabalho
-      cdc: centro de custo
-      atividade_realizada: atividade ou serviço realizado (resumo curto)
-      descritivo_trabalho: descrição detalhada do trabalho executado
-      observacoes: observações, ocorrências ou anomalias registradas
-      horimetro_inicial: leitura inicial do horímetro (número)
-      horimetro_final: leitura final do horímetro (número)
-      horas_trabalhadas: total de horas trabalhadas (número)
-      horas_disponiveis: horas disponíveis ou horas totais do turno (número, se informado)
-      horas_espera: horas em espera, ociosas ou de manutenção (número)
-      produtividade_quantidade: quantidade produzida (número)
-      responsavel_birigui_nome: nome do responsável Birigui pela execução do serviço
-      responsavel_birigui_matricula: matrícula do responsável Birigui
-      responsavel_cliente_nome: nome do responsável Cliente pela liberação/validação
-      responsavel_cliente_matricula: matrícula do responsável Cliente
-      numero_documento: número de controle pré-impresso da ficha/formulário (geralmente no canto superior direito, ex: 2351)`
+          ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+        },
+        body: JSON.stringify({ phone, message }),
+      }
+    )
+  } catch (e) {
+    console.error('[ocr-boletim] zapiSendText error:', e.message)
+  }
+}
+
+// Normaliza texto para lookup de alias (trim + upper + colapsa espa├ºos)
+function normalizeAlias(s) {
+  return (s || '').trim().toUpperCase().replace(/\s+/g, ' ')
+}
+
+// Dist├óncia de Levenshtein simples (para fuzzy matching)
 function levenshtein(a, b) {
   const m = a.length, n = b.length
   const dp = Array.from({ length: m + 1 }, (_, i) =>
@@ -102,7 +97,7 @@ function similaridade(a, b) {
   const na = normalizeAlias(a)
   const nb = normalizeAlias(b)
   if (na === nb) return 100
-  // Checa se um contém o outro
+  // Checa se um cont├®m o outro
   if (na.includes(nb) || nb.includes(na)) {
     const shorter = Math.min(na.length, nb.length)
     const longer  = Math.max(na.length, nb.length)
@@ -119,7 +114,7 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
 
   const normRaw = normalizeAlias(valorRaw)
 
-  // 1️⃣ Verifica alias aprendido (match exato normalizado)
+  // 1´©ÅÔâú Verifica alias aprendido (match exato normalizado)
   const { data: alias } = await supabase
     .from('maquinas_aliases')
     .select('match_id, match_tabela')
@@ -132,7 +127,7 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
     return { matchId: alias.match_id, tabela: alias.match_tabela, confianca: 100, propostaTxt: null }
   }
 
-  // 2️⃣ Configuração de qual tabela e campo buscar por campoTipo
+  // 2´©ÅÔâú Configura├º├úo de qual tabela e campo buscar por campoTipo
   const config = {
     colaborador:  { tabela: 'maquinas_colaboradores', campo: 'nome' },
     equipamento:  { tabela: 'maquinas_equipamentos',  campo: 'codigo' },
@@ -142,7 +137,7 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
   const cfg = config[campoTipo]
   if (!cfg) return { matchId: null, tabela: null, confianca: 0, propostaTxt: null }
 
-  // 3️⃣ Tenta match exato ignorando case (ilike)
+  // 3´©ÅÔâú Tenta match exato ignorando case (ilike)
   const { data: exatos } = await supabase
     .from(cfg.tabela)
     .select(`id, ${cfg.campo}`)
@@ -156,11 +151,11 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
       matchId:     exatos[0].id,
       tabela:      cfg.tabela,
       confianca:   95,
-      propostaTxt: `${exatos[0][cfg.campo]} — 95% (match exato)`,
+      propostaTxt: `${exatos[0][cfg.campo]} ÔÇö 95% (match exato)`,
     }
   }
 
-  // 4️⃣ Carrega todos os registros para fuzzy match
+  // 4´©ÅÔâú Carrega todos os registros para fuzzy match
   const { data: todos } = await supabase
     .from(cfg.tabela)
     .select(`id, ${cfg.campo}`)
@@ -187,33 +182,25 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
     matchId:     melhor.id,
     tabela:      cfg.tabela,
     confianca:   melhorConf,
-    propostaTxt: `${melhor[cfg.campo]} — ${melhorConf}% de similaridade`,
+    propostaTxt: `${melhor[cfg.campo]} ÔÇö ${melhorConf}% de similaridade`,
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // Processa um boletim completo
-// ─────────────────────────────────────────────────────────────────────────────
-// Mapeia campos OCR brutos para estrutura padrão do MapaApontamentoMaquina
+// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// Mapeia campos OCR brutos para estrutura padr├úo do MapaApontamentoMaquina
 function mapOcrToExtras(ocr, data) {
   const r     = ocr || {}
   const hTrab = parseFloat(r.horas_trabalhadas || r.horas_produtivas || 0) || null
-  // horas_disponiveis: usa campo explícito, ou calcula de horímetro, ou horas_totais
+  // horas_disponiveis: usa campo expl├¡cito, ou calcula de hor├¡metro, ou horas_totais
   const hIni  = parseFloat(r.horimetro_inicial || 0) || null
   const hFin  = parseFloat(r.horimetro_final   || 0) || null
   const hDisp = parseFloat(r.horas_disponiveis || r.horas_totais || 0) ||
                 (hIni != null && hFin != null ? parseFloat((hFin - hIni).toFixed(2)) : null)
   const pct   = hDisp && hTrab ? parseFloat((hTrab / hDisp * 100).toFixed(2)) : null
-  // Jornada: calcula total a partir dos horários HH:MM ou usa campo direto
-  const parseHHMM = s => { if (!s) return null; const m = String(s).match(/^(\d{1,2}):(\d{2})$/); return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : null }
-  const jInicio  = r.jornada_inicio || null
-  const jFim     = r.jornada_fim    || null
-  const jCalc    = parseHHMM(jInicio) != null && parseHHMM(jFim) != null
-    ? parseFloat(((parseHHMM(jFim) - parseHHMM(jInicio) + 24) % 24).toFixed(2))
-    : null
-  const jTotal   = parseFloat(r.jornada_total_horas || 0) || jCalc || hTrab || null
   return {
-    // Identificação
+    // Identifica├º├úo
     equipamento:           (r.equipamento || '').toUpperCase(),
     modelo:                r.modelo || '',
     classe_operacional:    r.classe || r.classe_operacional || '',
@@ -236,21 +223,35 @@ function mapOcrToExtras(ocr, data) {
     produtividade_qtd:     parseFloat(r.produtividade_quantidade || r.produtividade || 0) || null,
     produtividade_un:      r.produtividade_unidade || r.unidade_medida || '',
     produtividade_hora:    parseFloat(r.produtividade_por_hora || 0) || null,
-    // Identificação do documento
-    numero_documento:      r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || '',
+    // Respons├íveis
+    responsavel_birigui_nome:       r.responsavel_birigui_nome || '',
+    responsavel_birigui_matricula:  r.responsavel_birigui_matricula || '',
+    responsavel_cliente_nome:       r.responsavel_cliente_nome || '',
+    responsavel_cliente_matricula:  r.responsavel_cliente_matricula || '',
     // Unidade da empresa
     unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || '',
     // Jornada
-    jornada_inicio:        jInicio || '',
-    jornada_fim:           jFim    || '',
-    jornada_total_horas:   jTotal,
+    jornada_inicio:      (() => { const v = r.jornada_inicio || null; return v || '' })(),
+    jornada_fim:         (() => { const v = r.jornada_fim    || null; return v || '' })(),
+    jornada_total_horas: (() => {
+      const parseHHMM = s => { if (!s) return null; const m = String(s).match(/^(\d{1,2}):(\d{2})$/); return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : null }
+      const jIni = r.jornada_inicio || null
+      const jFim = r.jornada_fim    || null
+      const jCalc = parseHHMM(jIni) != null && parseHHMM(jFim) != null
+        ? parseFloat(((parseHHMM(jFim) - parseHHMM(jIni) + 24) % 24).toFixed(2))
+        : null
+      const hTrabVal = parseFloat(r.horas_trabalhadas || r.horas_produtivas || 0) || null
+      return parseFloat(r.jornada_total_horas || 0) || jCalc || hTrabVal || null
+    })(),
+    // N├║mero do documento (ficha pr├®-impressa)
+    numero_documento: r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || '',
   }
 }
 
 async function processarBoletim(boletimId) {
   const supabase = getSupabase()
-  if (!supabase) throw new Error('supabase não configurado')
-  if (!groqApiKey) throw new Error('GROQ_API_KEY não configurada no servidor')
+  if (!supabase) throw new Error('supabase n├úo configurado')
+  if (!groqApiKey) throw new Error('GROQ_API_KEY n├úo configurada no servidor')
 
   // Carrega boletim + relacionamentos
   const { data: bol, error: bolErr } = await supabase
@@ -263,14 +264,14 @@ async function processarBoletim(boletimId) {
     .eq('id', boletimId)
     .single()
 
-  if (bolErr || !bol) throw new Error(`boletim não encontrado: ${bolErr?.message}`)
+  if (bolErr || !bol) throw new Error(`boletim n├úo encontrado: ${bolErr?.message}`)
 
   const colaborador   = bol.maquinas_colaboradores
   let   boletimTipo   = bol.maquinas_boletim_tipos
   const workspaceId   = bol.workspace_id
   const waPhone       = bol.wa_from
 
-  // Fallback: se o join PostgREST não trouxe o tipo, busca separadamente
+  // Fallback: se o join PostgREST n├úo trouxe o tipo, busca separadamente
   if (!boletimTipo && bol.boletim_tipo_id) {
     const { data: tipoFallback } = await supabase
       .from('maquinas_boletim_tipos')
@@ -286,46 +287,50 @@ async function processarBoletim(boletimId) {
   // Atualiza status para 'processando'
   await supabase.from('maquinas_boletins').update({ status: 'processando' }).eq('id', boletimId)
 
-  // ── OCR via GPT-4 Vision ─────────────────────────────────────────────────
+  // ÔöÇÔöÇ OCR via GPT-4 Vision ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   const camposJson = boletimTipo?.campos_json || {}
   const camposDescricao = Object.entries(camposJson)
     .map(([k, v]) => `- ${k}: "${v.label}" (tipo: ${v.tipo})`)
     .join('\n')
 
   const systemPrompt = [
-    'Você é um sistema de OCR especializado em boletins de apontamento de máquinas.',
-    'Extraia os campos do formulário da imagem e retorne um JSON com as chaves exatamente como listadas.',
-    'Para campos não preenchidos ou ilegíveis, use null.',
-    'Retorne APENAS o JSON, sem explicações.',
+    'Voc├¬ ├® um sistema de OCR especializado em boletins de apontamento de m├íquinas.',
+    'Extraia os campos do formul├írio da imagem e retorne um JSON com as chaves exatamente como listadas.',
+    'Para campos n├úo preenchidos ou ileg├¡veis, use null.',
+    'Retorne APENAS o JSON, sem explica├º├Áes.',
   ].join(' ')
 
   const userPrompt = boletimTipo?.imagem_url
-    ? `Analise este boletim de apontamento. O formulário tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}.`
-    : `Extraia TODOS os dados deste formulário de apontamento de máquinas. Retorne um JSON com as seguintes chaves (use null se o campo não existir ou estiver ilegível):
+    ? `Analise este boletim de apontamento. O formul├írio tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}, responsavel_birigui_nome, responsavel_birigui_matricula, responsavel_cliente_nome, responsavel_cliente_matricula, numero_documento.`
+    : `Extraia TODOS os dados deste formul├írio de apontamento de m├íquinas. Retorne um JSON com as seguintes chaves (use null se o campo n├úo existir ou estiver ileg├¡vel):
 - data: data do boletim (DD/MM/YYYY)
 - turno: "dia", "noite" ou "integral" conforme marcado
 - colaborador: nome do operador/colaborador
-- equipamento: código ou nome do equipamento (ex: EH-22, CAD 320)
+- equipamento: c├│digo ou nome do equipamento (ex: EH-22, CAD 320)
 - classe_operacional: classe/tipo do equipamento
 - frente: local ou frente de trabalho
 - cdc: centro de custo
-- atividade_realizada: atividade ou serviço realizado (resumo curto)
-- descritivo_trabalho: descrição detalhada do trabalho executado
-- observacoes: observações, ocorrências ou anomalias registradas
-- horimetro_inicial: leitura inicial do horímetro (número)
-- horimetro_final: leitura final do horímetro (número)
-- horas_trabalhadas: total de horas trabalhadas (número)
-- horas_disponiveis: horas disponíveis ou horas totais do turno (número, se informado)
-- horas_espera: horas em espera, ociosas ou de manutenção (número)
-- produtividade_quantidade: quantidade produzida (número)
-- produtividade_unidade: unidade de medida da produção (ex: m3, ton)
-- produtividade_por_hora: produtividade por hora (número)
-- unidade_empresa: unidade/filial/localidade da empresa cliente onde o serviço foi executado (ex: Três Lagoas, Birigui, Araçatuba)
-- jornada_inicio: horário de início do serviço/jornada (formato HH:MM, ex: 07:00)
-- jornada_fim: horário de encerramento do serviço/jornada (formato HH:MM, ex: 17:00)
-- jornada_total_horas: total de horas corridas da jornada (número decimal, ex: 10.0)
-- numero_documento: número de controle pré-impresso da ficha/formulário, geralmente no canto superior direito da folha em destaque (ex: 2351)
-Retorne APENAS o JSON, sem comentários.`
+- atividade_realizada: atividade ou servi├ºo realizado (resumo curto)
+- descritivo_trabalho: descri├º├úo detalhada do trabalho executado
+- observacoes: observa├º├Áes, ocorr├¬ncias ou anomalias registradas
+- horimetro_inicial: leitura inicial do hor├¡metro (n├║mero)
+- horimetro_final: leitura final do hor├¡metro (n├║mero)
+- horas_trabalhadas: total de horas trabalhadas (n├║mero)
+- horas_disponiveis: horas dispon├¡veis ou horas totais do turno (n├║mero, se informado)
+- horas_espera: horas em espera, ociosas ou de manuten├º├úo (n├║mero)
+- produtividade_quantidade: quantidade produzida (n├║mero)
+- produtividade_unidade: unidade de medida da produ├º├úo (ex: m3, ton)
+- produtividade_por_hora: produtividade por hora (n├║mero)
+- responsavel_birigui_nome: nome do respons├ível Birigui pela execu├º├úo do servi├ºo
+- responsavel_birigui_matricula: matr├¡cula do respons├ível Birigui
+- responsavel_cliente_nome: nome do respons├ível Cliente pela libera├º├úo/valida├º├úo
+- responsavel_cliente_matricula: matr├¡cula do respons├ível Cliente
+- unidade_empresa: unidade/filial/localidade da empresa cliente onde o servi├ºo foi executado (ex: Tr├¬s Lagoas, Birigui, Ara├ºatuba)
+- jornada_inicio: hor├írio de in├¡cio do servi├ºo/jornada (formato HH:MM, ex: 07:00)
+- jornada_fim: hor├írio de encerramento do servi├ºo/jornada (formato HH:MM, ex: 17:00)
+- jornada_total_horas: total de horas corridas da jornada (n├║mero decimal, ex: 10.0)
+- numero_documento: n├║mero de controle pr├®-impresso da ficha/formul├írio, geralmente no canto superior direito da folha em destaque (ex: 2351)
+Retorne APENAS o JSON, sem coment├írios.`
 
   let ocrRaw = {}
   try {
@@ -346,22 +351,22 @@ Retorne APENAS o JSON, sem comentários.`
   } catch (e) {
     console.error('[ocr-boletim] groq error:', e.message)
     await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
-    if (waPhone) await zapiSendText(waPhone, `❌ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
+    if (waPhone) await zapiSendText(waPhone, `ÔØî Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
     return
   }
 
   // Salva o OCR bruto
   await supabase.from('maquinas_boletins').update({ ocr_raw: ocrRaw }).eq('id', boletimId)
 
-  // ── Matching de campos ───────────────────────────────────────────────────
-  // Mapeamento de chave OCR → tipo de campo para matching
+  // ÔöÇÔöÇ Matching de campos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // Mapeamento de chave OCR ÔåÆ tipo de campo para matching
   const tipoMatchMap = {
     operador:         'colaborador',
     colaborador:      'colaborador',
     equipamento:      'equipamento',
     classe:           'classe',
     frente:           'frente',
-    // campos numéricos e texto não precisam de matching cadastral
+    // campos num├®ricos e texto n├úo precisam de matching cadastral
   }
 
   const camposTiposAtivos = Object.keys(camposJson).length > 0
@@ -370,14 +375,17 @@ Retorne APENAS o JSON, sem comentários.`
 
   const registrosCampos = []
   let   temPendente     = false
-    // Validação obrigatória: se vier nome do responsável cliente e matrícula vazia, marcar pendente
-    if (
-      ocrRaw.responsavel_cliente_nome &&
-      (!ocrRaw.responsavel_cliente_matricula || String(ocrRaw.responsavel_cliente_matricula).trim() === '' || ocrRaw.responsavel_cliente_matricula === '—')
-    ) {
-      temPendente = true
-    }
   let   dataBoletim     = null
+
+  // Valida├º├úo: responsavel_cliente sem matr├¡cula ÔåÆ pendente
+  if (
+    ocrRaw.responsavel_cliente_nome &&
+    (!ocrRaw.responsavel_cliente_matricula ||
+      String(ocrRaw.responsavel_cliente_matricula).trim() === '' ||
+      ocrRaw.responsavel_cliente_matricula === '\u2014')
+  ) {
+    temPendente = true
+  }
 
   for (const campoKey of camposTiposAtivos) {
     const valorRaw   = ocrRaw[campoKey] != null ? String(ocrRaw[campoKey]) : null
@@ -386,7 +394,7 @@ Retorne APENAS o JSON, sem comentários.`
 
     // Extrai data para salvar em data_boletim
     if ((campoKey === 'data' || campoTipo === 'data') && valorRaw) {
-      // Tenta vários formatos: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY
+      // Tenta v├írios formatos: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY
       const m1 = valorRaw.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/)
       const m2 = valorRaw.match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/)
       if (m1) dataBoletim = `${m1[3]}-${m1[2]}-${m1[1]}`
@@ -414,7 +422,7 @@ Retorne APENAS o JSON, sem comentários.`
         proposta_texto:  match.propostaTxt,
       })
     } else {
-      // Campo numérico, texto ou sem valor — salva direto sem matching
+      // Campo num├®rico, texto ou sem valor ÔÇö salva direto sem matching
       const statusCampo = valorRaw ? 'ok' : 'ignorado'
       registrosCampos.push({
         boletim_id:      boletimId,
@@ -435,25 +443,25 @@ Retorne APENAS o JSON, sem comentários.`
     if (camposErr) console.error('[ocr-boletim] campos insert error:', camposErr.message)
   }
 
-  // Atualiza data_boletim se extraída
+  // Atualiza data_boletim se extra├¡da
   const updateData = dataBoletim ? { data_boletim: dataBoletim } : {}
 
-  // ── Resultado final ──────────────────────────────────────────────────────
+  // ÔöÇÔöÇ Resultado final ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   const isGerencial = boletimTipo?.modulo_destino === 'gerencial'
   console.log(`[ocr-boletim] isGerencial=${isGerencial} | boletim_tipo_id=${bol.boletim_tipo_id} | modulo_destino=${boletimTipo?.modulo_destino} | temPendente=${temPendente}`)
 
   if (isGerencial) {
-    // ── Fluxo Gerencial ──────────────────────────────────────────────────
-    // Cria o lançamento SEMPRE, independente de campos pendentes.
-    // O lançamento com status 'pendente' é o próprio documento de revisão:
-    // o usuário abre no Gerencial, corrige o que o OCR errou e salva.
+    // ÔöÇÔöÇ Fluxo Gerencial ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    // Cria o lan├ºamento SEMPRE, independente de campos pendentes.
+    // O lan├ºamento com status 'pendente' ├® o pr├│prio documento de revis├úo:
+    // o usu├írio abre no Gerencial, corrige o que o OCR errou e salva.
     const { data: lancamento, error: lancErr } = await supabase
       .from('lancamentos')
       .insert({
         workspace_id:    workspaceId,
         user_id:         null,
         tipo:            'despesa',
-        descricao:       `Boletim ${bol.numero} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
+        descricao:       `Boletim ${bol.numero} ÔÇö ${colaborador?.nome || 'Colaborador'} ÔÇö ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
         valor:           0,
         data:            dataBoletim || new Date().toISOString().slice(0, 10),
         categoria:       'Campo',
@@ -483,23 +491,23 @@ Retorne APENAS o JSON, sem comentários.`
         ? dataBoletim.split('-').reverse().join('/')
         : new Date().toLocaleDateString('pt-BR')
       const msg = temPendente
-        ? `📋 *Boletim ${bol.numero}* do dia ${dataFmt} recebido!\n\n_Alguns campos precisam de revisão. Acesse o sistema para validar._`
-        : `✅ *Boletim ${bol.numero}* do dia ${dataFmt} processado com sucesso!`
+        ? `­ƒôï *Boletim ${bol.numero}* do dia ${dataFmt} recebido!\n\n_Alguns campos precisam de revis├úo. Acesse o sistema para validar._`
+        : `Ô£à *Boletim ${bol.numero}* do dia ${dataFmt} processado com sucesso!`
       await zapiSendText(waPhone, msg)
     }
 
   } else if (!temPendente) {
-    // ── Fluxo Máquinas — todos os campos ok → cria lançamento ────────────
+    // ÔöÇÔöÇ Fluxo M├íquinas ÔÇö todos os campos ok ÔåÆ cria lan├ºamento ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     const { data: lancamento, error: lancErr } = await supabase
       .from('lancamentos')
       .insert({
         workspace_id:    workspaceId,
         user_id:         null,
         tipo:            'despesa',
-        descricao:       `Boletim ${bol.numero} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
+        descricao:       `Boletim ${bol.numero} ÔÇö ${colaborador?.nome || 'Colaborador'} ÔÇö ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
         valor:           0,
         data:            dataBoletim || new Date().toISOString().slice(0, 10),
-        categoria:       'Máquinas',
+        categoria:       'M├íquinas',
         centro_custo:    '',
         status:          'pendente',
         observacoes:     ocrRaw.observacao || ocrRaw.observacoes || '',
@@ -527,11 +535,11 @@ Retorne APENAS o JSON, sem comentários.`
         : new Date().toLocaleDateString('pt-BR')
       await zapiSendText(
         waPhone,
-        `✅ *Boletim ${bol.numero}* do dia ${dataFmt} processado com sucesso!\n\n_Todos os campos foram identificados automaticamente._`
+        `Ô£à *Boletim ${bol.numero}* do dia ${dataFmt} processado com sucesso!\n\n_Todos os campos foram identificados automaticamente._`
       )
     }
   } else {
-    // ── Fluxo Máquinas — campos pendentes → revisão do admin ─────────────
+    // ÔöÇÔöÇ Fluxo M├íquinas ÔÇö campos pendentes ÔåÆ revis├úo do admin ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     await supabase.from('maquinas_boletins').update({
       status:  'pendente_revisao',
       ...updateData,
@@ -540,24 +548,24 @@ Retorne APENAS o JSON, sem comentários.`
     if (waPhone) {
       await zapiSendText(
         waPhone,
-        `⚠️ *Boletim ${bol.numero}* recebido!\n\nAlguns campos precisam ser confirmados pelo supervisor. Você será avisado assim que for revisado.`
+        `ÔÜá´©Å *Boletim ${bol.numero}* recebido!\n\nAlguns campos precisam ser confirmados pelo supervisor. Voc├¬ ser├í avisado assim que for revisado.`
       )
     }
 
-    console.log(`[ocr-boletim] boletim ${bol.numero} (${boletimId}) aguarda revisão admin — ${registrosCampos.filter(c => c.status_match !== 'ok' && c.status_match !== 'ignorado').length} campo(s) pendente(s)`)
+    console.log(`[ocr-boletim] boletim ${bol.numero} (${boletimId}) aguarda revis├úo admin ÔÇö ${registrosCampos.filter(c => c.status_match !== 'ok' && c.status_match !== 'ignorado').length} campo(s) pendente(s)`)
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 // Handler Vercel
-// ─────────────────────────────────────────────────────────────────────────────
+// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   const { boletimId } = req.body || {}
-  if (!boletimId) return res.status(400).json({ error: 'boletimId obrigatório' })
+  if (!boletimId) return res.status(400).json({ error: 'boletimId obrigat├│rio' })
 
-  // Processa primeiro (maxDuration: 60s) e só depois responde
+  // Processa primeiro (maxDuration: 60s) e s├│ depois responde
   await processarBoletim(boletimId).catch(e =>
     console.error('[ocr-boletim-maquina] processarBoletim error:', e.message)
   )
