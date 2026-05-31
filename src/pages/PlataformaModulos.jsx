@@ -5,42 +5,37 @@ import { PuzzlePieceIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/
 // Mapeamento de todos os módulos disponíveis na plataforma
 const TODOS_MODULOS = [
   // ── FinanceiroPro ─────────────────────────────────────────
-  { key: 'dashboard',     label: 'Início / Dashboard',    descricao: 'Tela inicial e visão geral' },
-  { key: 'despesas',      label: 'Despesas',              descricao: 'Lançamentos de despesas' },
-  { key: 'acertos',       label: 'Acertos',               descricao: 'Acertos e divisão entre pessoas' },
-  { key: 'recorrentes',   label: 'Fixos do Mês',          descricao: 'Despesas recorrentes / Fixos do mês' },
-  { key: 'cartoes',       label: 'Cartões',               descricao: 'Controle de cartões' },
-  { key: 'grupos',        label: 'Grupos',                descricao: 'Grupos e categorias de despesas' },
-  { key: 'pessoas',       label: 'Pessoas',               descricao: 'Cadastro de pessoas' },
-  { key: 'veiculos',      label: 'Veículos',              descricao: 'Controle de frota' },
-  { key: 'timeline',      label: 'Histórico / Timeline',  descricao: 'Linha do tempo financeira' },
-  { key: 'balanco',       label: 'Balanço',               descricao: 'Balanço e relatórios' },
-  { key: 'previsao',      label: 'Caixa / Previsão',      descricao: 'Orçamento e previsão de caixa' },
-  { key: 'proventos',     label: 'Proventos',             descricao: 'Receitas e proventos' },
-  { key: 'negocios',      label: 'Negócios',              descricao: 'CRM e oportunidades' },
+  { key: 'financeiropro', label: 'FinanceiroPro',              descricao: 'Controle financeiro pessoal/empresarial (despesas, cartões, balanço, etc.)' },
+  // ── Prospectar ────────────────────────────────────────────
+  { key: 'prospectar',    label: 'Prospectar / CRM',           descricao: 'CRM e oportunidades de negócios' },
   // ── Gerencial ─────────────────────────────────────────────
-  { key: 'central',                    label: 'Central Gerencial',               descricao: 'Visão gerencial consolidada' },
-  { key: 'lancamentos',                label: 'Lançamentos',                     descricao: 'Lançamentos financeiros gerencial' },
-  { key: 'cadastros',                  label: 'Cadastros',                       descricao: 'Cadastros gerenciais' },
-  // ── Formulários de Lançamento (por cliente) ───────────────
-  { key: 'lancamentos_form_padrao',    label: '  └ Form: Padrão',                descricao: 'Formulário padrão de lançamento (valor, categoria, descrição)' },
-  { key: 'lancamentos_form_transporte',label: '  └ Form: Transporte / KM',       descricao: 'Formulário de diário de viagem com tabela de km asfalto/terra' },
-  { key: 'lancamentos_form_diario',    label: '  └ Form: Diário de Campo',       descricao: 'Formulário para registro de atividades de campo (personalizável por cliente)' },
+  { key: 'gerencial',     label: 'Gerencial',                  descricao: 'Central gerencial, lançamentos e cadastros' },
+  // ── Formulários de Lançamento (sub-módulos do Gerencial) ──
+  { key: 'lancamentos_form_padrao',     label: '  └ Form: Padrão',          descricao: 'Formulário padrão de lançamento (valor, categoria, descrição)' },
+  { key: 'lancamentos_form_transporte', label: '  └ Form: Transporte / KM', descricao: 'Formulário de diário de viagem com tabela de km asfalto/terra' },
+  { key: 'lancamentos_form_diario',     label: '  └ Form: Diário de Campo', descricao: 'Formulário para registro de atividades de campo (personalizável por cliente)' },
   // ── Financeiro ────────────────────────────────────────────
-  { key: 'faturamento',   label: 'Faturamento',           descricao: 'Notas fiscais, contas a receber/pagar' },
-  // ── Módulos especializados ────────────────────────────────
-  { key: 'compras',       label: 'Compras',               descricao: 'Módulo de compras/cotações' },
-  { key: 'refeicoes',     label: 'Refeições',             descricao: 'Controle de refeições' },
+  { key: 'faturamento',   label: 'Financeiro',                 descricao: 'Faturamento, contas a receber/pagar' },
+  // ── Compras ───────────────────────────────────────────────
+  { key: 'compras',       label: 'Compras',                    descricao: 'Módulo de compras/cotações' },
+  // ── Refeições ─────────────────────────────────────────────
+  { key: 'refeicoes',     label: 'Refeições',                  descricao: 'Controle de refeições' },
+  // ── SmartLíder ────────────────────────────────────────────
+  { key: 'smartlider',    label: 'SmartLíder',                 descricao: 'Gestão de campo: turnos, apontamentos, equipes, EPIs' },
+  // ── Manutenção ────────────────────────────────────────────
+  { key: 'manutencao',    label: 'Manutenção',                 descricao: 'Ordens de serviço, preventiva, planos PFD' },
+  // ── Máquinas ──────────────────────────────────────────────
+  { key: 'maquinas',      label: 'Máquinas',                   descricao: 'Mapa de apontamento e relatórios de máquinas' },
+  // ── Automação ─────────────────────────────────────────────
+  { key: 'automacao',     label: 'Automação',                  descricao: 'Flow Center, Flow Lab e simulações de fluxo' },
+  // ── Agendamentos ──────────────────────────────────────────
+  { key: 'agendamentos',  label: 'Agendamentos',               descricao: 'Agenda de serviços via WhatsApp' },
   // ── Documentos ────────────────────────────────────────────
-  { key: 'importar',      label: 'Importar Extratos',     descricao: 'Importação de extratos bancários' },
-  { key: 'escanear',      label: 'Escanear Documentos',   descricao: 'Escaneamento de documentos' },
-  { key: 'notas-fiscais', label: 'Notas Fiscais',         descricao: 'Emissão e consulta de notas fiscais' },
+  { key: 'importar',      label: '  └ Importar Extratos',      descricao: 'Importação de extratos bancários' },
+  { key: 'escanear',      label: '  └ Escanear Documentos',    descricao: 'Escaneamento de documentos' },
+  { key: 'notas-fiscais', label: '  └ Notas Fiscais',          descricao: 'Emissão e consulta de notas fiscais' },
   // ── IA ────────────────────────────────────────────────────
-  { key: 'chat_ia',       label: 'Chat IA',               descricao: 'Assistente de inteligência artificial' },
-  // ── Agenda ────────────────────────────────────────────────────────────────
-  { key: 'agendamentos',  label: 'Agendamentos',          descricao: 'Agenda de serviços via WhatsApp' },
-  // ── Manutenção ────────────────────────────────────────────────────────────
-  { key: 'manutencao',    label: 'Manutenção',            descricao: 'Ordens de serviço, preventiva, planos PFD' },
+  { key: 'chat_ia',       label: 'Chat IA',                    descricao: 'Assistente de inteligência artificial' },
 ]
 
 export default function PlataformaModulos() {
