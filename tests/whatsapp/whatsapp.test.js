@@ -156,3 +156,113 @@ describe('POST /api/whatsapp — mensagem fromMe ignorada', () => {
     expect(res.status).toBe(200)
   })
 })
+
+// ─── identificarBoletimPorImagem — lógica de matching ────────────────────────
+// Replica a lógica de casamento do identificador_visual (caso-insensitivo, includes)
+
+function casaIdentificador(headerText, tipos) {
+  if (!tipos?.length || !headerText) return null
+  const texto = headerText.toLowerCase()
+  for (const tipo of tipos) {
+    const id = (tipo.identificador_visual || '').toLowerCase().trim()
+    if (id && texto.includes(id)) return tipo
+  }
+  return null
+}
+
+describe('identificarBoletimPorImagem — casamento de identificador_visual', () => {
+  const tipos = [
+    { id: 'uuid-birigui', nome: 'Boletim BIRIGUI', workspace_id: 'ws-1', identificador_visual: 'BIRIGUI SOLUÇÕES' },
+    { id: 'uuid-carpelo', nome: 'Boletim CARPELO', workspace_id: 'ws-2', identificador_visual: 'CARPELO SERVIÇOS FLORESTAIS' },
+  ]
+
+  it('casa por substring exata (case-insensitive)', () => {
+    const r = casaIdentificador('birigui soluções sustentaveis ltda', tipos)
+    expect(r?.id).toBe('uuid-birigui')
+  })
+
+  it('casa com texto em maiúsculas no header', () => {
+    const r = casaIdentificador('BIRIGUI SOLUÇÕES SUSTENTAVEIS', tipos)
+    expect(r?.id).toBe('uuid-birigui')
+  })
+
+  it('casa com identificador de segundo cliente', () => {
+    const r = casaIdentificador('carpelo serviços florestais eireli', tipos)
+    expect(r?.id).toBe('uuid-carpelo')
+  })
+
+  it('sem correspondência → null', () => {
+    const r = casaIdentificador('total energia renovável s/a', tipos)
+    expect(r).toBeNull()
+  })
+
+  it('header vazio → null', () => {
+    const r = casaIdentificador('', tipos)
+    expect(r).toBeNull()
+  })
+
+  it('lista de tipos vazia → null', () => {
+    const r = casaIdentificador('BIRIGUI SOLUÇÕES', [])
+    expect(r).toBeNull()
+  })
+
+  it('identificador_visual null no tipo → ignora esse tipo', () => {
+    const r = casaIdentificador('BIRIGUI', [
+      { id: 'x', identificador_visual: null },
+      { id: 'uuid-birigui', identificador_visual: 'BIRIGUI' },
+    ])
+    expect(r?.id).toBe('uuid-birigui')
+  })
+
+  it('identificador_visual string vazia → ignora esse tipo', () => {
+    const r = casaIdentificador('BIRIGUI', [
+      { id: 'x', identificador_visual: '' },
+    ])
+    expect(r).toBeNull()
+  })
+
+  it('retorna o primeiro match (ordem importa)', () => {
+    const tiposSimples = [
+      { id: 'uuid-birigui', identificador_visual: 'BIRIGUI' },
+      { id: 'uuid-carpelo', identificador_visual: 'CARPELO' },
+    ]
+    const r = casaIdentificador('relatorio birigui carpelo ltda', tiposSimples)
+    expect(r?.id).toBe('uuid-birigui') // BIRIGUI vem primeiro na lista
+  })
+})
+
+// ─── variants de telefone para lookup de colaborador ─────────────────────────
+
+function phoneVariants(from) {
+  const norm = from.replace(/\D/g, '')
+  const sem55 = norm.replace(/^55/, '')
+  const com9  = sem55.length === 10 ? sem55.slice(0, 2) + '9' + sem55.slice(2) : sem55
+  const sem9  = sem55.length === 11 && sem55[2] === '9' ? sem55.slice(0, 2) + sem55.slice(3) : sem55
+  return [...new Set([sem55, com9, sem9])]
+}
+
+describe('phoneVariants para lookup de colaborador', () => {
+  it('número com 55 + 9 dígito → gera sem55, com9, sem9', () => {
+    const v = phoneVariants('+5516996030901')
+    expect(v).toContain('16996030901')   // sem55, com 9
+    expect(v).toContain('1696030901')    // sem9 (10 dígitos)
+    expect(v.every(x => !x.startsWith('55'))).toBe(true)
+  })
+
+  it('número sem 55 e sem 9 → gera variante com 9 adicionado', () => {
+    const v = phoneVariants('1696030901')
+    expect(v).toContain('1696030901')
+    expect(v).toContain('16996030901')
+  })
+
+  it('número de 11 dígitos sem prefixo 55 → sem9 tem 10 dígitos', () => {
+    const v = phoneVariants('11987654321')
+    expect(v).toContain('11987654321')
+    expect(v).toContain('1187654321')
+  })
+
+  it('sem duplicatas na lista', () => {
+    const v = phoneVariants('5511987654321')
+    expect(v.length).toBe(new Set(v).size)
+  })
+})
