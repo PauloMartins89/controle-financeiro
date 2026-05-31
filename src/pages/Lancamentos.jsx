@@ -2225,6 +2225,7 @@ export default function Lancamentos() {
                   {!isDiarioView && <ColHead colKey="destino" label="DESTINO" />}
                   <ColHead colKey="placa" label="PLACA" />
                   {isDiarioView && <ColHead colKey="jornada" label="JORNADA" />}
+                  {isDiarioView && <ColHead colKey="totalJornada" label="H. TOTAL" align="right" />}
                   {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
                   {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
                   {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
@@ -2343,6 +2344,21 @@ export default function Lancamentos() {
                                   {jTotal != null
                                     ? <span style={{ fontWeight: 700, color: LC.accent }}>({Number(jTotal).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h)</span>
                                     : null}
+                                </span>
+                              : <span style={{ color: LC.txtMuted }}>—</span>}
+                          </td>
+                        )
+                      })()}
+                      {/* H. TOTAL */}
+                      {isDiarioView && (() => {
+                        const hTotal = d.total_horas_dia != null ? d.total_horas_dia
+                                     : (d.jornada_total_horas != null ? d.jornada_total_horas
+                                     : (ocr.jornada_total_horas ? Number(ocr.jornada_total_horas) : null))
+                        return (
+                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {hTotal != null
+                              ? <span style={{ fontWeight: 800, fontSize: 13, color: LC.accent }}>
+                                  {Number(hTotal).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })}h
                                 </span>
                               : <span style={{ color: LC.txtMuted }}>—</span>}
                           </td>
