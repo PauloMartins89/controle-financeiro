@@ -162,9 +162,10 @@ describe('POST /api/whatsapp — mensagem fromMe ignorada', () => {
 
 function casaIdentificador(headerText, tipos) {
   if (!tipos?.length || !headerText) return null
-  const texto = headerText.toLowerCase()
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  const texto = norm(headerText)
   for (const tipo of tipos) {
-    const id = (tipo.identificador_visual || '').toLowerCase().trim()
+    const id = norm(tipo.identificador_visual || '')
     if (id && texto.includes(id)) return tipo
   }
   return null
@@ -219,6 +220,20 @@ describe('identificarBoletimPorImagem — casamento de identificador_visual', ()
       { id: 'x', identificador_visual: '' },
     ])
     expect(r).toBeNull()
+  })
+
+  it('casa sem acentos — header tem "solucoes", identifier tem "SOLUÇÕES"', () => {
+    const r = casaIdentificador('BIRIGUI SOLUCOES SUSTENTAVEIS', [
+      { id: 'uuid-birigui', identificador_visual: 'BIRIGUI SOLUÇÕES SUSTENTÁVEIS' },
+    ])
+    expect(r?.id).toBe('uuid-birigui')
+  })
+
+  it('casa sem acentos — header tem "SOLUÇÕES", identifier tem "solucoes"', () => {
+    const r = casaIdentificador('BIRIGUI SOLUÇÕES SUSTENTÁVEIS LTDA', [
+      { id: 'uuid-birigui', identificador_visual: 'birigui solucoes' },
+    ])
+    expect(r?.id).toBe('uuid-birigui')
   })
 
   it('retorna o primeiro match (ordem importa)', () => {

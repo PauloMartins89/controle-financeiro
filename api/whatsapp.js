@@ -151,15 +151,22 @@ async function identificarBoletimPorImagem(base64, db) {
   }
 
   if (!headerText) return null
-  console.log('[WA] header texto extraído:', headerText.slice(0, 120))
+  console.log('[WA] header texto extraído:', headerText.slice(0, 200))
+
+  // Normaliza acentos para comparação robusta (NFC→NFD → strip diacríticos)
+  const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+  const headerNorm = norm(headerText)
 
   for (const tipo of tipos) {
-    const id = tipo.identificador_visual.toLowerCase().trim()
-    if (id && headerText.includes(id)) {
+    const id = norm(tipo.identificador_visual || '')
+    if (id && headerNorm.includes(id)) {
       console.log('[WA] boletim tipo identificado:', tipo.nome, '(workspace:', tipo.workspace_id, ')')
+      console.log('[WA] header normalizado:', headerNorm.slice(0, 120))
+      console.log('[WA] identificador normalizado:', id)
       return tipo
     }
   }
+  console.log('[WA] nenhum boletim tipo matched. Identificadores:', tipos.map(t => norm(t.identificador_visual || '')).join(' | '))
   return null
 }
 
