@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback, useEffect } from 'react'
+﻿import { useState, useRef, useCallback, useEffect, Fragment } from 'react'
 import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
@@ -1567,6 +1567,11 @@ export default function Lancamentos() {
   const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
   const [inlineEdit, setInlineEdit] = useState({ id: null, field: null, value: '', origValue: '' })
   const [inlineSaving, setInlineSaving] = useState(false)
+  const [expandedDiario, setExpandedDiario] = useState(new Set())
+
+  function toggleDiario(id) {
+    setExpandedDiario(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
 
   function toggleSelect(id) {
     setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -2252,7 +2257,8 @@ export default function Lancamentos() {
                   )
 
                   return (
-                    <tr key={l.id} style={{ borderBottom: `1px solid ${LC.border}`, transition: 'background 0.1s', background: selectedIds.has(l.id) ? LC.accentLight : '' }}
+                    <Fragment key={l.id}>
+                    <tr style={{ borderBottom: `1px solid ${LC.border}`, transition: 'background 0.1s', background: selectedIds.has(l.id) ? LC.accentLight : '' }}
                       onMouseEnter={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = LC.hover }}
                       onMouseLeave={e => { if (!selectedIds.has(l.id)) e.currentTarget.style.background = '' }}
                     >
@@ -2448,9 +2454,110 @@ export default function Lancamentos() {
                               <TrashIcon style={{ width: 15, height: 15 }} />
                             </button>
                           )}
+                          {/* Expand detail para boletins diários */}
+                          {isDiario && (
+                            <button
+                              title={expandedDiario.has(l.id) ? 'Fechar detalhes' : 'Ver linhas de jornada'}
+                              onClick={() => toggleDiario(l.id)}
+                              style={{ padding: 5, borderRadius: 6, background: expandedDiario.has(l.id) ? LC.accentLight : 'transparent', border: 'none', cursor: 'pointer', color: LC.accent, display: 'flex', alignItems: 'center', transition: 'background 0.15s' }}
+                              onMouseEnter={e => e.currentTarget.style.background = LC.accentLight}
+                              onMouseLeave={e => e.currentTarget.style.background = expandedDiario.has(l.id) ? LC.accentLight : 'transparent'}>
+                              <ChevronDownIcon style={{ width: 15, height: 15, transform: expandedDiario.has(l.id) ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
+                    {/* ── Linha de detalhe expandível (somente boletins diários) ── */}
+                    {expandedDiario.has(l.id) && isDiario && (() => {
+                      const linhas = d.linhas_jornada || []
+                      const sol = d.solicitante || ''
+                      const tel = d.telefone || ''
+                      const eqDiu = d.equipe_diurna || ''
+                      const eqNot = d.equipe_noturna || ''
+                      const acess = d.acessorios_utilizados || ''
+                      const local = d.local_servico || ''
+                      const setor = Array.isArray(d.setores) ? d.setores : []
+                      const obs = d.observacoes || ''
+                      const assCliente = d.assinatura_cliente || ''
+                      const assEmpresa = d.assinatura_empresa || ''
+                      return (
+                        <tr>
+                          <td colSpan={20} style={{ padding: 0, background: '#f8faff', borderBottom: `2px solid ${LC.accent}44` }}>
+                            <div style={{ padding: '14px 32px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                              {/* Chips de informações do cabeçalho */}
+                              {(sol || eqDiu || local || setor.length > 0 || acess) && (
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                  {sol && <span style={{ fontSize: 11, background: '#e0f2fe', color: '#0369a1', padding: '2px 9px', borderRadius: 10, whiteSpace: 'nowrap' }}>Solicitante: <strong>{sol}</strong>{tel ? ` · ${tel}` : ''}</span>}
+                                  {eqDiu && <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 9px', borderRadius: 10, whiteSpace: 'nowrap' }}>Equipe Diurna: {eqDiu}</span>}
+                                  {eqNot && eqNot !== 'Não se aplica' && <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 9px', borderRadius: 10, whiteSpace: 'nowrap' }}>Equipe Noturna: {eqNot}</span>}
+                                  {local && <span style={{ fontSize: 11, background: '#f5f3ff', color: '#6d28d9', padding: '2px 9px', borderRadius: 10 }}>Local: {local}</span>}
+                                  {setor.map((s, si) => <span key={si} style={{ fontSize: 11, background: '#fdf4ff', color: '#7e22ce', padding: '2px 9px', borderRadius: 10, whiteSpace: 'nowrap' }}>{s}</span>)}
+                                  {acess && <span style={{ fontSize: 11, background: '#fff7ed', color: '#c2410c', padding: '2px 9px', borderRadius: 10 }}>Acess.: {acess}</span>}
+                                </div>
+                              )}
+                              {/* Tabela de linhas de jornada */}
+                              {linhas.length > 0 ? (
+                                <div style={{ overflowX: 'auto' }}>
+                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5, background: '#fff', border: `1px solid ${LC.border}`, borderRadius: 8, overflow: 'hidden' }}>
+                                    <thead>
+                                      <tr style={{ background: LC.secondary }}>
+                                        {['DATA', 'ENTRADA 1', 'SAÍDA 1', 'ENTRADA 2', 'SAÍDA 2', 'TOTAL', 'SERVIÇO EXECUTADO'].map(h => (
+                                          <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap', borderBottom: `1px solid ${LC.border}` }}>{h}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {linhas.map((lj, li) => (
+                                        <tr key={li} style={{ borderBottom: `1px solid ${LC.border}`, background: li % 2 === 0 ? '#fff' : LC.bg }}>
+                                          <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', color: LC.txtSecondary }}>{lj.data || '—'}</td>
+                                          <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontFamily: 'monospace', color: '#059669' }}>{lj.e1 || '—'}</td>
+                                          <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontFamily: 'monospace', color: '#dc2626' }}>{lj.s1 || '—'}</td>
+                                          <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontFamily: 'monospace', color: lj.e2 ? '#059669' : LC.txtMuted }}>{lj.e2 || '—'}</td>
+                                          <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontFamily: 'monospace', color: lj.s2 ? '#dc2626' : LC.txtMuted }}>{lj.s2 || '—'}</td>
+                                          <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontWeight: 700, color: LC.accent }}>{lj.total || '—'}</td>
+                                          <td style={{ padding: '6px 10px', color: LC.txtPrimary, maxWidth: 340, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lj.servico || '—'}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <p style={{ margin: 0, fontSize: 11.5, color: LC.txtMuted, fontStyle: 'italic' }}>Nenhuma linha de jornada registrada — boletim anterior ao novo formato ou OCR sem tabela de jornada.</p>
+                              )}
+                              {/* Observações e assinaturas */}
+                              {(obs || assCliente || assEmpresa) && (
+                                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', borderTop: `1px solid ${LC.border}`, paddingTop: 10 }}>
+                                  {obs && (
+                                    <div style={{ flex: 1, minWidth: 220 }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Observações</span>
+                                      <p style={{ margin: '4px 0 0', fontSize: 11.5, color: LC.txtSecondary, lineHeight: 1.5 }}>{obs}</p>
+                                    </div>
+                                  )}
+                                  {(assCliente || assEmpresa) && (
+                                    <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', flexShrink: 0 }}>
+                                      {assCliente && (
+                                        <div style={{ textAlign: 'center' }}>
+                                          <span style={{ fontSize: 10, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>Assinatura Cliente</span>
+                                          <span style={{ fontSize: 12, color: LC.txtPrimary, fontStyle: 'italic' }}>{assCliente}</span>
+                                        </div>
+                                      )}
+                                      {assEmpresa && (
+                                        <div style={{ textAlign: 'center' }}>
+                                          <span style={{ fontSize: 10, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>Assinatura Empresa</span>
+                                          <span style={{ fontSize: 12, color: LC.txtPrimary, fontStyle: 'italic' }}>{assEmpresa}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })()}
+                    </Fragment>
                   )
                 })}
               </tbody>

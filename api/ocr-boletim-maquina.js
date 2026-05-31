@@ -231,8 +231,17 @@ function mapOcrToExtras(ocr, data) {
     // Unidade da empresa
     unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || r.cidade_estado || '',
     // Jornada (aceita aliases: entrada/saida usados em boletins HJ e similares)
-    jornada_inicio:      (() => { const v = r.jornada_inicio || r.entrada || null; return v || '' })(),
-    jornada_fim:         (() => { const v = r.jornada_fim    || r.saida   || null; return v || '' })(),
+    jornada_inicio: (() => {
+      const linhas = Array.isArray(r.linhas_jornada) ? r.linhas_jornada : []
+      const v = r.jornada_inicio || r.entrada || (linhas.length > 0 ? linhas[0].e1 : null) || null
+      return v || ''
+    })(),
+    jornada_fim: (() => {
+      const linhas = Array.isArray(r.linhas_jornada) ? r.linhas_jornada : []
+      const ultima = linhas.length > 0 ? linhas[linhas.length - 1] : null
+      const v = r.jornada_fim || r.saida || (ultima ? (ultima.s2 || ultima.s1) : null) || null
+      return v || ''
+    })(),
     jornada_total_horas: (() => {
       const parseHHMM = s => { if (!s) return null; const m = String(s).match(/^(\d{1,2}):(\d{2})$/); return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : null }
       const jIni = r.jornada_inicio || r.entrada || null
@@ -243,10 +252,33 @@ function mapOcrToExtras(ocr, data) {
       const hTrabVal = parseFloat(r.horas_trabalhadas || r.horas_produtivas || 0) || null
       // r.total pode ser número ou string HH:MM (boletins HJ)
       const totalRaw = r.jornada_total_horas || r.total || 0
-      return parseFloat(totalRaw) || parseHHMM(String(totalRaw)) || jCalc || hTrabVal || null
+      const linhas = Array.isArray(r.linhas_jornada) ? r.linhas_jornada : []
+      const linhasSum = linhas.length > 0
+        ? (linhas.reduce((acc, lj) => acc + (parseHHMM(lj.total) || 0), 0) || null)
+        : null
+      return parseFloat(totalRaw) || parseHHMM(String(totalRaw)) || jCalc || linhasSum || hTrabVal || null
     })(),
-    // N├║mero do documento (ficha pr├®-impressa)
+    // Número do documento (ficha pré-impressa)
     numero_documento: r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || '',
+    // ── Campos Relatório Diário de Obra ──────────────────────────────────────
+    cliente:            r.cliente || r.empresa || '',
+    solicitante:        r.solicitante || '',
+    telefone:           r.telefone || r.fone || '',
+    placa:              r.placa || r.veiculo_placa || '',
+    equipe_diurna:      r.equipe_diurna || '',
+    equipe_noturna:     r.equipe_noturna || '',
+    acessorios_utilizados: r.acessorios_utilizados || r.acessorios || '',
+    local_servico:      r.local_servico || r.local_de_realizacao_dos_servicos || '',
+    setores:            Array.isArray(r.setores) ? r.setores : [],
+    linhas_jornada:     Array.isArray(r.linhas_jornada) ? r.linhas_jornada : [],
+    assinatura_cliente: r.assinatura_cliente || r.responsavel_cliente_nome || '',
+    assinatura_empresa: r.assinatura_empresa || r.responsavel_birigui_nome || '',
+    total_horas_dia:    (() => {
+      const parseHHMM2 = s => { if (!s) return null; const m = String(s).match(/^(\d{1,2}):(\d{2})$/); return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : null }
+      const linhas = Array.isArray(r.linhas_jornada) ? r.linhas_jornada : []
+      const soma = linhas.reduce((acc, lj) => acc + (parseHHMM2(lj.total) || 0), 0)
+      return soma > 0 ? parseFloat(soma.toFixed(2)) : null
+    })(),
   }
 }
 
@@ -304,35 +336,49 @@ async function processarBoletim(boletimId) {
 
   const userPrompt = boletimTipo?.imagem_url
     ? `Analise este boletim de apontamento. O formul├írio tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}, responsavel_birigui_nome, responsavel_birigui_matricula, responsavel_cliente_nome, responsavel_cliente_matricula, numero_documento.`
-    : `Extraia TODOS os dados deste formul├írio de apontamento de m├íquinas. Retorne um JSON com as seguintes chaves (use null se o campo n├úo existir ou estiver ileg├¡vel):
+    : `Extraia TODOS os dados deste formulário de apontamento. Retorne um JSON com as seguintes chaves (use null se o campo não existir ou estiver ilegível):
+- numero_documento: número de controle pré-impresso da ficha/formulário, geralmente no canto superior direito da folha em destaque (ex: 2351)
 - data: data do boletim (DD/MM/YYYY)
 - turno: "dia", "noite" ou "integral" conforme marcado
-- colaborador: nome do operador/colaborador
-- equipamento: c├│digo ou nome do equipamento (ex: EH-22, CAD 320)
+- colaborador: nome do operador/colaborador principal
+- equipamento: código ou nome do equipamento (ex: EH-22, CAD 320, Hidrojato 10.000 PSI)
+- modelo: modelo do equipamento (se informado separadamente)
 - classe_operacional: classe/tipo do equipamento
 - frente: local ou frente de trabalho
 - cdc: centro de custo
-- atividade_realizada: atividade ou servi├ºo realizado (resumo curto)
-- descritivo_trabalho: descri├º├úo detalhada do trabalho executado
-- observacoes: observa├º├Áes, ocorr├¬ncias ou anomalias registradas
-- horimetro_inicial: leitura inicial do hor├¡metro (n├║mero)
-- horimetro_final: leitura final do hor├¡metro (n├║mero)
-- horas_trabalhadas: total de horas trabalhadas (n├║mero)
-- horas_disponiveis: horas dispon├¡veis ou horas totais do turno (n├║mero, se informado)
-- horas_espera: horas em espera, ociosas ou de manuten├º├úo (n├║mero)
-- produtividade_quantidade: quantidade produzida (n├║mero)
-- produtividade_unidade: unidade de medida da produ├º├úo (ex: m3, ton)
-- produtividade_por_hora: produtividade por hora (n├║mero)
-- responsavel_birigui_nome: nome do respons├ível Birigui pela execu├º├úo do servi├ºo
-- responsavel_birigui_matricula: matr├¡cula do respons├ível Birigui
-- responsavel_cliente_nome: nome do respons├ível Cliente pela libera├º├úo/valida├º├úo
-- responsavel_cliente_matricula: matr├¡cula do respons├ível Cliente
-- unidade_empresa: unidade/filial/localidade da empresa cliente onde o servi├ºo foi executado (ex: Tr├¬s Lagoas, Birigui, Ara├ºatuba)
-- jornada_inicio: hor├írio de in├¡cio do servi├ºo/jornada (formato HH:MM, ex: 07:00)
-- jornada_fim: hor├írio de encerramento do servi├ºo/jornada (formato HH:MM, ex: 17:00)
-- jornada_total_horas: total de horas corridas da jornada (n├║mero decimal, ex: 10.0)
-- numero_documento: n├║mero de controle pr├®-impresso da ficha/formul├írio, geralmente no canto superior direito da folha em destaque (ex: 2351)
-Retorne APENAS o JSON, sem coment├írios.`
+- atividade_realizada: atividade ou serviço realizado (resumo curto)
+- descritivo_trabalho: descrição detalhada do trabalho executado
+- observacoes: observações, ocorrências ou anomalias registradas
+- horimetro_inicial: leitura inicial do horímetro (número)
+- horimetro_final: leitura final do horímetro (número)
+- horas_trabalhadas: total de horas trabalhadas (número)
+- horas_disponiveis: horas disponíveis ou horas totais do turno (número)
+- horas_espera: horas em espera, ociosas ou de manutenção (número)
+- produtividade_quantidade: quantidade produzida (número)
+- produtividade_unidade: unidade de medida da produção (ex: m3, ton)
+- produtividade_por_hora: produtividade por hora (número)
+- responsavel_birigui_nome: nome do responsável Birigui pela execução do serviço
+- responsavel_birigui_matricula: matrícula do responsável Birigui
+- responsavel_cliente_nome: nome do responsável Cliente pela liberação/validação
+- responsavel_cliente_matricula: matrícula do responsável Cliente
+- unidade_empresa: unidade/filial/localidade da empresa cliente onde o serviço foi executado (ex: Três Lagoas, Birigui)
+- jornada_inicio: horário de início do serviço/jornada (formato HH:MM, ex: 07:00)
+- jornada_fim: horário de encerramento do serviço/jornada (formato HH:MM, ex: 17:00)
+- jornada_total_horas: total de horas corridas da jornada (número decimal, ex: 10.0)
+- cliente: razão social ou nome da empresa cliente
+- cidade_estado: cidade e estado onde o serviço foi executado (ex: "Três Lagoas/MS")
+- solicitante: nome do solicitante ou responsável pela abertura do serviço
+- telefone: telefone de contato do solicitante
+- placa: placa do veículo (ex: "QAZ-4D21")
+- equipe_diurna: nomes dos membros da equipe diurna separados por ponto-e-vírgula
+- equipe_noturna: nomes da equipe noturna, ou "Não se aplica"
+- acessorios_utilizados: lista de acessórios e materiais utilizados no serviço
+- local_servico: local de realização dos serviços (campo "LOCAL DE REALIZAÇÃO DOS SERVIÇOS" ou similar)
+- setores: array com os nomes exatos dos setores/áreas com caixa marcada (checkbox com X), ex: ["Rotinas-1", "Linha de Fibras-1"]; retorne [] se não houver
+- linhas_jornada: array de objetos, uma entrada por linha preenchida na tabela de Jornada de Trabalho. Cada objeto deve ter exatamente estas chaves: { "data": "DD/MM/AA", "e1": "HH:MM", "s1": "HH:MM", "e2": "HH:MM ou null", "s2": "HH:MM ou null", "total": "HH:MM", "servico": "descrição do serviço executado nesta linha" }. Retorne [] se não houver tabela de jornada.
+- assinatura_cliente: nome por extenso na linha de assinatura do cliente
+- assinatura_empresa: nome por extenso na linha de assinatura da empresa/Birigui
+Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}
   try {
