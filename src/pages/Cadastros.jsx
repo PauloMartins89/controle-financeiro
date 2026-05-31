@@ -116,8 +116,40 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
   const emptyForm = () => Object.fromEntries(config.fields.filter(f => !f.divider).map(f => [f.key, '']))
   const [form, setForm] = useState(item ? { ...item } : emptyForm())
   const [saving, setSaving] = useState(false)
+  const [cnpjLoading, setCnpjLoading] = useState(false)
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
+
+  async function handleCnpjChange(raw) {
+    const digits = raw.replace(/\D/g, '').slice(0, 14)
+    let m = digits
+    if (digits.length > 2)  m = digits.slice(0,2) + '.' + digits.slice(2)
+    if (digits.length > 5)  m = digits.slice(0,2) + '.' + digits.slice(2,5) + '.' + digits.slice(5)
+    if (digits.length > 8)  m = digits.slice(0,2) + '.' + digits.slice(2,5) + '.' + digits.slice(5,8) + '/' + digits.slice(8)
+    if (digits.length > 12) m = digits.slice(0,2) + '.' + digits.slice(2,5) + '.' + digits.slice(5,8) + '/' + digits.slice(8,12) + '-' + digits.slice(12,14)
+    set('cnpj', m)
+    if (digits.length !== 14) return
+    setCnpjLoading(true)
+    try {
+      const res = await fetch(`/api/cnpj?cnpj=${digits}`)
+      if (!res.ok) throw new Error('not found')
+      const d = await res.json()
+      setForm(f => ({
+        ...f,
+        cnpj:         m,
+        razao_social: f.razao_social || d.razao_social || '',
+        nome:         f.nome        || d.nome_fantasia || d.razao_social || '',
+        email:        f.email       || d.email         || '',
+        telefone:     f.telefone    || d.ddd_telefone_1 || '',
+        contato:      f.contato     || d.qsa?.[0]?.nome_socio || '',
+      }))
+      toast.success('Dados do CNPJ preenchidos automaticamente')
+    } catch {
+      toast.error('CNPJ não encontrado')
+    } finally {
+      setCnpjLoading(false)
+    }
+  }
 
   async function handleSave() {
     const req = config.fields.filter(f => f.required && !f.divider)
@@ -168,6 +200,20 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
                   rows={2}
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
+              ) : f.key === 'cnpj' ? (
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={form.cnpj ?? ''}
+                    placeholder="XX.XXX.XXX/XXXX-XX"
+                    onChange={e => handleCnpjChange(e.target.value)}
+                    style={{ ...inputStyle, paddingRight: cnpjLoading ? 32 : 10 }}
+                    maxLength={18}
+                  />
+                  {cnpjLoading && (
+                    <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-secondary)' }}>⏳</span>
+                  )}
+                </div>
               ) : (
                 <input
                   type={f.type || 'text'}
