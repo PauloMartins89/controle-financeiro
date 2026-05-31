@@ -116,12 +116,16 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
   const emptyForm = () => Object.fromEntries(config.fields.filter(f => !f.divider).map(f => [f.key, '']))
   const [form, setForm] = useState(item ? { ...item } : emptyForm())
   const [saving, setSaving] = useState(false)
-  const [cnpjLoading, setCnpjLoading] = useState(false)
+  const [cnpjLoading, setCnpjLoading]   = useState(false)
+  const [nomeResults, setNomeResults]   = useState([])
+  const [nomeSearching, setNomeSearching] = useState(false)
+  const [showNomeDrop, setShowNomeDrop] = useState(false)
+  const nomeTimer = useRef(null)
+  const hasCnpj   = config.fields.some(f => f.key === 'cnpj')
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
 
-  async function handleCnpjChange(raw) {
-    const digits = raw.replace(/\D/g, '').slice(0, 14)
+  async function handleCnpjChange(raw) {    const digits = raw.replace(/\D/g, '').slice(0, 14)
     let m = digits
     if (digits.length > 2)  m = digits.slice(0,2) + '.' + digits.slice(2)
     if (digits.length > 5)  m = digits.slice(0,2) + '.' + digits.slice(2,5) + '.' + digits.slice(5)
@@ -149,6 +153,43 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
     } finally {
       setCnpjLoading(false)
     }
+  }
+
+  async function handleNomeChange(val) {
+    set('nome', val)
+    if (!hasCnpj || val.trim().length < 3) {
+      clearTimeout(nomeTimer.current)
+      setNomeResults([])
+      setShowNomeDrop(false)
+      return
+    }
+    clearTimeout(nomeTimer.current)
+    nomeTimer.current = setTimeout(async () => {
+      setNomeSearching(true)
+      try {
+        const res = await fetch('/api/cnpj', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'cnpj_search', nome: val.trim() }),
+        })
+        if (!res.ok) throw new Error()
+        const data = await res.json()
+        setNomeResults(data.cnpjs || [])
+        setShowNomeDrop((data.cnpjs || []).length > 0)
+      } catch {
+        setNomeResults([])
+        setShowNomeDrop(false)
+      } finally {
+        setNomeSearching(false)
+      }
+    }, 500)
+  }
+
+  async function selectNomeResult(r) {
+    setShowNomeDrop(false)
+    setNomeResults([])
+    setForm(f => ({ ...f, nome: r.razao_social || f.nome, razao_social: r.razao_social || f.razao_social }))
+    await handleCnpjChange(r.cnpj)
   }
 
   async function handleSave() {
@@ -200,6 +241,34 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
                   rows={2}
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
+              ) : f.key === 'nome' && hasCnpj ? (
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={form.nome ?? ''}
+                    placeholder="Digite para buscar empresa..."
+                    onChange={e => handleNomeChange(e.target.value)}
+                    onBlur={() => setTimeout(() => setShowNomeDrop(false), 200)}
+                    style={{ ...inputStyle, paddingRight: nomeSearching ? 32 : 10 }}
+                  />
+                  {nomeSearching && (
+                    <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-secondary)' }}>⏳</span>
+                  )}
+                  {showNomeDrop && nomeResults.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: '0 4px 16px rgba(0,0,0,0.18)', marginTop: 2 }}>
+                      {nomeResults.map((r, i) => (
+                        <div
+                          key={i}
+                          onMouseDown={() => selectNomeResult(r)}
+                          style={{ padding: '9px 12px', cursor: 'pointer', borderBottom: i < nomeResults.length - 1 ? '1px solid var(--border)' : 'none' }}
+                        >
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{r.razao_social}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{r.cnpj}{r.municipio ? ` · ${r.municipio}/${r.uf}` : ''}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : f.key === 'cnpj' ? (
                 <div style={{ position: 'relative' }}>
                   <input

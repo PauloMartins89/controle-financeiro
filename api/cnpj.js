@@ -145,7 +145,12 @@ export default async function handler(req, res) {
       const cnpjs = (data.data?.cnpj || []).map(item => {
         const c = (item.cnpj || '').replace(/\D/g, '')
         if (c.length !== 14) return null
-        return `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`
+        return {
+          cnpj:         `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}/${c.slice(8,12)}-${c.slice(12)}`,
+          razao_social: item.razao_social || item.nome_fantasia || '',
+          municipio:    item.municipio    || '',
+          uf:           item.uf           || '',
+        }
       }).filter(Boolean)
 
       return res.status(200).json({ cnpjs })
