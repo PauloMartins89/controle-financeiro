@@ -834,11 +834,15 @@ export default function Faturamento() {
   }
 
   function toggleSelectAll() {
-    const aprovados = filtered.filter(l => l.status === 'aprovado')
-    if (aprovados.length > 0 && aprovados.every(l => selectedIds.has(l.id))) {
+    const faturáveis = filtered.filter(l =>
+      l.status === 'aprovado' &&
+      l.lote_cliente_id &&
+      lotesMap[l.lote_cliente_id]?.status === 'aprovado_cliente'
+    )
+    if (faturáveis.length > 0 && faturáveis.every(l => selectedIds.has(l.id))) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(aprovados.map(l => l.id)))
+      setSelectedIds(new Set(faturáveis.map(l => l.id)))
     }
   }
 
@@ -931,6 +935,10 @@ export default function Faturamento() {
   function handleFaturarLote(loteId) {
     const grupo = lotesAgrupados.find(g => g.lote.id === loteId)
     if (!grupo) return
+    if (grupo.lote.status !== 'aprovado_cliente') {
+      toast.error('O lote precisa ser aprovado pelo cliente antes de faturar.')
+      return
+    }
     const aprovados = grupo.itens.filter(l => l.status === 'aprovado')
     if (aprovados.length === 0) { toast.error('Nenhum item aprovado neste lote para faturar.'); return }
     setSelectedIds(new Set(aprovados.map(l => l.id)))
@@ -1113,7 +1121,7 @@ export default function Faturamento() {
                             {aprovandoLote === lote.id ? 'Aprovando...' : `Aprovar (${pendentes.length})`}
                           </button>
                         )}
-                        {aprovados.length > 0 && (
+                        {aprovados.length > 0 && lote.status === 'aprovado_cliente' && (
                           <button onClick={() => handleFaturarLote(lote.id)}
                             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#7c3aed,#8b5cf6)', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
                             <BanknotesIcon style={{ width: 15, height: 15 }} />
@@ -1259,7 +1267,7 @@ export default function Faturamento() {
                 <tr style={{ borderBottom: '2px solid var(--border)', background: 'var(--bg-muted)' }}>
                   <th style={{ padding: '10px 12px', width: 36, textAlign: 'center' }}>
                     <input type="checkbox"
-                      checked={filtered.filter(l => l.status === 'aprovado').length > 0 && filtered.filter(l => l.status === 'aprovado').every(l => selectedIds.has(l.id))}
+                      checked={filtered.filter(l => l.status === 'aprovado' && l.lote_cliente_id && lotesMap[l.lote_cliente_id]?.status === 'aprovado_cliente').length > 0 && filtered.filter(l => l.status === 'aprovado' && l.lote_cliente_id && lotesMap[l.lote_cliente_id]?.status === 'aprovado_cliente').every(l => selectedIds.has(l.id))}
                       onChange={toggleSelectAll}
                       style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#8b5cf6' }}
                     />
@@ -1295,7 +1303,7 @@ export default function Faturamento() {
                     >
                       {/* CHECKBOX */}
                       <td style={{ padding: '10px 12px', textAlign: 'center', width: 36 }}>
-                        {l.status === 'aprovado' && (
+                        {l.status === 'aprovado' && l.lote_cliente_id && lotesMap[l.lote_cliente_id]?.status === 'aprovado_cliente' && (
                           <input type="checkbox"
                             checked={selectedIds.has(l.id)}
                             onChange={() => toggleSelect(l.id)}
