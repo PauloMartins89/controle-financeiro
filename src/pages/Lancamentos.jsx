@@ -130,6 +130,49 @@ function calcKmTotais(d = {}) {
 }
 function getValorTransporte(d = {}) { return num(d.valor_total) }
 
+function calcPricingTotal(l, tarifasMap) {
+  const d   = l.dados_extras || {}
+  const ocr = l.tipo_formulario === 'diario' ? (d.ocr || {}) : {}
+  const empresa = (ocr.empresa || d.empresa || d.cliente || '').trim().toLowerCase()
+  let tarifa = empresa ? (tarifasMap[empresa] ?? null) : null
+  if (!tarifa && empresa) {
+    const found = Object.entries(tarifasMap).find(([k]) => empresa.includes(k) || k.includes(empresa))
+    if (found) tarifa = found[1]
+  }
+  if (!tarifa) return null
+  const tDs = tarifa.hora_inicio_diurno ? (_parseMin(tarifa.hora_inicio_diurno) ?? 300)  : 300
+  const tDe = tarifa.hora_fim_diurno    ? (_parseMin(tarifa.hora_fim_diurno)    ?? 1320) : 1320
+  let tDiurno = null, tNoturno = null
+  const linhasJ = d.linhas_jornada || []
+  if (linhasJ.length > 0 && linhasJ.some(lj => lj.e1 || lj.s1)) {
+    ;({ diurno: tDiurno, noturno: tNoturno } = calcHorasDiurnoNoturno(linhasJ, tDs, tDe))
+  } else {
+    const ini = d.jornada_inicio || ocr.jornada_inicio || ocr.entrada || ''
+    const fim = d.jornada_fim    || ocr.jornada_fim    || ocr.saida   || ''
+    if (ini && fim) { const r = _intervaloHoras(ini, fim, tDs, tDe); tDiurno = parseFloat(r.diurno.toFixed(2)); tNoturno = parseFloat(r.noturno.toFixed(2)) }
+  }
+  if (tDiurno == null && tNoturno == null) {
+    const hTotal = d.total_horas_dia ?? d.jornada_total_horas ?? (ocr.jornada_total_horas ? Number(ocr.jornada_total_horas) : null)
+    if (hTotal != null) {
+      const iniF = d.jornada_inicio || ocr.jornada_inicio || ocr.entrada || ''
+      if (iniF) {
+        const iniMin = _parseMin(iniF)
+        if (iniMin != null) {
+          const fimMin = (iniMin + Math.round(Number(hTotal) * 60)) % 1440
+          const fimF   = `${String(Math.floor(fimMin / 60)).padStart(2,'0')}:${String(fimMin % 60).padStart(2,'0')}`
+          const rF = _intervaloHoras(iniF, fimF, tDs, tDe)
+          tDiurno = parseFloat(rF.diurno.toFixed(2)); tNoturno = parseFloat(rF.noturno.toFixed(2))
+        }
+      }
+      if (tDiurno == null) { tDiurno = Number(hTotal); tNoturno = 0 }
+    }
+  }
+  const rsDiurno  = tDiurno  != null && tarifa.valor_hora_diurno  != null ? tDiurno  * Number(tarifa.valor_hora_diurno)  : null
+  const rsNoturno = tNoturno != null && tarifa.valor_hora_noturno != null ? tNoturno * Number(tarifa.valor_hora_noturno) : null
+  if (rsDiurno == null && rsNoturno == null) return null
+  return (rsDiurno ?? 0) + (rsNoturno ?? 0)
+}
+
 function mergeKmRows(ocrRows) {
   const base = DEFAULT_KM_ROWS.map(r => ({ ...r }))
   if (!ocrRows || !ocrRows.length) return base
