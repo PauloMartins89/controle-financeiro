@@ -1544,6 +1544,10 @@ const FIELD_LABELS = {
   placa: 'Placa',
   km_asfalto: 'KM Asfalto',
   km_terra: 'KM Terra',
+  unidade_empresa: 'Unidade',
+  jornada_inicio: 'Início Jornada',
+  jornada_fim: 'Fim Jornada',
+  responsavel_birigui_nome: 'Resp. Birigui',
 }
 
 function EditFieldModal({ editState, onSave, onCancel, saving }) {
@@ -2417,10 +2421,13 @@ export default function Lancamentos() {
                         </div>
                       ))}
                       {/* UNIDADE EMPRESA (só diário) */}
-                      {isDiarioView && isDiario && (
-                        <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtSecondary, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {isDiarioView && isDiario && EDITABLE_TD(
+                        'unidade_empresa',
+                        d.unidade_empresa || ocr.unidade_empresa || '',
+                        <span style={{ padding: '9px 12px', display: 'block', fontSize: 12, color: LC.txtSecondary, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {d.unidade_empresa || ocr.unidade_empresa || <span style={{ color: LC.txtMuted }}>—</span>}
-                        </td>
+                        </span>,
+                        { maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
                       )}
                       {/* ORIGEM / SERVIÇO */}
                       {EDITABLE_TD('local_origem', isDiario ? ocr.servico_executado : d.local_origem, (
@@ -2446,12 +2453,18 @@ export default function Lancamentos() {
                         const jIni  = d.jornada_inicio || ocr.jornada_inicio || ''
                         const jFimV = d.jornada_fim    || ocr.jornada_fim    || ''
                         return (<>
-                          <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtSecondary, textAlign: 'center' }}>
-                            {jIni  ? <span>{jIni}</span>  : <span style={{ color: LC.txtMuted }}>—</span>}
-                          </td>
-                          <td style={{ padding: '9px 12px', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtSecondary, textAlign: 'center' }}>
-                            {jFimV ? <span>{jFimV}</span> : <span style={{ color: LC.txtMuted }}>—</span>}
-                          </td>
+                          {EDITABLE_TD('jornada_inicio', jIni,
+                            <span style={{ padding: '9px 12px', display: 'block', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtSecondary, textAlign: 'center' }}>
+                              {jIni  ? jIni  : <span style={{ color: LC.txtMuted }}>—</span>}
+                            </span>,
+                            { textAlign: 'center' }
+                          )}
+                          {EDITABLE_TD('jornada_fim', jFimV,
+                            <span style={{ padding: '9px 12px', display: 'block', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtSecondary, textAlign: 'center' }}>
+                              {jFimV ? jFimV : <span style={{ color: LC.txtMuted }}>—</span>}
+                            </span>,
+                            { textAlign: 'center' }
+                          )}
                         </>)
                       })()}
                       {/* H. TOTAL / H. DIURNAS / H. NOTURNAS */}
@@ -2555,17 +2568,18 @@ export default function Lancamentos() {
                         </>)
                       })()}
                       {/* RESP. BIRIGUI */}
-                      {isDiarioView && (
-                        <td style={{ padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {(() => {
-                            const nome = d.responsavel_birigui_nome || ocr.responsavel_birigui_nome
-                            const mat  = d.responsavel_birigui_matricula || ocr.responsavel_birigui_matricula
-                            return nome
-                              ? <span>{nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({mat || '—'})</span></span>
-                              : <span style={{ color: LC.txtMuted }}>—</span>
-                          })()}
-                        </td>
-                      )}
+                      {isDiarioView && (() => {
+                        const nome = d.responsavel_birigui_nome || ocr.responsavel_birigui_nome
+                        const mat  = d.responsavel_birigui_matricula || ocr.responsavel_birigui_matricula
+                        return EDITABLE_TD(
+                          'responsavel_birigui_nome',
+                          nome || '',
+                          nome
+                            ? <span style={{ padding: '9px 12px', display: 'block', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({mat || '—'})</span></span>
+                            : <span style={{ padding: '9px 12px', display: 'block', color: LC.txtMuted }}>—</span>,
+                          { maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+                        )
+                      })()}
                       {/* RESP. CLIENTE */}
                       {isDiarioView && (() => {
                         const nome = d.responsavel_cliente_nome || ocr.responsavel_cliente_nome
