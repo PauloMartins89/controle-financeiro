@@ -1494,6 +1494,7 @@ const FIELD_LABELS = {
   data: 'Data',
   valor: 'Valor',
   numero_diario: 'Nº DM',
+  numero_documento: 'Nº Ficha',
   cliente: 'Cliente / Descrição',
   local_origem: 'Origem',
   local_destino: 'Destino',
@@ -2312,12 +2313,16 @@ export default function Lancamentos() {
                         <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
                       ))}
                       {/* Nº FICHA (só diário) */}
-                      {isDiarioView && isDiario && (
-                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap', textAlign: 'center' }}>
-                          {(d.numero_documento || ocr.numero_documento)
-                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#fef9c3', color: '#854d0e' }}>{d.numero_documento || ocr.numero_documento}</span>
-                            : <span style={{ color: LC.txtMuted }}>—</span>}
-                        </td>
+                      {isDiarioView && isDiario && EDITABLE_TD(
+                        'numero_documento',
+                        d.numero_documento || ocr.numero_documento || '',
+                        (() => {
+                          const val = d.numero_documento || ocr.numero_documento
+                          return val
+                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#fef9c3', color: '#854d0e' }}>{val}</span>
+                            : <span style={{ color: LC.txtMuted, fontSize: 12 }}>clique para inserir</span>
+                        })(),
+                        { whiteSpace: 'nowrap', textAlign: 'center' }
                       )}
                       {/* Nº DM / EQUIPAMENTO */}
                       {EDITABLE_TD('numero_diario', isDiario ? ocr.equipamento : d.numero_diario, (
