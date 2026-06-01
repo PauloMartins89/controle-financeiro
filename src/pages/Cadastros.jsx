@@ -106,6 +106,8 @@ const TABS_CONFIG = {
     color: '#059669',
     fields: [
       { key: 'nome',      label: 'Nome da Tabela', required: true, span: 2, placeholder: 'Ex: Tabela Suzano 2026' },
+      { key: 'cliente_id', label: 'Cliente', type: 'select', selectTable: 'cadastros_clientes', setName: 'cliente_nome', span: 2, listHide: true },
+      { key: 'cliente_nome', label: 'Cliente', span: 2, modalHide: true },
       { key: 'descricao', label: 'Descrição', span: 2, listHide: true },
       { key: '_sep1', divider: 'Período Regular (Segunda a Sexta)', span: 2 },
       { key: 'hora_inicio_diurno', label: 'Início Diurno', placeholder: '05:00' },
@@ -119,7 +121,7 @@ const TABS_CONFIG = {
       { key: 'valor_hora_feriado_diurno',  label: 'R$/h Diurno Feriado',  type: 'number', placeholder: '0.00', listHide: true },
       { key: 'valor_hora_feriado_noturno', label: 'R$/h Noturno Feriado', type: 'number', placeholder: '0.00', listHide: true },
     ],
-    importCols: ['nome','descricao','hora_inicio_diurno','hora_fim_diurno','valor_hora_diurno','valor_hora_noturno','valor_hora_fds_diurno','valor_hora_fds_noturno','valor_hora_feriado_diurno','valor_hora_feriado_noturno'],
+    importCols: ['nome','cliente_nome','descricao','hora_inicio_diurno','hora_fim_diurno','valor_hora_diurno','valor_hora_noturno','valor_hora_fds_diurno','valor_hora_fds_noturno','valor_hora_feriado_diurno','valor_hora_feriado_noturno'],
   },
 }
 
@@ -138,13 +140,25 @@ const labelStyle = {
 // Modal add/editar
 // ─────────────────────────────────────────────────────────────────────────────
 function CadastroModal({ config, item, ownerId, onClose, onSave }) {
-  const emptyForm = () => Object.fromEntries(config.fields.filter(f => !f.divider).map(f => [f.key, '']))
+  const emptyForm = () => Object.fromEntries(config.fields.filter(f => !f.divider && !f.modalHide).map(f => [f.key, '']))
   const [form, setForm] = useState(item ? { ...item } : emptyForm())
   const [saving, setSaving] = useState(false)
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [nomeBusca, setNomeBusca]     = useState('')
   const [cidadeBusca, setCidadeBusca] = useState('')
   const [buscandoNome, setBuscandoNome] = useState(false)
+  const [selectOptions, setSelectOptions] = useState({})
+
+  useEffect(() => {
+    const selFields = config.fields.filter(f => f.type === 'select' && f.selectTable)
+    if (!selFields.length || !ownerId) return
+    selFields.forEach(f => {
+      supabase.from(f.selectTable).select('id, nome').eq('owner_id', ownerId).eq('ativo', true).order('nome')
+        .then(({ data }) => {
+          setSelectOptions(prev => ({ ...prev, [f.key]: (data || []).map(r => ({ value: r.id, label: r.nome })) }))
+        })
+    })
+  }, [config.table, ownerId])
 
   function set(key, val) { setForm(f => ({ ...f, [key]: val })) }
 
@@ -280,7 +294,7 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
               <div key={f.key} style={{ gridColumn: 'span 2', margin: '8px 0 4px', paddingBottom: 6, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 10, fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 0.8 }}>{f.divider}</span>
               </div>
-            ) : (
+            ) : f.modalHide ? null : (
             <div key={f.key} style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: f.span === 2 ? 'span 2' : 'span 1' }}>
               <label style={labelStyle}>{f.label}{f.required ? ' *' : ''}</label>
               {f.multiline ? (
@@ -312,6 +326,23 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
                     <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-secondary)' }}>⏳</span>
                   )}
                 </div>
+              ) : f.type === 'select' && f.selectTable ? (
+                <select
+                  value={form[f.key] ?? ''}
+                  onChange={e => {
+                    set(f.key, e.target.value || null)
+                    if (f.setName) {
+                      const opt = (selectOptions[f.key] || []).find(o => o.value === e.target.value)
+                      set(f.setName, opt?.label || '')
+                    }
+                  }}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                  <option value="">— Selecionar —</option>
+                  {(selectOptions[f.key] || []).map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
               ) : (
                 <input
                   type={f.type || 'text'}
