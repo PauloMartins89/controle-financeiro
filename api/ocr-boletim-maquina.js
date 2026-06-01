@@ -3,6 +3,7 @@ import ws from 'ws'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
 // Gemini Vision — baixa as imagens por URL e envia inline (base64)
+// Retry automático em 503/429 com backoff exponencial (até 3 tentativas)
 async function callGeminiVision(apiKey, { system, prompt, imageUrls }) {
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
@@ -17,14 +18,32 @@ async function callGeminiVision(apiKey, { system, prompt, imageUrls }) {
     const mime = (res.headers.get('content-type') || 'image/jpeg').split(';')[0]
     return { inlineData: { mimeType: mime, data: Buffer.from(buf).toString('base64') } }
   }))
-  const result = await model.generateContent([{ text: prompt }, ...imageParts])
-  let parsed = JSON.parse(result.response.text())
-  // Gemini pode retornar array quando recebe múltiplas imagens — pega o objeto mais rico
-  if (Array.isArray(parsed)) {
-    const count = obj => (obj && typeof obj === 'object') ? Object.values(obj).filter(v => v != null).length : 0
-    parsed = parsed.reduce((best, cur) => count(cur) > count(best) ? cur : best, {})
+
+  const MAX_ATTEMPTS = 3
+  let lastErr
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const result = await model.generateContent([{ text: prompt }, ...imageParts])
+      let parsed = JSON.parse(result.response.text())
+      // Gemini pode retornar array quando recebe múltiplas imagens — pega o objeto mais rico
+      if (Array.isArray(parsed)) {
+        const count = obj => (obj && typeof obj === 'object') ? Object.values(obj).filter(v => v != null).length : 0
+        parsed = parsed.reduce((best, cur) => count(cur) > count(best) ? cur : best, {})
+      }
+      return parsed
+    } catch (err) {
+      lastErr = err
+      const isRetryable = /503|529|overloaded|unavailable|429|quota/i.test(err.message)
+      if (isRetryable && attempt < MAX_ATTEMPTS) {
+        const delay = attempt * 8000  // 8s, 16s
+        console.warn(`[ocr-boletim] gemini tentativa ${attempt} falhou (${err.message.slice(0, 80)}). Aguardando ${delay / 1000}s...`)
+        await new Promise(r => setTimeout(r, delay))
+      } else {
+        throw err
+      }
+    }
   }
-  return parsed
+  throw lastErr
 }
 
 // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
