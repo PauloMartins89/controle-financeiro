@@ -69,6 +69,29 @@
     .steps ol { padding-left: 18px; }
     .steps li { font-size: 0.82rem; color: #5a6a7a; margin-bottom: 6px; line-height: 1.4; }
     .steps li span { color: #8a9ab0; }
+    .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #0f1923;
+      border: 1px solid #2a3f55;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      color: #8a9ab0;
+      margin-bottom: 20px;
+    }
+    .version-badge .dot { width: 6px; height: 6px; background: #22c55e; border-radius: 50%; }
+    .changelog {
+      margin-top: 20px;
+      text-align: left;
+      background: #0f1923;
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+    .changelog p { font-size: 0.82rem; color: #8a9ab0; margin-bottom: 8px; font-weight: 600; }
+    .changelog ul { padding-left: 16px; }
+    .changelog li { font-size: 0.8rem; color: #5a6a7a; margin-bottom: 4px; line-height: 1.4; }
   </style>
 </head>
 <body>
@@ -76,6 +99,8 @@
     <div class="logo">📱</div>
     <h1>SmartLíder</h1>
     <p class="sub">App para líderes de equipe — apontamentos, refeições, solicitações e muito mais.</p>
+
+    <div class="version-badge"><span class="dot"></span> v1.0.0 &nbsp;·&nbsp; build 82a6399 &nbsp;·&nbsp; 01/06/2026</div>
 
     <a class="btn" href="https://expo.dev/artifacts/eas/h8HSamRG9uALQrJXnFFRWM.apk" id="dlBtn">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -86,7 +111,17 @@
       Baixar APK (Android)
     </a>
 
-    <p class="info">Versão mais recente • <span id="size">~107 MB</span></p>
+    <p class="info"><span id="size">~107 MB</span></p>
+
+    <div class="changelog">
+      <p>O que há de novo:</p>
+      <ul>
+        <li>Abertura imediata — sem tela branca no startup</li>
+        <li>Novo ícone com logo oficial SmartPro</li>
+        <li>Offline completo em todos os apontamentos</li>
+        <li>Fix barra de navegação Android (SafeAreaProvider)</li>
+      </ul>
+    </div>
 
     <div class="steps">
       <p>Como instalar:</p>
