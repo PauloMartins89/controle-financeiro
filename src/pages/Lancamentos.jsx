@@ -2274,6 +2274,7 @@ export default function Lancamentos() {
                   {isDiarioView && <ColHead colKey="rsDiurno" label="R$ DIURNO" align="right" />}
                   {isDiarioView && <ColHead colKey="hNoturnas" label="H. NOTURNAS" align="right" />}
                   {isDiarioView && <ColHead colKey="rsNoturno" label="R$ NOTURNO" align="right" />}
+                  {isDiarioView && <ColHead colKey="rsTotal" label="R$ TOTAL" align="right" />}
                   {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
                   {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
                   {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
@@ -2487,6 +2488,11 @@ export default function Lancamentos() {
                             {rsNoturno != null
                               ? <span style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{fmtR(rsNoturno)}</span>
                               : <span style={{ color: LC.txtMuted, fontSize: 11 }}>{tarifa ? '0h' : '—'}</span>}
+                          </td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {(rsDiurno != null || rsNoturno != null)
+                              ? <span style={{ fontWeight: 800, fontSize: 13, color: LC.accent }}>{fmtR((rsDiurno ?? 0) + (rsNoturno ?? 0))}</span>
+                              : <span style={{ color: LC.txtMuted }}>—</span>}
                           </td>
                         </>)
                       })()}
