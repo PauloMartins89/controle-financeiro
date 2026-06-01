@@ -2273,8 +2273,7 @@ export default function Lancamentos() {
                   {isDiarioView && <ColHead colKey="hDiurnas" label="H. DIURNAS" align="right" />}
                   {isDiarioView && <ColHead colKey="rsDiurno" label="R$ DIURNO" align="right" />}
                   {isDiarioView && <ColHead colKey="hNoturnas" label="H. NOTURNAS" align="right" />}
-                  {isDiarioView && <ColHead colKey="rsNoturno" label="R$ NOTURNO" align="right" />}
-                  {isDiarioView && <ColHead colKey="rsTotal" label="R$ TOTAL" align="right" />}
+                  {isDiarioView && <ColHead colKey="rsNoturno" label="R$ TOTAL" align="right" />}
                   {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
                   {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
                   {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
@@ -2483,11 +2482,6 @@ export default function Lancamentos() {
                             {noturno != null
                               ? <span style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{fmtH(noturno)}</span>
                               : <span style={{ color: LC.txtMuted }}>—</span>}
-                          </td>
-                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            {rsNoturno != null
-                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{fmtR(rsNoturno)}</span>
-                              : <span style={{ color: LC.txtMuted, fontSize: 11 }}>{tarifa ? '0h' : '—'}</span>}
                           </td>
                           <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             {(rsDiurno != null || rsNoturno != null)
