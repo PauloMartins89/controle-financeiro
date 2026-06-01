@@ -7,6 +7,7 @@ import {
   PlusIcon, PencilIcon, TrashIcon, XMarkIcon,
   ChevronUpIcon, ChevronDownIcon, DocumentDuplicateIcon,
   EyeIcon, EyeSlashIcon, CheckCircleIcon, Squares2X2Icon,
+  SparklesIcon, PhotoIcon,
 } from '@heroicons/react/24/outline'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -215,6 +216,43 @@ function TemplateModal({ template, workspaceId, onClose, onSave }) {
     template?.campos?.length ? template.campos : []
   )
   const [saving, setSaving] = useState(false)
+  const [analisando, setAnalisando] = useState(false)
+
+  async function handleAnalisarImagem(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { toast.error('Selecione uma imagem (JPEG, PNG ou WebP)'); return }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Imagem muito grande (máx 10 MB)'); return }
+
+    setAnalisando(true)
+    const tid = toast.loading('Analisando formulário com IA...')
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      const resp = await fetch('/api/analisar-form-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type }),
+      })
+      const json = await resp.json()
+      if (!resp.ok) throw new Error(json.detail || json.error || 'Erro desconhecido')
+
+      setCampos(json.campos)
+      toast.success(`${json.total} campo(s) identificados!`, { id: tid })
+    } catch (err) {
+      toast.error(`Falha na análise: ${err.message}`, { id: tid })
+    } finally {
+      setAnalisando(false)
+      // Limpa o input para permitir reuso
+      e.target.value = ''
+    }
+  }
+
 
   const handleCampoChange = useCallback((idx, updated) => {
     setCampos(prev => prev.map((c, i) => i === idx ? updated : c))
@@ -338,10 +376,35 @@ function TemplateModal({ template, workspaceId, onClose, onSave }) {
               <span style={{ fontSize: 14, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1 }}>
                 Campos ({campos.length})
               </span>
-              <button onClick={handleAddCampo} style={btnPrimaryStyle}>
-                <PlusIcon style={{ width: 15, height: 15 }} />
-                Adicionar Campo
-              </button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {/* Botão Analisar Imagem */}
+                <label
+                  title="Envie uma foto do formulário físico e a IA detecta os campos automaticamente"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 13px', borderRadius: 8, cursor: analisando ? 'not-allowed' : 'pointer',
+                    background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)',
+                    color: '#a78bfa', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+                    opacity: analisando ? 0.6 : 1,
+                  }}
+                >
+                  {analisando
+                    ? <><SparklesIcon style={{ width: 15, height: 15 }} /> Analisando...</>
+                    : <><PhotoIcon style={{ width: 15, height: 15 }} /> Analisar Imagem</>
+                  }
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={analisando}
+                    onChange={handleAnalisarImagem}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                <button onClick={handleAddCampo} style={btnPrimaryStyle}>
+                  <PlusIcon style={{ width: 15, height: 15 }} />
+                  Adicionar Campo
+                </button>
+              </div>
             </div>
 
             {campos.length === 0 ? (

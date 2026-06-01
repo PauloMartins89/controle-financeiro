@@ -1650,6 +1650,7 @@ export default function Lancamentos() {
   const [inlineSaving, setInlineSaving] = useState(false)
   const [expandedDiario, setExpandedDiario] = useState(new Set())
   const [reprocessingId, setReprocessingId] = useState(null)
+  const [formTemplate, setFormTemplate] = useState(null)
 
   function toggleDiario(id) {
     setExpandedDiario(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -2079,7 +2080,15 @@ export default function Lancamentos() {
     if (error) { toast.error('Erro ao carregar lançamentos'); setLoading(false); return }
     const items = data || []
     setLancamentos(items)
-    // Carrega tabelas de valorização (tarifas por cliente)
+    // Carrega template ativo para este workspace (colunas dinâmicas por cliente)
+    supabase.from('form_templates')
+      .select('id, nome, tipo_base, campos')
+      .eq('workspace_id', workspaceId)
+      .eq('ativo', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data: tmpl }) => setFormTemplate(tmpl || null))
     supabase.from('diario_tarifas')
       .select('cliente_nome, valor_hora_diurno, valor_hora_noturno, hora_inicio_diurno, hora_fim_diurno')
       .eq('ativo', true)
@@ -2178,6 +2187,9 @@ export default function Lancamentos() {
   }) : filtered
 
   const isDiarioView = filterForm === 'diario'
+  // Colunas extras do template ativo — isoladas por workspace (cada cliente tem o seu)
+  const templateCols = (formTemplate?.campos || []).filter(c => c.show_in_table !== false)
+  const showTemplateCols = templateCols.length > 0 && filterForm === (formTemplate?.tipo_base || '__none__')
 
   const totalReceitas  = filtered.filter(l => l.tipo === 'receita'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const totalDespesas  = filtered.filter(l => l.tipo === 'despesa'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
@@ -2374,6 +2386,9 @@ export default function Lancamentos() {
                   {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
                   {!isDiarioView && <ColHead colKey="kmTer" label="KM TER" align="right" />}
                   {!isDiarioView && <ColHead colKey="kmTotal" label="KM TOTAL" align="right" />}
+                  {showTemplateCols && templateCols.map(c => (
+                    <ColHead key={c.key} colKey={`tmpl_${c.key}`} label={c.label.toUpperCase()} align={c.tipo === 'number' ? 'right' : 'left'} />
+                  ))}
                   <ColHead colKey="valor" label="VALOR" align="right" />
                   <ColHead colKey="status" label="STATUS" />
                   <th style={{ padding: '9px 12px', width: 80, background: LC.secondary, borderBottom: `1px solid ${LC.border}` }} />
@@ -2637,6 +2652,16 @@ export default function Lancamentos() {
                       ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>)}
                       {/* KM TOTAL */}
                       {!isDiarioView && <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.total > 0 ? 800 : 400, color: km?.total > 0 ? LC.txtPrimary : LC.txtMuted, fontSize: 13 }}>{fmtKm(km?.total)}</td>}
+                      {/* COLUNAS DO TEMPLATE (isoladas por workspace) */}
+                      {showTemplateCols && templateCols.map(c => {
+                        const val = d[c.key]
+                        const empty = val == null || val === ''
+                        return (
+                          <td key={c.key} style={{ padding: '9px 12px', textAlign: c.tipo === 'number' ? 'right' : 'left', fontSize: 12, whiteSpace: 'nowrap', color: empty ? LC.txtMuted : LC.txtPrimary }}>
+                            {empty ? '—' : String(val)}
+                          </td>
+                        )
+                      })}
                       {/* VALOR */}
                       {isDiarioView && row_rs.total != null
                         ? <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 800, fontSize: 13, color: '#059669' }}>{row_rs.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
