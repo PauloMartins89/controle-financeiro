@@ -2913,7 +2913,10 @@ export default function Lancamentos() {
       {criarLoteModal && (() => {
         const selecionados = filtered.filter(l => selectedIds.has(l.id))
         const fmtCurr = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
-        const total = selecionados.reduce((s, l) => s + (l.valor || 0), 0)
+        const total = selecionados.reduce((s, l) => {
+          const computed = calcPricingTotal(l, tarifasMap)
+          return s + (computed != null ? computed : (l.valor || 0))
+        }, 0)
 
         async function confirmarLote(forcar = false) {
           if (!criarLoteCliente.trim()) { toast.error('Informe o nome do cliente.'); return }
