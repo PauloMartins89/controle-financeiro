@@ -1582,7 +1582,7 @@ export default function Lancamentos() {
   const [userId, setUserId]             = useState(null)
   const [search, setSearch]             = useState('')
   const [filterStatus, setFilterStatus] = useState('meus')
-  const [filterForm, setFilterForm]     = useState('todos')
+  const [filterForm, setFilterForm]     = useState('diario')
   const [showModal, setShowModal]       = useState(false)
   const [showDigital, setShowDigital]   = useState(false)
   const [editItem, setEditItem]         = useState(null)
@@ -2192,7 +2192,6 @@ export default function Lancamentos() {
           {/* Select formulário */}
           <select value={filterForm} onChange={e => setFilterForm(e.target.value)}
             style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 160 }}>
-            <option value="todos">Todos formulários</option>
             <option value="diario">Diário de Campo</option>
             <option value="transporte">Diário Motorista</option>
             <option value="padrao">Padrão</option>
