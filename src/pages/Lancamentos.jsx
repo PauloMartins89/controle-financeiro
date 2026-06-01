@@ -447,7 +447,78 @@ function FormTransporte({ dados, onChange }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Modal principal — cria / edita lançamento
 // ─────────────────────────────────────────────────────────────────────────────
-function LancamentoModal({ item, workspaceId, userId, enabledModules, onClose, onSaved }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Renderizador dinâmico de campos de template — usado no modal de edição
+// ─────────────────────────────────────────────────────────────────────────────
+function TemplateCamposRenderer({ campos, dados, onChange }) {
+  const inputStyle = {
+    width: '100%', padding: '10px 12px', borderRadius: 8,
+    background: 'var(--bg-card)', border: '1px solid var(--border)',
+    color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+  }
+  const set = (key, val) => onChange(prev => ({ ...prev, [key]: val }))
+
+  // Agrupa campos por seção
+  const sections = []
+  const sectionMap = {}
+  ;(campos || []).forEach(c => {
+    const sec = c.section || ''
+    if (!sectionMap[sec]) { sectionMap[sec] = []; sections.push(sec) }
+    sectionMap[sec].push(c)
+  })
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {sections.map(sec => (
+        <div key={sec}>
+          {sec && (
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid rgba(99,102,241,0.18)' }}>
+              {sec}
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            {sectionMap[sec].map(c => {
+              const val = dados[c.key] ?? ''
+              const options = typeof c.options === 'string'
+                ? c.options.split(',').map(o => o.trim()).filter(Boolean)
+                : (Array.isArray(c.options) ? c.options : [])
+              return (
+                <div key={c.key} style={{ gridColumn: c.width === 'half' ? 'span 1' : 'span 2' }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
+                    {c.label.toUpperCase()}{c.required && <span style={{ color: '#f87171' }}> *</span>}
+                  </label>
+                  {c.type === 'textarea' ? (
+                    <textarea style={{ ...inputStyle, minHeight: 64, resize: 'vertical' }} value={val} placeholder={c.ocr_hint || ''} onChange={e => set(c.key, e.target.value)} />
+                  ) : c.type === 'checkbox' ? (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingTop: 4 }}>
+                      <input type="checkbox" checked={!!val} onChange={e => set(c.key, e.target.checked)} style={{ width: 16, height: 16, accentColor: '#6366f1' }} />
+                      <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{val ? 'Sim' : 'Não'}</span>
+                    </label>
+                  ) : c.type === 'select' && options.length > 0 ? (
+                    <select style={inputStyle} value={val} onChange={e => set(c.key, e.target.value)}>
+                      <option value="">Selecione...</option>
+                      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      style={inputStyle}
+                      type={c.type === 'date' ? 'date' : c.type === 'number' ? 'number' : 'text'}
+                      value={val}
+                      placeholder={c.ocr_hint || ''}
+                      onChange={e => set(c.key, e.target.value)}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplate, onClose, onSaved }) {
   const formTypesDisponiveis = getFormTypesParaWorkspace(enabledModules)
   const [tipoForm, setTipoForm] = useState(() => {
     const prev = item?.tipo_formulario || 'padrao'
@@ -721,7 +792,10 @@ function LancamentoModal({ item, workspaceId, userId, enabledModules, onClose, o
                 </select>
               </div>
             </div>
-            <FormTransporte dados={dadosExtras} onChange={setDadosExtras} />
+            {formTemplate?.tipo_base === 'transporte' && formTemplate.campos?.length > 0
+              ? <TemplateCamposRenderer campos={formTemplate.campos} dados={dadosExtras} onChange={setDadosExtras} />
+              : <FormTransporte dados={dadosExtras} onChange={setDadosExtras} />
+            }
             <div style={{ marginTop: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>OBSERVAÇÕES</label>
               <textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} placeholder="Observações adicionais..." value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
@@ -1993,6 +2067,31 @@ export default function Lancamentos() {
       { key: 'obs',         label: 'OBSERVAÇÕES',width: 90,  halign: 'left',   getValue: l => (l.observacoes || l.dados_extras?.observacao || '').slice(0, 80) },
     ]
 
+    // ── Injeta colunas do template (campos marcados show_in_pdf !== false) ────
+    const tmplPdfCols = []
+    if (formTemplate?.campos?.length && formTemplate.tipo_base) {
+      const stdKeys = new Set(['numero_diario','cliente','empresa','condutor','placa','local_origem','local_destino','solicitante','km_asfalto','km_terra','km_total','pedagio','pernoite','refeicao','outros_adicionais','desconto','observacao'])
+      formTemplate.campos
+        .filter(c => c.show_in_pdf !== false && !stdKeys.has(c.key))
+        .forEach(c => {
+          tmplPdfCols.push({
+            key: `tmpl_${c.key}`,
+            label: c.label.toUpperCase(),
+            width: c.type === 'number' ? 52 : 72,
+            halign: c.type === 'number' ? 'right' : 'left',
+            getValue: l => {
+              if ((l.tipo_formulario || 'padrao') !== formTemplate.tipo_base) return ''
+              const v = l.dados_extras?.[c.key]
+              return v != null && v !== '' ? String(v) : ''
+            },
+          })
+        })
+    }
+    if (tmplPdfCols.length) {
+      const valorIdx = ALL_COLS.findIndex(c => c.key === 'valor')
+      ALL_COLS.splice(valorIdx, 0, ...tmplPdfCols)
+    }
+
     // ── Filtra apenas colunas que têm ao menos 1 valor preenchido ─────────────
     const activeCols = ALL_COLS.filter(col =>
       selecionados.some(l => { const v = col.getValue(l); return v !== '' && v !== '—' && v != null })
@@ -2875,6 +2974,7 @@ export default function Lancamentos() {
           workspaceId={workspaceId}
           userId={userId}
           enabledModules={enabledModules}
+          formTemplate={formTemplate}
           onClose={() => { setShowModal(false); setEditItem(null) }}
           onSaved={() => { setShowModal(false); setEditItem(null); loadData() }}
         />
