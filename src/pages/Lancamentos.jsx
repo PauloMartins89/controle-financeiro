@@ -2304,6 +2304,7 @@ export default function Lancamentos() {
                       {children}
                     </td>
                   )
+                  const row_rs = { total: null } // preenchido pela IIFE de preços
 
                   return (
                     <Fragment key={l.id}>
@@ -2462,6 +2463,7 @@ export default function Lancamentos() {
                         const rsDiurno  = tDiurno  != null && tarifa?.valor_hora_diurno  != null ? tDiurno  * Number(tarifa.valor_hora_diurno)  : null
                         const rsNoturno = tNoturno != null && tarifa?.valor_hora_noturno != null ? tNoturno * Number(tarifa.valor_hora_noturno) : null
                         const fmtR = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        if (rsDiurno != null || rsNoturno != null) row_rs.total = (rsDiurno ?? 0) + (rsNoturno ?? 0)
                         return (<>
                           <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             {hTotal != null
@@ -2531,11 +2533,13 @@ export default function Lancamentos() {
                       {/* KM TOTAL */}
                       {!isDiarioView && <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.total > 0 ? 800 : 400, color: km?.total > 0 ? LC.txtPrimary : LC.txtMuted, fontSize: 13 }}>{fmtKm(km?.total)}</td>}
                       {/* VALOR */}
-                      {EDITABLE_TD('valor', l.valor, (
-                        <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
-                          {fmtCurrency(l.valor)}
-                        </span>
-                      ), { textAlign: 'right' })}
+                      {isDiarioView && row_rs.total != null
+                        ? <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 800, fontSize: 13, color: '#059669' }}>{row_rs.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        : EDITABLE_TD('valor', l.valor, (
+                          <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
+                            {fmtCurrency(l.valor)}
+                          </span>
+                        ), { textAlign: 'right' })}
                       {/* STATUS */}
                       <td style={{ padding: '10px 12px' }}>
                         <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
