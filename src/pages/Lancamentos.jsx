@@ -2185,7 +2185,7 @@ export default function Lancamentos() {
 
         {/* Cards de resumo */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-          {isDiarioView ? [
+          {(isDiarioView ? [
             { label: 'TOTAL VALORIZADO', value: fmtCurrency(diarioTotalValorizado), color: '#059669' },
             { label: 'H. TRABALHADAS',   value: diarioTotalHoras.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'h', color: '#6366f1' },
             { label: 'REGISTROS',        value: filtered.length, color: '#0ea5e9' },
@@ -2195,7 +2195,7 @@ export default function Lancamentos() {
             { label: 'DESPESAS',  value: fmtCurrency(totalDespesas),  color: '#dc2626' },
             { label: 'SALDO',     value: fmtCurrency(totalReceitas - totalDespesas), color: totalReceitas - totalDespesas >= 0 ? '#059669' : '#dc2626' },
             { label: 'PENDENTES', value: pendentes, color: pendentes > 0 ? '#d97706' : LC.txtSecondary },
-          ]}.map(c => (
+          ]).map(c => (
             <div key={c.label} style={{ background: `linear-gradient(135deg, ${c.color}14 0%, var(--bg-card) 55%)`, borderRadius: 12, padding: '16px 20px', border: `1px solid ${c.color}28`, borderTop: `3px solid ${c.color}`, boxShadow: 'var(--shadow-card)' }}>
               <div style={{ fontSize: 10.5, color: LC.txtMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{c.label}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
