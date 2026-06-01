@@ -18,7 +18,13 @@ async function callGeminiVision(apiKey, { system, prompt, imageUrls }) {
     return { inlineData: { mimeType: mime, data: Buffer.from(buf).toString('base64') } }
   }))
   const result = await model.generateContent([{ text: prompt }, ...imageParts])
-  return JSON.parse(result.response.text())
+  let parsed = JSON.parse(result.response.text())
+  // Gemini pode retornar array quando recebe múltiplas imagens — pega o objeto mais rico
+  if (Array.isArray(parsed)) {
+    const count = obj => (obj && typeof obj === 'object') ? Object.values(obj).filter(v => v != null).length : 0
+    parsed = parsed.reduce((best, cur) => count(cur) > count(best) ? cur : best, {})
+  }
+  return parsed
 }
 
 // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
