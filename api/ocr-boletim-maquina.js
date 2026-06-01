@@ -1,22 +1,24 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-async function callGroq(apiKey, messages) {
-  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      max_tokens: 1024,
-      messages,
-    }),
+// Gemini Vision — baixa as imagens por URL e envia inline (base64)
+async function callGeminiVision(apiKey, { system, prompt, imageUrls }) {
+  const genAI = new GoogleGenerativeAI(apiKey)
+  const model = genAI.getGenerativeModel({
+    model: process.env.GEMINI_OCR_MODEL || 'gemini-2.0-flash',
+    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 4096 },
+    systemInstruction: system,
   })
-  if (!resp.ok) {
-    const err = await resp.text()
-    throw new Error(`Groq API error ${resp.status}: ${err.slice(0, 400)}`)
-  }
-  const json = await resp.json()
-  return json.choices?.[0]?.message?.content || ''
+  const imageParts = await Promise.all(imageUrls.map(async url => {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`Erro ao baixar imagem (${res.status}): ${url}`)
+    const buf = await res.arrayBuffer()
+    const mime = (res.headers.get('content-type') || 'image/jpeg').split(';')[0]
+    return { inlineData: { mimeType: mime, data: Buffer.from(buf).toString('base64') } }
+  }))
+  const result = await model.generateContent([{ text: prompt }, ...imageParts])
+  return JSON.parse(result.response.text())
 }
 
 // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
@@ -35,7 +37,7 @@ async function callGroq(apiKey, messages) {
 
 const supabaseUrl        = process.env.SUPABASE_URL        || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
-const groqApiKey         = process.env.GROQ_API_KEY
+const geminiApiKey       = process.env.GEMINI_API_KEY
 const zapiInstanceId     = process.env.ZAPI_INSTANCE_ID
 const zapiToken          = process.env.ZAPI_TOKEN
 const APP_URL            = process.env.APP_URL || 'https://smartpro.app.br'
@@ -285,7 +287,7 @@ function mapOcrToExtras(ocr, data) {
 async function processarBoletim(boletimId) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('supabase n├úo configurado')
-  if (!groqApiKey) throw new Error('GROQ_API_KEY n├úo configurada no servidor')
+  if (!geminiApiKey) throw new Error('GEMINI_API_KEY não configurada no servidor')
 
   // Carrega boletim + relacionamentos
   const { data: bol, error: bolErr } = await supabase
@@ -383,24 +385,15 @@ Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}
   try {
-    const imageMessages = [
-      { role: 'system', content: systemPrompt },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: userPrompt },
-          ...(boletimTipo?.imagem_url ? [{ type: 'image_url', image_url: { url: boletimTipo.imagem_url } }] : []),
-          { type: 'image_url', image_url: { url: bol.imagem_url } },
-        ],
-      },
-    ]
-    const rawText = await callGroq(groqApiKey, imageMessages)
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-    ocrRaw = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
+    const imageUrls = [
+      ...(boletimTipo?.imagem_url ? [boletimTipo.imagem_url] : []),
+      bol.imagem_url,
+    ].filter(Boolean)
+    ocrRaw = await callGeminiVision(geminiApiKey, { system: systemPrompt, prompt: userPrompt, imageUrls })
   } catch (e) {
-    console.error('[ocr-boletim] groq error:', e.message)
+    console.error('[ocr-boletim] gemini error:', e.message)
     await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
-    if (waPhone) await zapiSendText(waPhone, `ÔØî Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
+    if (waPhone) await zapiSendText(waPhone, `⚠️ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
     return
   }
 
