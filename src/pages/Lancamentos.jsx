@@ -1598,6 +1598,7 @@ export default function Lancamentos() {
   const [loteConflito, setLoteConflito] = useState(null) // itens com lote já atribuído
   const [sortKey, setSortKey] = useState(null)   // colKey ativo
   const [sortDir, setSortDir] = useState('asc')  // 'asc' | 'desc'
+  const [tarifasMap, setTarifasMap] = useState({}) // cliente_nome.lower → diario_tarifas row
   const [inlineEdit, setInlineEdit] = useState({ id: null, field: null, value: '', origValue: '' })
   const [inlineSaving, setInlineSaving] = useState(false)
   const [expandedDiario, setExpandedDiario] = useState(new Set())
@@ -2002,6 +2003,15 @@ export default function Lancamentos() {
     if (error) { toast.error('Erro ao carregar lançamentos'); setLoading(false); return }
     const items = data || []
     setLancamentos(items)
+    // Carrega tabelas de valorização (tarifas por cliente)
+    supabase.from('diario_tarifas')
+      .select('cliente_nome, valor_hora_diurno, valor_hora_noturno')
+      .eq('ativo', true)
+      .then(({ data: tData }) => {
+        const tMap = {}
+        ;(tData || []).forEach(t => { if (t.cliente_nome) tMap[t.cliente_nome.toLowerCase()] = t })
+        setTarifasMap(tMap)
+      })
     // Carrega info dos lotes vinculados
     const loteIds = [...new Set(items.map(l => l.lote_cliente_id).filter(Boolean))]
     if (loteIds.length > 0) {
@@ -2261,7 +2271,9 @@ export default function Lancamentos() {
                   {isDiarioView && <ColHead colKey="jornadaFim" label="FIM" />}
                   {isDiarioView && <ColHead colKey="totalJornada" label="H. TOTAL" align="right" />}
                   {isDiarioView && <ColHead colKey="hDiurnas" label="H. DIURNAS" align="right" />}
+                  {isDiarioView && <ColHead colKey="rsDiurno" label="R$ DIURNO" align="right" />}
                   {isDiarioView && <ColHead colKey="hNoturnas" label="H. NOTURNAS" align="right" />}
+                  {isDiarioView && <ColHead colKey="rsNoturno" label="R$ NOTURNO" align="right" />}
                   {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
                   {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
                   {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
@@ -2403,6 +2415,11 @@ export default function Lancamentos() {
                           }
                         }
                         const fmtH = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + 'h'
+                        const empresa = (ocr.empresa || d.empresa || d.cliente || '').toLowerCase()
+                        const tarifa  = empresa ? tarifasMap[empresa] : null
+                        const rsDiurno  = diurno  != null && tarifa?.valor_hora_diurno  != null ? diurno  * Number(tarifa.valor_hora_diurno)  : null
+                        const rsNoturno = noturno != null && tarifa?.valor_hora_noturno != null ? noturno * Number(tarifa.valor_hora_noturno) : null
+                        const fmtR = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         return (<>
                           <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             {hTotal != null
@@ -2415,9 +2432,19 @@ export default function Lancamentos() {
                               : <span style={{ color: LC.txtMuted }}>—</span>}
                           </td>
                           <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {rsDiurno != null
+                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#d97706' }}>{fmtR(rsDiurno)}</span>
+                              : <span style={{ color: LC.txtMuted, fontSize: 11 }}>{tarifa ? '0h' : '—'}</span>}
+                          </td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             {noturno != null
                               ? <span style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{fmtH(noturno)}</span>
                               : <span style={{ color: LC.txtMuted }}>—</span>}
+                          </td>
+                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            {rsNoturno != null
+                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{fmtR(rsNoturno)}</span>
+                              : <span style={{ color: LC.txtMuted, fontSize: 11 }}>{tarifa ? '0h' : '—'}</span>}
                           </td>
                         </>)
                       })()}
