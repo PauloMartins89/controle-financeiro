@@ -2416,7 +2416,14 @@ export default function Lancamentos() {
                         }
                         const fmtH = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + 'h'
                         const empresa = (ocr.empresa || d.empresa || d.cliente || '').trim().toLowerCase()
-                        const tarifa  = empresa ? tarifasMap[empresa] : null
+                        // Match exato → parcial (uma contém a outra, ex: "suzano" match "suzano s.a.")
+                        let tarifa = empresa ? (tarifasMap[empresa] ?? null) : null
+                        if (!tarifa && empresa) {
+                          const found = Object.entries(tarifasMap).find(([key]) =>
+                            empresa.includes(key) || key.includes(empresa)
+                          )
+                          if (found) tarifa = found[1]
+                        }
                         // Recalcula horas usando os limites diurno/noturno da própria tarifa
                         const tDs = tarifa?.hora_inicio_diurno ? (_parseMin(tarifa.hora_inicio_diurno) ?? 5 * 60)  : 5 * 60
                         const tDe = tarifa?.hora_fim_diurno    ? (_parseMin(tarifa.hora_fim_diurno)    ?? 22 * 60) : 22 * 60
