@@ -2107,6 +2107,21 @@ export default function Lancamentos() {
   const totalDespesas  = filtered.filter(l => l.tipo === 'despesa'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const pendentes = filtered.filter(l => ['rascunho','aguardando_aprovacao','devolvido','corrigido'].includes(l.status)).length
 
+  // Stats para o contexto Diário de Campo
+  const diarioTotalValorizado = isDiarioView
+    ? filtered.reduce((s, l) => { const t = calcPricingTotal(l, tarifasMap); return t != null ? s + t : s }, 0)
+    : 0
+  const diarioTotalHoras = isDiarioView
+    ? filtered.reduce((s, l) => {
+        const d = l.dados_extras || {}; const ocr = d.ocr || {}
+        const h = d.total_horas_dia ?? d.jornada_total_horas ?? (ocr.jornada_total_horas ? Number(ocr.jornada_total_horas) : null)
+        return h != null ? s + Number(h) : s
+      }, 0)
+    : 0
+  const diarioSemTarifa = isDiarioView
+    ? filtered.filter(l => calcPricingTotal(l, tarifasMap) == null && l.tipo_formulario === 'diario').length
+    : 0
+
   // Light-theme palette (scoped to this component)
   const LC = {
     bg: '#f4f6fa', card: '#fff', secondary: '#f0f2f8', hover: '#f7f8fd',
@@ -2170,12 +2185,17 @@ export default function Lancamentos() {
 
         {/* Cards de resumo */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-          {[
+          {isDiarioView ? [
+            { label: 'TOTAL VALORIZADO', value: fmtCurrency(diarioTotalValorizado), color: '#059669' },
+            { label: 'H. TRABALHADAS',   value: diarioTotalHoras.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'h', color: '#6366f1' },
+            { label: 'REGISTROS',        value: filtered.length, color: '#0ea5e9' },
+            { label: 'PENDENTES',        value: pendentes, color: pendentes > 0 ? '#d97706' : '#9aa3bf' },
+          ] : [
             { label: 'RECEITAS',  value: fmtCurrency(totalReceitas),  color: '#059669' },
             { label: 'DESPESAS',  value: fmtCurrency(totalDespesas),  color: '#dc2626' },
             { label: 'SALDO',     value: fmtCurrency(totalReceitas - totalDespesas), color: totalReceitas - totalDespesas >= 0 ? '#059669' : '#dc2626' },
             { label: 'PENDENTES', value: pendentes, color: pendentes > 0 ? '#d97706' : LC.txtSecondary },
-          ].map(c => (
+          ]}.map(c => (
             <div key={c.label} style={{ background: `linear-gradient(135deg, ${c.color}14 0%, var(--bg-card) 55%)`, borderRadius: 12, padding: '16px 20px', border: `1px solid ${c.color}28`, borderTop: `3px solid ${c.color}`, boxShadow: 'var(--shadow-card)' }}>
               <div style={{ fontSize: 10.5, color: LC.txtMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{c.label}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
