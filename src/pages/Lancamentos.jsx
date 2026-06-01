@@ -2434,6 +2434,23 @@ export default function Lancamentos() {
                               tNoturno = parseFloat(r2.noturno.toFixed(2))
                             }
                           }
+                          // Fallback para lançamentos antigos sem horários detalhados:
+                          // usa total_horas_dia + jornada_inicio para estimar o intervalo
+                          if (tDiurno == null && tNoturno == null && hTotal != null) {
+                            const iniF = d.jornada_inicio || ocr.jornada_inicio || ocr.entrada || ''
+                            if (iniF) {
+                              const iniMin = _parseMin(iniF)
+                              if (iniMin != null) {
+                                const fimMin = (iniMin + Math.round(Number(hTotal) * 60)) % 1440
+                                const fimF   = `${String(Math.floor(fimMin / 60)).padStart(2,'0')}:${String(fimMin % 60).padStart(2,'0')}`
+                                const rF = _intervaloHoras(iniF, fimF, tDs, tDe)
+                                tDiurno  = parseFloat(rF.diurno.toFixed(2))
+                                tNoturno = parseFloat(rF.noturno.toFixed(2))
+                              }
+                            }
+                            // Sem nenhuma referência de horário → tudo como diurno
+                            if (tDiurno == null) { tDiurno = Number(hTotal); tNoturno = 0 }
+                          }
                         }
                         const rsDiurno  = tDiurno  != null && tarifa?.valor_hora_diurno  != null ? tDiurno  * Number(tarifa.valor_hora_diurno)  : null
                         const rsNoturno = tNoturno != null && tarifa?.valor_hora_noturno != null ? tNoturno * Number(tarifa.valor_hora_noturno) : null
