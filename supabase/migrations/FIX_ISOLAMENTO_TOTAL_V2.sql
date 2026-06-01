@@ -224,19 +224,21 @@ CREATE POLICY "ws_contas_pagar" ON contas_pagar
   );
 
 -- ─── PASSO 8: DIARIO_TARIFAS ─────────────────────────────────────────────────
+-- Atenção: diario_tarifas usa owner_id (auth.users) e não workspace_id
 
 ALTER TABLE diario_tarifas ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "ws_diario_tarifas" ON diario_tarifas;
+DROP POLICY IF EXISTS "owner_diario_tarifas" ON diario_tarifas;
+DROP POLICY IF EXISTS "ws_diario_tarifas"    ON diario_tarifas;
 
 CREATE POLICY "ws_diario_tarifas" ON diario_tarifas
   FOR ALL
   USING (
-    workspace_id IN (SELECT my_workspace_ids())
+    auth.uid() = owner_id
     OR is_platform_admin()
   )
   WITH CHECK (
-    workspace_id IN (SELECT my_workspace_ids())
+    auth.uid() = owner_id
     OR is_platform_admin()
   );
 
