@@ -10,6 +10,7 @@ import {
   ArrowUpTrayIcon, ArrowDownTrayIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XCircleIcon, BuildingOffice2Icon,
   UserIcon, TruckIcon, UsersIcon, WrenchScrewdriverIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -95,6 +96,30 @@ const TABS_CONFIG = {
       { key: 'observacoes',    label: 'Observações', span: 2, multiline: true },
     ],
     importCols: ['nome','cpf','cnh','categoria_cnh','placa_vinculada','telefone','email','observacoes'],
+  },
+
+  tarifas: {
+    label: 'Valorização',
+    singular: 'Tabela de Valorização',
+    icon: BanknotesIcon,
+    table: 'diario_tarifas',
+    color: '#059669',
+    fields: [
+      { key: 'nome',      label: 'Nome da Tabela', required: true, span: 2, placeholder: 'Ex: Tabela Suzano 2026' },
+      { key: 'descricao', label: 'Descrição', span: 2, listHide: true },
+      { key: '_sep1', divider: 'Período Regular (Segunda a Sexta)', span: 2 },
+      { key: 'hora_inicio_diurno', label: 'Início Diurno', placeholder: '05:00' },
+      { key: 'hora_fim_diurno',    label: 'Fim Diurno',    placeholder: '22:00' },
+      { key: 'valor_hora_diurno',  label: 'R$/h Diurno',   type: 'number', placeholder: '0.00' },
+      { key: 'valor_hora_noturno', label: 'R$/h Noturno',  type: 'number', placeholder: '0.00' },
+      { key: '_sep2', divider: 'Fins de Semana (Sábado e Domingo)', span: 2 },
+      { key: 'valor_hora_fds_diurno',  label: 'R$/h Diurno FDS',  type: 'number', placeholder: '0.00', listHide: true },
+      { key: 'valor_hora_fds_noturno', label: 'R$/h Noturno FDS', type: 'number', placeholder: '0.00', listHide: true },
+      { key: '_sep3', divider: 'Feriados', span: 2 },
+      { key: 'valor_hora_feriado_diurno',  label: 'R$/h Diurno Feriado',  type: 'number', placeholder: '0.00', listHide: true },
+      { key: 'valor_hora_feriado_noturno', label: 'R$/h Noturno Feriado', type: 'number', placeholder: '0.00', listHide: true },
+    ],
+    importCols: ['nome','descricao','hora_inicio_diurno','hora_fim_diurno','valor_hora_diurno','valor_hora_noturno','valor_hora_fds_diurno','valor_hora_fds_noturno','valor_hora_feriado_diurno','valor_hora_feriado_noturno'],
   },
 }
 
