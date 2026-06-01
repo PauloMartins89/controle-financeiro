@@ -206,7 +206,14 @@ function CadastroModal({ config, item, ownerId, onClose, onSave }) {
       if (!form[f.key]?.trim()) { toast.error(`Campo "${f.label}" é obrigatório`); return }
     }
     setSaving(true)
-    const payload = { ...form, owner_id: ownerId }
+    // Campos numéricos: string vazia → null (evita erro "invalid input syntax for type numeric")
+    const numericKeys = new Set(config.fields.filter(f => f.type === 'number').map(f => f.key))
+    const payload = Object.fromEntries(
+      Object.entries({ ...form, owner_id: ownerId }).map(([k, v]) => [
+        k,
+        numericKeys.has(k) ? (v === '' || v == null ? null : Number(v)) : v,
+      ])
+    )
     let error
     if (item?.id) {
       ;({ error } = await supabase.from(config.table).update(payload).eq('id', item.id))
