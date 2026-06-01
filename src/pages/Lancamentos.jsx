@@ -82,32 +82,32 @@ const DEFAULT_KM_ROWS = [
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 // ── Diário de Obra: cálculo horas diurnas/noturnas ─────────────────────────
-// Diurno: 05:00 – 22:00 | Noturno: 22:00 – 05:00
+// Diurno: 05:00 – 22:00 | Noturno: 22:00 – 05:00 (configurável via tarifa)
 function _parseMin(hhmm) {
   if (!hhmm || typeof hhmm !== 'string') return null
   const [h, m] = hhmm.split(':').map(Number)
   if (isNaN(h)) return null
   return h * 60 + (m || 0)
 }
-function _intervaloHoras(startStr, endStr) {
+function _intervaloHoras(startStr, endStr, dStart = 5 * 60, dEnd = 22 * 60) {
   const s = _parseMin(startStr)
   const e = _parseMin(endStr)
   if (s == null || e == null) return { diurno: 0, noturno: 0 }
   const endAdj = e <= s ? e + 1440 : e   // cruzou meia-noite
   const total  = endAdj - s
   if (total <= 0) return { diurno: 0, noturno: 0 }
-  const D1 = 5 * 60, D2 = 22 * 60
+  const D1 = dStart, D2 = dEnd
   const ov1 = Math.min(endAdj, D2)        - Math.max(s, D1)
   const ov2 = Math.min(endAdj, D2 + 1440) - Math.max(s, D1 + 1440)
   const diurnoMin = Math.max(0, ov1) + Math.max(0, ov2)
   return { diurno: diurnoMin / 60, noturno: Math.max(0, total - diurnoMin) / 60 }
 }
-function calcHorasDiurnoNoturno(linhas) {
+function calcHorasDiurnoNoturno(linhas, dStart = 5 * 60, dEnd = 22 * 60) {
   if (!Array.isArray(linhas) || linhas.length === 0) return { diurno: null, noturno: null }
   let d = 0, n = 0, temDados = false
   for (const lj of linhas) {
-    if (lj.e1 && lj.s1) { const r = _intervaloHoras(lj.e1, lj.s1); d += r.diurno; n += r.noturno; temDados = true }
-    if (lj.e2 && lj.s2) { const r = _intervaloHoras(lj.e2, lj.s2); d += r.diurno; n += r.noturno; temDados = true }
+    if (lj.e1 && lj.s1) { const r = _intervaloHoras(lj.e1, lj.s1, dStart, dEnd); d += r.diurno; n += r.noturno; temDados = true }
+    if (lj.e2 && lj.s2) { const r = _intervaloHoras(lj.e2, lj.s2, dStart, dEnd); d += r.diurno; n += r.noturno; temDados = true }
   }
   if (!temDados) return { diurno: null, noturno: null }
   return { diurno: parseFloat(d.toFixed(2)), noturno: parseFloat(n.toFixed(2)) }
@@ -2005,7 +2005,7 @@ export default function Lancamentos() {
     setLancamentos(items)
     // Carrega tabelas de valorização (tarifas por cliente)
     supabase.from('diario_tarifas')
-      .select('cliente_nome, valor_hora_diurno, valor_hora_noturno')
+      .select('cliente_nome, valor_hora_diurno, valor_hora_noturno, hora_inicio_diurno, hora_fim_diurno')
       .eq('ativo', true)
       .then(({ data: tData }) => {
         const tMap = {}
@@ -2415,10 +2415,28 @@ export default function Lancamentos() {
                           }
                         }
                         const fmtH = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + 'h'
-                        const empresa = (ocr.empresa || d.empresa || d.cliente || '').toLowerCase()
+                        const empresa = (ocr.empresa || d.empresa || d.cliente || '').trim().toLowerCase()
                         const tarifa  = empresa ? tarifasMap[empresa] : null
-                        const rsDiurno  = diurno  != null && tarifa?.valor_hora_diurno  != null ? diurno  * Number(tarifa.valor_hora_diurno)  : null
-                        const rsNoturno = noturno != null && tarifa?.valor_hora_noturno != null ? noturno * Number(tarifa.valor_hora_noturno) : null
+                        // Recalcula horas usando os limites diurno/noturno da própria tarifa
+                        const tDs = tarifa?.hora_inicio_diurno ? (_parseMin(tarifa.hora_inicio_diurno) ?? 5 * 60)  : 5 * 60
+                        const tDe = tarifa?.hora_fim_diurno    ? (_parseMin(tarifa.hora_fim_diurno)    ?? 22 * 60) : 22 * 60
+                        let tDiurno = null, tNoturno = null
+                        if (tarifa) {
+                          const linhasJ2 = d.linhas_jornada || []
+                          if (linhasJ2.length > 0 && linhasJ2.some(lj => lj.e1 || lj.s1)) {
+                            ;({ diurno: tDiurno, noturno: tNoturno } = calcHorasDiurnoNoturno(linhasJ2, tDs, tDe))
+                          } else {
+                            const ini2 = d.jornada_inicio || ocr.jornada_inicio || ocr.entrada || ''
+                            const fim2 = d.jornada_fim    || ocr.jornada_fim    || ocr.saida   || ''
+                            if (ini2 && fim2) {
+                              const r2 = _intervaloHoras(ini2, fim2, tDs, tDe)
+                              tDiurno  = parseFloat(r2.diurno.toFixed(2))
+                              tNoturno = parseFloat(r2.noturno.toFixed(2))
+                            }
+                          }
+                        }
+                        const rsDiurno  = tDiurno  != null && tarifa?.valor_hora_diurno  != null ? tDiurno  * Number(tarifa.valor_hora_diurno)  : null
+                        const rsNoturno = tNoturno != null && tarifa?.valor_hora_noturno != null ? tNoturno * Number(tarifa.valor_hora_noturno) : null
                         const fmtR = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                         return (<>
                           <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
