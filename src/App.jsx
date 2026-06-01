@@ -74,6 +74,7 @@ import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
 import Cadastros from './pages/Cadastros'
+import FormTemplates from './pages/FormTemplates'
 import Faturamento from './pages/Faturamento'
 import Pagamentos from './pages/Pagamentos'
 import ContasPagar from './pages/ContasPagar'
@@ -547,6 +548,7 @@ export default function App() {
                   <Route path="/lancamentos" element={<Lancamentos />} />
                   <Route path="/cadastros" element={<Cadastros />} />
                   <Route path="/lotes-cliente" element={<LotesCliente />} />
+                  <Route path="/form-templates" element={<FormTemplates />} />
                   <Route path="/faturamento" element={<Faturamento />} />
                   <Route path="/pagamentos" element={<Pagamentos />} />
                   <Route path="/contas-pagar" element={<ContasPagar />} />

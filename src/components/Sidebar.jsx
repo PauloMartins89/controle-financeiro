@@ -9,7 +9,7 @@ import {
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
   TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon, BeakerIcon, DevicePhoneMobileIcon,
-  WrenchScrewdriverIcon, ExclamationTriangleIcon, MapPinIcon, CubeIcon,
+  WrenchScrewdriverIcon, ExclamationTriangleIcon, MapPinIcon, CubeIcon, Squares2X2Icon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -50,7 +50,8 @@ const navGroups = [
       { to: '/lancamentos',   icon: DocumentTextIcon,          label: 'Lançamentos',         moduleKey: 'gerencial' },
       { to: '/gerencial/boletins-diarios', icon: ClipboardDocumentListIcon, label: 'Boletins Diários', moduleKey: 'gerencial' },
       { to: '/cadastros',     icon: UsersIcon,        label: 'Cadastros',         moduleKey: 'gerencial' },
-      { to: '/lotes-cliente', icon: UserGroupIcon,    label: 'Lotes Cliente',     moduleKey: 'gerencial' },
+      { to: '/lotes-cliente',   icon: UserGroupIcon,    label: 'Lotes Cliente',     moduleKey: 'gerencial' },
+      { to: '/form-templates', icon: Squares2X2Icon,   label: 'Templates Forms',   moduleKey: 'gerencial' },
     ],
   },
   {
