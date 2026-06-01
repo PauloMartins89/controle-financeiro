@@ -6,7 +6,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 async function callGeminiVision(apiKey, { system, prompt, imageUrls }) {
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_OCR_MODEL || 'gemini-2.0-flash',
+    model: process.env.GEMINI_OCR_MODEL || 'gemini-2.5-flash',
     generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 4096 },
     systemInstruction: system,
   })
