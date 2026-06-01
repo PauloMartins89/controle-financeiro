@@ -1649,9 +1649,38 @@ export default function Lancamentos() {
   const [inlineEdit, setInlineEdit] = useState({ id: null, field: null, value: '', origValue: '' })
   const [inlineSaving, setInlineSaving] = useState(false)
   const [expandedDiario, setExpandedDiario] = useState(new Set())
+  const [reprocessingId, setReprocessingId] = useState(null)
 
   function toggleDiario(id) {
     setExpandedDiario(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+
+  async function reprocessarLancamento(l) {
+    if (reprocessingId) return
+    setReprocessingId(l.id)
+    const tid = toast.loading('Reprocessando com IA...')
+    try {
+      const resp = await fetch('/api/reprocessar-diario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lancamentoId: l.id, workspaceId: l.workspace_id }),
+      })
+      const json = await resp.json()
+      if (!resp.ok) throw new Error(json.error || 'Erro desconhecido')
+      if (json.updated === 0) {
+        toast.success('Nenhum campo novo identificado', { id: tid })
+      } else {
+        toast.success(`${json.updated} campo(s) atualizados: ${json.fields.join(', ')}`, { id: tid })
+        // Atualiza local
+        setLancamentos(prev => prev.map(item =>
+          item.id === l.id ? { ...item, dados_extras: json.dados_extras } : item
+        ))
+      }
+    } catch (err) {
+      toast.error(`Falha ao reprocessar: ${err.message}`, { id: tid })
+    } finally {
+      setReprocessingId(null)
+    }
   }
 
   function toggleSelect(id) {
@@ -2660,6 +2689,31 @@ export default function Lancamentos() {
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                             <MapPinIcon style={{ width: 15, height: 15 }} />
                           </button>
+                          {/* Reprocessar IA — só para diários com comprovante */}
+                          {isDiario && l.comprovante_url && (() => {
+                            const isLoading = reprocessingId === l.id
+                            const hasMissing = !d.jornada_inicio || !d.jornada_fim || !(d.cliente || d.empresa)
+                            return (
+                              <button
+                                title={hasMissing ? 'Reprocessar com IA (campos faltando)' : 'Reprocessar com IA'}
+                                onClick={() => reprocessarLancamento(l)}
+                                disabled={!!reprocessingId}
+                                style={{
+                                  padding: 5, borderRadius: 6, border: 'none', cursor: reprocessingId ? 'not-allowed' : 'pointer',
+                                  background: hasMissing ? 'rgba(245,158,11,0.12)' : 'transparent',
+                                  color: hasMissing ? '#d97706' : '#818cf8',
+                                  display: 'flex', alignItems: 'center', opacity: reprocessingId && !isLoading ? 0.4 : 1,
+                                  transition: 'background 0.15s',
+                                }}
+                                onMouseEnter={e => { if (!reprocessingId) e.currentTarget.style.background = hasMissing ? 'rgba(245,158,11,0.22)' : 'rgba(99,102,241,0.1)' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = hasMissing ? 'rgba(245,158,11,0.12)' : 'transparent' }}>
+                                {isLoading
+                                  ? <ArrowPathIcon style={{ width: 15, height: 15, animation: 'spin 1s linear infinite' }} />
+                                  : <SparklesIcon style={{ width: 15, height: 15 }} />
+                                }
+                              </button>
+                            )
+                          })()}
                           {l.comprovante_url && (
                             <button title="Ver comprovante" onClick={() => window.open(l.comprovante_url, '_blank')}
                               style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center' }}
