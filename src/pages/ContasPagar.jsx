@@ -478,17 +478,26 @@ export default function ContasPagar() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [resContas, resLanc] = await Promise.all([
+      // Lançamentos só entram em Contas a Pagar após aprovação do lote pelo cliente
+      const [resContas, resLotes] = await Promise.all([
         supabase.from('contas_pagar').select('*, solicitacao:solicitacoes_compra(id,titulo,descricao,urgencia,quantidade,requisitante_nome,data_necessidade,comprovante_url)').order('vencimento', { ascending: true }),
-        supabase.from('lancamentos')
-          .select('*')
-          .eq('tipo', 'despesa')
-          .neq('status', 'reprovado')
-          .order('data', { ascending: false }),
+        supabase.from('lotes_cliente').select('id').in('status', ['aprovado_cliente', 'faturado']),
       ])
       if (resContas.error) throw resContas.error
       setContas(resContas.data || [])
-      setLancamentos(resLanc.data || [])
+      const loteIds = (resLotes.data || []).map(l => l.id)
+      if (loteIds.length > 0) {
+        const resLanc = await supabase.from('lancamentos')
+          .select('*')
+          .eq('tipo', 'despesa')
+          .neq('status', 'reprovado')
+          .in('lote_cliente_id', loteIds)
+          .order('data', { ascending: false })
+        if (resLanc.error) throw resLanc.error
+        setLancamentos(resLanc.data || [])
+      } else {
+        setLancamentos([])
+      }
     } catch (e) {
       console.error(e)
       toast.error('Erro ao carregar contas')

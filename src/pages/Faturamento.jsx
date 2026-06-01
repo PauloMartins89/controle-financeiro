@@ -745,27 +745,30 @@ export default function Faturamento() {
   const loadData = useCallback(async () => {
     if (!supabase || !workspaceId) return
     setLoading(true)
+    // Apenas lotes aprovados pelo cliente (ou já faturados) chegam em Faturamento
+    const { data: lotesData } = await supabase
+      .from('lotes_cliente')
+      .select('id, cliente, status, confirmado_por, assinatura_url, aprovado_em, token_acesso')
+      .eq('workspace_id', workspaceId)
+      .in('status', ['aprovado_cliente', 'faturado'])
+    const lm = {}
+    ;(lotesData || []).forEach(lt => { lm[lt.id] = lt })
+    const loteIds = Object.keys(lm)
+    setLotesMap(lm)
+    if (loteIds.length === 0) {
+      setLancamentos([])
+      setLoading(false)
+      return
+    }
     const { data, error } = await supabase
       .from('lancamentos')
       .select('*')
       .eq('workspace_id', workspaceId)
+      .in('lote_cliente_id', loteIds)
       .order('data', { ascending: false })
       .order('created_at', { ascending: false })
     if (error) { toast.error('Erro ao carregar lançamentos'); setLoading(false); return }
-    const items = data || []
-    setLancamentos(items)
-    // Carrega info dos lotes vinculados
-    const loteIds = [...new Set(items.map(l => l.lote_cliente_id).filter(Boolean))]
-    if (loteIds.length > 0) {
-      supabase.from('lotes_cliente').select('id, cliente, status, confirmado_por, assinatura_url, aprovado_em, token_acesso').in('id', loteIds)
-        .then(({ data: ld }) => {
-          const m = {}
-          ;(ld || []).forEach(lt => { m[lt.id] = lt })
-          setLotesMap(m)
-        })
-    } else {
-      setLotesMap({})
-    }
+    setLancamentos(data || [])
     setLoading(false)
   }, [workspaceId])
 
