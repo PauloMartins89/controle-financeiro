@@ -18,7 +18,8 @@ DROP POLICY IF EXISTS "members_manage_lotes_cliente" ON lotes_cliente;
 
 -- Corrige acesso público por token: restringe a usuários anônimos
 -- (evita que usuário autenticado de outro workspace veja todos os lotes com token)
-DROP POLICY IF EXISTS "public_read_by_token" ON lotes_cliente;
+DROP POLICY IF EXISTS "public_read_by_token"    ON lotes_cliente;
+DROP POLICY IF EXISTS "anon_lote_token_select"  ON lotes_cliente;
 CREATE POLICY "anon_lote_token_select" ON lotes_cliente
   FOR SELECT TO anon
   USING (token_acesso IS NOT NULL);
