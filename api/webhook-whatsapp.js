@@ -185,7 +185,6 @@ async function getWorkspaceForPhone(supabase, phone) {
     .from('cadastros_condutores')
     .select('workspace_id, owner_id, nome')
     .eq('telefone', phone)
-    .eq('ativo_whatsapp', true)
     .eq('ativo', true)
     .limit(1)
     .maybeSingle()
