@@ -447,16 +447,7 @@ export default async function handler(req, res) {
       await zapiSendText(fromPhone, '⏳ Recebi a foto! Estou analisando o formulário com IA...')
     }
 
-    // Roda OCR
-    let ocr
-    try {
-      ocr = await runOCR(imageBase64)
-    } catch (e) {
-      if (fromPhone) await zapiSendText(fromPhone, '❌ Não consegui ler o formulário. Verifique se a foto está nítida e tente novamente.')
-      return res.status(200).json({ error: 'ocr_failed', detail: e.message })
-    }
-
-    // Supabase
+    // Supabase — precisa antes do OCR para buscar template do workspace
     const supabase = getSupabase()
     if (!supabase) {
       if (fromPhone) await zapiSendText(fromPhone, '⚠️ Erro interno. Contate o administrador.')
@@ -471,6 +462,34 @@ export default async function handler(req, res) {
         `⚠️ Seu número *${fromPhone}* não está cadastrado no sistema.\nPeça ao administrador para cadastrá-lo em *Configurações → WhatsApp*.`
       )
       return res.status(200).json({ error: 'phone_not_configured' })
+    }
+
+    // Busca form_template ativo para o workspace (primeiro ativo encontrado)
+    let formTemplate = null
+    try {
+      const { data: tmpl } = await supabase
+        .from('form_templates')
+        .select('id, nome, tipo_base, campos')
+        .eq('workspace_id', wsConfig.workspace_id)
+        .eq('ativo', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      formTemplate = tmpl || null
+      if (formTemplate) {
+        console.log(`[webhook-wa] usando form_template: "${formTemplate.nome}" (${formTemplate.tipo_base})`)
+      }
+    } catch (e) {
+      console.warn('[webhook-wa] erro ao buscar form_template:', e.message)
+    }
+
+    // Roda OCR — passa o template para extração dinâmica se disponível
+    let ocr
+    try {
+      ocr = await runOCR(imageBase64, { template: formTemplate })
+    } catch (e) {
+      if (fromPhone) await zapiSendText(fromPhone, '❌ Não consegui ler o formulário. Verifique se a foto está nítida e tente novamente.')
+      return res.status(200).json({ error: 'ocr_failed', detail: e.message })
     }
 
     // Monta payload
