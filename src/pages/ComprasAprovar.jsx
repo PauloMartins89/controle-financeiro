@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import useStore from '../store/useStore'
 import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
@@ -487,6 +488,7 @@ function CardAprovador({ s, cotacoes, onRefresh }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ComprasAprovar() {
+  const { workspaceId } = useStore()
   const [solicitacoes, setSolicitacoes] = useState([])
   const [cotacoes, setCotacoes]         = useState([])
   const [loading, setLoading]           = useState(true)
@@ -494,15 +496,16 @@ export default function ComprasAprovar() {
   const [busca, setBusca]               = useState('')
 
   const loadData = useCallback(async () => {
+    if (!workspaceId) return
     setLoading(true)
     const [{ data: sols }, { data: cots }] = await Promise.all([
-      supabase.from('solicitacoes_compra').select('*').order('created_at', { ascending: false }),
+      supabase.from('solicitacoes_compra').select('*').eq('workspace_id', workspaceId).order('created_at', { ascending: false }),
       supabase.from('cotacoes_compra').select('*').order('valor_total', { ascending: true }),
     ])
     setSolicitacoes(sols || [])
     setCotacoes(cots || [])
     setLoading(false)
-  }, [])
+  }, [workspaceId])
 
   useEffect(() => { loadData() }, [loadData])
 

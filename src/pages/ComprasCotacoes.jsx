@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import useStore from '../store/useStore'
 import { waLink } from '../lib/utils'
 import Header from '../components/Header'
 import toast from 'react-hot-toast'
@@ -337,20 +338,22 @@ function LeilaoCard({ sol, cotacoesDaSol, onRefresh }) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ComprasCotacoes() {
   const [sols,    setSols]    = useState([])
+  const { workspaceId } = useStore()
   const [cotacoes,setCotacoes]= useState([])
   const [loading, setLoading] = useState(true)
   const [filtro,  setFiltro]  = useState('ativos')
 
   const load = useCallback(async () => {
+    if (!workspaceId) return
     setLoading(true)
     const [{ data: s }, { data: c }] = await Promise.all([
-      supabase.from('solicitacoes_compra').select('*').in('status', ['leilao_aberto','leilao_encerrado']).order('created_at', { ascending: false }),
+      supabase.from('solicitacoes_compra').select('*').eq('workspace_id', workspaceId).in('status', ['leilao_aberto','leilao_encerrado']).order('created_at', { ascending: false }),
       supabase.from('cotacoes_compra').select('*').order('valor_total', { ascending: true }),
     ])
     setSols(s || [])
     setCotacoes(c || [])
     setLoading(false)
-  }, [])
+  }, [workspaceId])
 
   useEffect(() => { load() }, [load])
 

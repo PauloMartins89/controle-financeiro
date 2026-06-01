@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import useStore from '../store/useStore'
 import Header from '../components/Header'
 import toast from 'react-hot-toast'
 import {
@@ -991,6 +992,7 @@ function ModalConfigAprovador({ onClose }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function Compras() {
+  const { workspaceId } = useStore()
   const [solicitacoes, setSolicitacoes] = useState([])
   const [cotacoes, setCotacoes]         = useState([])
   const [loading, setLoading]           = useState(true)
@@ -998,20 +1000,12 @@ export default function Compras() {
   const [showConfig, setShowConfig]     = useState(false)
   const [filtroStatus, setFiltroStatus] = useState('todos')
   const [busca, setBusca]               = useState('')
-  const [workspaceId, setWorkspaceId]   = useState(null)
-
-  const loadWorkspace = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    const { data: wm } = await supabase.from('workspace_members')
-      .select('workspace_id').eq('user_id', user.id).limit(1).single()
-    if (wm) setWorkspaceId(wm.workspace_id)
-  }, [])
 
   const loadData = useCallback(async () => {
+    if (!workspaceId) return
     setLoading(true)
     const [{ data: sols, error }, { data: cots }] = await Promise.all([
-      supabase.from('solicitacoes_compra').select('*').order('created_at', { ascending: false }),
+      supabase.from('solicitacoes_compra').select('*').eq('workspace_id', workspaceId).order('created_at', { ascending: false }),
       supabase.from('cotacoes_compra').select('*').order('valor_total', { ascending: true }),
     ])
     if (error) toast.error('Erro ao carregar: ' + error.message)
@@ -1020,9 +1014,9 @@ export default function Compras() {
       setCotacoes(cots || [])
     }
     setLoading(false)
-  }, [])
+  }, [workspaceId])
 
-  useEffect(() => { loadWorkspace().then(loadData) }, [loadWorkspace, loadData])
+  useEffect(() => { loadData() }, [loadData])
 
   // KPIs
   const total          = solicitacoes.length
