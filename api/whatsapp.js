@@ -340,9 +340,77 @@ export default async function handler(req, res) {
         }
       } catch (_) {}
 
-      // ── Check de boletim por identificador_visual (antes do condutor) ─────────
-      // Identifica o formulário pelo texto do cabeçalho, independente do telefone.
-      // Resolve o problema de operadores que trocam de empresa.
+      // ── Check de boletim por telefone (path rápido — template exclusivo) ───────
+      // Para workspaces com template exclusivo, o telefone já identifica o
+      // colaborador e o tipo de boletim, sem precisar de Groq visual.
+      // Groq só é usado como fallback para telefones não cadastrados.
+      {
+        const _bNorm  = from.replace(/\D/g, '')
+        const _bSem55 = _bNorm.replace(/^55/, '')
+        const _bCom9  = _bSem55.length === 10 ? _bSem55.slice(0, 2) + '9' + _bSem55.slice(2) : _bSem55
+        const _bSem9  = _bSem55.length === 11 && _bSem55[2] === '9' ? _bSem55.slice(0, 2) + _bSem55.slice(3) : _bSem55
+        let colaboradorDireto = null
+        for (const v of [...new Set([_bSem55, _bCom9, _bSem9])]) {
+          const { data: colab } = await getDb()
+            .from('maquinas_colaboradores')
+            .select('id, workspace_id')
+            .ilike('telefone_wa', `%${v}%`)
+            .eq('ativo', true)
+            .maybeSingle()
+          if (colab?.id) { colaboradorDireto = colab; break }
+        }
+
+        if (colaboradorDireto) {
+          // Telefone identificado → busca o(s) tipo(s) de boletim do workspace
+          const { data: tiposWs } = await getDb()
+            .from('maquinas_boletim_tipos')
+            .select('id, nome, workspace_id, modulo_destino')
+            .eq('workspace_id', colaboradorDireto.workspace_id)
+            .eq('ativo', true)
+
+          // Template exclusivo: exatamente 1 tipo → rota direta sem Groq
+          if (tiposWs?.length === 1) {
+            const tipoExclusivo = tiposWs[0]
+            console.log('[WA] boletim rota direta (template exclusivo):', tipoExclusivo.nome, 'colaborador:', colaboradorDireto.id)
+
+            const numero = `BOL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
+            const { data: boletimRec, error: bolErr } = await getDb()
+              .from('maquinas_boletins')
+              .insert({
+                workspace_id:    colaboradorDireto.workspace_id,
+                boletim_tipo_id: tipoExclusivo.id,
+                colaborador_id:  colaboradorDireto.id,
+                wa_from:         from,
+                imagem_url:      comprovanteUrl || '',
+                numero,
+                status:          'recebido',
+              })
+              .select('id')
+              .single()
+
+            if (!bolErr && boletimRec?.id) {
+              const selfBase = `https://${req.headers.host}`
+              fetch(`${selfBase}/api/ocr-boletim-maquina`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ boletimId: boletimRec.id }),
+              }).catch(e => console.error('[WA] ocr-boletim-maquina call error:', e.message))
+
+              await sendWA(from, `📋 *Boletim recebido!*\n\nEstamos processando automaticamente. Em breve você receberá a confirmação.\n_Protocolo: ${numero}_`)
+            } else {
+              console.error('[WA] maquinas_boletins insert error (direto):', bolErr?.message)
+              await sendWA(from, '❌ Erro ao registrar o boletim. Por favor, tente reenviar a imagem.')
+            }
+            return res.status(200).end()
+          }
+          // Múltiplos tipos no workspace → precisa do Groq para identificar qual
+          console.log('[WA] workspace tem', tiposWs?.length ?? 0, 'tipos → usando Groq para identificar')
+        }
+      }
+
+      // ── Fallback: Check de boletim por identificador_visual (Groq) ───────────
+      // Para: (a) telefone não em maquinas_colaboradores, ou
+      //        (b) workspace com múltiplos tipos de boletim.
       const boletimTipoMatch = await identificarBoletimPorImagem(base64, getDb())
       if (boletimTipoMatch) {
         // Tenta localizar colaborador pelo telefone dentro desse workspace
@@ -377,7 +445,6 @@ export default async function handler(req, res) {
           .single()
 
         if (!bolErr && boletimRec?.id) {
-          // Dispara OCR em background (fire-and-forget)
           const selfBase = `https://${req.headers.host}`
           fetch(`${selfBase}/api/ocr-boletim-maquina`, {
             method: 'POST',
