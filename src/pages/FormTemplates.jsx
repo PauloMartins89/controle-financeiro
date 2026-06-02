@@ -461,7 +461,7 @@ function PreviewModal({ template, onClose }) {
       }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#f1f5f9' }}>
-            Preview — {template.nome}
+            Visualizar — {template.nome}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
             <XMarkIcon style={{ width: 20, height: 20 }} />
@@ -653,9 +653,9 @@ export default function FormTemplates() {
                     <PencilIcon style={{ width: 14, height: 14 }} />
                     Editar
                   </button>
-                  <button onClick={() => setPreviewing(t)} style={btnSmallStyle} title="Preview">
+                  <button onClick={() => setPreviewing(t)} style={btnSmallStyle} title="Visualizar">
                     <EyeIcon style={{ width: 14, height: 14 }} />
-                    Preview
+                    Visualizar
                   </button>
                   <button onClick={() => handleDuplicate(t)} style={btnSmallStyle} title="Duplicar">
                     <DocumentDuplicateIcon style={{ width: 14, height: 14 }} />

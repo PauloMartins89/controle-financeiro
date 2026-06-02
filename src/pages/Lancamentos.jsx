@@ -518,7 +518,7 @@ function TemplateCamposRenderer({ campos, dados, onChange }) {
   )
 }
 
-function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplate, onClose, onSaved }) {
+function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplates, onClose, onSaved }) {
   const formTypesDisponiveis = getFormTypesParaWorkspace(enabledModules)
   const [tipoForm, setTipoForm] = useState(() => {
     const prev = item?.tipo_formulario || 'padrao'
@@ -539,6 +539,7 @@ function LancamentoModal({ item, workspaceId, userId, enabledModules, formTempla
   })
   const [dadosExtras, setDadosExtras] = useState(item?.dados_extras || {})
   const [saving, setSaving] = useState(false)
+  const formTemplate = (formTemplates || {})[tipoForm] || null
   const [uploadingImg, setUploadingImg] = useState(false)
   const fileRef = useRef()
 
@@ -792,7 +793,7 @@ function LancamentoModal({ item, workspaceId, userId, enabledModules, formTempla
                 </select>
               </div>
             </div>
-            {formTemplate?.tipo_base === 'transporte' && formTemplate.campos?.length > 0
+            {formTemplate?.campos?.length > 0
               ? <TemplateCamposRenderer campos={formTemplate.campos} dados={dadosExtras} onChange={setDadosExtras} />
               : <FormTransporte dados={dadosExtras} onChange={setDadosExtras} />
             }
@@ -1724,7 +1725,7 @@ export default function Lancamentos() {
   const [inlineSaving, setInlineSaving] = useState(false)
   const [expandedDiario, setExpandedDiario] = useState(new Set())
   const [reprocessingId, setReprocessingId] = useState(null)
-  const [formTemplate, setFormTemplate] = useState(null)
+  const [formTemplates, setFormTemplates] = useState({})
 
   function toggleDiario(id) {
     setExpandedDiario(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -2069,24 +2070,27 @@ export default function Lancamentos() {
 
     // ── Injeta colunas do template (campos marcados show_in_pdf !== false) ────
     const tmplPdfCols = []
-    if (formTemplate?.campos?.length && formTemplate.tipo_base) {
-      const stdKeys = new Set(['numero_diario','cliente','empresa','condutor','placa','local_origem','local_destino','solicitante','km_asfalto','km_terra','km_total','pedagio','pernoite','refeicao','outros_adicionais','desconto','observacao'])
-      formTemplate.campos
+    const stdKeys = new Set(['numero_diario','cliente','empresa','condutor','placa','local_origem','local_destino','solicitante','km_asfalto','km_terra','km_total','pedagio','pernoite','refeicao','outros_adicionais','desconto','observacao'])
+    Object.values(formTemplates).forEach(tmpl => {
+      if (!tmpl?.campos?.length || !tmpl.tipo_base) return
+      tmpl.campos
         .filter(c => c.show_in_pdf !== false && !stdKeys.has(c.key))
         .forEach(c => {
+          if (tmplPdfCols.find(p => p.key === `tmpl_${c.key}`)) return
+          const tipoBase = tmpl.tipo_base
           tmplPdfCols.push({
             key: `tmpl_${c.key}`,
             label: c.label.toUpperCase(),
             width: c.type === 'number' ? 52 : 72,
             halign: c.type === 'number' ? 'right' : 'left',
             getValue: l => {
-              if ((l.tipo_formulario || 'padrao') !== formTemplate.tipo_base) return ''
+              if ((l.tipo_formulario || 'padrao') !== tipoBase) return ''
               const v = l.dados_extras?.[c.key]
               return v != null && v !== '' ? String(v) : ''
             },
           })
         })
-    }
+    })
     if (tmplPdfCols.length) {
       const valorIdx = ALL_COLS.findIndex(c => c.key === 'valor')
       ALL_COLS.splice(valorIdx, 0, ...tmplPdfCols)
@@ -2185,9 +2189,11 @@ export default function Lancamentos() {
       .eq('workspace_id', workspaceId)
       .eq('ativo', true)
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data: tmpl }) => setFormTemplate(tmpl || null))
+      .then(({ data: tmpls }) => {
+        const map = {}
+        ;(tmpls || []).forEach(t => { if (t.tipo_base && !map[t.tipo_base]) map[t.tipo_base] = t })
+        setFormTemplates(map)
+      })
     supabase.from('diario_tarifas')
       .select('cliente_nome, valor_hora_diurno, valor_hora_noturno, hora_inicio_diurno, hora_fim_diurno')
       .eq('ativo', true)
@@ -2287,8 +2293,10 @@ export default function Lancamentos() {
 
   const isDiarioView = filterForm === 'diario'
   // Colunas extras do template ativo — isoladas por workspace (cada cliente tem o seu)
-  const templateCols = (formTemplate?.campos || []).filter(c => c.show_in_table !== false)
-  const showTemplateCols = templateCols.length > 0 && filterForm === (formTemplate?.tipo_base || '__none__')
+  const activeTemplate = formTemplates[filterForm] || null
+  const RESERVED_COLS = new Set(['data', 'valor', 'status'])
+  const templateCols = (activeTemplate?.campos || []).filter(c => c.show_in_table !== false && !RESERVED_COLS.has(c.key))
+  const showTemplateCols = templateCols.length > 0
 
   const totalReceitas  = filtered.filter(l => l.tipo === 'receita'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const totalDespesas  = filtered.filter(l => l.tipo === 'despesa'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
@@ -2466,26 +2474,7 @@ export default function Lancamentos() {
                     />
                   </th>
                   <ColHead colKey="data" label="DATA" />
-                  {isDiarioView && <ColHead colKey="numDoc" label="Nº FICHA" />}
-                  <ColHead colKey="numDm" label={isDiarioView ? 'EQUIPAMENTO' : 'Nº DM'} />
-                  <ColHead colKey="cliente" label={isDiarioView ? 'EMPRESA' : 'CLIENTE / DESCRIÇÃO'} />
-                  {isDiarioView && <ColHead colKey="unidadeEmpresa" label="UNIDADE" />}
-                  <ColHead colKey="origem" label={isDiarioView ? 'SERVIÇO' : 'ORIGEM'} />
-                  {!isDiarioView && <ColHead colKey="destino" label="DESTINO" />}
-                  <ColHead colKey="placa" label="PLACA" />
-                  {isDiarioView && <ColHead colKey="jornadaInicio" label="INÍCIO" />}
-                  {isDiarioView && <ColHead colKey="jornadaFim" label="FIM" />}
-                  {isDiarioView && <ColHead colKey="totalJornada" label="H. TOTAL" align="right" />}
-                  {isDiarioView && <ColHead colKey="hDiurnas" label="H. DIURNAS" align="right" />}
-                  {isDiarioView && <ColHead colKey="rsDiurno" label="R$ DIURNO" align="right" />}
-                  {isDiarioView && <ColHead colKey="hNoturnas" label="H. NOTURNAS" align="right" />}
-                  {isDiarioView && <ColHead colKey="rsNoturno" label="R$ NOTURNO" align="right" />}
-                  {isDiarioView && <ColHead colKey="respBirigui" label="RESP. BIRIGUI" />}
-                  {isDiarioView && <ColHead colKey="respCliente" label="RESP. CLIENTE" />}
-                  {!isDiarioView && <ColHead colKey="kmAsf" label="KM ASF" align="right" />}
-                  {!isDiarioView && <ColHead colKey="kmTer" label="KM TER" align="right" />}
-                  {!isDiarioView && <ColHead colKey="kmTotal" label="KM TOTAL" align="right" />}
-                  {showTemplateCols && templateCols.map(c => (
+                  {templateCols.map(c => (
                     <ColHead key={c.key} colKey={`tmpl_${c.key}`} label={c.label.toUpperCase()} align={c.tipo === 'number' ? 'right' : 'left'} />
                   ))}
                   <ColHead colKey="valor" label="VALOR" align="right" />
@@ -2513,8 +2502,6 @@ export default function Lancamentos() {
                       {children}
                     </td>
                   )
-                  const row_rs = { total: null } // preenchido pela IIFE de preços
-
                   return (
                     <Fragment key={l.id}>
                     <tr style={{ borderBottom: `1px solid ${LC.border}`, transition: 'background 0.1s', background: selectedIds.has(l.id) ? LC.accentLight : '' }}
@@ -2534,237 +2521,27 @@ export default function Lancamentos() {
                       {EDITABLE_TD('data', l.data, (
                         <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
                       ))}
-                      {/* Nº FICHA (só diário) */}
-                      {isDiarioView && isDiario && EDITABLE_TD(
-                        'numero_documento',
-                        d.numero_documento || ocr.numero_documento || '',
-                        (() => {
-                          const val = d.numero_documento || ocr.numero_documento
-                          return val
-                            ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#fef9c3', color: '#854d0e' }}>{val}</span>
-                            : <span style={{ color: LC.txtMuted, fontSize: 12 }}>clique para inserir</span>
-                        })(),
-                        { whiteSpace: 'nowrap', textAlign: 'center' }
-                      )}
-                      {/* Nº DM / EQUIPAMENTO */}
-                      {EDITABLE_TD('numero_diario', isDiario ? ocr.equipamento : d.numero_diario, (
-                        <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap' }}>
-                          {isDiario
-                            ? (ocr.equipamento ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#dcfce7', color: '#16a34a' }}>{ocr.equipamento}</span> : <span style={{ color: LC.txtMuted }}>—</span>)
-                            : (isTransporte && d.numero_diario ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 800, background: '#eef0fe', color: LC.accent }}>{d.numero_diario}</span> : <span style={{ color: LC.txtMuted }}>—</span>)}
-                        </span>
-                      ))}
-                      {/* CLIENTE / EMPRESA */}
-                      {EDITABLE_TD('cliente', isDiario ? ocr.empresa : (d.cliente || d.empresa || l.descricao), (
-                        <div style={{ padding: '9px 12px', maxWidth: 180 }}>
-                          <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: LC.txtPrimary }}>
-                            {isDiario ? (ocr.empresa || l.descricao) : (isTransporte ? (d.cliente || d.empresa || l.descricao) : l.descricao)}
-                          </div>
-                          {!isDiario && d.condutor && <div style={{ fontSize: 11, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.condutor}</div>}
-                        </div>
-                      ))}
-                      {/* UNIDADE EMPRESA (só diário) */}
-                      {isDiarioView && isDiario && EDITABLE_TD(
-                        'unidade_empresa',
-                        d.unidade_empresa || ocr.unidade_empresa || '',
-                        <span style={{ padding: '9px 12px', display: 'block', fontSize: 12, color: LC.txtSecondary, maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {d.unidade_empresa || ocr.unidade_empresa || <span style={{ color: LC.txtMuted }}>—</span>}
-                        </span>,
-                        { maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
-                      )}
-                      {/* ORIGEM / SERVIÇO */}
-                      {EDITABLE_TD('local_origem', isDiario ? ocr.servico_executado : d.local_origem, (
-                        <span title={isDiario ? (ocr.servico_executado || '') : ''}
-                          style={{ padding: '9px 12px', display: 'block', maxWidth: 200, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {isDiario ? (ocr.servico_executado || '—') : (isTransporte ? (d.local_origem || '—') : '—')}
-                        </span>
-                      ))}
-                      {/* DESTINO (só para não-diário) */}
-                      {!isDiario && EDITABLE_TD('local_destino', d.local_destino, (
-                        <span style={{ padding: '9px 12px', display: 'block', maxWidth: 160, fontSize: 12, color: LC.txtSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {isTransporte ? (d.local_destino || '—') : '—'}
-                        </span>
-                      ))}
-                      {/* PLACA */}
-                      {EDITABLE_TD('placa', isDiario ? ocr.veiculo_placa : d.placa, (
-                        <span style={{ padding: '9px 12px', display: 'block', fontFamily: 'monospace', fontSize: 12, whiteSpace: 'nowrap', letterSpacing: 0.5, color: LC.txtPrimary }}>
-                          {(isDiario ? ocr.veiculo_placa : d.placa) || <span style={{ color: LC.txtMuted }}>—</span>}
-                        </span>
-                      ))}
-                      {/* JORNADA */}
-                      {isDiarioView && (() => {
-                        const jIni  = d.jornada_inicio || ocr.jornada_inicio || ''
-                        const jFimV = d.jornada_fim    || ocr.jornada_fim    || ''
-                        return (<>
-                          {EDITABLE_TD('jornada_inicio', jIni,
-                            <span style={{ padding: '9px 12px', display: 'block', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtSecondary, textAlign: 'center' }}>
-                              {jIni  ? jIni  : <span style={{ color: LC.txtMuted }}>—</span>}
-                            </span>,
-                            { textAlign: 'center' }
-                          )}
-                          {EDITABLE_TD('jornada_fim', jFimV,
-                            <span style={{ padding: '9px 12px', display: 'block', fontSize: 12, whiteSpace: 'nowrap', color: LC.txtSecondary, textAlign: 'center' }}>
-                              {jFimV ? jFimV : <span style={{ color: LC.txtMuted }}>—</span>}
-                            </span>,
-                            { textAlign: 'center' }
-                          )}
-                        </>)
-                      })()}
-                      {/* H. TOTAL / H. DIURNAS / H. NOTURNAS */}
-                      {isDiarioView && (() => {
-                        const hTotal = d.total_horas_dia != null ? d.total_horas_dia
-                                     : (d.jornada_total_horas != null ? d.jornada_total_horas
-                                     : (ocr.jornada_total_horas ? Number(ocr.jornada_total_horas) : null))
-                        const linhasJ = d.linhas_jornada || []
-                        let diurno, noturno
-                        if (linhasJ.length > 0 && linhasJ.some(lj => lj.e1 || lj.s1)) {
-                          // linhas com horários → cálculo preciso por intervalo
-                          ;({ diurno, noturno } = calcHorasDiurnoNoturno(linhasJ))
-                        } else {
-                          // fallback: intervalo único jornada_inicio → jornada_fim
-                          const ini = d.jornada_inicio || ocr.jornada_inicio || ocr.entrada || ''
-                          const fim = d.jornada_fim    || ocr.jornada_fim    || ocr.saida   || ''
-                          if (ini && fim) {
-                            const r = _intervaloHoras(ini, fim)
-                            diurno  = parseFloat(r.diurno.toFixed(2))
-                            noturno = parseFloat(r.noturno.toFixed(2))
-                          } else {
-                            diurno  = null
-                            noturno = null
-                          }
-                        }
-                        const fmtH = v => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + 'h'
-                        const empresa = (ocr.empresa || d.empresa || d.cliente || '').trim().toLowerCase()
-                        // Match exato → parcial (uma contém a outra, ex: "suzano" match "suzano s.a.")
-                        let tarifa = empresa ? (tarifasMap[empresa] ?? null) : null
-                        if (!tarifa && empresa) {
-                          const found = Object.entries(tarifasMap).find(([key]) =>
-                            empresa.includes(key) || key.includes(empresa)
-                          )
-                          if (found) tarifa = found[1]
-                        }
-                        // Recalcula horas usando os limites diurno/noturno da própria tarifa
-                        const tDs = tarifa?.hora_inicio_diurno ? (_parseMin(tarifa.hora_inicio_diurno) ?? 5 * 60)  : 5 * 60
-                        const tDe = tarifa?.hora_fim_diurno    ? (_parseMin(tarifa.hora_fim_diurno)    ?? 22 * 60) : 22 * 60
-                        let tDiurno = null, tNoturno = null
-                        if (tarifa) {
-                          const linhasJ2 = d.linhas_jornada || []
-                          if (linhasJ2.length > 0 && linhasJ2.some(lj => lj.e1 || lj.s1)) {
-                            ;({ diurno: tDiurno, noturno: tNoturno } = calcHorasDiurnoNoturno(linhasJ2, tDs, tDe))
-                          } else {
-                            const ini2 = d.jornada_inicio || ocr.jornada_inicio || ocr.entrada || ''
-                            const fim2 = d.jornada_fim    || ocr.jornada_fim    || ocr.saida   || ''
-                            if (ini2 && fim2) {
-                              const r2 = _intervaloHoras(ini2, fim2, tDs, tDe)
-                              tDiurno  = parseFloat(r2.diurno.toFixed(2))
-                              tNoturno = parseFloat(r2.noturno.toFixed(2))
-                            }
-                          }
-                          // Fallback para lançamentos antigos sem horários detalhados:
-                          // usa total_horas_dia + jornada_inicio para estimar o intervalo
-                          if (tDiurno == null && tNoturno == null && hTotal != null) {
-                            const iniF = d.jornada_inicio || ocr.jornada_inicio || ocr.entrada || ''
-                            if (iniF) {
-                              const iniMin = _parseMin(iniF)
-                              if (iniMin != null) {
-                                const fimMin = (iniMin + Math.round(Number(hTotal) * 60)) % 1440
-                                const fimF   = `${String(Math.floor(fimMin / 60)).padStart(2,'0')}:${String(fimMin % 60).padStart(2,'0')}`
-                                const rF = _intervaloHoras(iniF, fimF, tDs, tDe)
-                                tDiurno  = parseFloat(rF.diurno.toFixed(2))
-                                tNoturno = parseFloat(rF.noturno.toFixed(2))
-                              }
-                            }
-                            // Sem nenhuma referência de horário → tudo como diurno
-                            if (tDiurno == null) { tDiurno = Number(hTotal); tNoturno = 0 }
-                          }
-                        }
-                        const rsDiurno  = tDiurno  != null && tarifa?.valor_hora_diurno  != null ? tDiurno  * Number(tarifa.valor_hora_diurno)  : null
-                        const rsNoturno = tNoturno != null && tarifa?.valor_hora_noturno != null ? tNoturno * Number(tarifa.valor_hora_noturno) : null
-                        const fmtR = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                        if (rsDiurno != null || rsNoturno != null) row_rs.total = (rsDiurno ?? 0) + (rsNoturno ?? 0)
-                        return (<>
-                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            {hTotal != null
-                              ? <span style={{ fontWeight: 800, fontSize: 13, color: LC.accent }}>{fmtH(hTotal)}</span>
-                              : <span style={{ color: LC.txtMuted }}>—</span>}
-                          </td>
-                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            {diurno != null
-                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#d97706' }}>{fmtH(diurno)}</span>
-                              : <span style={{ color: LC.txtMuted }}>—</span>}
-                          </td>
-                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            {rsDiurno != null
-                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#d97706' }}>{fmtR(rsDiurno)}</span>
-                              : <span style={{ color: LC.txtMuted, fontSize: 11 }}>{tarifa ? '0h' : '—'}</span>}
-                          </td>
-                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            {noturno != null
-                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{fmtH(noturno)}</span>
-                              : <span style={{ color: LC.txtMuted }}>—</span>}
-                          </td>
-                          <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            {rsNoturno != null
-                              ? <span style={{ fontWeight: 700, fontSize: 12, color: '#7c3aed' }}>{fmtR(rsNoturno)}</span>
-                              : <span style={{ color: LC.txtMuted, fontSize: 11 }}>{tarifa ? '0h' : '—'}</span>}
-                          </td>
-                        </>)
-                      })()}
-                      {/* RESP. BIRIGUI */}
-                      {isDiarioView && (() => {
-                        const nome = d.responsavel_birigui_nome || ocr.responsavel_birigui_nome
-                        const mat  = d.responsavel_birigui_matricula || ocr.responsavel_birigui_matricula
-                        return EDITABLE_TD(
-                          'responsavel_birigui_nome',
-                          nome || '',
-                          nome
-                            ? <span style={{ padding: '9px 12px', display: 'block', fontSize: 12, color: LC.txtPrimary, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({mat || '—'})</span></span>
-                            : <span style={{ padding: '9px 12px', display: 'block', color: LC.txtMuted }}>—</span>,
-                          { maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
-                        )
-                      })()}
-                      {/* RESP. CLIENTE */}
-                      {isDiarioView && (() => {
-                        const nome = d.responsavel_cliente_nome || ocr.responsavel_cliente_nome
-                        const mat  = d.responsavel_cliente_matricula || ocr.responsavel_cliente_matricula
-                        const semMatricula = nome && (!mat || mat === '—')
-                        return EDITABLE_TD(
-                          'responsavel_cliente_nome',
-                          nome,
-                          nome
-                            ? <span>{nome} <span style={{ color: LC.txtMuted, fontSize: 11 }}>({mat || '—'})</span></span>
-                            : <span style={{ color: LC.txtMuted }}>—</span>,
-                          {
-                            padding: '9px 12px', fontSize: 12, color: LC.txtPrimary, maxWidth: 120,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            background: semMatricula ? '#fff7e6' : undefined,
-                          }
-                        )
-                      })()}
-                      {/* KM ASF */}
-                      {!isDiarioView && (isTransporte ? EDITABLE_TD('km_asfalto', km?.asfalto, (
-                        <span style={{ padding: '9px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.asfalto > 0 ? 700 : 400, color: km?.asfalto > 0 ? LC.accent : LC.txtMuted, fontSize: 12 }}>{fmtKm(km?.asfalto)}</span>
-                      ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>)}
-                      {/* KM TER */}
-                      {!isDiarioView && (isTransporte ? EDITABLE_TD('km_terra', km?.terra, (
-                        <span style={{ padding: '9px 12px', display: 'block', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.terra > 0 ? 700 : 400, color: km?.terra > 0 ? '#d97706' : LC.txtMuted, fontSize: 12 }}>{fmtKm(km?.terra)}</span>
-                      ), { textAlign: 'right' }) : <td style={{ padding: '9px 12px', textAlign: 'right', color: LC.txtMuted, fontSize: 12 }}>—</td>)}
-                      {/* KM TOTAL */}
-                      {!isDiarioView && <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: km?.total > 0 ? 800 : 400, color: km?.total > 0 ? LC.txtPrimary : LC.txtMuted, fontSize: 13 }}>{fmtKm(km?.total)}</td>}
-                      {/* COLUNAS DO TEMPLATE (isoladas por workspace) */}
-                      {showTemplateCols && templateCols.map(c => {
+                      {/* COLUNAS DO TEMPLATE */}
+                      {templateCols.map(c => {
                         const val = d[c.key]
                         const empty = val == null || val === ''
+                        let display = '—'
+                        if (!empty) {
+                          if (c.tipo === 'date' && /^\d{4}-\d{2}-\d{2}/.test(String(val))) {
+                            const [y, mo, dy] = String(val).split('T')[0].split('-')
+                            display = `${dy}/${mo}/${y}`
+                          } else {
+                            display = String(val)
+                          }
+                        }
                         return (
                           <td key={c.key} style={{ padding: '9px 12px', textAlign: c.tipo === 'number' ? 'right' : 'left', fontSize: 12, whiteSpace: 'nowrap', color: empty ? LC.txtMuted : LC.txtPrimary }}>
-                            {empty ? '—' : String(val)}
+                            {display}
                           </td>
                         )
                       })}
                       {/* VALOR */}
-                      {isDiarioView && row_rs.total != null
-                        ? <td style={{ padding: '9px 12px', textAlign: 'right', whiteSpace: 'nowrap', fontWeight: 800, fontSize: 13, color: '#059669' }}>{row_rs.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                        : EDITABLE_TD('valor', l.valor, (
+                      {EDITABLE_TD('valor', l.valor, (
                           <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
                             {fmtCurrency(l.valor)}
                           </span>
@@ -2974,7 +2751,7 @@ export default function Lancamentos() {
           workspaceId={workspaceId}
           userId={userId}
           enabledModules={enabledModules}
-          formTemplate={formTemplate}
+          formTemplates={formTemplates}
           onClose={() => { setShowModal(false); setEditItem(null) }}
           onSaved={() => { setShowModal(false); setEditItem(null); loadData() }}
         />
