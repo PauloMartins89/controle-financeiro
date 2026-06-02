@@ -209,8 +209,167 @@ async function matchCadastro(supabase, workspaceId, campoTipo, valorRaw) {
     matchId:     melhor.id,
     tabela:      cfg.tabela,
     confianca:   melhorConf,
-    propostaTxt: `${melhor[cfg.campo]} ÔÇö ${melhorConf}% de similaridade`,
+    propostaTxt: `${melhor[cfg.campo]} — ${melhorConf}% de similaridade`,
   }
+}
+
+// Calcula valor faturável de um lançamento diário a partir de diario_tarifas
+// Replica a lógica de calcPricingTotal do front-end
+async function calcValorTarifa(supabase, workspaceId, extrasObj) {
+  try {
+    const { data: tarifas } = await supabase
+      .from('diario_tarifas')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .eq('ativo', true)
+    if (!tarifas?.length) return null
+
+    const empresa = (extrasObj.cliente || extrasObj.empresa || '').trim().toLowerCase()
+    if (!empresa) return null
+
+    let tarifa = tarifas.find(t => (t.nome || '').trim().toLowerCase() === empresa)
+    if (!tarifa) tarifa = tarifas.find(t => empresa.includes((t.nome || '').trim().toLowerCase()) || (t.nome || '').trim().toLowerCase().includes(empresa))
+    if (!tarifa) return null
+
+    const parseMin = s => { if (!s) return null; const m = String(s).match(/^(\d{1,2}):(\d{2})/); return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : null }
+    const tDs = tarifa.hora_inicio_diurno ? (parseMin(String(tarifa.hora_inicio_diurno)) ?? 300)  : 300
+    const tDe = tarifa.hora_fim_diurno    ? (parseMin(String(tarifa.hora_fim_diurno))    ?? 1320) : 1320
+
+    const intervalo = (ini, fim) => {
+      const iM = parseMin(ini); const fM = parseMin(fim)
+      if (iM == null || fM == null) return null
+      const total = ((fM - iM + 1440) % 1440) || 0
+      let d = 0, n = 0
+      for (let t = 0; t < total; t++) {
+        const cur = (iM + t) % 1440
+        if (cur >= tDs && cur < tDe) d++; else n++
+      }
+      return { diurno: d / 60, noturno: n / 60 }
+    }
+
+    let tDiurno = null, tNoturno = null
+    const linhas = Array.isArray(extrasObj.linhas_jornada) ? extrasObj.linhas_jornada : []
+    if (linhas.length > 0 && linhas.some(lj => lj.e1 || lj.s1)) {
+      let d = 0, n = 0
+      for (const lj of linhas) {
+        const r1 = lj.e1 && lj.s1 ? intervalo(lj.e1, lj.s1) : null
+        const r2 = lj.e2 && lj.s2 ? intervalo(lj.e2, lj.s2) : null
+        if (r1) { d += r1.diurno; n += r1.noturno }
+        if (r2) { d += r2.diurno; n += r2.noturno }
+      }
+      tDiurno = parseFloat(d.toFixed(2)); tNoturno = parseFloat(n.toFixed(2))
+    } else {
+      const ini = extrasObj.jornada_inicio || ''
+      const fim = extrasObj.jornada_fim    || ''
+      if (ini && fim) {
+        const r = intervalo(ini, fim)
+        if (r) { tDiurno = parseFloat(r.diurno.toFixed(2)); tNoturno = parseFloat(r.noturno.toFixed(2)) }
+      }
+    }
+    if (tDiurno == null && tNoturno == null) {
+      const hTotal = extrasObj.total_horas_dia ?? extrasObj.jornada_total_horas ?? null
+      if (hTotal != null) { tDiurno = Number(hTotal); tNoturno = 0 }
+    }
+    if (tDiurno == null && tNoturno == null) return null
+
+    const rsDiurno  = tDiurno  != null && tarifa.valor_hora_diurno  != null ? tDiurno  * Number(tarifa.valor_hora_diurno)  : null
+    const rsNoturno = tNoturno != null && tarifa.valor_hora_noturno != null ? tNoturno * Number(tarifa.valor_hora_noturno) : null
+    if (rsDiurno == null && rsNoturno == null) return null
+    return parseFloat(((rsDiurno ?? 0) + (rsNoturno ?? 0)).toFixed(2))
+  } catch (e) {
+    console.error('[ocr-boletim] calcValorTarifa error:', e.message)
+    return null
+  }
+}
+
+// Monta mensagem WA com o resumo de tudo que foi lido pelo OCR
+function buildResumoOCR(extras, valorCalculado, temPendente, boletimNumero, dataBoletim) {
+  const r   = extras.ocr || {}
+  const ex  = extras
+
+  const linha = (emoji, label, valor) => {
+    if (valor == null || valor === '' || valor === '0' || valor === 0) return null
+    return `${emoji} *${label}:* ${valor}`
+  }
+
+  // Data formatada
+  const dataFmt = dataBoletim
+    ? dataBoletim.split('-').reverse().join('/')
+    : new Date().toLocaleDateString('pt-BR')
+
+  // Motorista / condutor
+  const motorista = ex.condutor || r.colaborador || r.motorista || r.condutor || null
+
+  // Jornada — tenta linhas_jornada primeiro, depois jornada_inicio/fim
+  let jornadaStr = null
+  const linhas = Array.isArray(ex.linhas_jornada) ? ex.linhas_jornada : []
+  if (linhas.length > 0 && linhas.some(lj => lj.e1 || lj.s1)) {
+    const partes = linhas
+      .filter(lj => lj.e1 || lj.s1)
+      .map(lj => {
+        const blocos = []
+        if (lj.e1 && lj.s1) blocos.push(`${lj.e1}→${lj.s1}`)
+        if (lj.e2 && lj.s2) blocos.push(`${lj.e2}→${lj.s2}`)
+        return blocos.join(' / ') + (lj.total ? ` (${lj.total})` : '')
+      })
+    jornadaStr = partes.join(' | ')
+  } else {
+    const ini = ex.jornada_inicio || r.jornada_inicio || r.entrada || null
+    const fim = ex.jornada_fim    || r.jornada_fim    || r.saida   || null
+    const tot = ex.total_horas_dia ?? ex.jornada_total_horas ?? null
+    if (ini || fim) jornadaStr = [ini, fim].filter(Boolean).join(' → ') + (tot != null ? ` (${tot}h)` : '')
+  }
+
+  // KMs
+  const kmAst   = parseFloat(ex.km_ast   || r.km_ast   || r.km_aferido  || r.km_inicial || 0) || null
+  const kmTer   = parseFloat(ex.km_ter   || r.km_ter   || r.km_terminal || r.km_final   || 0) || null
+  const kmTotal = parseFloat(ex.km_total || r.km_total || r.km_percorrido || 0) ||
+                  (kmAst && kmTer && kmTer > kmAst ? kmTer - kmAst : null)
+
+  // Valor
+  const valorStr = valorCalculado != null && valorCalculado > 0
+    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorCalculado)
+    : null
+
+  // Horímetros (boletins de máquina)
+  const hIni  = ex.horimetro_inicial != null ? ex.horimetro_inicial : null
+  const hFin  = ex.horimetro_final   != null ? ex.horimetro_final   : null
+  const hTrab = ex.horas_trabalhadas != null ? ex.horas_trabalhadas : null
+
+  const campos = [
+    linha('📅', 'Data',          dataFmt),
+    linha('👤', 'Motorista',     motorista),
+    linha('🏢', 'Cliente',       ex.cliente || r.cliente || r.empresa || null),
+    linha('📍', 'Origem',        ex.local_origem  || ex.origem        || r.local_origem  || r.origem       || null),
+    linha('🏁', 'Destino',       ex.local_destino || ex.destino       || r.local_destino || r.destino      || null),
+    linha('🚗', 'Placa',         ex.placa || r.placa || null),
+    linha('🔧', 'Equipamento',   ex.equipamento || r.equipamento || null),
+    linha('📂', 'Classe',        ex.classe_operacional || r.classe || null),
+    linha('📌', 'Frente/CDC',    [ex.frente || r.frente, ex.cdc || r.cdc].filter(Boolean).join(' / ') || null),
+    linha('⏱', 'Jornada',       jornadaStr),
+    linha('📏', 'Horímetro',     hIni != null && hFin != null ? `${hIni} → ${hFin}` : null),
+    linha('⚙️', 'Hs trabalhadas', hTrab != null ? `${hTrab}h` : null),
+    linha('🛣', 'KM saída',      kmAst  != null ? kmAst.toLocaleString('pt-BR')  : null),
+    linha('🛣', 'KM chegada',    kmTer  != null ? kmTer.toLocaleString('pt-BR')  : null),
+    linha('🛣', 'KM total',      kmTotal != null ? kmTotal.toLocaleString('pt-BR') : null),
+    linha('✍️', 'Assinatura CLI', ex.assinatura_cliente || r.assinatura_cliente || null),
+    linha('✍️', 'Assinatura EMP', ex.assinatura_empresa || r.assinatura_empresa || null),
+    linha('💰', 'Valor calculado', valorStr),
+  ].filter(Boolean)
+
+  const statusIcon = temPendente ? '⚠️' : '✅'
+  const statusMsg  = temPendente
+    ? '_Alguns campos precisam de revisão. Acesse o sistema para validar._'
+    : '_Lançamento gerado automaticamente no sistema._'
+
+  return [
+    `${statusIcon} *Boletim ${boletimNumero}* — ${dataFmt}`,
+    '',
+    '📋 *Campos lidos pelo OCR:*',
+    ...campos,
+    '',
+    statusMsg,
+  ].join('\n')
 }
 
 // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
@@ -306,6 +465,15 @@ function mapOcrToExtras(ocr, data) {
       const soma = linhas.reduce((acc, lj) => acc + (parseHHMM2(lj.total) || 0), 0)
       return soma > 0 ? parseFloat(soma.toFixed(2)) : null
     })(),
+    // ── Campos Diário do Motorista ─────────────────────────────────────────
+    condutor:      r.condutor      || r.motorista     || r.colaborador      || '',
+    local_origem:  r.local_origem  || r.origem        || '',
+    origem:        r.origem        || r.local_origem  || '',
+    local_destino: r.local_destino || r.destino       || '',
+    destino:       r.destino       || r.local_destino || '',
+    km_ast:        parseFloat(r.km_ast      || r.km_aferido    || r.km_inicial  || r.km_saida    || 0) || null,
+    km_ter:        parseFloat(r.km_ter      || r.km_terminal   || r.km_final    || r.km_chegada  || 0) || null,
+    km_total:      parseFloat(r.km_total    || r.km_percorrido || 0)                                   || null,
   }
 }
 
@@ -406,6 +574,12 @@ async function processarBoletim(boletimId) {
 - linhas_jornada: array de objetos, uma entrada por linha preenchida na tabela de Jornada de Trabalho. Cada objeto deve ter exatamente estas chaves: { "data": "DD/MM/AA", "e1": "HH:MM", "s1": "HH:MM", "e2": "HH:MM ou null", "s2": "HH:MM ou null", "total": "HH:MM", "servico": "descrição do serviço executado nesta linha" }. Retorne [] se não houver tabela de jornada.
 - assinatura_cliente: nome por extenso na linha de assinatura do cliente
 - assinatura_empresa: nome por extenso na linha de assinatura da empresa/Birigui
+- condutor: nome do motorista ou condutor do veículo (se for um Diário de Motorista ou formulário de transporte; use null se não houver)
+- local_origem: local, cidade ou endereço de onde o veículo/serviço partiu (origem da viagem); use null se não houver
+- local_destino: local, cidade ou endereço para onde o veículo foi ou onde o serviço foi realizado (destino); use null se não houver
+- km_ast: quilometragem do hodômetro na saída (km aferido ou hodômetro inicial do percurso) — retorne somente o número, null se não houver
+- km_ter: quilometragem do hodômetro na chegada (km terminal ou hodômetro final do percurso) — retorne somente o número, null se não houver
+- km_total: total de quilômetros percorridos no dia ou na viagem — retorne somente o número, null se não houver
 Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}
@@ -518,25 +692,27 @@ Retorne APENAS o JSON, sem comentários.`
   console.log(`[ocr-boletim] isGerencial=${isGerencial} | boletim_tipo_id=${bol.boletim_tipo_id} | modulo_destino=${boletimTipo?.modulo_destino} | temPendente=${temPendente}`)
 
   if (isGerencial) {
-    // ÔöÇÔöÇ Fluxo Gerencial ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
-    // Cria o lan├ºamento SEMPRE, independente de campos pendentes.
-    // O lan├ºamento com status 'pendente' ├® o pr├│prio documento de revis├úo:
-    // o usu├írio abre no Gerencial, corrige o que o OCR errou e salva.
+    // ── Fluxo Gerencial ─────────────────────────────────────────────────────
+    // Cria o lançamento SEMPRE, independente de campos pendentes.
+    // O lançamento com status 'pendente' é o próprio documento de revisão:
+    // o usuário abre no Gerencial, corrige o que o OCR errou e salva.
+    const extrasGerencial = { boletim_id: boletimId, ocr: ocrRaw, campos_pendentes: temPendente, ...mapOcrToExtras(ocrRaw, dataBoletim) }
+    const valorCalculado  = await calcValorTarifa(supabase, workspaceId, extrasGerencial)
     const { data: lancamento, error: lancErr } = await supabase
       .from('lancamentos')
       .insert({
         workspace_id:    workspaceId,
         user_id:         null,
         tipo:            'despesa',
-        descricao:       `Boletim ${bol.numero} ÔÇö ${colaborador?.nome || 'Colaborador'} ÔÇö ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
-        valor:           0,
+        descricao:       `Boletim ${bol.numero} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
+        valor:           valorCalculado ?? 0,
         data:            dataBoletim || new Date().toISOString().slice(0, 10),
         categoria:       'Campo',
         centro_custo:    '',
         status:          'pendente',
         observacoes:     ocrRaw.observacao || ocrRaw.observacoes || '',
         tipo_formulario: 'diario',
-        dados_extras:    { boletim_id: boletimId, ocr: ocrRaw, campos_pendentes: temPendente, ...mapOcrToExtras(ocrRaw, dataBoletim) },
+        dados_extras:    extrasGerencial,
         comprovante_url: bol.imagem_url || '',
       })
       .select('id')
@@ -554,13 +730,8 @@ Retorne APENAS o JSON, sem comentários.`
     }).eq('id', boletimId)
 
     if (waPhone) {
-      const dataFmt = dataBoletim
-        ? dataBoletim.split('-').reverse().join('/')
-        : new Date().toLocaleDateString('pt-BR')
-      const msg = temPendente
-        ? `­ƒôï *Boletim ${bol.numero}* do dia ${dataFmt} recebido!\n\n_Alguns campos precisam de revis├úo. Acesse o sistema para validar._`
-        : `Ô£à *Boletim ${bol.numero}* do dia ${dataFmt} processado com sucesso!`
-      await zapiSendText(waPhone, msg)
+      const resumo = buildResumoOCR(extrasGerencial, valorCalculado, temPendente, bol.numero, dataBoletim)
+      await zapiSendText(waPhone, resumo)
     }
 
   } else if (!temPendente) {
@@ -597,13 +768,9 @@ Retorne APENAS o JSON, sem comentários.`
     }).eq('id', boletimId)
 
     if (waPhone) {
-      const dataFmt = dataBoletim
-        ? dataBoletim.split('-').reverse().join('/')
-        : new Date().toLocaleDateString('pt-BR')
-      await zapiSendText(
-        waPhone,
-        `Ô£à *Boletim ${bol.numero}* do dia ${dataFmt} processado com sucesso!\n\n_Todos os campos foram identificados automaticamente._`
-      )
+      const extrasMaq = { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) }
+      const resumo = buildResumoOCR(extrasMaq, null, false, bol.numero, dataBoletim)
+      await zapiSendText(waPhone, resumo)
     }
   } else {
     // ÔöÇÔöÇ Fluxo M├íquinas ÔÇö campos pendentes ÔåÆ revis├úo do admin ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
@@ -613,10 +780,9 @@ Retorne APENAS o JSON, sem comentários.`
     }).eq('id', boletimId)
 
     if (waPhone) {
-      await zapiSendText(
-        waPhone,
-        `ÔÜá´©Å *Boletim ${bol.numero}* recebido!\n\nAlguns campos precisam ser confirmados pelo supervisor. Voc├¬ ser├í avisado assim que for revisado.`
-      )
+      const extrasPend = { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) }
+      const resumo = buildResumoOCR(extrasPend, null, true, bol.numero, dataBoletim)
+      await zapiSendText(waPhone, resumo)
     }
 
     console.log(`[ocr-boletim] boletim ${bol.numero} (${boletimId}) aguarda revis├úo admin ÔÇö ${registrosCampos.filter(c => c.status_match !== 'ok' && c.status_match !== 'ignorado').length} campo(s) pendente(s)`)

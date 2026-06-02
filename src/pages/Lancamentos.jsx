@@ -131,14 +131,21 @@ function calcKmTotais(d = {}) {
   return { asfalto, terra, total: asfalto + terra }
 }
 // Lê o primeiro campo não-vazio dentre as chaves fornecidas (suporte a novo e legado)
+// Também aceita prefixo "ocr." para leitura do sub-objeto d.ocr (retrocompatibilidade)
 function getDmField(d, ...keys) {
-  for (const k of keys) { const v = d[k]; if (v != null && v !== '') return v }
+  for (const k of keys) {
+    if (k.startsWith('ocr.')) {
+      const sub = k.slice(4); const v = d?.ocr?.[sub]; if (v != null && v !== '') return v
+    } else {
+      const v = d[k]; if (v != null && v !== '') return v
+    }
+  }
   return null
 }
-// KM com fallback: nova chave direta → ou calcula de km_rows
-function getKmAst(d)   { const v = parseFloat(d.km_ast);   return !isNaN(v) && v > 0 ? v : calcKmTotais(d).asfalto }
-function getKmTer(d)   { const v = parseFloat(d.km_ter);   return !isNaN(v) && v > 0 ? v : calcKmTotais(d).terra }
-function getKmTotal(d) { const v = parseFloat(d.km_total); return !isNaN(v) && v > 0 ? v : calcKmTotais(d).total }
+// KM com fallback: nova chave direta → ocr sub-objeto → calcula de km_rows
+function getKmAst(d)   { const v = parseFloat(d.km_ast   ?? d.ocr?.km_ast   ?? d.ocr?.km_aferido  ?? d.ocr?.km_inicial);  return !isNaN(v) && v > 0 ? v : calcKmTotais(d).asfalto }
+function getKmTer(d)   { const v = parseFloat(d.km_ter   ?? d.ocr?.km_ter   ?? d.ocr?.km_terminal ?? d.ocr?.km_final);    return !isNaN(v) && v > 0 ? v : calcKmTotais(d).terra }
+function getKmTotal(d) { const v = parseFloat(d.km_total ?? d.ocr?.km_total ?? d.ocr?.km_percorrido);                      return !isNaN(v) && v > 0 ? v : calcKmTotais(d).total }
 function getValorTransporte(d = {}) { return num(d.valor_total) }
 
 function calcPricingTotal(l, tarifasMap) {
@@ -2600,7 +2607,9 @@ export default function Lancamentos() {
                           </td>
                           {/* MOTORISTA */}
                           {EDITABLE_TD('condutor', d.condutor, (
-                            <span style={{ padding: '9px 10px', display: 'block', whiteSpace: 'nowrap', fontSize: 12, color: d.condutor ? LC.txtPrimary : LC.txtMuted }}>{d.condutor || '—'}</span>
+                            <span style={{ padding: '9px 10px', display: 'block', whiteSpace: 'nowrap', fontSize: 12, color: (d.condutor || d.ocr?.colaborador || d.ocr?.motorista || d.ocr?.condutor) ? LC.txtPrimary : LC.txtMuted }}>
+                              {d.condutor || d.ocr?.colaborador || d.ocr?.motorista || d.ocr?.condutor || '—'}
+                            </span>
                           ))}
                           {/* DATA BOLETIM */}
                           <td style={{ padding: '9px 10px', whiteSpace: 'nowrap', fontSize: 12, color: LC.txtSecondary }}>
@@ -2626,13 +2635,13 @@ export default function Lancamentos() {
                           {/* ORIGEM */}
                           {EDITABLE_TD('local_origem', getDmField(d,'origem','local_origem'), (
                             <span style={{ padding: '9px 10px', display: 'block', fontSize: 11.5, color: LC.txtPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
-                              {getDmField(d,'origem','local_origem') || '—'}
+                              {getDmField(d,'origem','local_origem','ocr.local_origem','ocr.origem','ocr.local_servico') || '—'}
                             </span>
                           ))}
                           {/* DESTINO */}
                           {EDITABLE_TD('local_destino', getDmField(d,'destino','local_destino'), (
-                            <span title={getDmField(d,'destino','local_destino')} style={{ padding: '9px 10px', display: 'block', fontSize: 11.5, color: LC.txtPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
-                              {getDmField(d,'destino','local_destino') || '—'}
+                            <span title={getDmField(d,'destino','local_destino','ocr.destino','ocr.local_destino')} style={{ padding: '9px 10px', display: 'block', fontSize: 11.5, color: LC.txtPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+                              {getDmField(d,'destino','local_destino','ocr.destino','ocr.local_destino') || '—'}
                             </span>
                           ))}
                           {/* PLACA */}
