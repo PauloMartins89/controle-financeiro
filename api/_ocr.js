@@ -251,7 +251,7 @@ ${skeletonComKm}`
   }
 
   // Adiciona tipo do formulário para que o webhook saiba como processar
-  json.tipo_formulario      = isTransporte ? 'transporte' : (tipoBase === 'despesa' ? 'padrao' : 'custom')
+  json.tipo_formulario      = tipoBase  // 'diario', 'transporte', 'despesa', etc.
   json._template_id         = template.id   || null
   json._template_nome       = nomeTemplate
 

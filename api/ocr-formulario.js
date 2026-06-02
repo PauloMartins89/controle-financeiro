@@ -6,10 +6,10 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   try {
-    const { imageBase64 } = req.body
+    const { imageBase64, template } = req.body
     if (!imageBase64) return res.status(400).json({ error: 'imageBase64 required' })
 
-    const json = await runOCR(imageBase64)
+    const json = await runOCR(imageBase64, { template: template || null })
     return res.json(json)
   } catch (e) {
     console.error('[ocr-formulario] error:', e.message)

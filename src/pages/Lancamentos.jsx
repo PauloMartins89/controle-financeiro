@@ -1026,10 +1026,15 @@ function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
         reader.onerror = reject
         reader.readAsDataURL(imgFile)
       })
+      // Passa o template ativo para o OCR usar extração guiada por campos
+      const tmpl = formTemplates[filterForm] || null
       const resp = await fetch('/api/ocr-formulario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: b64 }),
+        body: JSON.stringify({
+          imageBase64: b64,
+          template: tmpl ? { id: tmpl.id, nome: tmpl.nome, tipo_base: tmpl.tipo_base, campos: tmpl.campos } : null,
+        }),
       })
       if (!resp.ok) throw new Error('Erro na API')
       const data = await resp.json()
@@ -1051,6 +1056,21 @@ function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
           centro_custo: data.cc || '',
           status: 'rascunho',
           observacoes: data.observacao || '',
+          comprovante_url: '',
+        })
+      } else if (data.tipo_formulario && data.tipo_formulario !== 'padrao') {
+        // OCR com template — tipo 'diario', 'custom', etc.
+        setDetectedType(data.tipo_formulario)
+        setDadosExtras(data)
+        setForm({
+          tipo: 'receita',
+          descricao: '',
+          valor: String(data.valor_total || data.valor || 0),
+          data: data.data || hoje,
+          categoria: 'Serviços',
+          centro_custo: data.cc || '',
+          status: 'rascunho',
+          observacoes: data.observacao || data.observacoes || '',
           comprovante_url: '',
         })
       } else {
@@ -1076,15 +1096,20 @@ function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
   }
 
   async function handleSave() {
-    const valorFinal = detectedType === 'transporte'
+    const isTransporteType = detectedType === 'transporte'
+    const isTemplateType = detectedType && detectedType !== 'transporte' && detectedType !== 'padrao'
+    const valorFinal = isTransporteType
       ? getValorTransporte(dadosExtras)
       : parseFloat(String(form?.valor || '0').replace(',', '.'))
     if (isNaN(valorFinal) || valorFinal < 0) { toast.error('Valor inválido'); return }
 
     const d = dadosExtras
-    const descricao = (detectedType === 'transporte')
+    const hoje = new Date().toISOString().slice(0, 10)
+    const descricao = isTransporteType
       ? `Nº ${d.numero_diario || '—'} | ${d.empresa || ''} | ${d.local_origem || ''} → ${d.local_destino || ''}`.trim()
-      : (form?.descricao?.trim() || '')
+      : isTemplateType
+        ? ([`Nº ${d.numero_diario || d.nro_boletim || ''}`.trim(), d.empresa || d.cliente || '', d.local_origem || d.local_servico || ''].filter(Boolean).join(' | ') || `Digitalizado em ${hoje}`)
+        : (form?.descricao?.trim() || '')
     if (!descricao) { toast.error('Informe a descrição'); return }
 
     setSaving(true)
