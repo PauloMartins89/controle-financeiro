@@ -258,3 +258,88 @@ ${skeletonComKm}`
   console.log(`[runOCRComTemplate] template="${nomeTemplate}" tipo=${tipoBase} campos_extraidos=${Object.keys(json).length}`)
   return json
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// runOCRDiarioMotorista — extração hardcoded para o formulário DM Casagrande
+// Usa novo schema de chaves: numero_dm, cliente, origem, destino,
+// km_ast, km_ter, km_total, condutor, placa, data_boletim, total_geral
+// ─────────────────────────────────────────────────────────────────────────────
+export async function runOCRDiarioMotorista(imageBase64) {
+  const hoje = new Date().toISOString().slice(0, 10)
+  const groq  = new Groq({ apiKey: process.env.GROQ_API_KEY })
+  const imgUrl = `data:image/jpeg;base64,${imageBase64}`
+
+  const extractRes = await groqWithRetry(groq, {
+    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image_url', image_url: { url: imgUrl } },
+        {
+          type: 'text',
+          text: `Este é um formulário DIÁRIO DO MOTORISTA (Casagrande Transportes).
+Extraia os dados e retorne APENAS este JSON (sem texto adicional, sem cerca de código):
+{
+  "tipo_formulario": "transporte",
+  "numero_dm": "<número Nº no canto superior — ex: '1234'>",
+  "data": "<data do dia — YYYY-MM-DD, use ${hoje} se ilegível>",
+  "data_boletim": "<data impressa no boletim — YYYY-MM-DD, igual a data se não houver campo separado>",
+  "cliente": "<nome da empresa/cliente — campo EMPRESA ou CLIENTE>",
+  "condutor": "<nome do motorista — campo CONDUTOR ou assinatura>",
+  "placa": "<placa do veículo — campo PLACA>",
+  "origem": "<local de origem — campo LOCAL ORIGEM ou ORIGEM>",
+  "destino": "<local de destino — campo LOCAL DESTINO ou DESTINO>",
+  "km_ast": <total KM ASFALTO como número decimal, 0 se nenhum>,
+  "km_ter": <total KM TERRA como número decimal, 0 se nenhum>,
+  "km_total": <soma km_ast + km_ter como número decimal>,
+  "total_geral": <valor monetário total — campo VALOR R$ como número decimal, ex: 5950.00>,
+  "observacao": "<observações — campo OBSERVAÇÃO ou ''>",
+  "km_rows": [
+    { "tipo": "ASFALTO", "saida": "<KM saída ou ''>", "entrada": "<KM entrada ou ''>", "total": "<TOTAL ou ''>" },
+    { "tipo": "TERRA",   "saida": "<KM saída ou ''>", "entrada": "<KM entrada ou ''>", "total": "<TOTAL ou ''>" },
+    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },
+    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" },
+    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },
+    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" },
+    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },
+    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" }
+  ]
+}`,
+        },
+      ],
+    }],
+    max_tokens: 1500,
+    temperature: 0,
+  })
+
+  const raw     = extractRes.choices[0]?.message?.content?.trim() || ''
+  const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim()
+  const m       = cleaned.match(/\{[\s\S]*\}/)
+  if (!m) throw new Error(`runOCRDiarioMotorista: JSON não encontrado. raw=${raw.slice(0, 200)}`)
+
+  const json = JSON.parse(m[0])
+
+  // Normaliza campos numéricos
+  for (const k of ['km_ast', 'km_ter', 'km_total', 'total_geral']) {
+    if (typeof json[k] === 'string') {
+      json[k] = parseFloat(json[k].replace(/[^\d,.]/g, '').replace(',', '.')) || 0
+    }
+    if (json[k] == null) json[k] = 0
+  }
+
+  // Garante km_total coerente com km_ast + km_ter
+  if (json.km_total === 0 && (json.km_ast > 0 || json.km_ter > 0)) {
+    json.km_total = (json.km_ast || 0) + (json.km_ter || 0)
+  }
+
+  // Normaliza km_rows
+  if (!Array.isArray(json.km_rows)) json.km_rows = []
+  while (json.km_rows.length < 8) {
+    const tipo = json.km_rows.length % 2 === 0 ? 'ASFALTO' : 'TERRA'
+    json.km_rows.push({ tipo, saida: '', entrada: '', total: '' })
+  }
+
+  json.tipo_formulario = 'transporte'  // compatibilidade com registros existentes
+  console.log(`[runOCRDiarioMotorista] numero_dm=${json.numero_dm} condutor=${json.condutor} total=${json.total_geral}`)
+  return json
+}

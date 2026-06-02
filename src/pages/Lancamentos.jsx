@@ -33,6 +33,7 @@ const TIPO_CORES = {
 }
 
 const STATUS_CONF = {
+  revisar:              { icon: ExclamationTriangleIcon, color: '#f97316', label: 'A revisar' },
   rascunho:             { icon: DocumentTextIcon,      color: '#94a3b8', label: 'Rascunho' },
   aguardando_aprovacao: { icon: ClockIcon,             color: '#f59e0b', label: 'Ag. Aprovação' },
   aprovado:             { icon: CheckCircleIcon,       color: '#10b981', label: 'Aprovado' },
@@ -41,6 +42,7 @@ const STATUS_CONF = {
   reprovado:            { icon: XCircleIcon,           color: '#ef4444', label: 'Reprovado' },
   cancelado:            { icon: NoSymbolIcon,          color: '#64748b', label: 'Cancelado' },
   faturado:             { icon: BanknotesIcon,         color: '#8b5cf6', label: 'Faturado' },
+  pago:                 { icon: CheckCircleIcon,       color: '#0ea5e9', label: 'Pago' },
   // aliases legado (registros antigos no banco)
   pendente:             { icon: ClockIcon,             color: '#f59e0b', label: 'Ag. Aprovação' },
   rejeitado:            { icon: XCircleIcon,           color: '#ef4444', label: 'Reprovado' },
@@ -128,6 +130,15 @@ function calcKmTotais(d = {}) {
   const terra   = rows.filter(r => r.tipo === 'TERRA').reduce((s, r) => s + parseKm(r.total), 0)
   return { asfalto, terra, total: asfalto + terra }
 }
+// Lê o primeiro campo não-vazio dentre as chaves fornecidas (suporte a novo e legado)
+function getDmField(d, ...keys) {
+  for (const k of keys) { const v = d[k]; if (v != null && v !== '') return v }
+  return null
+}
+// KM com fallback: nova chave direta → ou calcula de km_rows
+function getKmAst(d)   { const v = parseFloat(d.km_ast);   return !isNaN(v) && v > 0 ? v : calcKmTotais(d).asfalto }
+function getKmTer(d)   { const v = parseFloat(d.km_ter);   return !isNaN(v) && v > 0 ? v : calcKmTotais(d).terra }
+function getKmTotal(d) { const v = parseFloat(d.km_total); return !isNaN(v) && v > 0 ? v : calcKmTotais(d).total }
 function getValorTransporte(d = {}) { return num(d.valor_total) }
 
 function calcPricingTotal(l, tarifasMap) {
@@ -1028,12 +1039,15 @@ function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
       })
       // Passa o template ativo para o OCR usar extração guiada por campos
       const tmpl = formTemplates[filterForm] || null
+      // Para DM Casagrande (filterForm 'dm', 'transporte'), usa nova função hardcoded
+      const isDmScan = filterForm === 'dm' || filterForm === 'transporte'
       const resp = await fetch('/api/ocr-formulario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: b64,
-          template: tmpl ? { id: tmpl.id, nome: tmpl.nome, tipo_base: tmpl.tipo_base, campos: tmpl.campos } : null,
+          formType: isDmScan ? 'dm' : null,
+          template: (!isDmScan && tmpl) ? { id: tmpl.id, nome: tmpl.nome, tipo_base: tmpl.tipo_base, campos: tmpl.campos } : null,
         }),
       })
       if (!resp.ok) throw new Error('Erro na API')
@@ -1637,11 +1651,15 @@ const FIELD_LABELS = {
   data: 'Data',
   valor: 'Valor',
   numero_diario: 'Nº DM',
+  numero_dm: 'Nº DM',
   numero_documento: 'Nº Ficha',
   cliente: 'Cliente / Descrição',
   local_origem: 'Origem',
+  origem: 'Origem',
   local_destino: 'Destino',
+  destino: 'Destino',
   placa: 'Placa',
+  condutor: 'Motorista',
   km_asfalto: 'KM Asfalto',
   km_terra: 'KM Terra',
   unidade_empresa: 'Unidade',
@@ -1729,7 +1747,7 @@ export default function Lancamentos() {
   const [userId, setUserId]             = useState(null)
   const [search, setSearch]             = useState('')
   const [filterStatus, setFilterStatus] = useState('meus')
-  const [filterForm, setFilterForm]     = useState('diario')
+  const [filterForm, setFilterForm]     = useState('dm')
   const [showModal, setShowModal]       = useState(false)
   const [showDigital, setShowDigital]   = useState(false)
   const [editItem, setEditItem]         = useState(null)
@@ -2275,7 +2293,9 @@ export default function Lancamentos() {
     } else if (filterStatus === 'em_revisao') {
       if (l.status !== 'aguardando_aprovacao' && l.status !== 'corrigido') return false
     } else if (filterStatus !== 'todos' && l.status !== filterStatus) return false
-    if (filterForm !== 'todos' && (l.tipo_formulario || 'padrao') !== filterForm) return false
+    if (filterForm === 'dm') {
+      if (!['diario', 'transporte'].includes(l.tipo_formulario || 'padrao')) return false
+    } else if (filterForm !== 'todos' && (l.tipo_formulario || 'padrao') !== filterForm) return false
     if (search) {
       const q = search.toLowerCase()
       const d = l.dados_extras || {}
@@ -2287,6 +2307,9 @@ export default function Lancamentos() {
         !d.empresa?.toLowerCase().includes(q) &&
         !d.placa?.toLowerCase().includes(q) &&
         !d.solicitante?.toLowerCase().includes(q) &&
+        !d.numero_dm?.toLowerCase().includes(q) &&
+        !d.origem?.toLowerCase().includes(q) &&
+        !d.destino?.toLowerCase().includes(q) &&
         !ocr.empresa?.toLowerCase().includes(q) &&
         !ocr.equipamento?.toLowerCase().includes(q) &&
         !ocr.veiculo_placa?.toLowerCase().includes(q)
@@ -2300,32 +2323,34 @@ export default function Lancamentos() {
     const d = a.dados_extras || {}, e = b.dados_extras || {}
     let va, vb
     if (sortKey === 'data')    { va = a.data || '';          vb = b.data || '' }
-    else if (sortKey === 'numDm')   { va = Number(d.numero_diario) || 0; vb = Number(e.numero_diario) || 0 }
-    else if (sortKey === 'cliente') { va = (d.cliente || d.empresa || a.descricao || '').toLowerCase(); vb = (e.cliente || e.empresa || b.descricao || '').toLowerCase() }
-    else if (sortKey === 'origem')  { va = (d.local_origem || '').toLowerCase();  vb = (e.local_origem || '').toLowerCase() }
-    else if (sortKey === 'destino') { va = (d.local_destino || '').toLowerCase(); vb = (e.local_destino || '').toLowerCase() }
-    else if (sortKey === 'placa')   { va = (d.placa || '').toLowerCase();         vb = (e.placa || '').toLowerCase() }
-    else if (sortKey === 'valor')   { va = a.valor || 0;                          vb = b.valor || 0 }
-    else if (sortKey === 'status')  { va = a.status || '';                        vb = b.status || '' }
-    else if (sortKey === 'kmAsf')   { va = calcKmTotais(d).asfalto;               vb = calcKmTotais(e).asfalto }
-    else if (sortKey === 'kmTer')   { va = calcKmTotais(d).terra;                 vb = calcKmTotais(e).terra }
-    else if (sortKey === 'kmTotal') { va = calcKmTotais(d).total;                 vb = calcKmTotais(e).total }
+    else if (sortKey === 'numDm')      { va = Number(getDmField(d,'numero_dm','numero_diario'))||0; vb = Number(getDmField(e,'numero_dm','numero_diario'))||0 }
+    else if (sortKey === 'cliente')    { va = (getDmField(d,'cliente','empresa') || a.descricao || '').toLowerCase(); vb = (getDmField(e,'cliente','empresa') || b.descricao || '').toLowerCase() }
+    else if (sortKey === 'condutor')   { va = (d.condutor || '').toLowerCase(); vb = (e.condutor || '').toLowerCase() }
+    else if (sortKey === 'origem')     { va = (getDmField(d,'origem','local_origem') || '').toLowerCase(); vb = (getDmField(e,'origem','local_origem') || '').toLowerCase() }
+    else if (sortKey === 'destino')    { va = (getDmField(d,'destino','local_destino') || '').toLowerCase(); vb = (getDmField(e,'destino','local_destino') || '').toLowerCase() }
+    else if (sortKey === 'placa')      { va = (d.placa || '').toLowerCase(); vb = (e.placa || '').toLowerCase() }
+    else if (sortKey === 'valor')      { va = a.valor || 0; vb = b.valor || 0 }
+    else if (sortKey === 'status')     { va = a.status || ''; vb = b.status || '' }
+    else if (sortKey === 'kmAsf')      { va = getKmAst(d);   vb = getKmAst(e) }
+    else if (sortKey === 'kmTer')      { va = getKmTer(d);   vb = getKmTer(e) }
+    else if (sortKey === 'kmTotal')    { va = getKmTotal(d); vb = getKmTotal(e) }
     else { va = ''; vb = '' }
     if (va < vb) return sortDir === 'asc' ? -1 : 1
     if (va > vb) return sortDir === 'asc' ? 1 : -1
     return 0
   }) : filtered
 
-  const isDiarioView = filterForm === 'diario'
-  // Colunas extras do template ativo — isoladas por workspace (cada cliente tem o seu)
-  const activeTemplate = formTemplates[filterForm] || null
+  const isDmView      = filterForm === 'dm' || filterForm === 'diario' || filterForm === 'transporte'
+  const isDiarioView  = filterForm === 'diario'
+  // Colunas extras do template ativo — usadas apenas para formulários não-DM
+  const activeTemplate = (!isDmView && formTemplates[filterForm]) || null
   const RESERVED_COLS = new Set(['data', 'valor', 'status'])
   const templateCols = (activeTemplate?.campos || []).filter(c => c.show_in_table !== false && !RESERVED_COLS.has(c.key))
   const showTemplateCols = templateCols.length > 0
 
   const totalReceitas  = filtered.filter(l => l.tipo === 'receita'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
   const totalDespesas  = filtered.filter(l => l.tipo === 'despesa'  && l.status !== 'rejeitado').reduce((s, l) => s + (l.valor || 0), 0)
-  const pendentes = filtered.filter(l => ['rascunho','aguardando_aprovacao','devolvido','corrigido'].includes(l.status)).length
+  const pendentes = filtered.filter(l => ['revisar','rascunho','aguardando_aprovacao','devolvido','corrigido'].includes(l.status)).length
 
   // Stats para o contexto Diário de Campo
   const diarioTotalValorizado = isDiarioView
@@ -2405,17 +2430,12 @@ export default function Lancamentos() {
 
         {/* Cards de resumo */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
-          {(isDiarioView ? [
-            { label: 'TOTAL VALORIZADO', value: fmtCurrency(diarioTotalValorizado), color: '#059669' },
-            { label: 'H. TRABALHADAS',   value: diarioTotalHoras.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'h', color: '#6366f1' },
-            { label: 'REGISTROS',        value: filtered.length, color: '#0ea5e9' },
-            { label: 'PENDENTES',        value: pendentes, color: pendentes > 0 ? '#d97706' : '#9aa3bf' },
-          ] : [
+          {[
             { label: 'RECEITAS',  value: fmtCurrency(totalReceitas),  color: '#059669' },
             { label: 'DESPESAS',  value: fmtCurrency(totalDespesas),  color: '#dc2626' },
             { label: 'SALDO',     value: fmtCurrency(totalReceitas - totalDespesas), color: totalReceitas - totalDespesas >= 0 ? '#059669' : '#dc2626' },
             { label: 'PENDENTES', value: pendentes, color: pendentes > 0 ? '#d97706' : LC.txtSecondary },
-          ]).map(c => (
+          ].map(c => (
             <div key={c.label} style={{ background: `linear-gradient(135deg, ${c.color}14 0%, var(--bg-card) 55%)`, borderRadius: 12, padding: '16px 20px', border: `1px solid ${c.color}28`, borderTop: `3px solid ${c.color}`, boxShadow: 'var(--shadow-card)' }}>
               <div style={{ fontSize: 10.5, color: LC.txtMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{c.label}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
@@ -2431,9 +2451,9 @@ export default function Lancamentos() {
           </div>
           {/* Select formulário */}
           <select value={filterForm} onChange={e => setFilterForm(e.target.value)}
-            style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 160 }}>
-            <option value="diario">Diário de Campo</option>
-            <option value="transporte">Diário Motorista</option>
+            style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 180 }}>
+            <option value="todos">Todos formulários</option>
+            <option value="dm">Diário do Motorista</option>
             <option value="padrao">Padrão</option>
           </select>
           {/* Select status */}
@@ -2489,7 +2509,6 @@ export default function Lancamentos() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                {/* Linha de cabeçalhos com ordenação */}
                 <tr>
                   <th style={{ padding: '9px 12px', width: 36, textAlign: 'center', background: LC.secondary, borderBottom: `1px solid ${LC.border}` }}>
                     <input type="checkbox"
@@ -2498,12 +2517,34 @@ export default function Lancamentos() {
                       style={{ cursor: 'pointer', width: 13, height: 13, accentColor: LC.accent }}
                     />
                   </th>
-                  <ColHead colKey="data" label="DATA" />
-                  {templateCols.map(c => (
-                    <ColHead key={c.key} colKey={`tmpl_${c.key}`} label={c.label.toUpperCase()} align={c.tipo === 'number' ? 'right' : 'left'} />
-                  ))}
-                  <ColHead colKey="valor" label="VALOR" align="right" />
-                  <ColHead colKey="status" label="STATUS" />
+                  {isDmView ? (
+                    <>
+                      <th style={{ padding: '9px 8px', width: 32, textAlign: 'center', fontSize: 10.5, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.6, background: LC.secondary, borderBottom: `1px solid ${LC.border}` }}>#</th>
+                      <ColHead colKey="data"        label="DATA" />
+                      <ColHead colKey="processadoEm" label="PROCESSADO EM" />
+                      <ColHead colKey="condutor"    label="MOTORISTA" />
+                      <ColHead colKey="dataBoletim" label="DATA BOLETIM" />
+                      <ColHead colKey="numDm"       label="Nº DM" />
+                      <ColHead colKey="cliente"     label="CLIENTE / DESCRIÇÃO" />
+                      <ColHead colKey="origem"      label="ORIGEM" />
+                      <ColHead colKey="destino"     label="DESTINO" />
+                      <ColHead colKey="placa"       label="PLACA" />
+                      <ColHead colKey="kmAsf"       label="KM AST" align="right" />
+                      <ColHead colKey="kmTer"       label="KM TER" align="right" />
+                      <ColHead colKey="kmTotal"     label="KM TOTAL" align="right" />
+                      <ColHead colKey="valor"       label="VALOR" align="right" />
+                      <ColHead colKey="status"      label="STATUS" />
+                    </>
+                  ) : (
+                    <>
+                      <ColHead colKey="data" label="DATA" />
+                      {templateCols.map(c => (
+                        <ColHead key={c.key} colKey={`tmpl_${c.key}`} label={c.label.toUpperCase()} align={c.tipo === 'number' ? 'right' : 'left'} />
+                      ))}
+                      <ColHead colKey="valor" label="VALOR" align="right" />
+                      <ColHead colKey="status" label="STATUS" />
+                    </>
+                  )}
                   <th style={{ padding: '9px 12px', width: 80, background: LC.secondary, borderBottom: `1px solid ${LC.border}` }} />
                 </tr>
               </thead>
@@ -2542,44 +2583,128 @@ export default function Lancamentos() {
                           style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#818cf8' }}
                         />
                       </td>
-                      {/* DATA */}
-                      {EDITABLE_TD('data', l.data, (
-                        <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
-                      ))}
-                      {/* COLUNAS DO TEMPLATE */}
-                      {templateCols.map(c => {
-                        const val = d[c.key]
-                        const empty = val == null || val === ''
-                        let display = '—'
-                        if (!empty) {
-                          if (c.tipo === 'date' && /^\d{4}-\d{2}-\d{2}/.test(String(val))) {
-                            const [y, mo, dy] = String(val).split('T')[0].split('-')
-                            display = `${dy}/${mo}/${y}`
-                          } else {
-                            display = String(val)
-                          }
-                        }
-                        return (
-                          <td key={c.key} style={{ padding: '9px 12px', textAlign: c.tipo === 'number' ? 'right' : 'left', fontSize: 12, whiteSpace: 'nowrap', color: empty ? LC.txtMuted : LC.txtPrimary }}>
-                            {display}
+                      {isDmView ? (
+                        <>
+                          {/* # */}
+                          <td style={{ padding: '9px 8px', textAlign: 'center', fontSize: 11, color: LC.txtMuted, width: 32 }}>
+                            {sortedFiltered.indexOf(l) + 1}
                           </td>
-                        )
-                      })}
-                      {/* VALOR */}
-                      {EDITABLE_TD('valor', l.valor, (
-                          <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
-                            {fmtCurrency(l.valor)}
-                          </span>
-                        ), { textAlign: 'right' })}
-                      {/* STATUS */}
-                      <td style={{ padding: '10px 12px' }}>
-                        <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
-                        {l.lote_cliente_id && lotesMap[l.lote_cliente_id] && (
-                          <div style={{ marginTop: 3, fontSize: 10, color: LC.txtMuted }}>
-                            {lotesMap[l.lote_cliente_id].cliente.length > 18 ? lotesMap[l.lote_cliente_id].cliente.slice(0, 18) + '…' : lotesMap[l.lote_cliente_id].cliente}
-                          </div>
-                        )}
-                      </td>
+                          {/* DATA */}
+                          {EDITABLE_TD('data', l.data, (
+                            <span style={{ padding: '9px 10px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
+                          ))}
+                          {/* PROCESSADO EM */}
+                          <td style={{ padding: '9px 10px', whiteSpace: 'nowrap', fontSize: 11, color: LC.txtMuted }}>
+                            {l.created_at ? new Date(l.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                          </td>
+                          {/* MOTORISTA */}
+                          {EDITABLE_TD('condutor', d.condutor, (
+                            <span style={{ padding: '9px 10px', display: 'block', whiteSpace: 'nowrap', fontSize: 12, color: d.condutor ? LC.txtPrimary : LC.txtMuted }}>{d.condutor || '—'}</span>
+                          ))}
+                          {/* DATA BOLETIM */}
+                          <td style={{ padding: '9px 10px', whiteSpace: 'nowrap', fontSize: 12, color: LC.txtSecondary }}>
+                            {fmtDate(getDmField(d, 'data_boletim') || l.data)}
+                          </td>
+                          {/* Nº DM */}
+                          {EDITABLE_TD('numero_diario', getDmField(d,'numero_dm','numero_diario'), (
+                            <span style={{ padding: '9px 10px', display: 'block', fontWeight: 800, color: getDmField(d,'numero_dm','numero_diario') ? LC.accent : LC.txtMuted, fontSize: 13, whiteSpace: 'nowrap' }}>
+                              {getDmField(d,'numero_dm','numero_diario') || '—'}
+                            </span>
+                          ))}
+                          {/* CLIENTE / DESCRIÇÃO */}
+                          {EDITABLE_TD('cliente', getDmField(d,'cliente','empresa'), (
+                            <div style={{ padding: '7px 10px', minWidth: 120, maxWidth: 200 }}>
+                              <div style={{ fontWeight: 700, fontSize: 12, color: LC.txtPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {getDmField(d,'cliente','empresa') || '—'}
+                              </div>
+                              {d.solicitante && (
+                                <div style={{ fontSize: 10, color: LC.txtMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>{d.solicitante}</div>
+                              )}
+                            </div>
+                          ))}
+                          {/* ORIGEM */}
+                          {EDITABLE_TD('local_origem', getDmField(d,'origem','local_origem'), (
+                            <span style={{ padding: '9px 10px', display: 'block', fontSize: 11.5, color: LC.txtPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+                              {getDmField(d,'origem','local_origem') || '—'}
+                            </span>
+                          ))}
+                          {/* DESTINO */}
+                          {EDITABLE_TD('local_destino', getDmField(d,'destino','local_destino'), (
+                            <span title={getDmField(d,'destino','local_destino')} style={{ padding: '9px 10px', display: 'block', fontSize: 11.5, color: LC.txtPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+                              {getDmField(d,'destino','local_destino') || '—'}
+                            </span>
+                          ))}
+                          {/* PLACA */}
+                          {EDITABLE_TD('placa', d.placa, (
+                            <span style={{ padding: '9px 10px', display: 'block', fontFamily: 'monospace', fontWeight: 700, fontSize: 12, color: d.placa ? LC.txtPrimary : LC.txtMuted, letterSpacing: 1, whiteSpace: 'nowrap' }}>
+                              {d.placa || '—'}
+                            </span>
+                          ))}
+                          {/* KM AST */}
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontSize: 12, color: getKmAst(d) > 0 ? '#6366f1' : LC.txtMuted, whiteSpace: 'nowrap' }}>
+                            {getKmAst(d) > 0 ? getKmAst(d).toLocaleString('pt-BR') : '—'}
+                          </td>
+                          {/* KM TER */}
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontSize: 12, color: getKmTer(d) > 0 ? '#f59e0b' : LC.txtMuted, whiteSpace: 'nowrap' }}>
+                            {getKmTer(d) > 0 ? getKmTer(d).toLocaleString('pt-BR') : '—'}
+                          </td>
+                          {/* KM TOTAL */}
+                          <td style={{ padding: '9px 10px', textAlign: 'right', fontWeight: 700, fontSize: 12, color: getKmTotal(d) > 0 ? LC.txtPrimary : LC.txtMuted, whiteSpace: 'nowrap' }}>
+                            {getKmTotal(d) > 0 ? getKmTotal(d).toLocaleString('pt-BR') : '—'}
+                          </td>
+                          {/* VALOR */}
+                          {EDITABLE_TD('valor', l.valor, (
+                            <span style={{ padding: '9px 10px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                              {fmtCurrency(l.valor)}
+                            </span>
+                          ), { textAlign: 'right' })}
+                          {/* STATUS */}
+                          <td style={{ padding: '10px 10px' }}>
+                            <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          {/* DATA */}
+                          {EDITABLE_TD('data', l.data, (
+                            <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', color: LC.txtSecondary, fontSize: 12 }}>{fmtDate(l.data)}</span>
+                          ))}
+                          {/* COLUNAS DO TEMPLATE */}
+                          {templateCols.map(c => {
+                            const val = d[c.key]
+                            const empty = val == null || val === ''
+                            let display = '—'
+                            if (!empty) {
+                              if (c.tipo === 'date' && /^\d{4}-\d{2}-\d{2}/.test(String(val))) {
+                                const [y, mo, dy] = String(val).split('T')[0].split('-')
+                                display = `${dy}/${mo}/${y}`
+                              } else {
+                                display = String(val)
+                              }
+                            }
+                            return (
+                              <td key={c.key} style={{ padding: '9px 12px', textAlign: c.tipo === 'number' ? 'right' : 'left', fontSize: 12, whiteSpace: 'nowrap', color: empty ? LC.txtMuted : LC.txtPrimary }}>
+                                {display}
+                              </td>
+                            )
+                          })}
+                          {/* VALOR */}
+                          {EDITABLE_TD('valor', l.valor, (
+                            <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
+                              {fmtCurrency(l.valor)}
+                            </span>
+                          ), { textAlign: 'right' })}
+                          {/* STATUS */}
+                          <td style={{ padding: '10px 12px' }}>
+                            <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
+                            {l.lote_cliente_id && lotesMap[l.lote_cliente_id] && (
+                              <div style={{ marginTop: 3, fontSize: 10, color: LC.txtMuted }}>
+                                {lotesMap[l.lote_cliente_id].cliente.length > 18 ? lotesMap[l.lote_cliente_id].cliente.slice(0, 18) + '…' : lotesMap[l.lote_cliente_id].cliente}
+                              </div>
+                            )}
+                          </td>
+                        </>
+                      )}
                       {/* AÇÕES */}
                       <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
