@@ -217,7 +217,11 @@ async function calcValorTarifa(supabase, workspaceId, extrasObj) {
       .select('*')
       .eq('workspace_id', workspaceId)
       .eq('ativo', true)
-    if (!tarifas?.length) return null
+    if (!tarifas?.length) {
+      // sem tarifas configuradas: usa valor_total do formulário como fallback
+      const vt = parseFloat(extrasObj.valor_total || 0)
+      return (!isNaN(vt) && vt > 0) ? vt : null
+    }
 
     const empresa = (extrasObj.cliente || extrasObj.empresa || '').trim().toLowerCase()
     if (!empresa) return null
@@ -473,8 +477,10 @@ function mapOcrToExtras(ocr, data) {
         : null
       return parseFloat(totalRaw) || parseHHMM(String(totalRaw)) || jCalc || linhasSum || hTrabVal || null
     })(),
-    // Número do documento (ficha pré-impressa)
+    // Número do documento (ficha pré-impressa) — aliases para UI (Nº DM column)
     numero_documento: String(r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || r.ficha || r.numero || r.n_doc || r.ndoc || r.n_ficha || '').trim() || null,
+    numero_diario:    String(r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || r.ficha || r.numero || r.n_doc || r.ndoc || r.n_ficha || '').trim() || null,
+    numero_dm:        String(r.numero_documento || r.num_documento || r.numero_ficha || r.num_ficha || r.ficha || r.numero || r.n_doc || r.ndoc || r.n_ficha || '').trim() || null,
     // ── Campos Relatório Diário de Obra ──────────────────────────────────────
     cliente:            r.cliente || r.empresa || '',
     solicitante:        r.solicitante || '',
