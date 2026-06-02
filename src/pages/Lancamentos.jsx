@@ -2632,9 +2632,6 @@ export default function Lancamentos() {
                               <div style={{ fontWeight: 700, fontSize: 12, color: LC.txtPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {getDmField(d,'cliente','empresa') || '—'}
                               </div>
-                              {d.solicitante && (
-                                <div style={{ fontSize: 10, color: LC.txtMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>{d.solicitante}</div>
-                              )}
                             </div>
                           ))}
                           {/* CDC */}
