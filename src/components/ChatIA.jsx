@@ -9,9 +9,9 @@ const WELCOME = 'Oi! 👋 Sou a Livia, sua assistente financeira do SmartPro!\n\
 const DAILY_LIMIT = 30
 const WELCOME_MSG = { role: 'assistant', text: WELCOME, type: 'text' }
 
-function getDailyCount() {
+function getDailyCount(wsId = '') {
   try {
-    const raw = localStorage.getItem('livia-daily')
+    const raw = localStorage.getItem(`livia-daily${wsId ? '-' + wsId : ''}`)
     const data = raw ? JSON.parse(raw) : null
     const today = new Date().toDateString()
     if (!data || data.date !== today) return 0
@@ -19,10 +19,10 @@ function getDailyCount() {
   } catch { return 0 }
 }
 
-function incrementDaily() {
+function incrementDaily(wsId = '') {
   try {
-    const count = getDailyCount() + 1
-    localStorage.setItem('livia-daily', JSON.stringify({ date: new Date().toDateString(), count }))
+    const count = getDailyCount(wsId) + 1
+    localStorage.setItem(`livia-daily${wsId ? '-' + wsId : ''}`, JSON.stringify({ date: new Date().toDateString(), count }))
     return count
   } catch { return 0 }
 }
@@ -73,18 +73,18 @@ function renderText(text) {
 
 export default function ChatIA() {
   const [open, setOpen] = useState(false)
+  const { expenses, people, groups, cards, addExpense, recurring, saldoCaixa, currentUser, workspaceId } = useStore()
+  const chatKey = workspaceId ? `livia-chat-${workspaceId}` : 'livia-chat'
   const [messages, setMessages] = useState(() => {
-    try { const s = localStorage.getItem('livia-chat'); return s ? JSON.parse(s) : [WELCOME_MSG] } catch { return [WELCOME_MSG] }
+    try { const s = localStorage.getItem(chatKey); return s ? JSON.parse(s) : [WELCOME_MSG] } catch { return [WELCOME_MSG] }
   })
-  const [dailyCount, setDailyCount] = useState(() => getDailyCount())
+  const [dailyCount, setDailyCount] = useState(() => getDailyCount(workspaceId))
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingExpense, setPendingExpense] = useState(null)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const hadUser = useRef(false)
-
-  const { expenses, people, groups, cards, addExpense, recurring, saldoCaixa, currentUser } = useStore()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -96,14 +96,14 @@ export default function ChatIA() {
 
   // Persistir histórico
   useEffect(() => {
-    try { localStorage.setItem('livia-chat', JSON.stringify(messages)) } catch {}
-  }, [messages])
+    try { localStorage.setItem(chatKey, JSON.stringify(messages)) } catch {}
+  }, [messages, chatKey])
 
   // Limpar no logout
   useEffect(() => {
     if (currentUser) { hadUser.current = true; return }
     if (hadUser.current) {
-      localStorage.removeItem('livia-chat')
+      localStorage.removeItem(chatKey)
       setMessages([WELCOME_MSG])
       hadUser.current = false
     }
@@ -112,7 +112,7 @@ export default function ChatIA() {
   // Sugestão proativa (1x por dia, na primeira abertura)
   useEffect(() => {
     if (!open || messages.length > 1) return
-    const key = `livia-proactive-${new Date().toDateString()}`
+    const key = `livia-proactive-${workspaceId ? workspaceId + '-' : ''}${new Date().toDateString()}`
     if (localStorage.getItem(key)) return
     const suggestion = buildProactiveSuggestion(expenses, recurring)
     if (!suggestion) return
@@ -131,7 +131,7 @@ export default function ChatIA() {
     const newMessages = [...messages, { role: 'user', text: userText, type: 'text' }]
     setMessages(newMessages)
     setLoading(true)
-    const newCount = incrementDaily()
+    const newCount = incrementDaily(workspaceId)
     setDailyCount(newCount)
 
     try {

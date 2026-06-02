@@ -1237,6 +1237,7 @@ export default function AgendaServicos() {
           *,
           agendamento_alertas (id, status, horario_previsto_envio, enviado_em, destinatario_nome, destinatario_tipo)
         `)
+        .eq('workspace_id', workspaceId)
         .order('data_servico', { ascending: true })
         .order('horario_servico', { ascending: true })
       if (error) throw error
@@ -1247,7 +1248,7 @@ export default function AgendaServicos() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [workspaceId])
 
   useEffect(() => { carregar() }, [carregar])
 

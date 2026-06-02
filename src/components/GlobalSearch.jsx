@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import useStore from '../store/useStore'
 import {
   MagnifyingGlassIcon, XMarkIcon,
   HomeIcon, CurrencyDollarIcon, UsersIcon, UserGroupIcon,
@@ -102,16 +103,17 @@ function highlight(text, query) {
   )
 }
 
-const RECENTES_KEY = 'globalsearch_recentes'
-function getRecentes() {
-  try { return JSON.parse(localStorage.getItem(RECENTES_KEY) || '[]') } catch { return [] }
+function getRecentesKey(wsId) { return wsId ? `globalsearch_recentes_${wsId}` : 'globalsearch_recentes' }
+function getRecentes(wsId) {
+  try { return JSON.parse(localStorage.getItem(getRecentesKey(wsId)) || '[]') } catch { return [] }
 }
-function saveRecente(to) {
-  const prev = getRecentes().filter(r => r !== to)
-  localStorage.setItem(RECENTES_KEY, JSON.stringify([to, ...prev].slice(0, 5)))
+function saveRecente(to, wsId) {
+  const prev = getRecentes(wsId).filter(r => r !== to)
+  localStorage.setItem(getRecentesKey(wsId), JSON.stringify([to, ...prev].slice(0, 5)))
 }
 
 export default function GlobalSearch() {
+  const { workspaceId } = useStore()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(0)
@@ -139,12 +141,12 @@ export default function GlobalSearch() {
         item.label.toLowerCase().includes(query.toLowerCase()) ||
         item.group.toLowerCase().includes(query.toLowerCase())
       ).slice(0, 10)
-    : getRecentes().map(to => ALL_ITEMS.find(i => i.to === to)).filter(Boolean)
+    : getRecentes(workspaceId).map(to => ALL_ITEMS.find(i => i.to === to)).filter(Boolean)
 
   useEffect(() => { setSelected(0) }, [query])
 
   function go(item) {
-    saveRecente(item.to)
+    saveRecente(item.to, workspaceId)
     navigate(item.to)
     setOpen(false)
   }

@@ -3,19 +3,23 @@ import { PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import useStore from '../store/useStore'
 import { formatCurrency, CATEGORIAS } from '../lib/utils'
 
-const STORAGE_KEY = 'metas-categorias'
+const DEFAULT_KEY = 'metas-categorias'
 
-function getMetas() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {} } catch { return {} }
+function getMetas(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || {} } catch { return {} }
 }
 
-function saveMetas(metas) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(metas))
+function saveMetas(key, metas) {
+  localStorage.setItem(key, JSON.stringify(metas))
 }
 
 export default function MetasCategorias() {
-  const { expenses } = useStore()
-  const [metas, setMetas] = useState(getMetas)
+  const { expenses, workspaceId } = useStore()
+  const storageKey = workspaceId ? `metas-categorias-${workspaceId}` : DEFAULT_KEY
+  const [metas, setMetas] = useState(() => getMetas(storageKey))
+
+  // Reload metas when workspace changes
+  useEffect(() => { setMetas(getMetas(storageKey)) }, [storageKey])
   const [editing, setEditing] = useState(null) // categoria sendo editada
   const [inputVal, setInputVal] = useState('')
 
@@ -44,7 +48,7 @@ export default function MetasCategorias() {
     if (!isNaN(val) && val > 0) updated[cat] = val
     else delete updated[cat]
     setMetas(updated)
-    saveMetas(updated)
+    saveMetas(storageKey, updated)
     setEditing(null)
   }
 

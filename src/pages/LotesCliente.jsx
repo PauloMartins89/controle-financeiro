@@ -569,13 +569,14 @@ function GerarLotesModal({ lancamentos, workspaceId, userId, onClose, onSaved })
 }
 
 // ── Modal: Enviar ao Cliente via WA / Email ──────────────────────────────────
-const LS_REMETENTE = 'smartpro_email_remetente'
+function getRemKey(wsId) { return wsId ? `smartpro_email_remetente_${wsId}` : 'smartpro_email_remetente' }
 
 function EnviarModal({ lote, workspaceId, onClose, onSent }) {
+  const remKey = getRemKey(workspaceId)
   const [telefone, setTelefone] = useState('')
   const [email, setEmail] = useState('')
-  const [remetente, setRemetente]     = useState(() => localStorage.getItem(LS_REMETENTE) || '')
-  const [remetenteLocked, setRemetenteLocked] = useState(() => !!localStorage.getItem(LS_REMETENTE))
+  const [remetente, setRemetente]     = useState(() => localStorage.getItem(remKey) || '')
+  const [remetenteLocked, setRemetenteLocked] = useState(() => !!localStorage.getItem(remKey))
   const [aprovadorNome, setAprovadorNome] = useState('')
   const [cadastroEncontrado, setCadastroEncontrado] = useState(false)
   const [token, setToken] = useState(lote.token_acesso || null)
@@ -633,11 +634,11 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
 
   function toggleLock() {
     if (remetenteLocked) {
-      localStorage.removeItem(LS_REMETENTE)
+      localStorage.removeItem(remKey)
       setRemetenteLocked(false)
     } else {
       if (remetente.trim()) {
-        localStorage.setItem(LS_REMETENTE, remetente.trim())
+        localStorage.setItem(remKey, remetente.trim())
         setRemetenteLocked(true)
       }
     }
@@ -646,7 +647,7 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
   function handleRemetenteChange(v) {
     setRemetente(v)
     if (remetenteLocked) {
-      localStorage.setItem(LS_REMETENTE, v)
+      localStorage.setItem(remKey, v)
     }
   }
 

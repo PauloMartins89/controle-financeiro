@@ -547,9 +547,10 @@ export default function Acessos() {
     const token = btoa(`invite-${Date.now()}-${Math.random().toString(36).slice(2)}`)
     const link = `${window.location.origin}/login?invite=${token}`
     setInviteLink(link)
-    const invites = JSON.parse(localStorage.getItem('invites') || '[]')
+    const invitesKey = `invites_${workspaceId || 'global'}`
+    const invites = JSON.parse(localStorage.getItem(invitesKey) || '[]')
     invites.push({ token, created: new Date().toISOString() })
-    localStorage.setItem('invites', JSON.stringify(invites.slice(-20)))
+    localStorage.setItem(invitesKey, JSON.stringify(invites.slice(-20)))
   }
 
   function copyInviteLink() {

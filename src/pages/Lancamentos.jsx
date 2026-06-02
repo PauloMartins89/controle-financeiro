@@ -2239,6 +2239,7 @@ export default function Lancamentos() {
       })
     supabase.from('diario_tarifas')
       .select('cliente_nome, valor_hora_diurno, valor_hora_noturno, hora_inicio_diurno, hora_fim_diurno')
+      .eq('workspace_id', workspaceId)
       .eq('ativo', true)
       .then(({ data: tData }) => {
         const tMap = {}

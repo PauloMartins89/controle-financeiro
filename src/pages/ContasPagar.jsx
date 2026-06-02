@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
+import useStore from '../store/useStore'
 import {
   PlusIcon, MagnifyingGlassIcon, XMarkIcon, CheckCircleIcon,
   ExclamationCircleIcon, ClockIcon, PencilIcon, TrashIcon,
@@ -83,7 +84,7 @@ const inputStyle = {
 }
 
 // ─── Modal de Criação / Edição (apenas entradas manuais) ─────────────────────
-function ContaModal({ conta, onClose, onSave }) {
+function ContaModal({ conta, onClose, onSave, workspaceId }) {
   const isEdit = !!conta?.id
   const [form, setForm] = useState(
     conta
@@ -112,6 +113,7 @@ function ContaModal({ conta, onClose, onSave }) {
         observacoes: form.observacoes?.trim() || null,
         status:      form.status || 'pendente',
         user_id:     user?.id,
+        workspace_id: workspaceId,
       }
 
       let result
@@ -461,6 +463,7 @@ function SourceBadge({ source }) {
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function ContasPagar() {
+  const { workspaceId } = useStore()
   const [contas,       setContas]       = useState([])  // contas_pagar (manual)
   const [lancamentos,  setLancamentos]  = useState([])  // lancamentos tipo=despesa (whatsapp)
   const [loading,      setLoading]      = useState(true)
@@ -480,8 +483,8 @@ export default function ContasPagar() {
     try {
       // Lançamentos só entram em Contas a Pagar após aprovação do lote pelo cliente
       const [resContas, resLotes] = await Promise.all([
-        supabase.from('contas_pagar').select('*, solicitacao:solicitacoes_compra(id,titulo,descricao,urgencia,quantidade,requisitante_nome,data_necessidade,comprovante_url)').order('vencimento', { ascending: true }),
-        supabase.from('lotes_cliente').select('id').in('status', ['aprovado_cliente', 'faturado']),
+        supabase.from('contas_pagar').select('*, solicitacao:solicitacoes_compra(id,titulo,descricao,urgencia,quantidade,requisitante_nome,data_necessidade,comprovante_url)').eq('workspace_id', workspaceId).order('vencimento', { ascending: true }),
+        supabase.from('lotes_cliente').select('id').eq('workspace_id', workspaceId).in('status', ['aprovado_cliente', 'faturado']),
       ])
       if (resContas.error) throw resContas.error
       setContas(resContas.data || [])
@@ -877,6 +880,7 @@ export default function ContasPagar() {
           conta={modal === 'new' ? null : modal}
           onClose={() => setModal(null)}
           onSave={onSaveConta}
+          workspaceId={workspaceId}
         />
       )}
       {pagoModal && (

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
 import { useNavigate } from 'react-router-dom'
+import useStore from '../store/useStore'
 import {
   ShoppingCartIcon, ClockIcon, CheckCircleIcon, TrophyIcon,
   BanknotesIcon, ArrowPathIcon, ExclamationTriangleIcon,
@@ -31,18 +32,21 @@ const PIPELINE_ORDER = [
 
 export default function ComprasDashboard() {
   const navigate = useNavigate()
+  const { workspaceId } = useStore()
   const [data, setData]       = useState([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
+    if (!workspaceId) return
     setLoading(true)
     const { data: rows } = await supabase
       .from('solicitacoes_compra')
       .select('id,titulo,status,urgencia,tipo,valor_estimado,valor_aprovado,economia,created_at,fornecedor,fornecedor_vencedor,requisitante_nome')
+      .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
     setData(rows || [])
     setLoading(false)
-  }, [])
+  }, [workspaceId])
 
   useEffect(() => { load() }, [load])
 
