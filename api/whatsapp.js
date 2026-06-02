@@ -369,16 +369,18 @@ export default async function handler(req, res) {
             const workspaceId = frente?.workspace_id || colaboradorBol.workspace_id
 
             // boletim_tipo_id: tenta via JOIN primeiro; se null, busca direto na tabela
+            // Prefere tipos com modulo_destino='gerencial' (nulls por último)
             let boletimTipoId = frente?.maquinas_boletim_tipos?.id || null
             if (!boletimTipoId) {
               const { data: tipos } = await dbBol
                 .from('maquinas_boletim_tipos')
-                .select('id')
+                .select('id, modulo_destino')
                 .eq('workspace_id', workspaceId)
                 .eq('ativo', true)
+                .order('modulo_destino', { ascending: false, nullsFirst: false })
                 .limit(1)
               boletimTipoId = tipos?.[0]?.id || null
-              console.log('[whatsapp/boletim] boletim_tipo_id via query direta:', boletimTipoId)
+              console.log('[whatsapp/boletim] boletim_tipo_id via query direta:', boletimTipoId, '| modulo_destino:', tipos?.[0]?.modulo_destino)
             }
 
             await sendWA(from, '📋 Boletim recebido! Estamos processando. Você será avisado em instantes.')
