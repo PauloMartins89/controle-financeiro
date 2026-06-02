@@ -285,7 +285,11 @@ const useStore = create(
     const v = parseFloat(valor) || 0
     set({ saldoCaixa: v })
     if (supabase) {
-      await supabase.from('configuracoes').upsert({ chave: 'saldoCaixa', valor: v, updated_at: new Date().toISOString() }, { onConflict: 'user_id,chave' })
+      const { workspaceId } = get()
+      await supabase.from('configuracoes').upsert(
+        { chave: 'saldoCaixa', valor: v, updated_at: new Date().toISOString(), workspace_id: workspaceId },
+        { onConflict: 'workspace_id,chave' }
+      )
     }
   },
 

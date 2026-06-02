@@ -368,8 +368,9 @@ export default function App() {
         workspaceId:   workspaceId,
         enabledModules: enabledModules,
       }
-      // Sincroniza saldoCaixa do banco
-      const cfgSaldo = configs?.find(c => c.chave === 'saldoCaixa')
+      // Sincroniza saldoCaixa do banco (filtra pelo workspace correto)
+      const cfgSaldo = (configs || []).find(c => c.chave === 'saldoCaixa' && c.workspace_id === workspaceId)
+                    || (configs || []).find(c => c.chave === 'saldoCaixa') // fallback p/ registros sem workspace_id
       if (cfgSaldo) update.saldoCaixa = parseFloat(cfgSaldo.valor) || 0
       // Verifica se o usuário é platform admin (substitui check hardcoded de e-mail)
       const { data: { user: authUser } } = await supabase.auth.getUser()
