@@ -1667,6 +1667,7 @@ const FIELD_LABELS = {
   destino: 'Destino',
   placa: 'Placa',
   condutor: 'Motorista',
+  cdc: 'CDC',
   km_asfalto: 'KM Asfalto',
   km_terra: 'KM Terra',
   unidade_empresa: 'Unidade',
@@ -2099,6 +2100,7 @@ export default function Lancamentos() {
     const ALL_COLS = [
       { key: 'data',        label: 'DATA',       width: 48,  halign: 'center', getValue: l => l.data ? l.data.split('-').reverse().join('/') : '' },
       { key: 'num_diario',  label: 'Nº DM',      width: 36,  halign: 'center', bold: true, getValue: l => l.dados_extras?.numero_diario || '' },
+      { key: 'cdc',         label: 'CDC',        width: 52,  halign: 'left',   getValue: l => l.dados_extras?.cdc || '' },
       { key: 'cliente',     label: 'CLIENTE',    width: 95,  halign: 'left',   bold: true, getValue: l => l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao || '' },
       { key: 'condutor',    label: 'CONDUTOR',   width: 72,  halign: 'left',   getValue: l => l.dados_extras?.condutor || '' },
       { key: 'placa',       label: 'PLACA',      width: 44,  halign: 'center', getValue: l => l.dados_extras?.placa || '' },
@@ -2534,6 +2536,7 @@ export default function Lancamentos() {
                       <ColHead colKey="dataBoletim" label="DATA BOLETIM" />
                       <ColHead colKey="numDm"       label="Nº DM" />
                       <ColHead colKey="cliente"     label="CLIENTE / DESCRIÇÃO" />
+                      <ColHead colKey="cdc"         label="CDC" />
                       <ColHead colKey="origem"      label="ORIGEM" />
                       <ColHead colKey="destino"     label="DESTINO" />
                       <ColHead colKey="placa"       label="PLACA" />
@@ -2631,6 +2634,12 @@ export default function Lancamentos() {
                                 <div style={{ fontSize: 10, color: LC.txtMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>{d.solicitante}</div>
                               )}
                             </div>
+                          ))}
+                          {/* CDC */}
+                          {EDITABLE_TD('cdc', d.cdc, (
+                            <span style={{ padding: '9px 10px', display: 'block', fontSize: 12, color: d.cdc ? LC.txtPrimary : LC.txtMuted, whiteSpace: 'nowrap' }}>
+                              {d.cdc || '—'}
+                            </span>
                           ))}
                           {/* ORIGEM */}
                           {EDITABLE_TD('local_origem', getDmField(d,'origem','local_origem'), (
