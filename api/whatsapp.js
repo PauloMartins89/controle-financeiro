@@ -388,11 +388,7 @@ export default async function handler(req, res) {
               console.error('[whatsapp/boletim] storage exception:', e.message)
             }
 
-            const { count } = await dbBol
-              .from('maquinas_boletins')
-              .select('*', { count: 'exact', head: true })
-              .eq('workspace_id', workspaceId)
-            const numero = `BOL-${new Date().getFullYear()}-${String((count || 0) + 1).padStart(6, '0')}`
+            const numero = `BOL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
 
             const { data: bolRecord, error: bolErr } = await dbBol
               .from('maquinas_boletins')
