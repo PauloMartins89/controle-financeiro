@@ -8,7 +8,7 @@ async function callGeminiVision(apiKey, { system, prompt, imageUrls }) {
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_OCR_MODEL || 'gemini-2.5-flash',
-    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 4096 },
+    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 },
     systemInstruction: system,
   })
   const imageParts = await Promise.all(imageUrls.map(async url => {
@@ -607,7 +607,7 @@ async function processarBoletim(boletimId) {
 - local_origem: local, cidade ou endereço de origem/saída do veículo ou serviço
 - local_destino: local, cidade ou endereço de destino/chegada do veículo ou serviço
 - condutor: nome do motorista/condutor (se houver campo específico separado de colaborador)
-- placa: placa do veículo (ex: "RUG-61B5", "BLG 9122")
+- placa: placa do veículo. Formato Mercosul: 3 letras + 1 dígito + 1 letra + 2 dígitos (ex: ABC1D23, QAY2B18). Leia com atenção a letra na 5ª posição — pode ser confundida com dígito (ex: Y não é 4, B não é 8, D não é 0). Formato antigo: 3 letras + 4 dígitos.
 - km_rows: IMPORTANTE — array com TODAS as linhas preenchidas da tabela de KM/HORAS do formulário. Cada objeto: { "tipo": "ASFALTO" | "TERRA" | "HORAS" | "DIÁRIAS", "saida": número ou null, "entrada": número ou null, "total": número ou null }. Extraia os números sem pontos/vírgulas de milhar. Retorne [] se não houver tabela.
 - valor_total: valor total em reais do formulário (campo "VALOR RS", "VALOR R$" ou similar, geralmente próximo ao final do formulário antes das assinaturas). ATENÇÃO ao formato brasileiro: ponto como separador de milhar e vírgula como decimal (ex: "5.950,00" = 5950.0, "12.500,00" = 12500.0). Retorne somente o número decimal sem símbolo de moeda.
 - km_ast: hodômetro na saída / km aferido (número, se houver campo direto separado da tabela)

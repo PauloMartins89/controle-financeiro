@@ -36,7 +36,7 @@ const USER_PROMPT = `Extraia TODOS os dados deste formulário de apontamento/di�
 - local_origem: local, cidade ou endereço de origem/saída do veículo ou serviço
 - local_destino: local, cidade ou endereço de destino/chegada do veículo ou serviço
 - condutor: nome do motorista/condutor (se houver campo específico separado de colaborador)
-- placa: placa do veículo (ex: "RUG-61B5", "BLG 9122")
+- placa: placa do veículo. Formato Mercosul: 3 letras + 1 dígito + 1 letra + 2 dígitos (ex: ABC1D23, QAY2B18). Leia com atenção a letra na 5ª posição — pode ser confundida com dígito (ex: Y não é 4, B não é 8, D não é 0). Formato antigo: 3 letras + 4 dígitos.
 - km_rows: IMPORTANTE — array com TODAS as linhas preenchidas da tabela de KM/HORAS do formulário. Cada objeto: { "tipo": "ASFALTO" | "TERRA" | "HORAS" | "DIÁRIAS", "saida": número ou null, "entrada": número ou null, "total": número ou null }. Extraia os números sem pontos/vírgulas de milhar. Retorne [] se não houver tabela.
 - valor_total: valor total em reais do formulário (campo "VALOR RS", "VALOR R$" ou similar, geralmente próximo ao final do formulário antes das assinaturas). ATENÇÃO ao formato brasileiro: ponto como separador de milhar e vírgula como decimal (ex: "5.950,00" = 5950.0, "12.500,00" = 12500.0). Retorne somente o número decimal sem símbolo de moeda.
 - km_ast: hodômetro na saída / km aferido (número, se houver campo direto separado da tabela)
@@ -101,7 +101,7 @@ export default async function handler(req, res) {
     const genAI = new GoogleGenerativeAI(geminiApiKey)
     const model = genAI.getGenerativeModel({
       model: process.env.GEMINI_OCR_MODEL || 'gemini-2.5-flash',
-      generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 4096 },
+      generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 },
       systemInstruction: SYSTEM_PROMPT,
     })
 
@@ -118,7 +118,25 @@ export default async function handler(req, res) {
       imagePart = { inlineData: { mimeType: mime, data: Buffer.from(buf).toString('base64') } }
     }
 
-    const result = await model.generateContent([{ text: USER_PROMPT }, imagePart])
+    // Retry 3x em 503/429 (igual à produção)
+    const MAX_ATTEMPTS = 3
+    let lastErr, result
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        result = await model.generateContent([{ text: USER_PROMPT }, imagePart])
+        break
+      } catch (err) {
+        lastErr = err
+        const retryable = /503|529|overloaded|unavailable|429|quota/i.test(err.message)
+        if (retryable && attempt < MAX_ATTEMPTS) {
+          const delay = attempt * 8000
+          console.warn(`[ocr-test] tentativa ${attempt} falhou, aguardando ${delay/1000}s...`)
+          await new Promise(r => setTimeout(r, delay))
+        } else throw err
+      }
+    }
+    if (!result) throw lastErr
+
     let ocr = JSON.parse(result.response.text().trim()
       .replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim())
 

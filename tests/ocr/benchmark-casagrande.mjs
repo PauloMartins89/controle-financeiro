@@ -328,6 +328,9 @@ async function main() {
     console.log(NEGRITO + `📄 ${arquivo}${label}` + RESET)
     if (semGabarito) console.log(CINZA + '   ⚠ Sem gabarito — apenas extração' + RESET)
 
+    // Pequena pausa entre chamadas para não saturar a API
+    if (GABARITO.indexOf(gabarito) > 0) await new Promise(r => setTimeout(r, 3000))
+
     const inicio = Date.now()
     let ocr
     try {
