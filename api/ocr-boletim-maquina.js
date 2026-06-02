@@ -1,49 +1,30 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Gemini Vision — baixa as imagens por URL e envia inline (base64)
-// Retry automático em 503/429 com backoff exponencial (até 3 tentativas)
-async function callGeminiVision(apiKey, { system, prompt, imageUrls }) {
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_OCR_MODEL || 'gemini-2.5-flash',
-    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 16384 },
-    systemInstruction: system,
+// Groq Vision (Llama-4-Scout) — passa imagens como image_url (URL pública)
+async function callGroq(apiKey, messages) {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      max_tokens: 4096,
+      response_format: { type: 'json_object' },
+      messages,
+    }),
   })
-  const imageParts = await Promise.all(imageUrls.map(async url => {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`Erro ao baixar imagem (${res.status}): ${url}`)
-    const buf = await res.arrayBuffer()
-    const mime = (res.headers.get('content-type') || 'image/jpeg').split(';')[0]
-    return { inlineData: { mimeType: mime, data: Buffer.from(buf).toString('base64') } }
-  }))
-
-  const MAX_ATTEMPTS = 3
-  let lastErr
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      const result = await model.generateContent([{ text: prompt }, ...imageParts])
-      let parsed = JSON.parse(result.response.text())
-      // Gemini pode retornar array quando recebe múltiplas imagens — pega o objeto mais rico
-      if (Array.isArray(parsed)) {
-        const count = obj => (obj && typeof obj === 'object') ? Object.values(obj).filter(v => v != null).length : 0
-        parsed = parsed.reduce((best, cur) => count(cur) > count(best) ? cur : best, {})
-      }
-      return parsed
-    } catch (err) {
-      lastErr = err
-      const isRetryable = /503|529|overloaded|unavailable|429|quota/i.test(err.message)
-      if (isRetryable && attempt < MAX_ATTEMPTS) {
-        const delay = attempt * 8000  // 8s, 16s
-        console.warn(`[ocr-boletim] gemini tentativa ${attempt} falhou (${err.message.slice(0, 80)}). Aguardando ${delay / 1000}s...`)
-        await new Promise(r => setTimeout(r, delay))
-      } else {
-        throw err
-      }
-    }
+  if (!resp.ok) {
+    const err = await resp.text()
+    throw new Error(`Groq API error ${resp.status}: ${err.slice(0, 400)}`)
   }
-  throw lastErr
+  const json = await resp.json()
+  const text = json.choices?.[0]?.message?.content || '{}'
+  try {
+    return JSON.parse(text)
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/)
+    return match ? JSON.parse(match[0]) : {}
+  }
 }
 
 // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
@@ -62,7 +43,7 @@ async function callGeminiVision(apiKey, { system, prompt, imageUrls }) {
 
 const supabaseUrl        = process.env.SUPABASE_URL        || process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
-const geminiApiKey       = process.env.GEMINI_API_KEY
+const groqApiKey         = process.env.GROQ_API_KEY
 const zapiInstanceId     = process.env.ZAPI_INSTANCE_ID
 const zapiToken          = process.env.ZAPI_TOKEN
 const APP_URL            = process.env.APP_URL || 'https://smartpro.app.br'
@@ -537,7 +518,7 @@ function mapOcrToExtras(ocr, data) {
 async function processarBoletim(boletimId) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('supabase n├úo configurado')
-  if (!geminiApiKey) throw new Error('GEMINI_API_KEY não configurada no servidor')
+  if (!groqApiKey) throw new Error('GROQ_API_KEY não configurada no servidor')
 
   // Carrega boletim + relacionamentos
   const { data: bol, error: bolErr } = await supabase
@@ -646,13 +627,20 @@ Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}
   try {
-    const imageUrls = [
-      ...(boletimTipo?.imagem_url ? [boletimTipo.imagem_url] : []),
-      bol.imagem_url,
-    ].filter(Boolean)
-    ocrRaw = await callGeminiVision(geminiApiKey, { system: systemPrompt, prompt: userPrompt, imageUrls })
+    const imageMessages = [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: userPrompt },
+          ...(boletimTipo?.imagem_url ? [{ type: 'image_url', image_url: { url: boletimTipo.imagem_url } }] : []),
+          ...(bol.imagem_url ? [{ type: 'image_url', image_url: { url: bol.imagem_url } }] : []),
+        ],
+      },
+    ]
+    ocrRaw = await callGroq(groqApiKey, imageMessages)
   } catch (e) {
-    console.error('[ocr-boletim] gemini error:', e.message)
+    console.error('[ocr-boletim] groq error:', e.message)
     await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
     if (waPhone) await zapiSendText(waPhone, `⚠️ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
     return
