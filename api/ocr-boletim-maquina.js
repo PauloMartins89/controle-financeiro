@@ -384,7 +384,8 @@ function buildResumoOCR(extras, valorCalculado, temPendente, boletimNumero, data
     ...(kmRowsLinhas.length > 0 ? [`🛣 *KM:*\n${kmRowsLinhas.join('\n')}`] : []),
     linha('✍️', 'Ass. recebedor',  ex.assinatura_cliente || r.assinatura_cliente || null),
     linha('✍️', 'Ass. entregador', ex.assinatura_empresa || r.assinatura_empresa || null),
-    linha('💰', 'Valor', valorStr),
+    linha('�', 'Nº DM',         ex.numero_documento || r.numero_documento || null),
+    linha('�💰', 'Valor', valorStr),
   ].filter(Boolean)
 
   const statusIcon = temPendente ? '⚠️' : '✅'
@@ -392,8 +393,11 @@ function buildResumoOCR(extras, valorCalculado, temPendente, boletimNumero, data
     ? '_Alguns campos precisam de revisão. Acesse o sistema para validar._'
     : '_Lançamento gerado automaticamente no sistema._'
 
+  const numDM = ex.numero_documento || r.numero_documento || null
+  const headerNumDM = numDM ? ` (DM ${numDM})` : ''
+
   return [
-    `${statusIcon} *Boletim ${boletimNumero}* — ${dataFmt}`,
+    `${statusIcon} *Boletim ${boletimNumero}*${headerNumDM} — ${dataFmt}`,
     '',
     '📋 *Campos lidos pelo OCR:*',
     ...campos,
