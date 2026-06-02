@@ -589,7 +589,7 @@ async function processarBoletim(boletimId) {
     : ''
 
   const userPrompt = `Extraia TODOS os dados deste formulário de apontamento/diário. Retorne um JSON com as seguintes chaves (use null se o campo não existir ou estiver ilegível):
-- numero_documento: OBRIGATÓRIO — número de 3 a 5 dígitos impresso em destaque no CANTO SUPERIOR DIREITO do formulário, dentro de uma caixa/quadro isolado (ex: 2351, 01772). Extraia SOMENTE os dígitos como string. NÃO retorne null.
+- numero_documento: OBRIGATÓRIO — número de 4 a 6 dígitos PRÉ-IMPRESSO (não manuscrito) no CANTO SUPERIOR DIREITO do formulário, dentro de uma caixa/quadro retangular com borda. Exemplo de posição: ao lado ou abaixo do título "DIÁRIO DO MOTORISTA" ou "Nº". Leia com MÁXIMA ATENÇÃO cada dígito — dígitos comumente confundidos: 7 com 9, 0 com 6, 1 com 7. O número costuma ter 5 dígitos (ex: 81772, 01234). Extraia SOMENTE os dígitos como string. NÃO retorne null.
 - data: data do boletim (DD/MM/YYYY)
 - turno: "dia", "noite" ou "integral" conforme marcado
 - empresa: nome da empresa/cliente no cabeçalho do formulário (campo "EMPRESA:" ou similar)
@@ -605,7 +605,7 @@ async function processarBoletim(boletimId) {
 - condutor: nome do motorista/condutor (se houver campo específico separado de colaborador)
 - placa: placa do veículo (ex: "RUG-61B5", "BLG 9122")
 - km_rows: IMPORTANTE — array com TODAS as linhas preenchidas da tabela de KM/HORAS do formulário. Cada objeto: { "tipo": "ASFALTO" | "TERRA" | "HORAS" | "DIÁRIAS", "saida": número ou null, "entrada": número ou null, "total": número ou null }. Extraia os números sem pontos/vírgulas de milhar. Retorne [] se não houver tabela.
-- valor_total: valor total em reais do formulário (campo "VALOR RS", "VALOR R$" ou similar) — retorne somente o número sem símbolo de moeda (ex: 5950.00)
+- valor_total: valor total em reais do formulário (campo "VALOR RS", "VALOR R$" ou similar, geralmente próximo ao final do formulário antes das assinaturas). ATENÇÃO ao formato brasileiro: ponto como separador de milhar e vírgula como decimal (ex: "5.950,00" = 5950.0, "12.500,00" = 12500.0). Retorne somente o número decimal sem símbolo de moeda.
 - km_ast: hodômetro na saída / km aferido (número, se houver campo direto separado da tabela)
 - km_ter: hodômetro na chegada / km terminal (número, se houver campo direto)
 - km_total: total de km percorridos (número, se houver campo direto)
