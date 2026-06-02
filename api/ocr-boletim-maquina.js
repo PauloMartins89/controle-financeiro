@@ -270,15 +270,25 @@ async function calcValorTarifa(supabase, workspaceId, extrasObj) {
       const hTotal = extrasObj.total_horas_dia ?? extrasObj.jornada_total_horas ?? null
       if (hTotal != null) { tDiurno = Number(hTotal); tNoturno = 0 }
     }
-    if (tDiurno == null && tNoturno == null) return null
+    if (tDiurno == null && tNoturno == null) {
+      // fallback: usa valor_total do formulário se preenchido
+      const vt = parseFloat(extrasObj.valor_total || 0)
+      if (!isNaN(vt) && vt > 0) return vt
+      return null
+    }
 
     const rsDiurno  = tDiurno  != null && tarifa.valor_hora_diurno  != null ? tDiurno  * Number(tarifa.valor_hora_diurno)  : null
     const rsNoturno = tNoturno != null && tarifa.valor_hora_noturno != null ? tNoturno * Number(tarifa.valor_hora_noturno) : null
-    if (rsDiurno == null && rsNoturno == null) return null
+    if (rsDiurno == null && rsNoturno == null) {
+      const vt = parseFloat(extrasObj.valor_total || 0)
+      return (!isNaN(vt) && vt > 0) ? vt : null
+    }
     return parseFloat(((rsDiurno ?? 0) + (rsNoturno ?? 0)).toFixed(2))
   } catch (e) {
     console.error('[ocr-boletim] calcValorTarifa error:', e.message)
-    return null
+    // fallback final: valor_total do formulário
+    const vt = parseFloat(extrasObj.valor_total || 0)
+    return (!isNaN(vt) && vt > 0) ? vt : null
   }
 }
 
@@ -326,9 +336,23 @@ function buildResumoOCR(extras, valorCalculado, temPendente, boletimNumero, data
   const kmTotal = parseFloat(ex.km_total || r.km_total || r.km_percorrido || 0) ||
                   (kmAst && kmTer && kmTer > kmAst ? kmTer - kmAst : null)
 
-  // Valor
-  const valorStr = valorCalculado != null && valorCalculado > 0
-    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorCalculado)
+  // KM table rows (ASFALTO / TERRA / HORAS / DIÁRIAS)
+  const kmRows = Array.isArray(ex.km_rows) ? ex.km_rows : (Array.isArray(r.km_rows) ? r.km_rows : [])
+  const kmRowsLinhas = kmRows
+    .filter(row => row.total != null && row.total !== 0 && row.total !== '')
+    .map(row => {
+      const partes = []
+      if (row.saida   != null) partes.push(`saída: ${Number(row.saida).toLocaleString('pt-BR')}`)
+      if (row.entrada != null) partes.push(`chegada: ${Number(row.entrada).toLocaleString('pt-BR')}`)
+      if (row.total   != null) partes.push(`total: ${Number(row.total).toLocaleString('pt-BR')} km`)
+      return `   • ${(row.tipo || '?').toUpperCase()}: ${partes.join(' | ')}`
+    })
+
+  // Valor: tarifa calculada > valor_total do formulário
+  const vt = parseFloat(ex.valor_total || r.valor_total || 0) || null
+  const valorFinal = valorCalculado != null && valorCalculado > 0 ? valorCalculado : vt
+  const valorStr = valorFinal != null && valorFinal > 0
+    ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorFinal)
     : null
 
   // Horímetros (boletins de máquina)
@@ -338,23 +362,29 @@ function buildResumoOCR(extras, valorCalculado, temPendente, boletimNumero, data
 
   const campos = [
     linha('📅', 'Data',          dataFmt),
-    linha('👤', 'Motorista',     motorista),
-    linha('🏢', 'Cliente',       ex.cliente || r.cliente || r.empresa || null),
-    linha('📍', 'Origem',        ex.local_origem  || ex.origem        || r.local_origem  || r.origem       || null),
-    linha('🏁', 'Destino',       ex.local_destino || ex.destino       || r.local_destino || r.destino      || null),
+    linha('🏢', 'Empresa',       ex.empresa || r.empresa || null),
+    linha('👤', 'Motorista/Colaborador', motorista),
+    linha('📋', 'Solicitante',   ex.solicitante || r.solicitante || null),
     linha('🚗', 'Placa',         ex.placa || r.placa || null),
     linha('🔧', 'Equipamento',   ex.equipamento || r.equipamento || null),
     linha('📂', 'Classe',        ex.classe_operacional || r.classe || null),
     linha('📌', 'Frente/CDC',    [ex.frente || r.frente, ex.cdc || r.cdc].filter(Boolean).join(' / ') || null),
+    linha('📍', 'Origem',        ex.local_origem  || ex.origem        || r.local_origem  || r.origem       || null),
+    linha('🏁', 'Destino',       ex.local_destino || ex.destino       || r.local_destino || r.destino      || null),
     linha('⏱', 'Jornada',       jornadaStr),
     linha('📏', 'Horímetro',     hIni != null && hFin != null ? `${hIni} → ${hFin}` : null),
     linha('⚙️', 'Hs trabalhadas', hTrab != null ? `${hTrab}h` : null),
-    linha('🛣', 'KM saída',      kmAst  != null ? kmAst.toLocaleString('pt-BR')  : null),
-    linha('🛣', 'KM chegada',    kmTer  != null ? kmTer.toLocaleString('pt-BR')  : null),
-    linha('🛣', 'KM total',      kmTotal != null ? kmTotal.toLocaleString('pt-BR') : null),
-    linha('✍️', 'Assinatura CLI', ex.assinatura_cliente || r.assinatura_cliente || null),
-    linha('✍️', 'Assinatura EMP', ex.assinatura_empresa || r.assinatura_empresa || null),
-    linha('💰', 'Valor calculado', valorStr),
+    // KM direto (se não houver tabela)
+    ...(kmRowsLinhas.length === 0 ? [
+      linha('🛣', 'KM saída',  kmAst  != null ? kmAst.toLocaleString('pt-BR')  : null),
+      linha('🛣', 'KM chegada', kmTer != null ? kmTer.toLocaleString('pt-BR')  : null),
+      linha('🛣', 'KM total',  kmTotal != null ? kmTotal.toLocaleString('pt-BR') : null),
+    ] : []),
+    // KM tabela (ASFALTO / TERRA / etc.)
+    ...(kmRowsLinhas.length > 0 ? [`🛣 *KM:*\n${kmRowsLinhas.join('\n')}`] : []),
+    linha('✍️', 'Ass. recebedor',  ex.assinatura_cliente || r.assinatura_cliente || null),
+    linha('✍️', 'Ass. entregador', ex.assinatura_empresa || r.assinatura_empresa || null),
+    linha('💰', 'Valor', valorStr),
   ].filter(Boolean)
 
   const statusIcon = temPendente ? '⚠️' : '✅'
@@ -466,14 +496,37 @@ function mapOcrToExtras(ocr, data) {
       return soma > 0 ? parseFloat(soma.toFixed(2)) : null
     })(),
     // ── Campos Diário do Motorista ─────────────────────────────────────────
+    empresa:       r.empresa       || r.cliente       || '',
     condutor:      r.condutor      || r.motorista     || r.colaborador      || '',
     local_origem:  r.local_origem  || r.origem        || '',
     origem:        r.origem        || r.local_origem  || '',
     local_destino: r.local_destino || r.destino       || '',
     destino:       r.destino       || r.local_destino || '',
-    km_ast:        parseFloat(r.km_ast      || r.km_aferido    || r.km_inicial  || r.km_saida    || 0) || null,
-    km_ter:        parseFloat(r.km_ter      || r.km_terminal   || r.km_final    || r.km_chegada  || 0) || null,
-    km_total:      parseFloat(r.km_total    || r.km_percorrido || 0)                                   || null,
+    km_rows:       Array.isArray(r.km_rows) ? r.km_rows : [],
+    km_ast:        (() => {
+      const v = parseFloat(r.km_ast || r.km_aferido || r.km_inicial || r.km_saida || 0)
+      if (!isNaN(v) && v > 0) return v
+      // fallback: km_rows ASFALTO saida
+      const rows = Array.isArray(r.km_rows) ? r.km_rows : []
+      const asfRow = rows.find(row => String(row.tipo || '').toUpperCase() === 'ASFALTO')
+      return asfRow?.saida ? (parseFloat(asfRow.saida) || null) : null
+    })(),
+    km_ter:        (() => {
+      const v = parseFloat(r.km_ter || r.km_terminal || r.km_final || r.km_chegada || 0)
+      if (!isNaN(v) && v > 0) return v
+      const rows = Array.isArray(r.km_rows) ? r.km_rows : []
+      const asfRow = rows.find(row => String(row.tipo || '').toUpperCase() === 'ASFALTO')
+      return asfRow?.entrada ? (parseFloat(asfRow.entrada) || null) : null
+    })(),
+    km_total:      (() => {
+      const v = parseFloat(r.km_total || r.km_percorrido || 0)
+      if (!isNaN(v) && v > 0) return v
+      // fallback: soma total das linhas km_rows
+      const rows = Array.isArray(r.km_rows) ? r.km_rows : []
+      const soma = rows.reduce((s, row) => s + (parseFloat(row.total) || 0), 0)
+      return soma > 0 ? soma : null
+    })(),
+    valor_total:   parseFloat(String(r.valor_total || r.valor || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || null,
   }
 }
 
@@ -530,56 +583,61 @@ async function processarBoletim(boletimId) {
     'Retorne APENAS o JSON, sem explica├º├Áes.',
   ].join(' ')
 
-  const userPrompt = boletimTipo?.imagem_url
-    ? `Analise este boletim de apontamento. O formul├írio tem os seguintes campos:\n${camposDescricao}\n\nExtrai o valor de cada campo. Retorne um objeto JSON com as chaves: ${Object.keys(camposJson).join(', ')}, responsavel_birigui_nome, responsavel_birigui_matricula, responsavel_cliente_nome, responsavel_cliente_matricula, numero_documento.`
-    : `Extraia TODOS os dados deste formulário de apontamento. Retorne um JSON com as seguintes chaves (use null se o campo não existir ou estiver ilegível):
-- numero_documento: OBRIGATÓRIO — olhe no CANTO SUPERIOR DIREITO do formulário: há um número de 3 a 5 dígitos impresso dentro de uma caixa/quadro retangular isolado, sem rótulo próximo. Esse é o número do documento. Exemplos: 2351, 1872, 3040. Extraia SOMENTE os dígitos como string. NÃO retorne null para este campo.
+  // Contexto adicional de campos_json (quando o tipo tem template configurado)
+  const extraCamposCtx = Object.keys(camposJson).length > 0
+    ? `\n\nCampos específicos mapeados para este tipo de formulário (extraia também se presentes):\n${camposDescricao}`
+    : ''
+
+  const userPrompt = `Extraia TODOS os dados deste formulário de apontamento/diário. Retorne um JSON com as seguintes chaves (use null se o campo não existir ou estiver ilegível):
+- numero_documento: OBRIGATÓRIO — número de 3 a 5 dígitos impresso em destaque no CANTO SUPERIOR DIREITO do formulário, dentro de uma caixa/quadro isolado (ex: 2351, 01772). Extraia SOMENTE os dígitos como string. NÃO retorne null.
 - data: data do boletim (DD/MM/YYYY)
 - turno: "dia", "noite" ou "integral" conforme marcado
-- colaborador: nome do operador/colaborador principal
-- equipamento: código ou nome do equipamento (ex: EH-22, CAD 320, Hidrojato 10.000 PSI)
+- empresa: nome da empresa/cliente no cabeçalho do formulário (campo "EMPRESA:" ou similar)
+- colaborador: nome do operador, colaborador ou motorista principal
+- solicitante: nome do solicitante ou responsável pela emissão
+- equipamento: código ou nome do equipamento (ex: EH-22, J Po-01, Hidrojato 10.000 PSI)
 - modelo: modelo do equipamento (se informado separadamente)
 - classe_operacional: classe/tipo do equipamento
-- frente: local ou frente de trabalho
-- cdc: centro de custo
-- atividade_realizada: atividade ou serviço realizado (resumo curto)
-- descritivo_trabalho: descrição detalhada do trabalho executado
-- observacoes: observações, ocorrências ou anomalias registradas
+- frente: local ou frente de trabalho (campo "SETOR" ou "FRENTE")
+- cdc: centro de custo (campo "CC" ou "CDC")
+- local_origem: local, cidade ou endereço de origem/saída do veículo ou serviço
+- local_destino: local, cidade ou endereço de destino/chegada do veículo ou serviço
+- condutor: nome do motorista/condutor (se houver campo específico separado de colaborador)
+- placa: placa do veículo (ex: "RUG-61B5", "BLG 9122")
+- km_rows: IMPORTANTE — array com TODAS as linhas preenchidas da tabela de KM/HORAS do formulário. Cada objeto: { "tipo": "ASFALTO" | "TERRA" | "HORAS" | "DIÁRIAS", "saida": número ou null, "entrada": número ou null, "total": número ou null }. Extraia os números sem pontos/vírgulas de milhar. Retorne [] se não houver tabela.
+- valor_total: valor total em reais do formulário (campo "VALOR RS", "VALOR R$" ou similar) — retorne somente o número sem símbolo de moeda (ex: 5950.00)
+- km_ast: hodômetro na saída / km aferido (número, se houver campo direto separado da tabela)
+- km_ter: hodômetro na chegada / km terminal (número, se houver campo direto)
+- km_total: total de km percorridos (número, se houver campo direto)
+- jornada_inicio: horário de início/HORA INICIAL (HH:MM)
+- jornada_fim: horário de encerramento/HORA FINAL (HH:MM)
+- jornada_total_horas: total de horas corridas ou HORAS ENVOLVIDAS (número decimal, ex: 1.0)
 - horimetro_inicial: leitura inicial do horímetro (número)
 - horimetro_final: leitura final do horímetro (número)
 - horas_trabalhadas: total de horas trabalhadas (número)
-- horas_disponiveis: horas disponíveis ou horas totais do turno (número)
-- horas_espera: horas em espera, ociosas ou de manutenção (número)
+- horas_disponiveis: horas disponíveis ou totais do turno (número)
+- horas_espera: horas em espera ou ociosas (número)
+- atividade_realizada: atividade ou serviço realizado (resumo)
+- descritivo_trabalho: descrição detalhada do serviço (campo "DESCRIÇÃO DO SERVIÇO" ou similar)
+- observacoes: observações, ocorrências ou anomalias
 - produtividade_quantidade: quantidade produzida (número)
-- produtividade_unidade: unidade de medida da produção (ex: m3, ton)
-- produtividade_por_hora: produtividade por hora (número)
-- responsavel_birigui_nome: nome do responsável Birigui pela execução do serviço
-- responsavel_birigui_matricula: matrícula do responsável Birigui
-- responsavel_cliente_nome: nome do responsável Cliente pela liberação/validação
-- responsavel_cliente_matricula: matrícula do responsável Cliente
-- unidade_empresa: unidade/filial/localidade da empresa cliente onde o serviço foi executado (ex: Três Lagoas, Birigui)
-- jornada_inicio: horário de início do serviço/jornada (formato HH:MM, ex: 07:00)
-- jornada_fim: horário de encerramento do serviço/jornada (formato HH:MM, ex: 17:00)
-- jornada_total_horas: total de horas corridas da jornada (número decimal, ex: 10.0)
-- cliente: razão social ou nome da empresa cliente
-- cidade_estado: cidade e estado onde o serviço foi executado (ex: "Três Lagoas/MS")
-- solicitante: nome do solicitante ou responsável pela abertura do serviço
-- telefone: telefone de contato do solicitante
-- placa: placa do veículo (ex: "QAZ-4D21")
-- equipe_diurna: nomes dos membros da equipe diurna separados por ponto-e-vírgula
-- equipe_noturna: nomes da equipe noturna, ou "Não se aplica"
-- acessorios_utilizados: lista de acessórios e materiais utilizados no serviço
-- local_servico: local de realização dos serviços (campo "LOCAL DE REALIZAÇÃO DOS SERVIÇOS" ou similar)
-- setores: array com os nomes exatos dos setores/áreas com caixa marcada (checkbox com X), ex: ["Rotinas-1", "Linha de Fibras-1"]; retorne [] se não houver
-- linhas_jornada: array de objetos, uma entrada por linha preenchida na tabela de Jornada de Trabalho. Cada objeto deve ter exatamente estas chaves: { "data": "DD/MM/AA", "e1": "HH:MM", "s1": "HH:MM", "e2": "HH:MM ou null", "s2": "HH:MM ou null", "total": "HH:MM", "servico": "descrição do serviço executado nesta linha" }. Retorne [] se não houver tabela de jornada.
-- assinatura_cliente: nome por extenso na linha de assinatura do cliente
-- assinatura_empresa: nome por extenso na linha de assinatura da empresa/Birigui
-- condutor: nome do motorista ou condutor do veículo (se for um Diário de Motorista ou formulário de transporte; use null se não houver)
-- local_origem: local, cidade ou endereço de onde o veículo/serviço partiu (origem da viagem); use null se não houver
-- local_destino: local, cidade ou endereço para onde o veículo foi ou onde o serviço foi realizado (destino); use null se não houver
-- km_ast: quilometragem do hodômetro na saída (km aferido ou hodômetro inicial do percurso) — retorne somente o número, null se não houver
-- km_ter: quilometragem do hodômetro na chegada (km terminal ou hodômetro final do percurso) — retorne somente o número, null se não houver
-- km_total: total de quilômetros percorridos no dia ou na viagem — retorne somente o número, null se não houver
+- produtividade_unidade: unidade de medida (ex: m3, ton)
+- responsavel_birigui_nome: responsável da empresa executora
+- responsavel_birigui_matricula: matrícula do responsável
+- responsavel_cliente_nome: responsável do cliente
+- responsavel_cliente_matricula: matrícula do responsável do cliente
+- cliente: razão social do cliente (se diferente de empresa)
+- unidade_empresa: unidade/filial/localidade
+- cidade_estado: cidade e estado (ex: "Três Lagoas/MS")
+- telefone: telefone de contato
+- equipe_diurna: membros da equipe diurna separados por ponto-e-vírgula
+- equipe_noturna: membros da equipe noturna
+- acessorios_utilizados: acessórios e materiais utilizados
+- local_servico: campo "LOCAL DE REALIZAÇÃO DOS SERVIÇOS" ou similar
+- setores: array com os nomes dos setores/áreas com checkbox marcado. Ex: ["Rotinas-1"]. Retorne [].
+- linhas_jornada: array de linhas da tabela Jornada de Trabalho. Cada objeto: { "data": "DD/MM/AA", "e1": "HH:MM", "s1": "HH:MM", "e2": "HH:MM ou null", "s2": "HH:MM ou null", "total": "HH:MM", "servico": "descrição" }. Retorne [].
+- assinatura_cliente: nome por extenso na linha de assinatura do cliente/recebedor
+- assinatura_empresa: nome por extenso na linha de assinatura da empresa/entregador${extraCamposCtx}
 Retorne APENAS o JSON, sem comentários.`
 
   let ocrRaw = {}

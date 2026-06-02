@@ -125,9 +125,9 @@ function fmtDate(d) {
 function num(v) { return parseFloat(String(v || 0).replace(',', '.')) || 0 }
 function calcKmTotais(d = {}) {
   const parseKm = v => { const n = parseFloat(String(v || '').replace(/[^\d.,]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
-  const rows = (d.km_rows || []).filter(r => r.total && String(r.total).trim() !== '')
-  const asfalto = rows.filter(r => r.tipo === 'ASFALTO').reduce((s, r) => s + parseKm(r.total), 0)
-  const terra   = rows.filter(r => r.tipo === 'TERRA').reduce((s, r) => s + parseKm(r.total), 0)
+  const rows = (d.km_rows || d.ocr?.km_rows || []).filter(r => r.total != null && String(r.total).trim() !== '')
+  const asfalto = rows.filter(r => String(r.tipo || '').toUpperCase() === 'ASFALTO').reduce((s, r) => s + parseKm(r.total), 0)
+  const terra   = rows.filter(r => String(r.tipo || '').toUpperCase() === 'TERRA').reduce((s, r) => s + parseKm(r.total), 0)
   return { asfalto, terra, total: asfalto + terra }
 }
 // Lê o primeiro campo não-vazio dentre as chaves fornecidas (suporte a novo e legado)
