@@ -2534,7 +2534,6 @@ export default function Lancamentos() {
                       <ColHead colKey="data"        label="DATA" />
                       <ColHead colKey="processadoEm" label="PROCESSADO EM" />
                       <ColHead colKey="condutor"    label="MOTORISTA" />
-                      <ColHead colKey="dataBoletim" label="DATA BOLETIM" />
                       <ColHead colKey="numDm"       label="Nº DM" />
                       <ColHead colKey="cliente"     label="CLIENTE / DESCRIÇÃO" />
                       <ColHead colKey="cdc"         label="CDC" />
@@ -2616,10 +2615,6 @@ export default function Lancamentos() {
                               {d.condutor || d.ocr?.colaborador || d.ocr?.motorista || d.ocr?.condutor || '—'}
                             </span>
                           ))}
-                          {/* DATA BOLETIM */}
-                          <td style={{ padding: '9px 10px', whiteSpace: 'nowrap', fontSize: 12, color: LC.txtSecondary }}>
-                            {fmtDate(getDmField(d, 'data_boletim') || l.data)}
-                          </td>
                           {/* Nº DM */}
                           {EDITABLE_TD('numero_diario', getDmField(d,'numero_dm','numero_diario'), (
                             <span style={{ padding: '9px 10px', display: 'block', fontWeight: 800, color: getDmField(d,'numero_dm','numero_diario') ? LC.accent : LC.txtMuted, fontSize: 13, whiteSpace: 'nowrap' }}>
