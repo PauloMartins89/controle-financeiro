@@ -37,6 +37,10 @@
     {
       "path": "/api/cron?type=refeicoes-pendentes",
       "schedule": "0 11 * * 1-6"
+    },
+    {
+      "path": "/api/cron?type=boletins-retry",
+      "schedule": "*/30 * * * *"
     }
   ],
   "redirects": [

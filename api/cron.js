@@ -238,6 +238,48 @@ async function handleRefeicoesValidacao(db, res) {
   return res.status(200).json({ sent, validacoes: pedidos.length })
 }
 
+// ── Retry de boletins com erro (Gemini 503 etc.) ────────────────────────────
+// Reprocessa boletins em status 'erro' das últimas 4 horas (máx 5 por execução)
+async function handleBoletinsRetry(db, req, res) {
+  const quatro_horas_atras = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+  const cinco_min_atras    = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+
+  const { data: boletins } = await db
+    .from('maquinas_boletins')
+    .select('id, numero, wa_from')
+    .eq('status', 'erro')
+    .gte('created_at', quatro_horas_atras)
+    .lte('updated_at', cinco_min_atras)   // só retenta se parado há >5 min
+    .order('created_at', { ascending: true })
+    .limit(5)
+
+  if (!boletins?.length) return res.status(200).json({ retried: 0 })
+
+  const host = req.headers.host || process.env.APP_URL?.replace('https://', '')
+  const selfBase = `https://${host}`
+  let retried = 0
+
+  for (const bol of boletins) {
+    // Marca como 'recebido' antes de disparar para evitar dupla-execução
+    await db.from('maquinas_boletins').update({ status: 'recebido' }).eq('id', bol.id)
+    try {
+      await fetch(`${selfBase}/api/ocr-boletim-maquina`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boletimId: bol.id }),
+      })
+      retried++
+      console.log(`[cron:boletins-retry] disparado OCR para boletim ${bol.numero} (${bol.id})`)
+    } catch (e) {
+      console.error(`[cron:boletins-retry] falha ao disparar OCR para ${bol.id}:`, e.message)
+      await db.from('maquinas_boletins').update({ status: 'erro' }).eq('id', bol.id)
+    }
+    await new Promise(r => setTimeout(r, 3000))  // 3s entre requests para não saturar Gemini
+  }
+
+  return res.status(200).json({ retried, total: boletins.length })
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -249,5 +291,6 @@ export default async function handler(req, res) {
   if (type === 'relatorio')            return handleRelatorio(db, res)
   if (type === 'refeicoes-pendentes')  return handleRefeicoesPendentes(db, res)
   if (type === 'refeicoes-validacao')  return handleRefeicoesValidacao(db, res)
-  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao' })
+  if (type === 'boletins-retry')       return handleBoletinsRetry(db, req, res)
+  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-retry' })
 }
