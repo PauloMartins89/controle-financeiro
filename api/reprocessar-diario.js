@@ -17,7 +17,7 @@ async function callGemini(apiKey, imageUrl) {
   const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_OCR_MODEL || 'gemini-2.5-flash',
-    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 2048 },
+    generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 8192 },
   })
 
   const res = await fetch(imageUrl)
