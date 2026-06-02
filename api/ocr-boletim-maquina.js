@@ -3,28 +3,42 @@ import ws from 'ws'
 
 // Groq Vision (Llama-4-Scout) — passa imagens como image_url (URL pública)
 async function callGroq(apiKey, messages) {
-  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-      max_tokens: 4096,
-      response_format: { type: 'json_object' },
-      messages,
-    }),
-  })
-  if (!resp.ok) {
-    const err = await resp.text()
-    throw new Error(`Groq API error ${resp.status}: ${err.slice(0, 400)}`)
+  const MAX_ATTEMPTS = 3
+  let lastErr
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        max_tokens: 4096,
+        response_format: { type: 'json_object' },
+        messages,
+      }),
+    })
+    if (!resp.ok) {
+      const err = await resp.text()
+      lastErr = new Error(`Groq API error ${resp.status}: ${err.slice(0, 400)}`)
+      if (resp.status === 429 && attempt < MAX_ATTEMPTS) {
+        // extrai o tempo sugerido do corpo ("try again in X.Xs") ou usa backoff fixo
+        const waitMatch = err.match(/try again in (\d+\.?\d*)s/i)
+        const delay = waitMatch ? Math.ceil(parseFloat(waitMatch[1])) * 1000 + 500 : attempt * 4000
+        console.warn(`[ocr-boletim] groq 429 tentativa ${attempt}. Aguardando ${delay/1000}s...`)
+        await new Promise(r => setTimeout(r, delay))
+        continue
+      }
+      throw lastErr
+    }
+    const json = await resp.json()
+    const text = json.choices?.[0]?.message?.content || '{}'
+    try {
+      return JSON.parse(text)
+    } catch {
+      const match = text.match(/\{[\s\S]*\}/)
+      return match ? JSON.parse(match[0]) : {}
+    }
   }
-  const json = await resp.json()
-  const text = json.choices?.[0]?.message?.content || '{}'
-  try {
-    return JSON.parse(text)
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/)
-    return match ? JSON.parse(match[0]) : {}
-  }
+  throw lastErr
 }
 
 // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ

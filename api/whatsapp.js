@@ -368,6 +368,19 @@ export default async function handler(req, res) {
             const frente      = colaboradorBol.maquinas_frentes
             const workspaceId = frente?.workspace_id || colaboradorBol.workspace_id
 
+            // boletim_tipo_id: tenta via JOIN primeiro; se null, busca direto na tabela
+            let boletimTipoId = frente?.maquinas_boletim_tipos?.id || null
+            if (!boletimTipoId) {
+              const { data: tipos } = await dbBol
+                .from('maquinas_boletim_tipos')
+                .select('id')
+                .eq('workspace_id', workspaceId)
+                .eq('ativo', true)
+                .limit(1)
+              boletimTipoId = tipos?.[0]?.id || null
+              console.log('[whatsapp/boletim] boletim_tipo_id via query direta:', boletimTipoId)
+            }
+
             await sendWA(from, '📋 Boletim recebido! Estamos processando. Você será avisado em instantes.')
 
             let imagemUrl = ''
@@ -395,7 +408,7 @@ export default async function handler(req, res) {
               .insert({
                 workspace_id:    workspaceId,
                 colaborador_id:  colaboradorBol.id,
-                boletim_tipo_id: frente?.maquinas_boletim_tipos?.id || null,
+                boletim_tipo_id: boletimTipoId,
                 wa_from:         from,
                 imagem_url:      imagemUrl || comprovanteUrl || 'pending',
                 numero,
