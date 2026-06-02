@@ -1668,6 +1668,7 @@ const FIELD_LABELS = {
   placa: 'Placa',
   condutor: 'Motorista',
   cdc: 'CDC',
+  solicitante: 'Solicitante',
   km_asfalto: 'KM Asfalto',
   km_terra: 'KM Terra',
   unidade_empresa: 'Unidade',
@@ -2537,6 +2538,7 @@ export default function Lancamentos() {
                       <ColHead colKey="numDm"       label="Nº DM" />
                       <ColHead colKey="cliente"     label="CLIENTE / DESCRIÇÃO" />
                       <ColHead colKey="cdc"         label="CDC" />
+                      <ColHead colKey="solicitante"  label="SOLICITANTE" />
                       <ColHead colKey="origem"      label="ORIGEM" />
                       <ColHead colKey="destino"     label="DESTINO" />
                       <ColHead colKey="placa"       label="PLACA" />
@@ -2639,6 +2641,12 @@ export default function Lancamentos() {
                           {EDITABLE_TD('cdc', d.cdc, (
                             <span style={{ padding: '9px 10px', display: 'block', fontSize: 12, color: d.cdc ? LC.txtPrimary : LC.txtMuted, whiteSpace: 'nowrap' }}>
                               {d.cdc || '—'}
+                            </span>
+                          ))}
+                          {/* SOLICITANTE */}
+                          {EDITABLE_TD('solicitante', d.solicitante, (
+                            <span style={{ padding: '9px 10px', display: 'block', fontSize: 12, color: d.solicitante ? LC.txtPrimary : LC.txtMuted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 140 }}>
+                              {d.solicitante || '—'}
                             </span>
                           ))}
                           {/* ORIGEM */}
