@@ -773,7 +773,7 @@ Retorne APENAS o JSON, sem comentários.`
       .insert({
         workspace_id:    workspaceId,
         user_id:         null,
-        tipo:            'despesa',
+        tipo:            'receita',
         descricao:       `Boletim ${bol.numero} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
         valor:           valorCalculado ?? 0,
         data:            dataBoletim || new Date().toISOString().slice(0, 10),
@@ -811,8 +811,8 @@ Retorne APENAS o JSON, sem comentários.`
       .insert({
         workspace_id:    workspaceId,
         user_id:         null,
-        tipo:            'despesa',
-        descricao:       `Boletim ${bol.numero} ÔÇö ${colaborador?.nome || 'Colaborador'} ÔÇö ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
+        tipo:            'receita',
+        descricao:       `Boletim ${bol.numero} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletim || new Date().toISOString().slice(0, 10)}`,
         valor:           0,
         data:            dataBoletim || new Date().toISOString().slice(0, 10),
         categoria:       'M├íquinas',
