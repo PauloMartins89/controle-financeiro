@@ -1,0 +1,2022 @@
+[
+  {
+    "timestamp": "2026-06-02T06:39:44.544Z",
+    "totalCampos": 0,
+    "totalOK": 0,
+    "totalParcial": 0,
+    "totalErro": 0,
+    "pctGeral": 0,
+    "errosPorCampo": {},
+    "resultados": []
+  },
+  {
+    "timestamp": "2026-06-02T06:49:16.327Z",
+    "totalCampos": 42,
+    "totalOK": 41,
+    "totalParcial": 0,
+    "totalErro": 1,
+    "pctGeral": 98,
+    "errosPorCampo": {
+      "numero_documento": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "data": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "empresa": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "solicitante": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "cdc": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "frente": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "local_origem": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "local_destino": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "equipamento": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "placa": {
+        "ok": 2,
+        "parcial": 0,
+        "erro": 1
+      },
+      "valor_total": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "assinatura_empresa": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "assinatura_cliente": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      },
+      "km_rows": {
+        "ok": 3,
+        "parcial": 0,
+        "erro": 0
+      }
+    },
+    "resultados": [
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.29.jpeg",
+        "tempo_s": 19.3,
+        "campos": {
+          "numero_documento": {
+            "esperado": "6234",
+            "obtido": "6234",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "05/06/2026",
+            "obtido": "05/06/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Agrovale Logística LTDA",
+            "obtido": "Agrovale Logística LTDA",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Rogério Almeida",
+            "obtido": "Rogério Almeida",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "5502",
+            "obtido": "5502",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Expedição",
+            "obtido": "Expedição",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Pátio Industrial - Três Lagoas/MS",
+            "obtido": "Pátio Industrial - Três Lagoas / MS",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Usina Santa Luzia - Água Clara/MS",
+            "obtido": "Usina Santa Luzia - Água Clara / MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Cavalo Mecânico VM 330 - Reboque R-24",
+            "obtido": "Cavalo Mecânico VM 330 - Reboque R-24",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "QAY2B18",
+            "obtido": "QA42B18",
+            "status": "ERRO"
+          },
+          "valor_total": {
+            "esperado": 4250,
+            "obtido": 4250,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "João Henrique",
+            "obtido": "João Henrique",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Lucas Pereira",
+            "obtido": "Lucas Pereira",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 215780,
+                "entrada": 216235,
+                "total": 455
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 216235,
+                "entrada": 216298,
+                "total": 63
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 215780,
+                "entrada": 216235,
+                "total": 455
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 216235,
+                "entrada": 216298,
+                "total": 63
+              },
+              {
+                "tipo": "HORAS",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "HORAS",
+                "saida": 815,
+                "entrada": 1545,
+                "total": null
+              },
+              {
+                "tipo": "HORAS",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "DIÁRIAS",
+                "saida": null,
+                "entrada": null,
+                "total": 522
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.30 (1).jpeg",
+        "tempo_s": 11.8,
+        "campos": {
+          "numero_documento": {
+            "esperado": "62077",
+            "obtido": "62077",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "03/08/2026",
+            "obtido": "03/08/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Silvamax Operações",
+            "obtido": "Silvamax Operações",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Diego Nunes",
+            "obtido": "Diego Nunes",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "4410",
+            "obtido": "4410",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Transporte",
+            "obtido": "Transporte",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Pátio Florestal Leste",
+            "obtido": "Pátio Florestal Leste",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Brasilândia/MS",
+            "obtido": "Brasilândia/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Truck Munck TM-03",
+            "obtido": "Truck Munck TM-03",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "FQK5J39",
+            "obtido": "FQK5J39",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 3950,
+            "obtido": 3950,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Tiago Ramos",
+            "obtido": "Tiago Ramos",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Sérgio Batista",
+            "obtido": "Sérgio Batista",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 176430,
+                "entrada": 176618,
+                "total": 188
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 176618,
+                "entrada": 176690,
+                "total": 72
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 176430,
+                "entrada": 176618,
+                "total": 188
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 176618,
+                "entrada": 176690,
+                "total": 72
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.21.26.jpeg",
+        "tempo_s": 14.3,
+        "campos": {
+          "numero_documento": {
+            "esperado": "61942",
+            "obtido": "61942",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "14/06/2026",
+            "obtido": "14/06/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Florestal Vale Verde",
+            "obtido": "Florestal Vale Verde",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Ricardo Almeida",
+            "obtido": "Ricardo Almeida",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "5178",
+            "obtido": "5178",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Colheita",
+            "obtido": "Colheita",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Buriti",
+            "obtido": "Fazenda Buriti",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Unidade Industrial - Água Clara/MS",
+            "obtido": "Unidade Industrial - Água Clara/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Comboio CB-12",
+            "obtido": "Caminhão Comboio CB-12",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "RTA6H21",
+            "obtido": "RTA6H21",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 4120,
+            "obtido": 4120,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Marcelo Lima",
+            "obtido": "Marcelo Lima",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Felipe Costa",
+            "obtido": "Felipe Costa",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-06-02T06:58:14.839Z",
+    "totalCampos": 98,
+    "totalOK": 96,
+    "totalParcial": 0,
+    "totalErro": 2,
+    "pctGeral": 98,
+    "errosPorCampo": {
+      "numero_documento": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "data": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "empresa": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 1
+      },
+      "solicitante": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "cdc": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "frente": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "local_origem": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "local_destino": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "equipamento": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "placa": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 1
+      },
+      "valor_total": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "assinatura_empresa": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "assinatura_cliente": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      },
+      "km_rows": {
+        "ok": 7,
+        "parcial": 0,
+        "erro": 0
+      }
+    },
+    "resultados": [
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.29.jpeg",
+        "tempo_s": 23.8,
+        "campos": {
+          "numero_documento": {
+            "esperado": "6234",
+            "obtido": "6234",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "05/06/2026",
+            "obtido": "05/06/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Agrovale Logística LTDA",
+            "obtido": "Agrovale Logística LTDA",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Rogério Almeida",
+            "obtido": "Rogério Almeida",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "5502",
+            "obtido": "5502",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Expedição",
+            "obtido": "Expedição",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Pátio Industrial - Três Lagoas/MS",
+            "obtido": "Pátio Industrial - Três Lagoas / MS",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Usina Santa Luzia - Água Clara/MS",
+            "obtido": "Usina Santa Luzia - Água Clara / MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Cavalo Mecânico VM 330 - Reboque R-24",
+            "obtido": "Cavalo Mecânico VM 330 - Reboque R-24",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "QAY2B18",
+            "obtido": "QA42B18",
+            "status": "ERRO"
+          },
+          "valor_total": {
+            "esperado": 4250,
+            "obtido": 4250,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "João Henrique",
+            "obtido": "João Henrique",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Lucas Pereira",
+            "obtido": "Lucas Pereira",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 215780,
+                "entrada": 216235,
+                "total": 455
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 216235,
+                "entrada": 216298,
+                "total": 63
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 215780,
+                "entrada": 216235,
+                "total": 455
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 216235,
+                "entrada": 216298,
+                "total": 63
+              },
+              {
+                "tipo": "HORAS",
+                "saida": null,
+                "entrada": null,
+                "total": 7.5
+              },
+              {
+                "tipo": "DIÁRIAS",
+                "saida": null,
+                "entrada": null,
+                "total": 522
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.30 (1).jpeg",
+        "tempo_s": 13.1,
+        "campos": {
+          "numero_documento": {
+            "esperado": "62077",
+            "obtido": "62077",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "03/08/2026",
+            "obtido": "03/08/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Silvamax Operações",
+            "obtido": "Silvamax Operações",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Diego Nunes",
+            "obtido": "Diego Nunes",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "4410",
+            "obtido": "4410",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Transporte",
+            "obtido": "Transporte",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Pátio Florestal Leste",
+            "obtido": "Pátio Florestal Leste",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Brasilândia/MS",
+            "obtido": "Brasilândia/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Truck Munck TM-03",
+            "obtido": "Truck Munck TM-03",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "FQK5J39",
+            "obtido": "FQK5J39",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 3950,
+            "obtido": 3950,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Tiago Ramos",
+            "obtido": "Tiago Ramos",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Sérgio Batista",
+            "obtido": "Sérgio Batista",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 176430,
+                "entrada": 176618,
+                "total": 188
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 176618,
+                "entrada": 176690,
+                "total": 72
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 176430,
+                "entrada": 176618,
+                "total": 188
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 176618,
+                "entrada": 176690,
+                "total": 72
+              },
+              {
+                "tipo": "ASFALTO",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "TERRA",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "ASFALTO",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "TERRA",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "HORAS",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "HORAS",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "DIÁRIAS",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.30.jpeg",
+        "tempo_s": 32.3,
+        "campos": {
+          "numero_documento": {
+            "esperado": "61942",
+            "obtido": "61942",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "14/06/2026",
+            "obtido": "14/06/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Florestal Vale Verde",
+            "obtido": "Florestal Vale Verde",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Ricardo Almeida",
+            "obtido": "Ricardo Almeida",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "5178",
+            "obtido": "5178",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Colheita",
+            "obtido": "Colheita",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Buriti",
+            "obtido": "Fazenda Buriti",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Unidade Industrial - Água Clara/MS",
+            "obtido": "Unidade Industrial - Água Clara/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Comboio CB-12",
+            "obtido": "Caminhão Comboio CB-12",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "RTA6H21",
+            "obtido": "RTA6H21",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 4120,
+            "obtido": 4120,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Marcelo Lima",
+            "obtido": "Marcelo Lima",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Felipe Costa",
+            "obtido": "Felipe Costa",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.31.jpeg",
+        "tempo_s": 13.5,
+        "campos": {
+          "numero_documento": {
+            "esperado": "61885",
+            "obtido": "61885",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "30/05/2026",
+            "obtido": "30/05/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Agrovale Logística LTDA",
+            "obtido": "Agrovale Logística LTDA",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Marcos Antônio",
+            "obtido": "Marcos Antônio",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "4201",
+            "obtido": "4201",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Silvicultura",
+            "obtido": "Silvicultura",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Santa Helena",
+            "obtido": "Fazenda Santa Helena",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Pátio Central - Três Lagoas/MS",
+            "obtido": "Pátio Central - Três Lagoas/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Prancha CP-07",
+            "obtido": "Caminhão Prancha CP-07",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "QAB7D42",
+            "obtido": "QAB7D42",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 3480,
+            "obtido": 3480,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "João Carlos",
+            "obtido": "João Carlos",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Renato Silva",
+            "obtido": "Renato Silva",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 128450,
+                "entrada": 128672,
+                "total": 222
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 128672,
+                "entrada": 128711,
+                "total": 39
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 128450,
+                "entrada": 128672,
+                "total": 222
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 128672,
+                "entrada": 128711,
+                "total": 39
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.32.jpeg",
+        "tempo_s": 11.7,
+        "campos": {
+          "numero_documento": {
+            "esperado": "62018",
+            "obtido": "62018",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "22/07/2026",
+            "obtido": "22/07/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "AgroTrans Brasil",
+            "obtido": "AgroTrans Brasil",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Juliano Pires",
+            "obtido": "Juliano Pires",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "3884",
+            "obtido": "3884",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Manutenção",
+            "obtido": "Manutenção",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Oficina Central",
+            "obtido": "Oficina Central",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Fazenda Santa Luzia",
+            "obtido": "Fazenda Santa Luzia",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Prancha PR-09",
+            "obtido": "Prancha PR-09",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "OYZ4C88",
+            "obtido": "OYZ4C88",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 2860,
+            "obtido": 2860,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Carlos Menezes",
+            "obtido": "Carlos Menezes",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Bruno Teles",
+            "obtido": "Bruno Teles",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 98054,
+                "entrada": 98291,
+                "total": 237
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 98291,
+                "entrada": 98322,
+                "total": 31
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 98054,
+                "entrada": 98291,
+                "total": 237
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 98291,
+                "entrada": 98322,
+                "total": 31
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.21.26.jpeg",
+        "tempo_s": 24.5,
+        "campos": {
+          "numero_documento": {
+            "esperado": "61942",
+            "obtido": "61942",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "14/06/2026",
+            "obtido": "14/06/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Florestal Vale Verde",
+            "obtido": "CASAGRANDE",
+            "status": "ERRO"
+          },
+          "solicitante": {
+            "esperado": "Ricardo Almeida",
+            "obtido": "Ricardo Almeida",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "5178",
+            "obtido": "5178",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Colheita",
+            "obtido": "Colheita",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Buriti",
+            "obtido": "Fazenda Buriti",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Unidade Industrial - Água Clara/MS",
+            "obtido": "Unidade Industrial - Água Clara/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Comboio CB-12",
+            "obtido": "Caminhão Comboio CB-12",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "RTA6H21",
+            "obtido": "RTA6H21",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 4120,
+            "obtido": 4120,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Marcelo Lima",
+            "obtido": "Marcelo Lima",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Felipe Costa",
+            "obtido": "Felipe Costa",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.23.48.jpeg",
+        "tempo_s": 49.7,
+        "campos": {
+          "numero_documento": {
+            "esperado": "6185",
+            "obtido": "6185",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "12/05/2026",
+            "obtido": "12/05/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Agrovale Logística LTDA",
+            "obtido": "Agrovale Logística LTDA",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Marcos Antônio",
+            "obtido": "Marcos Antônio",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "4201",
+            "obtido": "4201",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Silvicultura",
+            "obtido": "Silvicultura",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Santa Helena",
+            "obtido": "Fazenda Santa Helena",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Pátio Central - Três Lagoas/MS",
+            "obtido": "Pátio Central - Três Lagoas / MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Prancha CP-07",
+            "obtido": "Caminhão Prancha CP-07",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "QAB7D42",
+            "obtido": "QAB7D42",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 3480,
+            "obtido": 3480,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "João Carlos",
+            "obtido": "João Carlos",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Renato Silva",
+            "obtido": "Renato Silva",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 128450,
+                "entrada": 128672,
+                "total": 222
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 128672,
+                "entrada": 128711,
+                "total": 39
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 128450,
+                "entrada": 128672,
+                "total": 222
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 128672,
+                "entrada": 128711,
+                "total": 39
+              },
+              {
+                "tipo": "DIÁRIAS",
+                "saida": null,
+                "entrada": null,
+                "total": 261
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-06-02T07:05:42.871Z",
+    "totalCampos": 84,
+    "totalOK": 84,
+    "totalParcial": 0,
+    "totalErro": 0,
+    "pctGeral": 100,
+    "errosPorCampo": {
+      "numero_documento": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "data": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "empresa": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "solicitante": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "cdc": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "frente": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "local_origem": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "local_destino": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "equipamento": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "placa": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "valor_total": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "assinatura_empresa": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "assinatura_cliente": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      },
+      "km_rows": {
+        "ok": 6,
+        "parcial": 0,
+        "erro": 0
+      }
+    },
+    "resultados": [
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.30 (1).jpeg",
+        "tempo_s": 15.5,
+        "campos": {
+          "numero_documento": {
+            "esperado": "62077",
+            "obtido": "62077",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "03/08/2026",
+            "obtido": "03/08/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Silvamax Operações",
+            "obtido": "Silvamax Operações",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Diego Nunes",
+            "obtido": "Diego Nunes",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "4410",
+            "obtido": "4410",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Transporte",
+            "obtido": "Transporte",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Pátio Florestal Leste",
+            "obtido": "Pátio Florestal Leste",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Brasilândia/MS",
+            "obtido": "Brasilândia/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Truck Munck TM-03",
+            "obtido": "Truck Munck TM-03",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "FQK5J39",
+            "obtido": "FQK5J39",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 3950,
+            "obtido": 3950,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Tiago Ramos",
+            "obtido": "Tiago Ramos",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Sérgio Batista",
+            "obtido": "Sérgio Batista",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 176430,
+                "entrada": 176618,
+                "total": 188
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 176618,
+                "entrada": 176690,
+                "total": 72
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 176430,
+                "entrada": 176618,
+                "total": 188
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 176618,
+                "entrada": 176690,
+                "total": 72
+              },
+              {
+                "tipo": "ASFALTO",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "TERRA",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "ASFALTO",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "TERRA",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "HORAS",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "HORAS",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              },
+              {
+                "tipo": "DIÁRIAS",
+                "saida": null,
+                "entrada": null,
+                "total": null
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.30.jpeg",
+        "tempo_s": 18.9,
+        "campos": {
+          "numero_documento": {
+            "esperado": "61942",
+            "obtido": "61942",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "14/06/2026",
+            "obtido": "14/06/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Florestal Vale Verde",
+            "obtido": "Florestal Vale Verde",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Ricardo Almeida",
+            "obtido": "Ricardo Almeida",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "5178",
+            "obtido": "5178",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Colheita",
+            "obtido": "Colheita",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Buriti",
+            "obtido": "Fazenda Buriti",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Unidade Industrial - Água Clara/MS",
+            "obtido": "Unidade Industrial - Água Clara/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Comboio CB-12",
+            "obtido": "Caminhão Comboio CB-12",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "RTA6H21",
+            "obtido": "RTA6H21",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 4120,
+            "obtido": 4120,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Marcelo Lima",
+            "obtido": "Marcelo Lima",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Felipe Costa",
+            "obtido": "Felipe Costa",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.31.jpeg",
+        "tempo_s": 44.2,
+        "campos": {
+          "numero_documento": {
+            "esperado": "61885",
+            "obtido": "61885",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "30/05/2026",
+            "obtido": "30/05/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Agrovale Logística LTDA",
+            "obtido": "Agrovale Logística LTDA",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Marcos Antônio",
+            "obtido": "Marcos Antônio",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "4201",
+            "obtido": "4201",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Silvicultura",
+            "obtido": "Silvicultura",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Santa Helena",
+            "obtido": "Fazenda Santa Helena",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Pátio Central - Três Lagoas/MS",
+            "obtido": "Pátio Central - Três Lagoas/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Prancha CP-07",
+            "obtido": "Caminhão Prancha CP-07",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "QAB7D42",
+            "obtido": "QAB7D42",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 3480,
+            "obtido": 3480,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "João Carlos",
+            "obtido": "João Carlos",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Renato Silva",
+            "obtido": "Renato Silva",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 128450,
+                "entrada": 128672,
+                "total": 222
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 128672,
+                "entrada": 128711,
+                "total": 39
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 128450,
+                "entrada": 128672,
+                "total": 222
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 128672,
+                "entrada": 128711,
+                "total": 39
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.20.32.jpeg",
+        "tempo_s": 13.3,
+        "campos": {
+          "numero_documento": {
+            "esperado": "62018",
+            "obtido": "62018",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "22/07/2026",
+            "obtido": "22/07/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "AgroTrans Brasil",
+            "obtido": "AgroTrans Brasil",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Juliano Pires",
+            "obtido": "Juliano Pires",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "3884",
+            "obtido": "3884",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Manutenção",
+            "obtido": "Manutenção",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Oficina Central",
+            "obtido": "Oficina Central",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Fazenda Santa Luzia",
+            "obtido": "Fazenda Santa Luzia",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Prancha PR-09",
+            "obtido": "Prancha PR-09",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "OYZ4C88",
+            "obtido": "OYZ4C88",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 2860,
+            "obtido": 2860,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Carlos Menezes",
+            "obtido": "Carlos Menezes",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Bruno Teles",
+            "obtido": "Bruno Teles",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 98054,
+                "entrada": 98291,
+                "total": 237
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 98291,
+                "entrada": 98322,
+                "total": 31
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 98054,
+                "entrada": 98291,
+                "total": 237
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 98291,
+                "entrada": 98322,
+                "total": 31
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.21.56.jpeg",
+        "tempo_s": 14.3,
+        "campos": {
+          "numero_documento": {
+            "esperado": "6185",
+            "obtido": "6185",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "12/05/2026",
+            "obtido": "12/05/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Agrovale Logística LTDA",
+            "obtido": "Agrovale Logística LTDA",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Marcos Antônio",
+            "obtido": "Marcos Antônio",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "4201",
+            "obtido": "4201",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Silvicultura",
+            "obtido": "Silvicultura",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Santa Helena",
+            "obtido": "Fazenda Santa Helena",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Pátio Central - Três Lagoas/MS",
+            "obtido": "Pátio Central - Três Lagoas / MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Prancha CP-07",
+            "obtido": "Caminhão Prancha CP-07",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "QAB7D42",
+            "obtido": "QAB7D42",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 3480,
+            "obtido": 3480,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "João Carlos",
+            "obtido": "João Carlos",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Renato Silva",
+            "obtido": "Renato Silva",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 128450,
+                "entrada": 128672,
+                "total": 222
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 128672,
+                "entrada": 128711,
+                "total": 39
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 128450,
+                "entrada": 128672,
+                "total": 222
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 128672,
+                "entrada": 128711,
+                "total": 39
+              },
+              {
+                "tipo": "DIÁRIAS",
+                "saida": null,
+                "entrada": null,
+                "total": 261
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      },
+      {
+        "arquivo": "WhatsApp Image 2026-06-02 at 03.21.26.jpeg",
+        "tempo_s": 24.3,
+        "campos": {
+          "numero_documento": {
+            "esperado": "61942",
+            "obtido": "61942",
+            "status": "OK"
+          },
+          "data": {
+            "esperado": "14/06/2026",
+            "obtido": "14/06/2026",
+            "status": "OK"
+          },
+          "empresa": {
+            "esperado": "Florestal Vale Verde",
+            "obtido": "Florestal Vale Verde",
+            "status": "OK"
+          },
+          "solicitante": {
+            "esperado": "Ricardo Almeida",
+            "obtido": "Ricardo Almeida",
+            "status": "OK"
+          },
+          "cdc": {
+            "esperado": "5178",
+            "obtido": "5178",
+            "status": "OK"
+          },
+          "frente": {
+            "esperado": "Colheita",
+            "obtido": "Colheita",
+            "status": "OK"
+          },
+          "local_origem": {
+            "esperado": "Fazenda Buriti",
+            "obtido": "Fazenda Buriti",
+            "status": "OK"
+          },
+          "local_destino": {
+            "esperado": "Unidade Industrial - Água Clara/MS",
+            "obtido": "Unidade Industrial - Água Clara/MS",
+            "status": "OK"
+          },
+          "equipamento": {
+            "esperado": "Caminhão Comboio CB-12",
+            "obtido": "Caminhão Comboio CB-12",
+            "status": "OK"
+          },
+          "placa": {
+            "esperado": "RTA6H21",
+            "obtido": "RTA6H21",
+            "status": "OK"
+          },
+          "valor_total": {
+            "esperado": 4120,
+            "obtido": 4120,
+            "status": "OK"
+          },
+          "assinatura_empresa": {
+            "esperado": "Marcelo Lima",
+            "obtido": "Marcelo Lima",
+            "status": "OK"
+          },
+          "assinatura_cliente": {
+            "esperado": "Felipe Costa",
+            "obtido": "Felipe Costa",
+            "status": "OK"
+          },
+          "km_rows": {
+            "esperado": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "obtido": [
+              {
+                "tipo": "ASFALTO",
+                "saida": 245810,
+                "entrada": 246035,
+                "total": 225
+              },
+              {
+                "tipo": "TERRA",
+                "saida": 246035,
+                "entrada": 246081,
+                "total": 46
+              }
+            ],
+            "status": "OK"
+          }
+        }
+      }
+    ]
+  }
+]

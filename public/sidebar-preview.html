@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sidebar Preview — SmartLíder</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; display: flex; gap: 40px; padding: 40px; min-height: 100vh; justify-content: center; align-items: flex-start; }
+
+  .panel { display: flex; flex-direction: column; gap: 12px; }
+  .panel-label { color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; text-align: center; margin-bottom: 4px; }
+
+  .sidebar { width: 220px; background: #1e293b; border-radius: 16px; padding: 16px 10px; border: 1px solid #334155; }
+  .sidebar-title { color: #64748b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; padding: 6px 10px 4px; }
+
+  .item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 9px; font-size: 13px; font-weight: 500; color: #cbd5e1; cursor: pointer; transition: all 0.15s; }
+  .item:hover { background: #334155; }
+  .item.active { background: #22c55e20; color: #22c55e; font-weight: 700; }
+  .item .dot { width: 6px; height: 6px; border-radius: 50%; background: #475569; flex-shrink: 0; }
+  .item.active .dot { background: #22c55e; }
+  .item .icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+
+  .section-label { color: #475569; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 12px 12px 4px; margin-top: 4px; border-top: 1px solid #1e293b; }
+  .section-label:first-child { border-top: none; margin-top: 0; padding-top: 4px; }
+
+  .badge-new { font-size: 9px; font-weight: 800; background: #22c55e; color: #fff; padding: 1px 6px; border-radius: 20px; margin-left: auto; }
+  .badge-improved { font-size: 9px; font-weight: 800; background: #6366f1; color: #fff; padding: 1px 6px; border-radius: 20px; margin-left: auto; }
+
+  .arrow { color: #64748b; font-size: 16px; display: flex; align-items: center; padding-top: 60px; }
+
+  h2 { color: #f1f5f9; font-size: 15px; font-weight: 800; margin-bottom: 2px; text-align: center; }
+  p.desc { color: #64748b; font-size: 11px; text-align: center; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ATUAL -->
+<div class="panel">
+  <div class="panel-label">❌ Hoje — Sidebar plana</div>
+  <div class="sidebar">
+    <div class="sidebar-title">SmartLíder</div>
+    <div class="item"><span class="icon">📊</span> Dashboard</div>
+    <div class="item"><span class="icon">📅</span> Turnos</div>
+    <div class="item"><span class="icon">📋</span> Apontamentos</div>
+    <div class="item active"><span class="icon">📍</span> Frentes</div>
+    <div class="item"><span class="icon">👥</span> Equipes</div>
+    <div class="item"><span class="icon">👤</span> Colaboradores</div>
+    <div class="item"><span class="icon">🔧</span> Máquinas</div>
+    <div class="item"><span class="icon">⚗️</span> Implementos</div>
+    <div class="item"><span class="icon">📦</span> Produtos</div>
+    <div class="item"><span class="icon">🦺</span> EPIs</div>
+    <div class="item"><span class="icon">🦺</span> Solicitações EPI</div>
+    <div class="item"><span class="icon">🦺</span> Catálogo EPI</div>
+    <div class="item"><span class="icon">⚗️</span> Solicitações Insumo</div>
+    <div class="item"><span class="icon">🔧</span> Catálogo EPC</div>
+    <div class="item"><span class="icon">🔑</span> Admin Usuários</div>
+  </div>
+  <p style="color:#ef4444;font-size:11px;text-align:center">15 itens sem hierarquia</p>
+</div>
+
+<div class="arrow">→</div>
+
+<!-- NOVO -->
+<div class="panel">
+  <div class="panel-label">✅ Proposto — Organizado por seção</div>
+  <div class="sidebar">
+    <div class="sidebar-title">SmartLíder</div>
+    <div class="item"><span class="icon">📊</span> Dashboard</div>
+
+    <div class="section-label">── Operações ──</div>
+    <div class="item"><span class="icon">📅</span> Turnos</div>
+    <div class="item"><span class="icon">📋</span> Apontamentos</div>
+
+    <div class="section-label">── Estrutura ──</div>
+    <div class="item active"><span class="icon">📍</span> Frentes</div>
+    <div class="item"><span class="icon">👥</span> Equipes</div>
+    <div class="item"><span class="icon">🔑</span> Líderes <span class="badge-new">novo</span></div>
+    <div class="item"><span class="icon">👤</span> Colaboradores</div>
+    <div class="item"><span class="icon">🔧</span> Máquinas</div>
+    <div class="item"><span class="icon">⚗️</span> Implementos</div>
+
+    <div class="section-label">── Insumos ──</div>
+    <div class="item"><span class="icon">📋</span> Solicitações</div>
+    <div class="item"><span class="icon">📦</span> Catálogo Produtos</div>
+
+    <div class="section-label">── EPIs / EPCs ──</div>
+    <div class="item"><span class="icon">📋</span> Solicitações</div>
+    <div class="item"><span class="icon">🦺</span> Catálogo EPIs</div>
+    <div class="item"><span class="icon">🛡️</span> Catálogo EPCs</div>
+  </div>
+  <p style="color:#22c55e;font-size:11px;text-align:center">15 itens → agrupados em 4 seções</p>
+</div>
+
+</body>
+</html>

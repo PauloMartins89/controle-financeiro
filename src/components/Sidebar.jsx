@@ -114,21 +114,24 @@ const navGroups = [
   {
     title: 'SmartLíder',
     items: [
-      { to: '/lider/dashboard',                   icon: ChartBarIcon,              label: 'Dashboard',           moduleKey: 'smartlider' },
-      { to: '/lider/turnos',                       icon: CalendarDaysIcon,           label: 'Turnos',              moduleKey: 'smartlider' },
-      { to: '/lider/apontamentos',                 icon: ClipboardDocumentListIcon,  label: 'Apontamentos',        moduleKey: 'smartlider' },
-      { to: '/lider/cadastros/frentes',            icon: MapPinIcon,                 label: 'Frentes',             moduleKey: 'smartlider' },
-      { to: '/lider/cadastros/equipes',            icon: UserGroupIcon,              label: 'Equipes',             moduleKey: 'smartlider' },
-      { to: '/lider/cadastros/colaboradores',      icon: UsersIcon,                  label: 'Colaboradores',       moduleKey: 'smartlider' },
-      { to: '/lider/cadastros/maquinas',           icon: WrenchScrewdriverIcon,      label: 'Máquinas',            moduleKey: 'smartlider' },
-      { to: '/lider/cadastros/implementos',        icon: BeakerIcon,                 label: 'Implementos',         moduleKey: 'smartlider' },
-      { to: '/lider/cadastros/produtos',           icon: CubeIcon,                   label: 'Produtos',            moduleKey: 'smartlider' },
-      { to: '/lider/cadastros/epis',               icon: ShieldCheckIcon,            label: 'EPIs',                moduleKey: 'smartlider' },
-      { to: '/lider/epi/solicitacoes',             icon: ShieldCheckIcon,            label: 'Solicitações EPI',    moduleKey: 'smartlider' },
-      { to: '/lider/epi/catalogo',                 icon: TableCellsIcon,             label: 'Catálogo EPI',        moduleKey: 'smartlider' },
-      { to: '/lider/insumo/solicitacoes',          icon: BeakerIcon,                 label: 'Solicitações Insumo', moduleKey: 'smartlider' },
-      { to: '/lider/epc/catalogo',                 icon: WrenchScrewdriverIcon,      label: 'Catálogo EPC',        moduleKey: 'smartlider' },
-      { to: '/lider/admin',                         icon: ShieldCheckIcon,            label: 'Admin Usuários',      moduleKey: 'smartlider' },
+      { to: '/lider/dashboard',              icon: ChartBarIcon,             label: 'Dashboard',           moduleKey: 'smartlider' },
+      { divider: true,                        label: '── Operações',                                                        moduleKey: 'smartlider' },
+      { to: '/lider/turnos',                  icon: CalendarDaysIcon,          label: 'Turnos',              moduleKey: 'smartlider' },
+      { to: '/lider/apontamentos',            icon: ClipboardDocumentListIcon, label: 'Apontamentos',        moduleKey: 'smartlider' },
+      { divider: true,                        label: '── Estrutura',                                                            moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/frentes',       icon: MapPinIcon,                label: 'Frentes',             moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/equipes',       icon: UserGroupIcon,             label: 'Equipes',             moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/lideres',       icon: UsersIcon,                 label: 'Líderes',             moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/colaboradores', icon: UsersIcon,                 label: 'Colaboradores',       moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/maquinas',      icon: WrenchScrewdriverIcon,     label: 'Máquinas',            moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/implementos',   icon: BeakerIcon,                label: 'Implementos',         moduleKey: 'smartlider' },
+      { divider: true,                        label: '── Insumos',                                                              moduleKey: 'smartlider' },
+      { to: '/lider/insumo/solicitacoes',     icon: ClipboardDocumentListIcon, label: 'Solicitações',        moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/produtos',      icon: CubeIcon,                  label: 'Catálogo Produtos',   moduleKey: 'smartlider' },
+      { divider: true,                        label: '── EPIs / EPCs',                                                         moduleKey: 'smartlider' },
+      { to: '/lider/epi/solicitacoes',        icon: ShieldCheckIcon,           label: 'Solicitações EPI',    moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/epis',          icon: ShieldCheckIcon,           label: 'Catálogo EPIs',       moduleKey: 'smartlider' },
+      { to: '/lider/epc/catalogo',            icon: WrenchScrewdriverIcon,     label: 'Catálogo EPCs',       moduleKey: 'smartlider' },
     ],
   },
   {
@@ -241,6 +244,12 @@ export default function Sidebar({ collapsed, onToggle }) {
   function isItemVisible(item) {
     if (item.adminOnly) return isPlatformAdmin
     if (item.empresaAdminOnly) return isPlatformAdmin || permissoes?.includes('*')
+    // Divisores de seção: visíveis se o módulo estiver habilitado
+    if (item.divider) {
+      if (!item.moduleKey) return true
+      if (enabledModules === null) return true
+      return enabledModules.includes(item.moduleKey)
+    }
     // Guard por plataforma_modulos (restrição por usuário — whitelist de rotas)
     if (!isPlatformAdmin && plataformaModulos !== null) {
       const allowed = plataformaModulos.some(r => item.to === r || item.to.startsWith(r))
@@ -411,7 +420,19 @@ export default function Sidebar({ collapsed, onToggle }) {
                 </button>
               )}
               {collapsed && <div style={{ height: 1, background: 'var(--sb-border)', margin: '6px 4px' }} />}
-              {(isOpen || collapsed) && visibleItems.map(({ to, icon: Icon, label }) => (
+              {(isOpen || collapsed) && visibleItems.map((item) => {
+                const { to, icon: Icon, label, divider } = item
+                if (divider) {
+                  if (collapsed) return null
+                  return (
+                    <div key={label} style={{
+                      fontSize: 10, fontWeight: 700, color: 'var(--sb-title)', opacity: 0.5,
+                      textTransform: 'uppercase', letterSpacing: '0.08em',
+                      padding: '10px 10px 2px', marginTop: 4,
+                    }}>{label}</div>
+                  )
+                }
+                return (
                 <NavLink
                   key={to}
                   to={to}
@@ -423,7 +444,8 @@ export default function Sidebar({ collapsed, onToggle }) {
                   <Icon style={{ width: 18, height: 18, flexShrink: 0 }} />
                   {!collapsed && <span>{label}</span>}
                 </NavLink>
-              ))}
+                )
+              })}
             </div>
           )
         })}

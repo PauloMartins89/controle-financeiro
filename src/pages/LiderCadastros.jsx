@@ -150,10 +150,12 @@ function Select({ value, onChange, options }) {
 // ════════════════════════════════════════════════════════════════════════════════
 export default function LiderCadastros() {
   const { workspaceId } = useStore()
-  const [aba, setAba] = useState('frentes')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [aba, setAba] = useState(searchParams.get('tab') || 'frentes')
   const [busca, setBusca] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
+  const [savingApi, setSavingApi] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editId,    setEditId]    = useState(null)
   const [equipes,   setEquipes]   = useState([])
@@ -210,6 +212,16 @@ export default function LiderCadastros() {
     } else if (aba === 'epis') {
       const { data } = await supabase.from('lider_epis').select('*').eq('workspace_id', wid).order('nome')
       setEpis(data || [])
+    } else if (aba === 'epcs') {
+      const { data } = await supabase.from('lider_epcs').select('*').eq('workspace_id', wid).order('nome')
+      setEpcs(data || [])
+    } else if (aba === 'lideres') {
+      const [rL, rE] = await Promise.all([
+        supabase.from('lider_perfis').select('id, user_id, matricula, nome, celular, equipe_id, ativo').eq('workspace_id', wid).order('matricula'),
+        supabase.from('lider_equipes').select('id, nome').eq('workspace_id', wid).order('nome'),
+      ])
+      setLideres(rL.data || [])
+      setEquipes(rE.data || [])
     }
     setLoading(false)
   }
