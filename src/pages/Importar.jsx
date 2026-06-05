@@ -543,7 +543,7 @@ export default function Importar() {
         }
       }
       const expense = {
-        descricao: row._nome,
+        descricao: row.descricao,
         valor: row.valor,
         data: row.data,
         categoria: row._cat,
@@ -554,7 +554,8 @@ export default function Importar() {
         status: 'pendente',
         parcelas: 1,
         grupo_id: null,
-        notas: `Importado de: ${row.descricao}`,
+        conta: row.conta || null,
+        notas: row._nome !== row.descricao ? `Nome normalizado: ${row._nome}` : null,
         _veiculo: row._veiculo || null,
       }
       await addExpense(expense)
