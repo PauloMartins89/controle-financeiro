@@ -319,6 +319,13 @@ async function extractPdfLines(pdfJs, buffer) {
     }
   }
 
+  // DEBUG: log extracted lines so we can inspect what the PDF actually contains
+  if (allLines.length > 0 && allLines.length < 2000) {
+    console.groupCollapsed(`[PDF Debug] ${allLines.length} linhas extraídas`)
+    allLines.forEach((l, i) => console.log(`${String(i).padStart(3,'0')}: ${JSON.stringify(l)}`))
+    console.groupEnd()
+  }
+
   return allLines
 }
 
