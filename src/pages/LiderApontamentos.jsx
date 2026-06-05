@@ -89,6 +89,7 @@ function TabelaRegistros({ cols, rows, loading, empty }) {
 
 // ── Abas ──────────────────────────────────────────────────────────────────────
 const ABAS = [
+  { key: 'geral',            label: 'Visão Geral',           icon: ChartBarIcon },
   { key: 'mao-obra',         label: 'Mão de Obra',           icon: UsersIcon },
   { key: 'maquinas',         label: 'Máquinas',              icon: WrenchScrewdriverIcon },
   { key: 'insumos',          label: 'Insumos',               icon: ClipboardDocumentListIcon },
@@ -98,6 +99,134 @@ const ABAS = [
   { key: 'avaliacoes',       label: 'Avaliações',            icon: StarIcon },
   { key: 'controle-epi',     label: 'Controle EPI',         icon: ShieldCheckIcon },
 ]
+
+// ── Helpers de clima ──────────────────────────────────────────────────────────
+const CLIMA_ICON = { sol: '☀️', parcial: '⛅', nublado: '☁️', chuva: '🌧️', tempestade: '⛈️', vento_forte: '💨' }
+const TURNO_ICON = { manha: '🌅', tarde: '☀️', noite: '🌙' }
+const STATUS_CHIP = ({ status }) => {
+  const cfg = status === 'aberto'  ? { bg: 'rgba(16,185,129,0.15)', color: '#10b981', label: 'Aberto' }
+            : status === 'fechado' ? { bg: 'rgba(100,116,139,0.15)', color: '#64748b', label: 'Fechado' }
+            : { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', label: status || '—' }
+  return <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color }}>{cfg.label}</span>
+}
+
+// ─── Aba: Visão Geral (todos os módulos por turno) ────────────────────────────
+function AbaGeralTurnos({ workspaceId }) {
+  const [rows,    setRows]    = useState([])
+  const [loading, setLoading] = useState(false)
+  const [inicio,  setInicio]  = useState(hoje30)
+  const [fim,     setFim]     = useState(hoje)
+
+  const load = useCallback(async () => {
+    if (!workspaceId) return
+    setLoading(true)
+    try {
+      // 1. Turnos base
+      const { data: turnos } = await supabase
+        .from('lider_turnos')
+        .select('id,data,turno,status,lider_nome,equipe_id,frente_id,created_at,lider_equipes(nome,codigo),lider_frentes(nome,codigo)')
+        .eq('workspace_id', workspaceId)
+        .gte('data', inicio)
+        .lte('data', fim)
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(200)
+
+      if (!turnos || turnos.length === 0) { setRows([]); setLoading(false); return }
+
+      const ids = turnos.map(t => t.id)
+
+      // 2. Dados de todos os módulos em paralelo
+      const [moData, maqData, insData, prodEquData, avalData, climaData, solInsData, solEpiData] = await Promise.all([
+        supabase.from('lider_mao_obra').select('turno_id,presente').in('turno_id', ids),
+        supabase.from('lider_apontamentos_maquina').select('turno_id').in('turno_id', ids),
+        supabase.from('lider_apontamentos_insumo').select('turno_id').in('turno_id', ids),
+        supabase.from('lider_produtividade_equipe').select('turno_id,realizado_ha,meta_ha').in('turno_id', ids),
+        supabase.from('lider_avaliacoes_equipe').select('turno_id,nota_geral').in('turno_id', ids),
+        supabase.from('lider_condicoes_climaticas').select('turno_id,condicao,temperatura_c').in('turno_id', ids),
+        supabase.from('lider_solicitacoes_insumo').select('turno_id').in('turno_id', ids),
+        supabase.from('lider_solicitacoes_epi').select('turno_id').in('turno_id', ids),
+      ])
+
+      // 3. Indexar por turno_id
+      const idx = id => ({
+        presentes:  0, ausentes: 0, maquinas: 0, insumos: 0,
+        ha_real: 0, ha_meta: 0, nota: null, condicao: null, temp: null,
+        sol_ins: 0, sol_epi: 0,
+      })
+      const map = Object.fromEntries(ids.map(id => [id, idx(id)]))
+
+      ;(moData.data  || []).forEach(r => { if (r.presente) map[r.turno_id].presentes++; else map[r.turno_id].ausentes++ })
+      ;(maqData.data || []).forEach(r => { map[r.turno_id].maquinas++ })
+      ;(insData.data || []).forEach(r => { map[r.turno_id].insumos++ })
+      ;(prodEquData.data || []).forEach(r => { map[r.turno_id].ha_real += r.realizado_ha || 0; map[r.turno_id].ha_meta += r.meta_ha || 0 })
+      ;(avalData.data || []).forEach(r => { map[r.turno_id].nota = r.nota_geral })
+      ;(climaData.data || []).forEach(r => { if (!map[r.turno_id].condicao) { map[r.turno_id].condicao = r.condicao; map[r.turno_id].temp = r.temperatura_c } })
+      ;(solInsData.data || []).forEach(r => { map[r.turno_id].sol_ins++ })
+      ;(solEpiData.data || []).forEach(r => { map[r.turno_id].sol_epi++ })
+
+      setRows(turnos.map(t => ({ ...t, ...map[t.id] })))
+    } finally {
+      setLoading(false)
+    }
+  }, [workspaceId, inicio, fim])
+
+  useEffect(() => { load() }, [load])
+
+  const totalPresentes = rows.reduce((s, r) => s + r.presentes, 0)
+  const totalMaq       = rows.reduce((s, r) => s + r.maquinas, 0)
+  const totalHa        = rows.reduce((s, r) => s + r.ha_real, 0)
+
+  return (
+    <>
+      <FiltroPeriodo inicio={inicio} fim={fim} onInicio={setInicio} onFim={setFim} total={rows.length} />
+
+      {rows.length > 0 && (
+        <div style={{ display: 'flex', gap: 16, marginBottom: 14, flexWrap: 'wrap', fontSize: 13 }}>
+          <span>🗓️ <strong>{rows.length}</strong> <span style={{ color: 'var(--text-secondary)' }}>turnos</span></span>
+          <span>👥 <strong style={{ color: '#10b981' }}>{totalPresentes}</strong> <span style={{ color: 'var(--text-secondary)' }}>presenças</span></span>
+          <span>🚜 <strong style={{ color: '#3b82f6' }}>{totalMaq}</strong> <span style={{ color: 'var(--text-secondary)' }}>apontamentos máq.</span></span>
+          <span>🌾 <strong style={{ color: '#f59e0b' }}>{totalHa.toFixed(1)} ha</strong> <span style={{ color: 'var(--text-secondary)' }}>realizados</span></span>
+        </div>
+      )}
+
+      <TabelaRegistros loading={loading}
+        cols={['Data', 'Turno', 'Equipe', 'Frente', 'Líder', 'Clima', 'Presença', 'Máq.', 'Insumos', 'Produt. ha', 'Efic.', 'Avaliação', 'Sol. Ins.', 'Sol. EPI', 'Status']}
+        rows={rows.map(r => {
+          const total = r.presentes + r.ausentes
+          const efic  = r.ha_meta > 0 ? Math.round((r.ha_real / r.ha_meta) * 100) : null
+          const eq    = r.lider_equipes
+          const fr    = r.lider_frentes
+          return [
+            <td key="dt"  style={{ ...tdStyle, fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtData(r.data)}</td>,
+            <td key="t"   style={tdStyle}>{TURNO_ICON[r.turno]} {r.turno}</td>,
+            <td key="eq"  style={tdStyle}>{eq ? (eq.codigo ? `${eq.codigo} · ${eq.nome}` : eq.nome) : '—'}</td>,
+            <td key="fr"  style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{fr ? (fr.codigo ? `${fr.codigo} · ${fr.nome}` : fr.nome) : '—'}</td>,
+            <td key="li"  style={tdStyle}>{r.lider_nome || '—'}</td>,
+            <td key="cl"  style={tdStyle}>
+              {r.condicao
+                ? <span title={r.condicao}>{CLIMA_ICON[r.condicao] || '🌡️'} {r.temp != null ? `${r.temp}°C` : r.condicao}</span>
+                : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+            </td>,
+            <td key="pr"  style={tdStyle}>
+              {total > 0
+                ? <span><strong style={{ color: '#10b981' }}>{r.presentes}</strong><span style={{ color: 'var(--text-secondary)' }}>/{total}</span></span>
+                : '—'}
+            </td>,
+            <td key="mq"  style={{ ...tdStyle, textAlign: 'center' }}>{r.maquinas > 0 ? <strong style={{ color: '#3b82f6' }}>{r.maquinas}</strong> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
+            <td key="in"  style={{ ...tdStyle, textAlign: 'center' }}>{r.insumos  > 0 ? <strong style={{ color: '#8b5cf6' }}>{r.insumos}</strong>  : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
+            <td key="ha"  style={tdStyle}>{r.ha_real > 0 ? <strong style={{ color: '#f59e0b' }}>{r.ha_real.toFixed(1)} ha</strong> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
+            <td key="ef"  style={tdStyle}>{efic != null ? <span style={{ fontWeight: 700, color: efic >= 100 ? '#10b981' : efic >= 80 ? '#f59e0b' : '#ef4444' }}>{efic}%</span> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
+            <td key="av"  style={tdStyle}>{r.nota != null ? <span>{'★'.repeat(Math.round(r.nota))} <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{Number(r.nota).toFixed(1)}</span></span> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
+            <td key="si"  style={{ ...tdStyle, textAlign: 'center' }}>{r.sol_ins > 0 ? r.sol_ins : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
+            <td key="se"  style={{ ...tdStyle, textAlign: 'center' }}>{r.sol_epi > 0 ? r.sol_epi : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
+            <td key="st"  style={tdStyle}><STATUS_CHIP status={r.status} /></td>,
+          ]
+        })}
+      />
+    </>
+  )
+}
 
 function hoje30() {
   const d = new Date(); d.setDate(d.getDate() - 30)
@@ -569,7 +698,7 @@ export default function LiderApontamentos() {
   const location    = useLocation()
 
   const queryAba = new URLSearchParams(location.search).get('aba')
-  const [aba, setAba] = useState(queryAba || 'mao-obra')
+  const [aba, setAba] = useState(queryAba || 'geral')
 
   const abaAtual = ABAS.find(a => a.key === aba) || ABAS[0]
 
@@ -603,6 +732,7 @@ export default function LiderApontamentos() {
         </div>
 
         {/* Conteúdo da aba */}
+        {aba === 'geral'            && <AbaGeralTurnos       workspaceId={workspaceId} />}
         {aba === 'mao-obra'         && <AbaMaoObra          workspaceId={workspaceId} />}
         {aba === 'maquinas'         && <AbaMaquinas          workspaceId={workspaceId} />}
         {aba === 'insumos'          && <AbaInsumos           workspaceId={workspaceId} />}
