@@ -480,7 +480,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                       <button key={`sec-${label}`} onClick={() => toggleSection(label)} style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         width: '100%', background: 'none', border: 'none', cursor: 'pointer',
-                        fontSize: 10, fontWeight: 700, color: 'var(--sb-title)', opacity: 0.75,
+                        fontSize: 12, fontWeight: 700, color: 'var(--sb-title)', opacity: 0.75,
                         textTransform: 'uppercase', letterSpacing: '0.08em',
                         padding: '10px 10px 3px', marginTop: 4,
                       }}>
