@@ -158,27 +158,53 @@ function UploadZone({ onParsed, onDemo }) {
 // ─── Review Table ─────────────────────────────────────────────────────────────
 function ReviewTable({ rows, onRowsChange, people, currentUser, registeredCards = [] }) {
   const [editing, setEditing] = useState(null) // { id, field }
-  const [cardFilter, setCardFilter] = useState(null) // null = todos os cartões
+  const [cardFilter, setCardFilter] = useState(null) // null = todos | 'card:ID' | 'raw:DIGITS'
 
-  // Unique cards sorted
-  const uniqueCards = [...new Set(rows.filter(r => r.cartao_digitos).map(r => r.cartao_digitos))]
-  const hasMultipleCards = uniqueCards.length > 1
-  // Helper: find registered card name by last 4 digits
+  // Helper: find registered card by digits (supports array digitos_cartoes and legacy ultimos_digitos)
+  function getRegisteredCard(digits) {
+    return registeredCards.find(c =>
+      (c.digitos_cartoes || []).includes(digits) ||
+      c.ultimos_digitos === digits
+    ) || null
+  }
   function cardName(digits) {
-    const found = registeredCards.find(c => c.ultimos_digitos === digits)
-    return found ? found.nome : null
+    const c = getRegisteredCard(digits)
+    return c ? c.nome : null
   }
 
-  // Rows visible according to current card filter
-  const visibleRows = cardFilter ? rows.filter(r => r.cartao_digitos === cardFilter) : rows
+  // Build grouped filter chips
+  const allDigits = [...new Set(rows.filter(r => r.cartao_digitos).map(r => r.cartao_digitos))]
+  const cardGroups = (() => {
+    const seenIds = new Set()
+    const groups = []
+    for (const digits of allDigits) {
+      const reg = getRegisteredCard(digits)
+      if (reg) {
+        if (!seenIds.has(reg.id)) {
+          seenIds.add(reg.id)
+          const regDigitsArr = reg.digitos_cartoes || (reg.ultimos_digitos ? [reg.ultimos_digitos] : [])
+          groups.push({ key: `card:${reg.id}`, label: reg.nome, isRegistered: true, digitsSet: new Set(regDigitsArr) })
+        }
+      } else {
+        groups.push({ key: `raw:${digits}`, label: `•••• ${digits}`, isRegistered: false, digitsSet: new Set([digits]) })
+      }
+    }
+    return groups
+  })()
+  const hasMultipleCards = cardGroups.length > 1
+
+  // Active group and visible rows
+  const activeGroup = cardFilter ? cardGroups.find(g => g.key === cardFilter) || null : null
+  const visibleRows = activeGroup
+    ? rows.filter(r => r.cartao_digitos && activeGroup.digitsSet.has(r.cartao_digitos))
+    : rows
 
   function toggleRow(id) {
     onRowsChange(rows.map(r => r.id === id ? { ...r, _incluir: !r._incluir } : r))
   }
   function toggleAll(val) {
-    if (cardFilter) {
-      // Only affect rows of the current card filter
-      onRowsChange(rows.map(r => r.cartao_digitos === cardFilter ? { ...r, _incluir: val } : r))
+    if (cardFilter && activeGroup) {
+      onRowsChange(rows.map(r => activeGroup.digitsSet.has(r.cartao_digitos) ? { ...r, _incluir: val } : r))
     } else {
       onRowsChange(rows.map(r => ({ ...r, _incluir: val })))
     }
@@ -212,14 +238,16 @@ function ReviewTable({ rows, onRowsChange, people, currentUser, registeredCards 
           >
             Todos ({rows.length})
           </button>
-          {uniqueCards.map(card => {
-            const cardRows = rows.filter(r => r.cartao_digitos === card)
-            const cardTotal = cardRows.filter(r => r._incluir).reduce((s, r) => s + r.valor, 0)
-            const isActive = cardFilter === card
+          {cardGroups.map(group => {
+            const groupRows = rows.filter(r => r.cartao_digitos && group.digitsSet.has(r.cartao_digitos))
+            const groupTotal = groupRows.filter(r => r._incluir).reduce((s, r) => s + r.valor, 0)
+            const isActive = cardFilter === group.key
+            // Show which digits belong to this group (only those present in the import)
+            const presentDigits = allDigits.filter(d => group.digitsSet.has(d))
             return (
               <button
-                key={card}
-                onClick={() => setCardFilter(isActive ? null : card)}
+                key={group.key}
+                onClick={() => setCardFilter(isActive ? null : group.key)}
                 style={{
                   fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, cursor: 'pointer', border: '1px solid',
                   background: isActive ? 'rgba(130,10,209,0.15)' : 'transparent',
@@ -229,12 +257,12 @@ function ReviewTable({ rows, onRowsChange, people, currentUser, registeredCards 
                   display: 'flex', alignItems: 'center', gap: 6,
                 }}
               >
-                •••• {card}
-                {cardName(card) && (
-                  <span style={{ fontSize: 11, fontWeight: 600, opacity: isActive ? 1 : 0.7 }}>· {cardName(card)}</span>
+                {group.label}
+                {group.isRegistered && presentDigits.length > 0 && (
+                  <span style={{ fontSize: 9, fontWeight: 400, opacity: 0.65 }}>{presentDigits.map(d => `•••• ${d}`).join(' ')}</span>
                 )}
                 <span style={{ fontSize: 10, opacity: 0.65, fontWeight: 400 }}>
-                  {cardRows.length} · {formatCurrency(cardTotal)}
+                  {groupRows.length} · {formatCurrency(groupTotal)}
                 </span>
               </button>
             )
@@ -245,19 +273,19 @@ function ReviewTable({ rows, onRowsChange, people, currentUser, registeredCards 
       {/* Summary bar */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, padding: '12px 16px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          <span style={{ fontWeight: 800, color: '#818cf8' }}>{cardFilter ? incluidosVisiveis.length : incluidos.length}</span> de {visibleRows.length} selecionadas
-          {cardFilter && <span style={{ opacity: 0.6 }}> · {incluidos.length} total geral</span>}
+          <span style={{ fontWeight: 800, color: '#818cf8' }}>{activeGroup ? incluidosVisiveis.length : incluidos.length}</span> de {visibleRows.length} selecionadas
+          {activeGroup && <span style={{ opacity: 0.6 }}> · {incluidos.length} total geral</span>}
         </span>
         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          Total: <span style={{ fontWeight: 800, color: '#10b981' }}>{formatCurrency(cardFilter ? totalVisivel : total)}</span>
-          {cardFilter && total !== totalVisivel && <span style={{ opacity: 0.5, fontSize: 11 }}> · {formatCurrency(total)} geral</span>}
+          Total: <span style={{ fontWeight: 800, color: '#10b981' }}>{formatCurrency(activeGroup ? totalVisivel : total)}</span>
+          {activeGroup && total !== totalVisivel && <span style={{ opacity: 0.5, fontSize: 11 }}> · {formatCurrency(total)} geral</span>}
         </span>
         <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
           <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => toggleAll(true)}>
-            {cardFilter ? `Selecionar •••• ${cardFilter}` : 'Selecionar tudo'}
+            {activeGroup ? `Selecionar ${activeGroup.label}` : 'Selecionar tudo'}
           </button>
           <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => toggleAll(false)}>
-            {cardFilter ? `Desmarcar •••• ${cardFilter}` : 'Limpar'}
+            {activeGroup ? `Desmarcar ${activeGroup.label}` : 'Limpar'}
           </button>
         </div>
       </div>

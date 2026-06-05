@@ -748,8 +748,20 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
 
 // ─── Card Modal ───────────────────────────────────────────────────────────────
 function CardModal({ card, onClose, onSave }) {
-  const [form, setForm] = useState(card || { nome: '', bandeira: 'Visa', limite: '', dia_fechamento: 15, dia_vencimento: 22, cor: '#6366f1', ultimos_digitos: '' })
+  // Suporte legacy: se veio com ultimos_digitos (string), converter para array
+  const initDigitos = card?.digitos_cartoes || (card?.ultimos_digitos ? [card.ultimos_digitos] : [])
+  const [form, setForm] = useState({ nome: '', bandeira: 'Visa', limite: '', dia_fechamento: 15, dia_vencimento: 22, cor: '#6366f1', ...(card || {}), digitos_cartoes: initDigitos })
+  const [newDigit, setNewDigit] = useState('')
   const COLORS = ['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4','#1e293b','#C0C5CE']
+
+  function addDigit(d) {
+    if (d.length !== 4) return
+    setForm(f => ({ ...f, digitos_cartoes: [...new Set([...f.digitos_cartoes, d])] }))
+    setNewDigit('')
+  }
+  function removeDigit(d) {
+    setForm(f => ({ ...f, digitos_cartoes: f.digitos_cartoes.filter(x => x !== d) }))
+  }
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -764,9 +776,15 @@ function CardModal({ card, onClose, onSave }) {
             <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
             <div style={{ fontSize: 12, opacity: 0.8, color: 'white' }}>{form.bandeira}</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'white', marginTop: 8 }}>{form.nome || 'Nome do Cartão'}</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
-              {form.ultimos_digitos ? `•••• ${form.ultimos_digitos}  ·  ` : ''}Fecha dia {form.dia_fechamento} · Vence dia {form.dia_vencimento}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+              {form.digitos_cartoes.length > 0
+                ? form.digitos_cartoes.map(d => (
+                    <span key={d} style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.9)', background: 'rgba(0,0,0,0.25)', borderRadius: 6, padding: '1px 7px' }}>•••• {d}</span>
+                  ))
+                : <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Adicione os números abaixo</span>
+              }
             </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 5 }}>Fecha dia {form.dia_fechamento} · Vence dia {form.dia_vencimento}</div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -786,10 +804,31 @@ function CardModal({ card, onClose, onSave }) {
               <label className="label">Limite (R$)</label>
               <input className="input" type="number" value={form.limite} onChange={e => setForm(f => ({ ...f, limite: parseFloat(e.target.value) || '' }))} placeholder="0,00" />
             </div>
-            <div>
-              <label className="label">Últimos 4 dígitos</label>
-              <input className="input" value={form.ultimos_digitos} maxLength={4} pattern="[0-9]{4}" onChange={e => setForm(f => ({ ...f, ultimos_digitos: e.target.value.replace(/\D/g, '').slice(0, 4) }))} placeholder="Ex: 1851" />
+            <div />
+          </div>
+          {/* Números dos cartões (físico, digital, adicional...) */}
+          <div>
+            <label className="label">Números dos cartões (últimos 4 dígitos)</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 10, minHeight: 42, background: 'rgba(0,0,0,0.04)' }}>
+              {form.digitos_cartoes.map(d => (
+                <span key={d} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6, background: 'rgba(130,10,209,0.15)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.3)' }}>
+                  •••• {d}
+                  <button onClick={() => removeDigit(d)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a855f7', fontSize: 15, lineHeight: 1, padding: '0 0 1px 2px', opacity: 0.7 }}>×</button>
+                </span>
+              ))}
+              <input
+                value={newDigit}
+                maxLength={4}
+                placeholder={form.digitos_cartoes.length === 0 ? 'Ex: 1851, Enter para adicionar' : '+ adicionar'}
+                onChange={e => setNewDigit(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && newDigit.length === 4) { addDigit(newDigit); e.preventDefault() } }}
+                style={{ background: 'none', border: 'none', outline: 'none', fontSize: 12, color: 'var(--text-primary)', width: newDigit.length > 0 ? 60 : (form.digitos_cartoes.length === 0 ? 220 : 100), minWidth: 40, padding: '2px 4px' }}
+              />
+              {newDigit.length === 4 && (
+                <button onClick={() => addDigit(newDigit)} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(130,10,209,0.2)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.4)', cursor: 'pointer', fontWeight: 700 }}>Adicionar</button>
+              )}
             </div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Adicione todos os números vinculados a este cartao (físico, digital, cartões adicionais...)</div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
