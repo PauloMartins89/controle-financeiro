@@ -121,10 +121,10 @@ function AbaGeralTurnos({ workspaceId }) {
     if (!workspaceId) return
     setLoading(true)
     try {
-      // 1. Turnos base
+      // 1. Turnos base — inclui refei_equipe_id para cruzar com refeições
       const { data: turnos } = await supabase
         .from('lider_turnos')
-        .select('id,data,turno,status,lider_nome,equipe_id,frente_id,created_at,lider_equipes(nome,codigo),lider_frentes(nome,codigo)')
+        .select('id,data,turno,status,lider_nome,equipe_id,frente_id,created_at,lider_equipes(nome,codigo,refei_equipe_id),lider_frentes(nome,codigo)')
         .eq('workspace_id', workspaceId)
         .gte('data', inicio)
         .lte('data', fim)
@@ -137,7 +137,7 @@ function AbaGeralTurnos({ workspaceId }) {
       const ids = turnos.map(t => t.id)
 
       // 2. Dados de todos os módulos em paralelo
-      const [moData, maqData, insData, prodEquData, avalData, climaData, solInsData, solEpiData] = await Promise.all([
+      const [moData, maqData, insData, prodEquData, avalData, climaData, solInsData, solEpiData, refeiData] = await Promise.all([
         supabase.from('lider_mao_obra').select('turno_id,presente').in('turno_id', ids),
         supabase.from('lider_apontamentos_maquina').select('turno_id').in('turno_id', ids),
         supabase.from('lider_apontamentos_insumo').select('turno_id').in('turno_id', ids),
@@ -146,15 +146,20 @@ function AbaGeralTurnos({ workspaceId }) {
         supabase.from('lider_condicoes_climaticas').select('turno_id,condicao,temperatura_c').in('turno_id', ids),
         supabase.from('lider_solicitacoes_insumo').select('turno_id').in('turno_id', ids),
         supabase.from('lider_solicitacoes_epi').select('turno_id').in('turno_id', ids),
+        supabase.from('refei_solicitacoes')
+          .select('equipe_id,data_refeicao,status,total_refeicoes,total_cafes,numero_pedido')
+          .eq('workspace_id', workspaceId)
+          .gte('data_refeicao', inicio)
+          .lte('data_refeicao', fim),
       ])
 
       // 3. Indexar por turno_id
-      const idx = id => ({
+      const idx = () => ({
         presentes:  0, ausentes: 0, maquinas: 0, insumos: 0,
         ha_real: 0, ha_meta: 0, nota: null, condicao: null, temp: null,
-        sol_ins: 0, sol_epi: 0,
+        sol_ins: 0, sol_epi: 0, refeicao: null,
       })
-      const map = Object.fromEntries(ids.map(id => [id, idx(id)]))
+      const map = Object.fromEntries(ids.map(id => [id, idx()]))
 
       ;(moData.data  || []).forEach(r => { if (r.presente) map[r.turno_id].presentes++; else map[r.turno_id].ausentes++ })
       ;(maqData.data || []).forEach(r => { map[r.turno_id].maquinas++ })
@@ -164,6 +169,20 @@ function AbaGeralTurnos({ workspaceId }) {
       ;(climaData.data || []).forEach(r => { if (!map[r.turno_id].condicao) { map[r.turno_id].condicao = r.condicao; map[r.turno_id].temp = r.temperatura_c } })
       ;(solInsData.data || []).forEach(r => { map[r.turno_id].sol_ins++ })
       ;(solEpiData.data || []).forEach(r => { map[r.turno_id].sol_epi++ })
+
+      // Cruzar refeições: refei_equipe_id + data → turno_id
+      if (refeiData.data?.length) {
+        // Mapa: refei_equipe_id + data → turno_id
+        const refeiKey = {}
+        turnos.forEach(t => {
+          const rid = t.lider_equipes?.refei_equipe_id
+          if (rid) refeiKey[`${rid}_${t.data}`] = t.id
+        })
+        refeiData.data.forEach(r => {
+          const turnoId = refeiKey[`${r.equipe_id}_${r.data_refeicao}`]
+          if (turnoId && map[turnoId]) map[turnoId].refeicao = r
+        })
+      }
 
       setRows(turnos.map(t => ({ ...t, ...map[t.id] })))
     } finally {
@@ -176,6 +195,17 @@ function AbaGeralTurnos({ workspaceId }) {
   const totalPresentes = rows.reduce((s, r) => s + r.presentes, 0)
   const totalMaq       = rows.reduce((s, r) => s + r.maquinas, 0)
   const totalHa        = rows.reduce((s, r) => s + r.ha_real, 0)
+  const totalRef       = rows.reduce((s, r) => s + (r.refeicao?.total_refeicoes || 0), 0)
+
+  const REFEI_STATUS = {
+    rascunho:             { icon: '📝', color: '#94a3b8', label: 'Rascunho' },
+    aguardando_aprovacao: { icon: '⏳', color: '#f59e0b', label: 'Aguardando' },
+    pendente:             { icon: '🕐', color: '#f59e0b', label: 'Pendente' },
+    aprovado:             { icon: '✅', color: '#10b981', label: 'Aprovado' },
+    reprovado:            { icon: '❌', color: '#ef4444', label: 'Reprovado' },
+    entregue:             { icon: '🍽️', color: '#3b82f6', label: 'Entregue' },
+    cancelado:            { icon: '🚫', color: '#64748b', label: 'Cancelado' },
+  }
 
   return (
     <>
@@ -187,16 +217,19 @@ function AbaGeralTurnos({ workspaceId }) {
           <span>👥 <strong style={{ color: '#10b981' }}>{totalPresentes}</strong> <span style={{ color: 'var(--text-secondary)' }}>presenças</span></span>
           <span>🚜 <strong style={{ color: '#3b82f6' }}>{totalMaq}</strong> <span style={{ color: 'var(--text-secondary)' }}>apontamentos máq.</span></span>
           <span>🌾 <strong style={{ color: '#f59e0b' }}>{totalHa.toFixed(1)} ha</strong> <span style={{ color: 'var(--text-secondary)' }}>realizados</span></span>
+          {totalRef > 0 && <span>🍽️ <strong style={{ color: '#ec4899' }}>{totalRef}</strong> <span style={{ color: 'var(--text-secondary)' }}>refeições</span></span>}
         </div>
       )}
 
       <TabelaRegistros loading={loading}
-        cols={['Data', 'Turno', 'Equipe', 'Frente', 'Líder', 'Clima', 'Presença', 'Máq.', 'Insumos', 'Produt. ha', 'Efic.', 'Avaliação', 'Sol. Ins.', 'Sol. EPI', 'Status']}
+        cols={['Data', 'Turno', 'Equipe', 'Frente', 'Líder', 'Clima', 'Presença', 'Máq.', 'Insumos', 'Produt. ha', 'Efic.', 'Avaliação', 'Refeição', 'Sol. Ins.', 'Sol. EPI', 'Status']}
         rows={rows.map(r => {
           const total = r.presentes + r.ausentes
           const efic  = r.ha_meta > 0 ? Math.round((r.ha_real / r.ha_meta) * 100) : null
           const eq    = r.lider_equipes
           const fr    = r.lider_frentes
+          const ref   = r.refeicao
+          const refCfg = ref ? (REFEI_STATUS[ref.status] || { icon: '🍽️', color: '#94a3b8', label: ref.status }) : null
           return [
             <td key="dt"  style={{ ...tdStyle, fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtData(r.data)}</td>,
             <td key="t"   style={tdStyle}>{TURNO_ICON[r.turno]} {r.turno}</td>,
@@ -218,6 +251,13 @@ function AbaGeralTurnos({ workspaceId }) {
             <td key="ha"  style={tdStyle}>{r.ha_real > 0 ? <strong style={{ color: '#f59e0b' }}>{r.ha_real.toFixed(1)} ha</strong> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
             <td key="ef"  style={tdStyle}>{efic != null ? <span style={{ fontWeight: 700, color: efic >= 100 ? '#10b981' : efic >= 80 ? '#f59e0b' : '#ef4444' }}>{efic}%</span> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
             <td key="av"  style={tdStyle}>{r.nota != null ? <span>{'★'.repeat(Math.round(r.nota))} <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{Number(r.nota).toFixed(1)}</span></span> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
+            <td key="rf"  style={tdStyle}>
+              {refCfg
+                ? <span title={ref.numero_pedido || ''} style={{ color: refCfg.color, fontWeight: 600, fontSize: 12 }}>
+                    {refCfg.icon} {ref.total_refeicoes > 0 ? `${ref.total_refeicoes}x` : ''} <span style={{ fontWeight: 400 }}>{refCfg.label}</span>
+                  </span>
+                : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+            </td>,
             <td key="si"  style={{ ...tdStyle, textAlign: 'center' }}>{r.sol_ins > 0 ? r.sol_ins : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
             <td key="se"  style={{ ...tdStyle, textAlign: 'center' }}>{r.sol_epi > 0 ? r.sol_epi : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
             <td key="st"  style={tdStyle}><STATUS_CHIP status={r.status} /></td>,
