@@ -158,36 +158,99 @@ function UploadZone({ onParsed, onDemo }) {
 // ─── Review Table ─────────────────────────────────────────────────────────────
 function ReviewTable({ rows, onRowsChange, people, currentUser }) {
   const [editing, setEditing] = useState(null) // { id, field }
+  const [cardFilter, setCardFilter] = useState(null) // null = todos os cartões
+
+  // Unique cards sorted
+  const uniqueCards = [...new Set(rows.filter(r => r.cartao_digitos).map(r => r.cartao_digitos))]
+  const hasMultipleCards = uniqueCards.length > 1
+
+  // Rows visible according to current card filter
+  const visibleRows = cardFilter ? rows.filter(r => r.cartao_digitos === cardFilter) : rows
 
   function toggleRow(id) {
     onRowsChange(rows.map(r => r.id === id ? { ...r, _incluir: !r._incluir } : r))
   }
   function toggleAll(val) {
-    onRowsChange(rows.map(r => ({ ...r, _incluir: val })))
+    if (cardFilter) {
+      // Only affect rows of the current card filter
+      onRowsChange(rows.map(r => r.cartao_digitos === cardFilter ? { ...r, _incluir: val } : r))
+    } else {
+      onRowsChange(rows.map(r => ({ ...r, _incluir: val })))
+    }
   }
   function updateRow(id, field, value) {
     onRowsChange(rows.map(r => r.id === id ? { ...r, [field]: value } : r))
     setEditing(null)
   }
 
-  const allChecked = rows.every(r => r._incluir)
-  const someChecked = rows.some(r => r._incluir)
+  const allChecked = visibleRows.length > 0 && visibleRows.every(r => r._incluir)
   const incluidos = rows.filter(r => r._incluir)
+  const incluidosVisiveis = visibleRows.filter(r => r._incluir)
   const total = incluidos.reduce((s, r) => s + r.valor, 0)
+  const totalVisivel = incluidosVisiveis.reduce((s, r) => s + r.valor, 0)
 
   return (
     <div>
+      {/* Card filter chips — only when múltiplos cartões */}
+      {hasMultipleCards && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>Filtrar cartão:</span>
+          <button
+            onClick={() => setCardFilter(null)}
+            style={{
+              fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, cursor: 'pointer', border: '1px solid',
+              background: !cardFilter ? 'rgba(99,102,241,0.15)' : 'transparent',
+              borderColor: !cardFilter ? '#6366f1' : 'var(--border)',
+              color: !cardFilter ? '#818cf8' : 'var(--text-secondary)',
+              transition: 'all 0.15s',
+            }}
+          >
+            Todos ({rows.length})
+          </button>
+          {uniqueCards.map(card => {
+            const cardRows = rows.filter(r => r.cartao_digitos === card)
+            const cardTotal = cardRows.filter(r => r._incluir).reduce((s, r) => s + r.valor, 0)
+            const isActive = cardFilter === card
+            return (
+              <button
+                key={card}
+                onClick={() => setCardFilter(isActive ? null : card)}
+                style={{
+                  fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, cursor: 'pointer', border: '1px solid',
+                  background: isActive ? 'rgba(130,10,209,0.15)' : 'transparent',
+                  borderColor: isActive ? '#a855f7' : 'var(--border)',
+                  color: isActive ? '#a855f7' : 'var(--text-secondary)',
+                  transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                •••• {card}
+                <span style={{ fontSize: 10, opacity: 0.75, fontWeight: 400 }}>
+                  {cardRows.length} · {formatCurrency(cardTotal)}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Summary bar */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, padding: '12px 16px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          <span style={{ fontWeight: 800, color: '#818cf8' }}>{incluidos.length}</span> de {rows.length} selecionadas
+          <span style={{ fontWeight: 800, color: '#818cf8' }}>{cardFilter ? incluidosVisiveis.length : incluidos.length}</span> de {visibleRows.length} selecionadas
+          {cardFilter && <span style={{ opacity: 0.6 }}> · {incluidos.length} total geral</span>}
         </span>
         <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-          Total: <span style={{ fontWeight: 800, color: '#10b981' }}>{formatCurrency(total)}</span>
+          Total: <span style={{ fontWeight: 800, color: '#10b981' }}>{formatCurrency(cardFilter ? totalVisivel : total)}</span>
+          {cardFilter && total !== totalVisivel && <span style={{ opacity: 0.5, fontSize: 11 }}> · {formatCurrency(total)} geral</span>}
         </span>
         <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-          <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => toggleAll(true)}>Selecionar tudo</button>
-          <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => toggleAll(false)}>Limpar</button>
+          <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => toggleAll(true)}>
+            {cardFilter ? `Selecionar •••• ${cardFilter}` : 'Selecionar tudo'}
+          </button>
+          <button className="btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => toggleAll(false)}>
+            {cardFilter ? `Desmarcar •••• ${cardFilter}` : 'Limpar'}
+          </button>
         </div>
       </div>
 
@@ -208,7 +271,7 @@ function ReviewTable({ rows, onRowsChange, people, currentUser }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {visibleRows.map((row, i) => (
               <tr key={row.id} style={{
                 borderBottom: '1px solid var(--border)',
                 opacity: row._incluir ? 1 : 0.35,
