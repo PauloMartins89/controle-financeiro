@@ -385,6 +385,11 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
         {/* Meta */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(exp.data)}</span>
+          {exp.conta && exp.conta.includes('••••') && (
+            <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: 'rgba(130,10,209,0.13)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.25)', whiteSpace: 'nowrap' }}>
+              {exp.conta.replace(/^.*Nubank\s*/i, '')}
+            </span>
+          )}
           {pagador && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
               <span style={{ color: 'var(--text-secondary)' }}>por</span>
@@ -692,6 +697,11 @@ export default function Despesas() {
                                 <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.descricao}</div>
                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
                                   <span>{exp.categoria}</span>
+                                  {exp.conta && exp.conta.includes('••••') && (
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: '0px 5px', borderRadius: 5, background: 'rgba(130,10,209,0.13)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.25)' }}>
+                                      {exp.conta.replace(/^.*Nubank\s*/i, '')}
+                                    </span>
+                                  )}
                                   {pagador && pagador.nome && pagador.nome.trim().length > 1 && <><span>· por</span><span style={{ fontWeight: 600, color: pagador.cor }}>{pagador.nome.split(' ')[0]}</span></>}
                                   {exp.parcelas > 1 && <span style={{ color: '#818cf8' }}>· {exp.parcela_atual ?? 1}/{exp.parcelas}x</span>}
                                   {exp._veiculo && <span style={{ color: '#06b6d4' }}>🚗 {exp._veiculo}</span>}
