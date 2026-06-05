@@ -226,11 +226,18 @@ function ReviewTable({ rows, onRowsChange, people, currentUser }) {
                 </td>
 
                 {/* Original description */}
-                <td style={{ padding: '10px 12px', maxWidth: 200 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.descricao}>
-                    {row.descricao}
+                <td style={{ padding: '10px 12px', maxWidth: 240 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                    {row.cartao_digitos && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: 'rgba(130,10,209,0.15)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        •••• {row.cartao_digitos}
+                      </span>
+                    )}
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.descricao}>
+                      {row.descricao}
+                    </div>
                   </div>
-                  {row.conta && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{row.conta}</div>}
+                  {row.conta && !row.cartao_digitos && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 1 }}>{row.conta}</div>}
                 </td>
 
                 {/* Normalized name — editable */}

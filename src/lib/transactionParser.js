@@ -513,12 +513,14 @@ function parsePdfLines(lines) {
       const valor = parseAmount(valorStr)
       if (valor > 0 && valor < 500000) {
         const data = `${faturaYear}-${ptMonthsNu[mes.toLowerCase()]}-${dia.padStart(2, '0')}`
+        const desc = rawDesc.replace(/\s+/g, ' ').trim()
         transactions.push({
           id: `imp_pdfe_${Date.now()}_${i}`,
           data,
-          descricao: rawDesc.replace(/\s+/g, ' ').trim(),
+          descricao: parcela ? `${desc} - Parcela ${parcela}` : desc,
           valor,
           conta: cardNum ? `Nubank •••• ${cardNum}` : 'Nubank',
+          cartao_digitos: cardNum || '',
           parcela: parcela || '',
           tipo: 'debito',
         })
@@ -540,12 +542,14 @@ function parsePdfLines(lines) {
         const valor = parseAmount(valorStr)
         if (valor > 0 && valor < 500000) {
           const data = `${faturaYear}-${ptMonthsNu[pendingFaturaDate.mes.toLowerCase()]}-${pendingFaturaDate.dia.padStart(2, '0')}`
+          const desc = rawDesc.replace(/\s+/g, ' ').trim()
           transactions.push({
             id: `imp_pdfec_${Date.now()}_${i}`,
             data,
-            descricao: rawDesc.replace(/\s+/g, ' ').trim(),
+            descricao: parcela ? `${desc} - Parcela ${parcela}` : desc,
             valor,
             conta: cardNum ? `Nubank •••• ${cardNum}` : 'Nubank',
+            cartao_digitos: cardNum || '',
             parcela: parcela || '',
             tipo: 'debito',
           })
