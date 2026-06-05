@@ -32,8 +32,9 @@ const ALL_MODULES = [
   { key: 'faturamento',  label: 'Faturamento' },
   { key: 'importar',     label: 'Importar' },
   { key: 'escanear',     label: 'Escanear Doc.' },
-  { key: 'notas-fiscais',label: 'Notas Fiscais' },
-  { key: 'smartlider',   label: 'SmartLíder' },
+  { key: 'notas-fiscais',  label: 'Notas Fiscais' },
+  { key: 'financeiropro',  label: 'FinanceiroPro' },
+  { key: 'smartlider',     label: 'SmartLíder' },
 ]
 
 const TABS = [
