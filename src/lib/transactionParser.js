@@ -424,16 +424,10 @@ function parseSemPararPorVeiculo(lines) {
 // ── Nubank Fatura — state-machine parser ─────────────────────────────────────
 function parseNubankFatura(lines) {
   const blob = lines.join(' ')
-  // Detectar fatura Nubank: "FATURA DD MON YYYY" + pelo menos um numero de cartao mascarado
-  const hasFatura = /fatura\s+\d{2}\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+\d{4}/i.test(blob)
-  const hasCard   = /[^\w\s]{2,}\s*\d{4}/.test(blob)
-  console.log('[NuFatura] hasFatura:', hasFatura, '| hasCard:', hasCard, '| linhas:', lines.length)
-  if (!hasFatura) return null
-  if (!hasCard) {
-    // Mostrar trecho do blob para diagnóstico
-    console.log('[NuFatura] blob (primeiros 500 chars):', blob.slice(0, 500))
-    return null
-  }
+  // Detectar fatura Nubank: "FATURA DD MON YYYY"
+  if (!/fatura\s+\d{2}\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+\d{4}/i.test(blob)) return null
+  // Precisa ter pelo menos 1 número de cartão mascarado
+  if (!/[^\w\s]{2,}\s*\d{4}/.test(blob)) return null
 
   const ptM = { jan:'01',fev:'02',mar:'03',abr:'04',mai:'05',jun:'06',jul:'07',ago:'08',set:'09',out:'10',nov:'11',dez:'12' }
   const pa = s => parseFloat(s.replace(/\./g,'').replace(',','.'))
@@ -443,55 +437,70 @@ function parseNubankFatura(lines) {
   if (myr) year = parseInt(myr[1])
 
   const reDate    = /^(\d{2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\b/i
-  // Cartão mascarado: qualquer não-alfanumérico repetido seguido de 4 dígitos
   const reCard    = /[^\w\s]{2,}\s*(\d{4})/
   const reAmtEnd  = /R\$\s*((?:\d{1,3}\.)*\d{1,3},\d{2})\s*$/i
   const reAmtOnly = /^R\$\s*((?:\d{1,3}\.)*\d{1,3},\d{2})\s*$/i
-  const reSkip    = /^(DE\s+\d|CAMILA|FATURA\s|EMISS|RESUMO|PROX|LIMITE|IOF\s+de|IOF\s*"|Recarga\s+de|Convers|USD\s|Encargo|Saldo|Nu\s+Pagamento|CNPJ|SAC\s|Ouvidoria|Juros|Pagamento\s+m|Parcelamento|Composi|Nunca|Lembre|Valor\s+m)/i
+  // Linhas a ignorar: cabeçalhos, rodapés, créditos/pagamentos da fatura
+  const reSkip = /^(CAMILA|FATURA\s|EMISS|RESUMO|PROX|PRÓX|LIMIT|IOF\s+de|IOF\s*"|Recarga\s+de|Convers|USD\s|Encargo|Saldo\s|Nu\s+Pagamento|CNPJ|SAC\s|Ouvidoria|Juros|Pagamento\s+recebido|Pagamento\s+da|Pagamento\s+m|Parcelamento\s+d|Composi|Nunca|Lembre|Valor\s+m|Multa|Mora\s|Total\s+da|Cr[eé]dito|DE\s+\d)/i
+
+  // ── Pré-extração: todos os números de cartão distintos no PDF
+  // Garante que mesmo se a detecção por linha falhar, temos fallback
+  const allCardNums = [...blob.matchAll(/[^\w\s]{2,}\s*(\d{4})/g)].map(m => m[1])
+  const uniqueCards = [...new Set(allCardNums)]
+  // Se há apenas 1 cartão no PDF inteiro → usar como padrão para todas as transações
+  const defaultCard = uniqueCards.length === 1 ? uniqueCards[0] : null
 
   const txns = []
   let pDia=null, pMes=null, pCard=null, pDesc=null, pValor=null
 
   function flush() {
-    if (pDia && pMes && pValor > 0 && pValor < 500000 && (pDesc || pCard)) {
+    const cardToUse = pCard || defaultCard
+    if (pDia && pMes && pValor > 0 && pValor < 500000 && (pDesc || cardToUse)) {
       txns.push({
         id: `imp_nuf_${Date.now()}_${txns.length}`,
         data: `${year}-${ptM[pMes.toLowerCase()]}-${pDia.padStart(2,'0')}`,
-        descricao: pDesc || (pCard ? `Nubank •••• ${pCard}` : 'Nubank'),
+        descricao: pDesc || (cardToUse ? `Nubank •••• ${cardToUse}` : 'Nubank'),
         valor: pValor,
-        conta: pCard ? `Nubank •••• ${pCard}` : 'Nubank',
-        cartao_digitos: pCard || '',
+        conta: cardToUse ? `Nubank •••• ${cardToUse}` : 'Nubank',
+        cartao_digitos: cardToUse || '',
         parcela: '',
         tipo: 'debito',
       })
+      pDia=null; pMes=null; pCard=null; pDesc=null; pValor=null
+    } else {
+      // Flush sem transação: limpa apenas data/desc/valor, preserva pCard
+      // (cartão pode ter aparecido antes da data no PDF)
+      pDia=null; pMes=null; pDesc=null; pValor=null
     }
-    pDia=null; pMes=null; pCard=null; pDesc=null; pValor=null
+  }
+
+  function extractCard(text) {
+    const m = text.match(reCard)
+    if (m && !pCard) {
+      pCard = m[1]
+      const idx = text.indexOf(m[0])
+      return (text.slice(0, idx) + text.slice(idx + m[0].length)).replace(/\s+/g,' ').trim()
+    }
+    return text
   }
 
   function processText(text) {
     if (!text) return
-    const mCard = text.match(reCard)
-    if (mCard && !pCard) {
-      pCard = mCard[1]
-      const idx = text.indexOf(mCard[0])
-      text = (text.slice(0, idx) + text.slice(idx + mCard[0].length)).replace(/\s+/g,' ').trim()
-    }
+    text = extractCard(text)
     const mAmt = text.match(reAmtEnd)
     if (mAmt) {
       if (!pValor) pValor = pa(mAmt[1])
       text = text.slice(0, text.lastIndexOf(mAmt[0])).trim()
     }
-    // Aceitar descrição mesmo sem cartão detectado (alguns lançamentos não têm nº visível)
     if (text && !pDesc && pDia) pDesc = text
   }
 
-  // Processa todas as linhas sem exigir seção específica
-  // (a detecção de fatura Nubank já garante que é o documento certo)
   for (const rawLine of lines) {
     const line = rawLine.trim()
     if (!line) continue
     if (reSkip.test(line)) continue
 
+    // Linha apenas com valor monetário (coluna direita do PDF)
     if (reAmtOnly.test(line)) {
       const mA = line.match(reAmtOnly)
       if (!pValor && pDia) pValor = pa(mA[1])
@@ -500,21 +509,23 @@ function parseNubankFatura(lines) {
 
     const mDate = line.match(reDate)
     if (mDate) {
-      // Só emite se a linha de data NÃO contiver ano (para não capturar "10 JUN 2026" dos cabeçalhos)
       const rest = line.slice(mDate[0].length).trim()
-      if (/^\d{4}\b/.test(rest)) continue  // linha com ano = cabeçalho, ignorar
+      if (/^\d{4}\b/.test(rest)) continue  // linha com ano = cabeçalho
       flush()
       pDia = mDate[1]; pMes = mDate[2]
       processText(rest)
       continue
     }
 
-    if (!pDia) continue
+    // Sem data ativa: ainda extrai número de cartão (pode aparecer antes da data)
+    if (!pDia) {
+      extractCard(line)
+      continue
+    }
     processText(line)
   }
   flush()
 
-  console.log('[NuFatura] transações extraídas:', txns.length, txns.slice(0,3))
   return txns.length > 0 ? txns : null
 }
 
