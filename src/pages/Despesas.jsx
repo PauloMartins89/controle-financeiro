@@ -13,6 +13,7 @@ import { formatCurrency, formatDate, getCategoryIcon, CATEGORIAS, TIPOS_DIVISAO,
 //   como está (já é o valor da parcela).
 // - Lançamentos à vista → valor total.
 function valorEfetivo(e) {
+  if (e.minha_parte && Number(e.minha_parte) > 0) return Number(e.minha_parte)
   if (e.parcelas && e.parcelas > 1 && !e.lote_parcelamento) {
     return e.valor / e.parcelas
   }
@@ -122,6 +123,7 @@ const EMPTY_FORM = {
   participantes: [], tipo_divisao: 'igual',
   parcelas: 1, recorrente: false, status: 'pendente', observacoes: '',
   porcentagens: {}, valores_fixos: {},
+  minha_parte: '',
 }
 
 // ─── Expense Modal ────────────────────────────────────────────────────────────
@@ -145,11 +147,12 @@ function ExpenseModal({ expense, onClose, onSave }) {
 
   function handleSave() {
     if (!form.descricao || !form.valor) return
-    onSave({ ...form, pago_por: ownerId || form.pago_por, valor: parseFloat(form.valor) || 0 })
+    onSave({ ...form, pago_por: ownerId || form.pago_por, valor: parseFloat(form.valor) || 0, minha_parte: form.minha_parte ? parseFloat(form.minha_parte) || 0 : null })
   }
 
   const valorNum = parseFloat(form.valor) || 0
   const shareIgual = form.participantes.length ? valorNum / form.participantes.length : 0
+  const minhaParteSugerida = shareIgual > 0 ? shareIgual.toFixed(2) : ''
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -163,14 +166,35 @@ function ExpenseModal({ expense, onClose, onSave }) {
 
         <div style={{ padding: '20px 24px', display: 'grid', gap: 16 }}>
           {/* Row 1 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
             <div>
               <label className="label">Descrição *</label>
               <input className="input" placeholder="Ex: Aluguel, Supermercado..." value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
             </div>
             <div>
-              <label className="label">Valor (R$) *</label>
+              <label className="label">Valor total (R$) *</label>
               <input className="input" type="number" step="0.01" placeholder="0,00" value={form.valor} onChange={e => setForm(f => ({ ...f, valor: e.target.value }))} />
+            </div>
+            <div>
+              <label className="label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                Minha parte
+                <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-secondary)' }}>(opcional)</span>
+              </label>
+              <input
+                className="input"
+                type="number" step="0.01"
+                placeholder={minhaParteSugerida ? `sugestão: ${minhaParteSugerida}` : 'R$ do meu bolso'}
+                value={form.minha_parte}
+                onChange={e => setForm(f => ({ ...f, minha_parte: e.target.value }))}
+                style={{ borderColor: form.minha_parte ? 'rgba(99,102,241,0.5)' : undefined }}
+              />
+              {minhaParteSugerida && !form.minha_parte && (
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, minha_parte: minhaParteSugerida }))}
+                  style={{ marginTop: 4, fontSize: 10, color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
+                  ↑ usar {formatCurrency(parseFloat(minhaParteSugerida))} (divisão igual)
+                </button>
+              )}
             </div>
           </div>
 
@@ -311,6 +335,7 @@ function StatusBadge({ status }) {
 
 // ─── Expense Card (grid view) ─────────────────────────────────────────────────
 function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) {
+  const temMinhaParte = exp.minha_parte && Number(exp.minha_parte) > 0 && Number(exp.minha_parte) !== exp.valor
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s' }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)' }}
@@ -319,7 +344,7 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
       {/* Color accent top */}
       <div style={{ height: 3, background: exp.status === 'pago' ? '#10b981' : exp.status === 'cancelado' ? '#94a3b8' : '#f59e0b' }} />
 
-      <div style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div onClick={onEdit} style={{ padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column', gap: 10, cursor: 'pointer' }}>
         {/* Top row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -343,6 +368,11 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
           <span style={{ fontSize: 22, fontWeight: 800, color: exp.status === 'pago' ? '#10b981' : 'var(--text-primary)' }}>
             {formatCurrency(valorEfetivo(exp))}
           </span>
+          {temMinhaParte && (
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 8, background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>
+              de {formatCurrency(exp.valor)} total
+            </span>
+          )}
           {exp.parcelas > 1 && (
             <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               • {exp.lote_parcelamento
