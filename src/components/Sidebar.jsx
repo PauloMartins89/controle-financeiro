@@ -223,30 +223,53 @@ export default function Sidebar({ collapsed, onToggle }) {
   const location = useLocation()
   const [openGroups, setOpenGroups] = useState(() => {
     const open = {}
-    navGroups.forEach(({ title, items, defaultOpen }) => {
-      open[title] = defaultOpen || items.some(item =>
-        item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
+    navGroups.forEach(({ title }) => { open[title] = false })
+    // Abre apenas o grupo da rota ativa (accordion desde o início)
+    const activeGroup = navGroups.find(({ items, defaultOpen }) =>
+      defaultOpen || items.some(item =>
+        item.to && (item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to))
       )
-    })
-    // Se nenhum grupo ativo, abre o primeiro
-    if (!Object.values(open).some(Boolean)) open[navGroups[0].title] = true
+    )
+    if (activeGroup) open[activeGroup.title] = true
+    else open[navGroups[0].title] = true
     return open
   })
 
-  function toggleGroup(title) {
-    setOpenGroups(p => ({ ...p, [title]: !p[title] }))
+  // Abre um grupo (accordion: fecha todos os outros)
+  function openGroup(title) {
+    const next = {}
+    navGroups.forEach(g => { next[g.title] = false })
+    next[title] = true
+    setOpenGroups(next)
   }
 
-  // Auto-expande o grupo do módulo ativo ao navegar
+  function toggleGroup(title) {
+    setOpenGroups(p => {
+      if (p[title]) return { ...p, [title]: false } // fechar
+      // abrir este, fechar todos os outros (accordion)
+      const next = {}
+      navGroups.forEach(g => { next[g.title] = false })
+      next[title] = true
+      return next
+    })
+  }
+
+  // Auto-expande (accordion) o módulo da rota ativa ao navegar
   useEffect(() => {
-    navGroups.forEach(({ title, items }) => {
-      const isCurrentGroup = items.some(item =>
+    const activeGroup = navGroups.find(({ items }) =>
+      items.some(item =>
         item.to && (item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to))
       )
-      if (isCurrentGroup) {
-        setOpenGroups(p => p[title] ? p : { ...p, [title]: true })
-      }
-    })
+    )
+    if (activeGroup) {
+      setOpenGroups(p => {
+        if (p[activeGroup.title]) return p // já está aberto, não muda
+        const next = {}
+        navGroups.forEach(g => { next[g.title] = false })
+        next[activeGroup.title] = true
+        return next
+      })
+    }
   }, [location.pathname])
 
   // Função que decide se o item do menu deve aparecer:
