@@ -235,6 +235,19 @@ export default function Sidebar({ collapsed, onToggle }) {
     return open
   })
 
+  // Estado das sub-seções (dividers dentro de um grupo)
+  const [openSections, setOpenSections] = useState(() => {
+    const s = {}
+    navGroups.forEach(({ items }) => {
+      items.forEach(item => { if (item.divider) s[item.label] = true })
+    })
+    return s
+  })
+
+  function toggleSection(label) {
+    setOpenSections(p => ({ ...p, [label]: !p[label] }))
+  }
+
   // Abre um grupo (accordion: fecha todos os outros)
   function openGroup(title) {
     const next = {}
@@ -455,32 +468,46 @@ export default function Sidebar({ collapsed, onToggle }) {
                 </button>
               )}
               {collapsed && <div style={{ height: 1, background: 'var(--sb-border)', margin: '6px 4px' }} />}
-              {(isOpen || collapsed) && visibleItems.map((item) => {
-                const { to, icon: Icon, label, divider } = item
-                if (divider) {
-                  if (collapsed) return null
-                  return (
-                    <div key={label} style={{
-                      fontSize: 10, fontWeight: 700, color: 'var(--sb-title)', opacity: 0.5,
-                      textTransform: 'uppercase', letterSpacing: '0.08em',
-                      padding: '10px 10px 2px', marginTop: 4,
-                    }}>{label}</div>
-                  )
-                }
-                return (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={to === '/'}
-                  className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? label : undefined}
-                  style={{ marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start' }}
-                >
-                  <Icon style={{ width: 18, height: 18, flexShrink: 0 }} />
-                  {!collapsed && <span>{label}</span>}
-                </NavLink>
-                )
-              })}
+              {(isOpen || collapsed) && (() => {
+                let currentSection = null
+                return visibleItems.flatMap((item) => {
+                  const { to, icon: Icon, label, divider } = item
+                  if (divider) {
+                    currentSection = label
+                    if (collapsed) return []
+                    const secOpen = openSections[label] !== false
+                    return [(
+                      <button key={`sec-${label}`} onClick={() => toggleSection(label)} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                        fontSize: 10, fontWeight: 700, color: 'var(--sb-title)', opacity: 0.75,
+                        textTransform: 'uppercase', letterSpacing: '0.08em',
+                        padding: '10px 10px 3px', marginTop: 4,
+                      }}>
+                        <span>{label.replace(/^──\s*/, '')}</span>
+                        {secOpen
+                          ? <ChevronDownIcon style={{ width: 10, height: 10 }} />
+                          : <ChevronRightIcon style={{ width: 10, height: 10 }} />}
+                      </button>
+                    )]
+                  }
+                  // Esconde itens cujo sub-grupo está fechado
+                  if (currentSection && openSections[currentSection] === false) return []
+                  return [(
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === '/'}
+                      className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                      title={collapsed ? label : undefined}
+                      style={{ marginBottom: 2, justifyContent: collapsed ? 'center' : 'flex-start' }}
+                    >
+                      <Icon style={{ width: 18, height: 18, flexShrink: 0 }} />
+                      {!collapsed && <span>{label}</span>}
+                    </NavLink>
+                  )]
+                })
+              })()}
             </div>
           )
         })}
