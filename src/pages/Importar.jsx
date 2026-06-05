@@ -156,13 +156,18 @@ function UploadZone({ onParsed, onDemo }) {
 }
 
 // ─── Review Table ─────────────────────────────────────────────────────────────
-function ReviewTable({ rows, onRowsChange, people, currentUser }) {
+function ReviewTable({ rows, onRowsChange, people, currentUser, registeredCards = [] }) {
   const [editing, setEditing] = useState(null) // { id, field }
   const [cardFilter, setCardFilter] = useState(null) // null = todos os cartões
 
   // Unique cards sorted
   const uniqueCards = [...new Set(rows.filter(r => r.cartao_digitos).map(r => r.cartao_digitos))]
   const hasMultipleCards = uniqueCards.length > 1
+  // Helper: find registered card name by last 4 digits
+  function cardName(digits) {
+    const found = registeredCards.find(c => c.ultimos_digitos === digits)
+    return found ? found.nome : null
+  }
 
   // Rows visible according to current card filter
   const visibleRows = cardFilter ? rows.filter(r => r.cartao_digitos === cardFilter) : rows
@@ -225,7 +230,10 @@ function ReviewTable({ rows, onRowsChange, people, currentUser }) {
                 }}
               >
                 •••• {card}
-                <span style={{ fontSize: 10, opacity: 0.75, fontWeight: 400 }}>
+                {cardName(card) && (
+                  <span style={{ fontSize: 11, fontWeight: 600, opacity: isActive ? 1 : 0.7 }}>· {cardName(card)}</span>
+                )}
+                <span style={{ fontSize: 10, opacity: 0.65, fontWeight: 400 }}>
                   {cardRows.length} · {formatCurrency(cardTotal)}
                 </span>
               </button>
@@ -293,7 +301,7 @@ function ReviewTable({ rows, onRowsChange, people, currentUser }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
                     {row.cartao_digitos && (
                       <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: 'rgba(130,10,209,0.15)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        •••• {row.cartao_digitos}
+                        •••• {row.cartao_digitos}{cardName(row.cartao_digitos) ? ` · ${cardName(row.cartao_digitos)}` : ''}
                       </span>
                     )}
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.descricao}>
@@ -563,7 +571,7 @@ export default function Importar() {
                 </button>
               </div>
             </div>
-            <ReviewTable rows={rows} onRowsChange={setRows} people={people} currentUser={currentUser} />
+            <ReviewTable rows={rows} onRowsChange={setRows} people={people} currentUser={currentUser} registeredCards={cards} />
           </div>
         )}
 

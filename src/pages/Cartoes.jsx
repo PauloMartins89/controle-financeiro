@@ -748,7 +748,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
 
 // ─── Card Modal ───────────────────────────────────────────────────────────────
 function CardModal({ card, onClose, onSave }) {
-  const [form, setForm] = useState(card || { nome: '', bandeira: 'Visa', limite: '', dia_fechamento: 15, dia_vencimento: 22, cor: '#6366f1' })
+  const [form, setForm] = useState(card || { nome: '', bandeira: 'Visa', limite: '', dia_fechamento: 15, dia_vencimento: 22, cor: '#6366f1', ultimos_digitos: '' })
   const COLORS = ['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4','#1e293b','#C0C5CE']
 
   return (
@@ -764,13 +764,15 @@ function CardModal({ card, onClose, onSave }) {
             <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
             <div style={{ fontSize: 12, opacity: 0.8, color: 'white' }}>{form.bandeira}</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'white', marginTop: 8 }}>{form.nome || 'Nome do Cartão'}</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>Fecha dia {form.dia_fechamento} · Vence dia {form.dia_vencimento}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
+              {form.ultimos_digitos ? `•••• ${form.ultimos_digitos}  ·  ` : ''}Fecha dia {form.dia_fechamento} · Vence dia {form.dia_vencimento}
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label className="label">Nome do cartão *</label>
-              <input className="input" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Nubank, Itaú..." />
+              <input className="input" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Ex: Nubank Camila, Itaú Paulo..." />
             </div>
             <div>
               <label className="label">Bandeira</label>
@@ -779,9 +781,15 @@ function CardModal({ card, onClose, onSave }) {
               </select>
             </div>
           </div>
-          <div>
-            <label className="label">Limite (R$)</label>
-            <input className="input" type="number" value={form.limite} onChange={e => setForm(f => ({ ...f, limite: parseFloat(e.target.value) || '' }))} placeholder="0,00" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label className="label">Limite (R$)</label>
+              <input className="input" type="number" value={form.limite} onChange={e => setForm(f => ({ ...f, limite: parseFloat(e.target.value) || '' }))} placeholder="0,00" />
+            </div>
+            <div>
+              <label className="label">Últimos 4 dígitos</label>
+              <input className="input" value={form.ultimos_digitos} maxLength={4} pattern="[0-9]{4}" onChange={e => setForm(f => ({ ...f, ultimos_digitos: e.target.value.replace(/\D/g, '').slice(0, 4) }))} placeholder="Ex: 1851" />
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
