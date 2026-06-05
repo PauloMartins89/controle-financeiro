@@ -118,6 +118,7 @@ const navGroups = [
       { divider: true,                        label: '── Operações',                                                        moduleKey: 'smartlider' },
       { to: '/lider/turnos',                  icon: CalendarDaysIcon,          label: 'Turnos',              moduleKey: 'smartlider' },
       { to: '/lider/apontamentos',            icon: ClipboardDocumentListIcon, label: 'Apontamentos',        moduleKey: 'smartlider' },
+      { to: '/lider/ocorrencias',             icon: ExclamationTriangleIcon,   label: 'Ocorrências',         moduleKey: 'smartlider' },
       { divider: true,                        label: '── Estrutura',                                                            moduleKey: 'smartlider' },
       { to: '/lider/cadastros/frentes',       icon: MapPinIcon,                label: 'Frentes',             moduleKey: 'smartlider' },
       { to: '/lider/cadastros/equipes',       icon: UserGroupIcon,             label: 'Equipes',             moduleKey: 'smartlider' },
@@ -132,6 +133,8 @@ const navGroups = [
       { to: '/lider/epi/solicitacoes',        icon: ShieldCheckIcon,           label: 'Solicitações EPI',    moduleKey: 'smartlider' },
       { to: '/lider/cadastros/epis',          icon: ShieldCheckIcon,           label: 'Catálogo EPIs',       moduleKey: 'smartlider' },
       { to: '/lider/epc/catalogo',            icon: WrenchScrewdriverIcon,     label: 'Catálogo EPCs',       moduleKey: 'smartlider' },
+      { divider: true,                        label: '── Admin',                                                                moduleKey: 'smartlider' },
+      { to: '/lider/admin',                   icon: Cog6ToothIcon,             label: 'Usuários App',        moduleKey: 'smartlider', empresaAdminOnly: true },
     ],
   },
   {

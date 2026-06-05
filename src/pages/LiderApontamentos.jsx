@@ -6,7 +6,7 @@ import { useLocation } from 'react-router-dom'
 import {
   UsersIcon, WrenchScrewdriverIcon, BeakerIcon, ArrowTrendingUpIcon,
   ShieldCheckIcon, StarIcon, ArrowPathIcon, ChartBarIcon,
-  ClipboardDocumentListIcon,
+  ClipboardDocumentListIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -98,6 +98,7 @@ const ABAS = [
   { key: 'prod-equipe',      label: 'Prod. Equipe',          icon: ChartBarIcon },
   { key: 'avaliacoes',       label: 'Avaliações',            icon: StarIcon },
   { key: 'controle-epi',     label: 'Controle EPI',         icon: ShieldCheckIcon },
+  { key: 'ocorrencias',      label: 'Ocorrências',          icon: ExclamationTriangleIcon },
 ]
 
 // ── Helpers de clima ──────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ function AbaGeralTurnos({ workspaceId }) {
       const ids = turnos.map(t => t.id)
 
       // 2. Dados de todos os módulos em paralelo
-      const [moData, maqData, insData, prodEquData, avalData, climaData, solInsData, solEpiData, refeiData] = await Promise.all([
+      const [moData, maqData, insData, prodEquData, avalData, climaData, solInsData, solEpiData, refeiData, ocorrData] = await Promise.all([
         supabase.from('lider_mao_obra').select('turno_id,presente').in('turno_id', ids),
         supabase.from('lider_apontamentos_maquina').select('turno_id').in('turno_id', ids),
         supabase.from('lider_apontamentos_insumo').select('turno_id').in('turno_id', ids),
@@ -151,13 +152,14 @@ function AbaGeralTurnos({ workspaceId }) {
           .eq('workspace_id', workspaceId)
           .gte('data_refeicao', inicio)
           .lte('data_refeicao', fim),
+        supabase.from('lider_ocorrencias').select('turno_id,gravidade,status').in('turno_id', ids),
       ])
 
       // 3. Indexar por turno_id
       const idx = () => ({
         presentes:  0, ausentes: 0, maquinas: 0, insumos: 0,
         ha_real: 0, ha_meta: 0, nota: null, condicao: null, temp: null,
-        sol_ins: 0, sol_epi: 0, refeicao: null,
+        sol_ins: 0, sol_epi: 0, refeicao: null, ocorr: 0, ocorr_critica: 0,
       })
       const map = Object.fromEntries(ids.map(id => [id, idx()]))
 
@@ -169,6 +171,7 @@ function AbaGeralTurnos({ workspaceId }) {
       ;(climaData.data || []).forEach(r => { if (!map[r.turno_id].condicao) { map[r.turno_id].condicao = r.condicao; map[r.turno_id].temp = r.temperatura_c } })
       ;(solInsData.data || []).forEach(r => { map[r.turno_id].sol_ins++ })
       ;(solEpiData.data || []).forEach(r => { map[r.turno_id].sol_epi++ })
+      ;(ocorrData.data  || []).forEach(r => { map[r.turno_id].ocorr++; if (r.gravidade === 'critica') map[r.turno_id].ocorr_critica++ })
 
       // Cruzar refeições: refei_equipe_id + data → turno_id
       if (refeiData.data?.length) {
@@ -218,11 +221,12 @@ function AbaGeralTurnos({ workspaceId }) {
           <span>🚜 <strong style={{ color: '#3b82f6' }}>{totalMaq}</strong> <span style={{ color: 'var(--text-secondary)' }}>apontamentos máq.</span></span>
           <span>🌾 <strong style={{ color: '#f59e0b' }}>{totalHa.toFixed(1)} ha</strong> <span style={{ color: 'var(--text-secondary)' }}>realizados</span></span>
           {totalRef > 0 && <span>🍽️ <strong style={{ color: '#ec4899' }}>{totalRef}</strong> <span style={{ color: 'var(--text-secondary)' }}>refeições</span></span>}
+          {rows.reduce((s,r)=>s+r.ocorr,0) > 0 && <span>⚠️ <strong style={{ color: '#ef4444' }}>{rows.reduce((s,r)=>s+r.ocorr,0)}</strong> <span style={{ color: 'var(--text-secondary)' }}>ocorrências</span></span>}
         </div>
       )}
 
       <TabelaRegistros loading={loading}
-        cols={['Data', 'Turno', 'Equipe', 'Frente', 'Líder', 'Clima', 'Presença', 'Máq.', 'Insumos', 'Produt. ha', 'Efic.', 'Avaliação', 'Refeição', 'Sol. Ins.', 'Sol. EPI', 'Status']}
+        cols={['Data', 'Turno', 'Equipe', 'Frente', 'Líder', 'Clima', 'Presença', 'Máq.', 'Insumos', 'Produt. ha', 'Efic.', 'Avaliação', 'Refeição', 'Ocorr.', 'Sol. Ins.', 'Sol. EPI', 'Status']}
         rows={rows.map(r => {
           const total = r.presentes + r.ausentes
           const efic  = r.ha_meta > 0 ? Math.round((r.ha_real / r.ha_meta) * 100) : null
@@ -258,6 +262,14 @@ function AbaGeralTurnos({ workspaceId }) {
                   </span>
                 : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
             </td>,
+            <td key="oc"  style={{ ...tdStyle, textAlign: 'center' }}>
+              {r.ocorr > 0
+                ? <span style={{ fontWeight: 700, color: r.ocorr_critica > 0 ? '#ef4444' : '#f59e0b' }}>
+                    {r.ocorr_critica > 0 && <span title="crítica">🔴 </span>}
+                    {r.ocorr}
+                  </span>
+                : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+            </td>,
             <td key="si"  style={{ ...tdStyle, textAlign: 'center' }}>{r.sol_ins > 0 ? r.sol_ins : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
             <td key="se"  style={{ ...tdStyle, textAlign: 'center' }}>{r.sol_epi > 0 ? r.sol_epi : <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>,
             <td key="st"  style={tdStyle}><STATUS_CHIP status={r.status} /></td>,
@@ -274,6 +286,87 @@ function hoje30() {
 }
 function hoje() {
   return new Date().toISOString().split('T')[0]
+}
+
+// ─── Aba: Ocorrências ─────────────────────────────────────────────────────────
+const TIPO_OCORR = {
+  quebra_equipamento: { label: 'Quebra Equip.', color: '#f97316' },
+  acidente_pessoal:   { label: 'Acidente',      color: '#ef4444' },
+  chuva_vento:        { label: 'Chuva/Vento',  color: '#3b82f6' },
+  qualidade:          { label: 'Qualidade',     color: '#eab308' },
+  seguranca:          { label: 'Segurança',     color: '#ef4444' },
+  outro:              { label: 'Outro',         color: '#64748b' },
+}
+const GRAV_OCORR = {
+  baixa:   { label: 'Baixa',   color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+  media:   { label: 'Média',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  alta:    { label: 'Alta',    color: '#f97316', bg: 'rgba(249,115,22,0.12)' },
+  critica: { label: 'Crítica', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+}
+const STATUS_OCORR = {
+  aberta:        { label: 'Aberta',        color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
+  em_tratamento: { label: 'Em tratamento', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  resolvida:     { label: 'Resolvida',     color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
+}
+
+function AbaOcorrencias({ workspaceId }) {
+  const [rows,    setRows]    = useState([])
+  const [loading, setLoading] = useState(false)
+  const [inicio,  setInicio]  = useState(hoje30)
+  const [fim,     setFim]     = useState(hoje)
+  const [filtroStatus, setFiltroStatus] = useState('aberta')
+
+  const load = useCallback(async () => {
+    if (!workspaceId) return
+    setLoading(true)
+    let q = supabase
+      .from('lider_ocorrencias')
+      .select('id,tipo,descricao,gravidade,status,created_at,lider_equipes(nome),lider_turnos(data,turno)')
+      .eq('workspace_id', workspaceId)
+      .gte('created_at', inicio + 'T00:00:00')
+      .lte('created_at', fim + 'T23:59:59')
+      .order('created_at', { ascending: false })
+      .limit(300)
+    if (filtroStatus) q = q.eq('status', filtroStatus)
+    const { data } = await q
+    setRows(data || [])
+    setLoading(false)
+  }, [workspaceId, inicio, fim, filtroStatus])
+
+  useEffect(() => { load() }, [load])
+
+  const chipStyle = (active, color) => ({
+    padding: '4px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: 600, border: `1px solid ${active ? color : 'var(--border)'}`,
+    background: active ? color : 'transparent', color: active ? '#fff' : 'var(--text-secondary)', transition: 'all .15s',
+  })
+
+  return (
+    <>
+      <FiltroPeriodo inicio={inicio} fim={fim} onInicio={setInicio} onFim={setFim} total={rows.length} />
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        {[{key:'',label:'Todas',color:'#64748b'},{key:'aberta',label:'Aberta',color:'#ef4444'},{key:'em_tratamento',label:'Em tratamento',color:'#f59e0b'},{key:'resolvida',label:'Resolvida',color:'#10b981'}].map(s => (
+          <button key={s.key} onClick={() => setFiltroStatus(s.key)} style={chipStyle(filtroStatus === s.key, s.color)}>{s.label}</button>
+        ))}
+      </div>
+      <TabelaRegistros loading={loading}
+        cols={['Data/Hora', 'Equipe', 'Turno', 'Tipo', 'Descrição', 'Gravidade', 'Status']}
+        rows={rows.map(r => {
+          const tc = TIPO_OCORR[r.tipo] ?? TIPO_OCORR.outro
+          const gc = GRAV_OCORR[r.gravidade] ?? GRAV_OCORR.media
+          const sc = STATUS_OCORR[r.status] ?? STATUS_OCORR.aberta
+          return [
+            <td key="dt" style={{ ...tdStyle, whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDtHr(r.created_at)}</td>,
+            <td key="eq" style={tdStyle}>{r.lider_equipes?.nome || '—'}</td>,
+            <td key="tn" style={{ ...tdStyle, color: 'var(--text-secondary)' }}>{r.lider_turnos ? `${r.lider_turnos.turno}` : '—'}</td>,
+            <td key="tp" style={tdStyle}><span style={{ color: tc.color, fontWeight: 600, fontSize: 12 }}>{tc.label}</span></td>,
+            <td key="ds" style={{ ...tdStyle, maxWidth: 300 }}><span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{r.descricao}</span></td>,
+            <td key="gv" style={tdStyle}><span style={{ padding: '2px 9px', borderRadius: 20, background: gc.bg, color: gc.color, fontSize: 11, fontWeight: 700 }}>{gc.label}</span></td>,
+            <td key="st" style={tdStyle}><span style={{ padding: '2px 9px', borderRadius: 20, background: sc.bg, color: sc.color, fontSize: 11, fontWeight: 700 }}>{sc.label}</span></td>,
+          ]
+        })}
+      />
+    </>
+  )
 }
 
 // ─── Aba: Mão de Obra ─────────────────────────────────────────────────────────
@@ -781,6 +874,7 @@ export default function LiderApontamentos() {
         {aba === 'prod-equipe'      && <AbaProdEquipe        workspaceId={workspaceId} />}
         {aba === 'avaliacoes'       && <AbaAvaliacoes        workspaceId={workspaceId} />}
         {aba === 'controle-epi'     && <AbaControleEpi       workspaceId={workspaceId} />}
+        {aba === 'ocorrencias'      && <AbaOcorrencias       workspaceId={workspaceId} />}
       </div>
     </div>
   )
