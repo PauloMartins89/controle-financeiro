@@ -61,13 +61,22 @@ function ModalResetSenha({ perfil, onClose }) {
             placeholder={`Padrão: ${derivePwd(perfil.matricula || '00000')}`}
           />
         </Field>
-        <button onClick={handleReset} disabled={saving} style={{
-          marginTop: 16, width: '100%', padding: '13px 0', borderRadius: 10, border: 'none',
-          background: '#f59e0b', color: '#fff', fontWeight: 800, fontSize: 15,
-          cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1,
-        }}>
-          {saving ? 'Redefinindo…' : 'Redefinir Senha'}
-        </button>
+        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+          <button onClick={onClose} disabled={saving} style={{
+            flex: 1, padding: '13px 0', borderRadius: 10, border: 'none',
+            background: '#f97316', color: '#fff', fontWeight: 700, fontSize: 14,
+            cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.5 : 1,
+          }}>
+            Cancelar
+          </button>
+          <button onClick={handleReset} disabled={saving} style={{
+            flex: 2, padding: '13px 0', borderRadius: 10, border: 'none',
+            background: '#f59e0b', color: '#fff', fontWeight: 800, fontSize: 15,
+            cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1,
+          }}>
+            {saving ? 'Redefinindo…' : 'Redefinir Senha'}
+          </button>
+        </div>
       </div>
     </div>
   )

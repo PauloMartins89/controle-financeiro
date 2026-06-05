@@ -178,13 +178,22 @@ export function Modal({ title, onClose, onSave, saving, children }) {
           </button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>
-        <button onClick={onSave} disabled={saving} style={{
-          marginTop: 20, width: '100%', padding: '13px 0', borderRadius: 10, border: 'none',
-          background: 'var(--primary)', color: '#fff', fontWeight: 800, fontSize: 15,
-          cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1,
-        }}>
-          {saving ? 'Salvando…' : 'Salvar'}
-        </button>
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button onClick={onClose} disabled={saving} style={{
+            flex: 1, padding: '13px 0', borderRadius: 10, border: 'none',
+            background: '#f97316', color: '#fff', fontWeight: 700, fontSize: 14,
+            cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.5 : 1,
+          }}>
+            Cancelar
+          </button>
+          <button onClick={onSave} disabled={saving} style={{
+            flex: 2, padding: '13px 0', borderRadius: 10, border: 'none',
+            background: '#22c55e', color: '#fff', fontWeight: 800, fontSize: 15,
+            cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1,
+          }}>
+            {saving ? 'Salvando…' : 'Salvar'}
+          </button>
+        </div>
       </div>
     </div>
   )
