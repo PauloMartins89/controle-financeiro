@@ -425,9 +425,15 @@ function parseSemPararPorVeiculo(lines) {
 function parseNubankFatura(lines) {
   const blob = lines.join(' ')
   // Detectar fatura Nubank: "FATURA DD MON YYYY" + pelo menos um numero de cartao mascarado
-  if (!/fatura\s+\d{2}\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+\d{4}/i.test(blob)) return null
-  // Cartão mascarado: qualquer combinação de caracteres não-alfanuméricos (••••, ...., ----) + 4 dígitos
-  if (!/[^\w\s]{2,}\s*\d{4}/.test(blob)) return null
+  const hasFatura = /fatura\s+\d{2}\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+\d{4}/i.test(blob)
+  const hasCard   = /[^\w\s]{2,}\s*\d{4}/.test(blob)
+  console.log('[NuFatura] hasFatura:', hasFatura, '| hasCard:', hasCard, '| linhas:', lines.length)
+  if (!hasFatura) return null
+  if (!hasCard) {
+    // Mostrar trecho do blob para diagnóstico
+    console.log('[NuFatura] blob (primeiros 500 chars):', blob.slice(0, 500))
+    return null
+  }
 
   const ptM = { jan:'01',fev:'02',mar:'03',abr:'04',mai:'05',jun:'06',jul:'07',ago:'08',set:'09',out:'10',nov:'11',dez:'12' }
   const pa = s => parseFloat(s.replace(/\./g,'').replace(',','.'))
@@ -508,6 +514,7 @@ function parseNubankFatura(lines) {
   }
   flush()
 
+  console.log('[NuFatura] transações extraídas:', txns.length, txns.slice(0,3))
   return txns.length > 0 ? txns : null
 }
 
