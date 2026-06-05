@@ -72,7 +72,7 @@ export default function LiderCadastroProdutos() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Header title="Produtos / Insumos" subtitle="Cadastro de produtos agrícolas e insumos utilizados no campo" />
+      <Header title="Produtos / Insumos" subtitle="Cadastro de produtos agrícolas e insumos utilizados no campo" action={{ label: 'Novo Produto', onClick: openNew }} />
 
       <div style={{ padding: '24px 32px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>

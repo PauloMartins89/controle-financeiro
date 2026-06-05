@@ -83,7 +83,7 @@ export default function LiderCadastroEpis() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Header title="Catálogo de EPIs" subtitle="Cadastro de Equipamentos de Proteção Individual disponíveis no SmartLíder" />
+      <Header title="Catálogo de EPIs" subtitle="Cadastro de Equipamentos de Proteção Individual disponíveis no SmartLíder" action={{ label: 'Novo EPI', onClick: openNew }} />
 
       <div style={{ padding: '24px 32px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>

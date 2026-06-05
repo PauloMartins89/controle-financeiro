@@ -68,7 +68,7 @@ export default function LiderCadastroFrentes() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Header title="Frentes Operacionais" subtitle="Cadastro de frentes de trabalho do SmartLíder" />
+      <Header title="Frentes Operacionais" subtitle="Cadastro de frentes de trabalho do SmartLíder" action={{ label: 'Nova Frente', onClick: openNew }} />
 
       <div style={{ padding: '24px 32px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>

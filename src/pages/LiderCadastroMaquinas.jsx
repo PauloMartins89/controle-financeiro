@@ -71,7 +71,7 @@ export default function LiderCadastroMaquinas() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Header title="Máquinas" subtitle="Cadastro de máquinas e equipamentos do SmartLíder" />
+      <Header title="Máquinas" subtitle="Cadastro de máquinas e equipamentos do SmartLíder" action={{ label: 'Nova Máquina', onClick: openNew }} />
 
       <div style={{ padding: '24px 32px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>

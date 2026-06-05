@@ -76,7 +76,7 @@ export default function LiderCadastroColaboradores() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Header title="Colaboradores" subtitle="Cadastro de colaboradores, operadores e auxiliares do SmartLíder" />
+      <Header title="Colaboradores" subtitle="Cadastro de colaboradores, operadores e auxiliares do SmartLíder" action={{ label: 'Novo Colaborador', onClick: openNew }} />
 
       <div style={{ padding: '24px 32px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>

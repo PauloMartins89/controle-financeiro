@@ -195,7 +195,7 @@ export default function LiderCadastroLideres() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <Header title="Líderes" subtitle="Cadastro de líderes com acesso ao app SmartLíder" />
+      <Header title="Líderes" subtitle="Cadastro de líderes com acesso ao app SmartLíder" action={{ label: 'Novo Líder', onClick: openNew }} />
 
       <div style={{ padding: '24px 32px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
