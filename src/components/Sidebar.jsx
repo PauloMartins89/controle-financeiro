@@ -237,6 +237,18 @@ export default function Sidebar({ collapsed, onToggle }) {
     setOpenGroups(p => ({ ...p, [title]: !p[title] }))
   }
 
+  // Auto-expande o grupo do módulo ativo ao navegar
+  useEffect(() => {
+    navGroups.forEach(({ title, items }) => {
+      const isCurrentGroup = items.some(item =>
+        item.to && (item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to))
+      )
+      if (isCurrentGroup) {
+        setOpenGroups(p => p[title] ? p : { ...p, [title]: true })
+      }
+    })
+  }, [location.pathname])
+
   // Função que decide se o item do menu deve aparecer:
   // - adminOnly: só admin vê
   // - moduleKey null: sempre visível (se não for adminOnly)
