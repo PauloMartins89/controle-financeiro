@@ -509,7 +509,7 @@ function parsePdfLines(lines) {
     // ── Pattern E — Nubank fatura cartão de crédito (single-line) ─────────────
     let mFat = line.match(reFaturaNu)
     if (mFat) {
-      const [, dia, mes, , rawDesc, parcela, valorStr] = mFat
+      const [, dia, mes, cardNum, rawDesc, parcela, valorStr] = mFat
       const valor = parseAmount(valorStr)
       if (valor > 0 && valor < 500000) {
         const data = `${faturaYear}-${ptMonthsNu[mes.toLowerCase()]}-${dia.padStart(2, '0')}`
@@ -518,7 +518,7 @@ function parsePdfLines(lines) {
           data,
           descricao: rawDesc.replace(/\s+/g, ' ').trim(),
           valor,
-          conta: 'Nubank',
+          conta: cardNum ? `Nubank •••• ${cardNum}` : 'Nubank',
           parcela: parcela || '',
           tipo: 'debito',
         })
@@ -536,7 +536,7 @@ function parsePdfLines(lines) {
     if (pendingFaturaDate) {
       const mCont = line.match(reFaturaCont)
       if (mCont) {
-        const [, , rawDesc, parcela, valorStr] = mCont
+        const [, cardNum, rawDesc, parcela, valorStr] = mCont
         const valor = parseAmount(valorStr)
         if (valor > 0 && valor < 500000) {
           const data = `${faturaYear}-${ptMonthsNu[pendingFaturaDate.mes.toLowerCase()]}-${pendingFaturaDate.dia.padStart(2, '0')}`
@@ -545,7 +545,7 @@ function parsePdfLines(lines) {
             data,
             descricao: rawDesc.replace(/\s+/g, ' ').trim(),
             valor,
-            conta: 'Nubank',
+            conta: cardNum ? `Nubank •••• ${cardNum}` : 'Nubank',
             parcela: parcela || '',
             tipo: 'debito',
           })
