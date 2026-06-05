@@ -410,6 +410,7 @@ const useStore = create(
         valor_total: newExp.valor_total ?? null,
         lote_parcelamento: newExp.lote_parcelamento || null,
         veiculo_placa: newExp._veiculo || newExp.veiculo_placa || null,
+        conta: newExp.conta || null,
       }
       const { data, error } = await supabase.from('despesas').insert([row]).select().single()
       if (error) console.error('[Supabase] addExpense error:', error.message, row)
@@ -425,7 +426,7 @@ const useStore = create(
   updateExpense: async (id, data) => {
     if (supabase && isUUID(id)) {
       // Sanitiza payload: filtra apenas colunas conhecidas e converte IDs inválidos para null
-      const allowed = ['descricao','valor','data','categoria','tipo_divisao','porcentagens','valores_fixos','parcelas','parcela_atual','recorrente','status','observacoes','valor_total','lote_parcelamento']
+      const allowed = ['descricao','valor','data','categoria','tipo_divisao','porcentagens','valores_fixos','parcelas','parcela_atual','recorrente','status','observacoes','valor_total','lote_parcelamento','conta']
       const payload = {}
       for (const k of allowed) if (k in data) payload[k] = data[k]
       if ('grupo_id' in data) payload.grupo_id = isUUID(data.grupo_id) ? data.grupo_id : null
