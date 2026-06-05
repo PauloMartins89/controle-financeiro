@@ -463,6 +463,14 @@ export default function Despesas() {
     setSelectedIds(new Set())
     toast.success(`${selectedIds.size} despesa(s) deletada(s)`)
   }
+  async function deleteFiltered() {
+    const cardName = filterCard && filterCard !== '__none__' ? cards.find(c => c.id === filterCard)?.nome : null
+    const label = cardName ? `do cartão "${cardName}"` : 'com os filtros atuais'
+    if (!window.confirm(`Apagar todas as ${filtered.length} despesa(s) ${label}? Essa ação não pode ser desfeita.`)) return
+    for (const e of filtered) await deleteExpense(e.id)
+    setFilterCard('')
+    toast.success(`${filtered.length} despesa(s) apagada(s)`)
+  }
 
   useEffect(() => {
     if (searchParams.get('new')) setShowModal(true)
@@ -602,11 +610,22 @@ export default function Despesas() {
             <option value="">Categorias</option>
             {CATEGORIAS.map(c => <option key={c}>{getCategoryIcon(c)} {c}</option>)}
           </select>
-          <select className="input" value={filterCard} onChange={e => setFilterCard(e.target.value)} style={{ width: 165, paddingTop: 7, paddingBottom: 7 }}>
-            <option value="">Todos os cartões</option>
-            <option value="__none__">💵 Sem cartão</option>
-            {cards.map(c => <option key={c.id} value={c.id}>💳 {c.nome}</option>)}
-          </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <select className="input" value={filterCard} onChange={e => setFilterCard(e.target.value)} style={{ width: 165, paddingTop: 7, paddingBottom: 7 }}>
+              <option value="">Todos os cartões</option>
+              <option value="__none__">💵 Sem cartão</option>
+              {cards.map(c => <option key={c.id} value={c.id}>💳 {c.nome}</option>)}
+            </select>
+            {filterCard && filterCard !== '__none__' && filtered.length > 0 && (
+              <button
+                onClick={deleteFiltered}
+                title={`Apagar todas as ${filtered.length} despesas deste cartão`}
+                style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              >
+                <TrashIcon style={{ width: 15, height: 15 }} />
+              </button>
+            )}
+          </div>
 
           {/* Active filters badge + clear */}
           {activeFilters > 0 && (
