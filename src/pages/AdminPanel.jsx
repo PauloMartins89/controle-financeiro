@@ -33,6 +33,7 @@ const ALL_MODULES = [
   { key: 'importar',     label: 'Importar' },
   { key: 'escanear',     label: 'Escanear Doc.' },
   { key: 'notas-fiscais',label: 'Notas Fiscais' },
+  { key: 'smartlider',   label: 'SmartLíder' },
 ]
 
 const TABS = [
