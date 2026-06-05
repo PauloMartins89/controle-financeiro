@@ -422,20 +422,12 @@ function parseSemPararPorVeiculo(lines) {
 }
 
 // ── Nubank Fatura — state-machine parser ─────────────────────────────────────
-// O PDF do Nubank tem layout de 3 colunas (data | cartão+descrição | valor).
-// O PDF.js agrupa por coordenada Y, então cada coluna pode virar uma linha separada.
-// Possíveis combinações por transação:
-//   Linha A: "01 MAI •••• 1851 R$ 19,90"  (data+cartão+valor na mesma Y)
-//   Linha B: "Produtos Globo - Parcela 11/12"  (descrição numa Y abaixo)
-// ou
-//   Linha A: "01 MAI R$ 19,90"  (data+valor, cartão em Y diferente)
-//   Linha B: "•••• 1851 Produtos Globo - Parcela 11/12"  (cartão+descrição)
-// ou todas numa linha só (caso ideal).
 function parseNubankFatura(lines) {
   const blob = lines.join(' ')
-  // Detectar fatura Nubank: precisa de "FATURA DD MON YYYY" + bullets "•••• NNNN"
+  // Detectar fatura Nubank: "FATURA DD MON YYYY" + pelo menos um numero de cartao mascarado
   if (!/fatura\s+\d{2}\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\s+\d{4}/i.test(blob)) return null
-  if (!/[\u2022\u00B7\u25CF\u2219\.]{2,}\s*\d{4}/.test(blob)) return null
+  // Cartão mascarado: qualquer combinação de caracteres não-alfanuméricos (••••, ...., ----) + 4 dígitos
+  if (!/[^\w\s]{2,}\s*\d{4}/.test(blob)) return null
 
   const ptM = { jan:'01',fev:'02',mar:'03',abr:'04',mai:'05',jun:'06',jul:'07',ago:'08',set:'09',out:'10',nov:'11',dez:'12' }
   const pa = s => parseFloat(s.replace(/\./g,'').replace(',','.'))
@@ -444,24 +436,22 @@ function parseNubankFatura(lines) {
   const myr = blob.match(/fatura\s+\d{2}\s+\w+\s+(\d{4})/i)
   if (myr) year = parseInt(myr[1])
 
-  // Regexes
   const reDate    = /^(\d{2})\s+(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\b/i
-  const reCard    = /[\u2022\u00B7\u25CF\u2219\.]{2,}\s*(\d{4})/i
+  // Cartão mascarado: qualquer não-alfanumérico repetido seguido de 4 dígitos
+  const reCard    = /[^\w\s]{2,}\s*(\d{4})/
   const reAmtEnd  = /R\$\s*((?:\d{1,3}\.)*\d{1,3},\d{2})\s*$/i
   const reAmtOnly = /^R\$\s*((?:\d{1,3}\.)*\d{1,3},\d{2})\s*$/i
-  // Skip headers, footers, summaries
-  const reSkip = /^(DE\s+\d|CAMILA|FATURA\s|EMISS[AÃ]O|RESUMO|TRANSA[ÇC][OÕ]ES|PR[OÓ]XIMAS|LIMITES|IOF\s+de|IOF\s+"|\bIOF\b$|Recarga\s+de|Convers[aã]o|USD\s+\d|Encargos|Saldo|Nu\s+Pagamentos|CNPJ|Rua\s+|SAC\s|Ouvidoria|Juros|Pagamento\s+m[ií]nimo|Parcelamento|Composição|Nunca|Essa\s+opção|Lembre|Valor\s+máximo)/i
+  const reSkip    = /^(DE\s+\d|CAMILA|FATURA\s|EMISS|RESUMO|PROX|LIMITE|IOF\s+de|IOF\s*"|Recarga\s+de|Convers|USD\s|Encargo|Saldo|Nu\s+Pagamento|CNPJ|SAC\s|Ouvidoria|Juros|Pagamento\s+m|Parcelamento|Composi|Nunca|Lembre|Valor\s+m)/i
 
   const txns = []
   let pDia=null, pMes=null, pCard=null, pDesc=null, pValor=null
-  let inSection = false
 
   function flush() {
-    if (pDia && pMes && pDesc && pValor > 0 && pValor < 500000) {
+    if (pDia && pMes && pValor > 0 && pValor < 500000 && (pDesc || pCard)) {
       txns.push({
         id: `imp_nuf_${Date.now()}_${txns.length}`,
         data: `${year}-${ptM[pMes.toLowerCase()]}-${pDia.padStart(2,'0')}`,
-        descricao: pDesc,
+        descricao: pDesc || (pCard ? `Nubank •••• ${pCard}` : 'Nubank'),
         valor: pValor,
         conta: pCard ? `Nubank •••• ${pCard}` : 'Nubank',
         cartao_digitos: pCard || '',
@@ -474,45 +464,46 @@ function parseNubankFatura(lines) {
 
   function processText(text) {
     if (!text) return
-    // Extract card number if present (and not yet set)
     const mCard = text.match(reCard)
     if (mCard && !pCard) {
       pCard = mCard[1]
-      text = (text.slice(0, text.indexOf(mCard[0])) + text.slice(text.indexOf(mCard[0]) + mCard[0].length)).trim()
+      const idx = text.indexOf(mCard[0])
+      text = (text.slice(0, idx) + text.slice(idx + mCard[0].length)).replace(/\s+/g,' ').trim()
     }
-    // Extract amount if present at end of line (and not yet set)
     const mAmt = text.match(reAmtEnd)
     if (mAmt) {
       if (!pValor) pValor = pa(mAmt[1])
       text = text.slice(0, text.lastIndexOf(mAmt[0])).trim()
     }
-    // Remaining text is description
-    if (text && pCard !== null && !pDesc) pDesc = text
+    // Aceitar descrição mesmo sem cartão detectado (alguns lançamentos não têm nº visível)
+    if (text && !pDesc && pDia) pDesc = text
   }
 
+  // Processa todas as linhas sem exigir seção específica
+  // (a detecção de fatura Nubank já garante que é o documento certo)
   for (const rawLine of lines) {
     const line = rawLine.trim()
     if (!line) continue
-    if (/TRANSAÇÕES|TRANSA[ÇC][ÕO]ES/i.test(line)) { inSection = true; continue }
-    if (!inSection) continue
     if (reSkip.test(line)) continue
 
-    // Amount-only line (right column isolated)
     if (reAmtOnly.test(line)) {
       const mA = line.match(reAmtOnly)
-      if (!pValor) pValor = pa(mA[1])
+      if (!pValor && pDia) pValor = pa(mA[1])
       continue
     }
 
     const mDate = line.match(reDate)
     if (mDate) {
+      // Só emite se a linha de data NÃO contiver ano (para não capturar "10 JUN 2026" dos cabeçalhos)
+      const rest = line.slice(mDate[0].length).trim()
+      if (/^\d{4}\b/.test(rest)) continue  // linha com ano = cabeçalho, ignorar
       flush()
       pDia = mDate[1]; pMes = mDate[2]
-      processText(line.slice(mDate[0].length).trim())
+      processText(rest)
       continue
     }
 
-    if (!pDia) continue  // not in a transaction yet
+    if (!pDia) continue
     processText(line)
   }
   flush()
