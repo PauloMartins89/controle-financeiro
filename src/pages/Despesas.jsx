@@ -452,6 +452,17 @@ export default function Despesas() {
   const [filterCard, setFilterCard] = useState('')
   const [viewMode, setViewMode] = useState('byCard') // 'byCard' | 'list' | 'grid'
   const [collapsedCards, setCollapsedCards] = useState({})
+  const [selectedIds, setSelectedIds] = useState(new Set())
+
+  function toggleSelect(id) { setSelectedIds(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n }) }
+  function selectAll() { setSelectedIds(new Set(filtered.map(e => e.id))) }
+  function clearSelection() { setSelectedIds(new Set()) }
+  async function deleteSelected() {
+    if (!window.confirm(`Deletar ${selectedIds.size} despesa(s)? Essa ação não pode ser desfeita.`)) return
+    for (const id of selectedIds) await deleteExpense(id)
+    setSelectedIds(new Set())
+    toast.success(`${selectedIds.size} despesa(s) deletada(s)`)
+  }
 
   useEffect(() => {
     if (searchParams.get('new')) setShowModal(true)
@@ -604,6 +615,19 @@ export default function Despesas() {
             </button>
           )}
 
+          {/* Bulk select toggle */}
+          <button
+            onClick={() => selectedIds.size > 0 ? clearSelection() : selectAll()}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, background: selectedIds.size > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.04)', border: `1px solid ${selectedIds.size > 0 ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: selectedIds.size > 0 ? '#ef4444' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}
+          >
+            {selectedIds.size > 0 ? `✕ ${selectedIds.size} selecionada${selectedIds.size > 1 ? 's' : ''}` : 'Selecionar'}
+          </button>
+          {selectedIds.size > 0 && (
+            <button onClick={deleteSelected} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#ef4444', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+              🗑 Deletar {selectedIds.size}
+            </button>
+          )}
+
           {/* View toggle */}
           <div style={{ display: 'flex', gap: 2, background: 'var(--bg-secondary)', borderRadius: 9, padding: 3, border: '1px solid var(--border)', marginLeft: 'auto' }}>
             <button onClick={() => setViewMode('byCard')} title="Agrupado por cartão" style={{ width: 30, height: 30, borderRadius: 7, background: viewMode === 'byCard' ? 'rgba(99,102,241,0.2)' : 'transparent', border: viewMode === 'byCard' ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: viewMode === 'byCard' ? '#818cf8' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -679,16 +703,17 @@ export default function Despesas() {
                         const pagador = people.find(p => p.id === exp.pago_por)
                         return (
                           <div key={exp.id} style={{
-                            display: 'grid', gridTemplateColumns: '2.5fr 130px 100px 130px 110px 120px',
+                            display: 'grid', gridTemplateColumns: '32px 2.5fr 130px 100px 130px 110px 120px',
                             padding: '12px 18px',
                             borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none',
                             alignItems: 'center',
-                            background: exp.status === 'pago' ? 'rgba(16,185,129,0.02)' : 'transparent',
+                            background: selectedIds.has(exp.id) ? 'rgba(239,68,68,0.05)' : exp.status === 'pago' ? 'rgba(16,185,129,0.02)' : 'transparent',
                             transition: 'background 0.15s',
                           }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
-                            onMouseLeave={e => e.currentTarget.style.background = exp.status === 'pago' ? 'rgba(16,185,129,0.02)' : 'transparent'}
+                            onMouseEnter={e => { if (!selectedIds.has(exp.id)) e.currentTarget.style.background = 'rgba(255,255,255,0.025)' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = selectedIds.has(exp.id) ? 'rgba(239,68,68,0.05)' : exp.status === 'pago' ? 'rgba(16,185,129,0.02)' : 'transparent' }}
                           >
+                            <input type="checkbox" checked={selectedIds.has(exp.id)} onChange={() => toggleSelect(exp.id)} style={{ width: 14, height: 14, accentColor: '#ef4444', cursor: 'pointer' }} onClick={e => e.stopPropagation()} />
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
                                 {getCategoryIcon(exp.categoria)}
