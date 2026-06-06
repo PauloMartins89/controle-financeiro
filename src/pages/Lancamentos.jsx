@@ -10,6 +10,7 @@ import {
   PlusIcon, DocumentArrowUpIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XCircleIcon, ClockIcon, PencilIcon,
   TrashIcon, XMarkIcon, PhotoIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon,
+  ArrowDownTrayIcon, EyeIcon,
   DocumentTextIcon, TruckIcon, SparklesIcon, ClipboardDocumentListIcon,
   Cog6ToothIcon, PhoneIcon, UserPlusIcon, QrCodeIcon,
   PaperAirplaneIcon, ArrowUturnLeftIcon, WrenchScrewdriverIcon,
@@ -1777,11 +1778,20 @@ export default function Lancamentos() {
   const [inlineSaving, setInlineSaving] = useState(false)
   const [expandedDiario, setExpandedDiario] = useState(new Set())
   const [reprocessingId, setReprocessingId] = useState(null)
+  const [comprovanteMenuId, setComprovanteMenuId] = useState(null)
   const [formTemplates, setFormTemplates] = useState({})
 
   function toggleDiario(id) {
     setExpandedDiario(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
+
+  // Fecha menu de comprovante ao clicar fora
+  useEffect(() => {
+    if (!comprovanteMenuId) return
+    const close = () => setComprovanteMenuId(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [comprovanteMenuId])
 
   async function reprocessarLancamento(l) {
     if (reprocessingId) return
@@ -2785,12 +2795,46 @@ export default function Lancamentos() {
                             )
                           })()}
                           {l.comprovante_url && (
-                            <button title="Ver comprovante" onClick={() => window.open(l.comprovante_url, '_blank')}
-                              style={{ padding: 5, borderRadius: 6, background: 'transparent', border: 'none', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center' }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                              <PhotoIcon style={{ width: 15, height: 15 }} />
-                            </button>
+                            <div style={{ position: 'relative' }}>
+                              <button
+                                title="Ver / Baixar comprovante"
+                                onClick={e => { e.stopPropagation(); setComprovanteMenuId(comprovanteMenuId === l.id ? null : l.id) }}
+                                style={{ padding: 5, borderRadius: 6, background: comprovanteMenuId === l.id ? 'rgba(99,102,241,0.15)' : 'transparent', border: comprovanteMenuId === l.id ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center' }}
+                                onMouseEnter={e => { if (comprovanteMenuId !== l.id) e.currentTarget.style.background = 'rgba(99,102,241,0.1)' }}
+                                onMouseLeave={e => { if (comprovanteMenuId !== l.id) e.currentTarget.style.background = 'transparent' }}>
+                                <PhotoIcon style={{ width: 15, height: 15 }} />
+                              </button>
+                              {comprovanteMenuId === l.id && (
+                                <div
+                                  onClick={e => e.stopPropagation()}
+                                  style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 1000, background: 'var(--bg-card, #1c1c1e)', border: '1px solid var(--border, #2d2d2f)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden', minWidth: 160 }}>
+                                  <button
+                                    onClick={() => { window.open(l.comprovante_url, '_blank'); setComprovanteMenuId(null) }}
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 13, fontWeight: 500 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                                    <EyeIcon style={{ width: 15, height: 15, color: '#818cf8', flexShrink: 0 }} />
+                                    Visualizar
+                                  </button>
+                                  <div style={{ height: 1, background: 'var(--border, #2d2d2f)', margin: '0 10px' }} />
+                                  <button
+                                    onClick={() => {
+                                      const a = document.createElement('a')
+                                      a.href = l.comprovante_url
+                                      a.download = `comprovante_${l.id.slice(0,8)}`
+                                      a.target = '_blank'
+                                      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                                      setComprovanteMenuId(null)
+                                    }}
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 13, fontWeight: 500 }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.1)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                                    <ArrowDownTrayIcon style={{ width: 15, height: 15, color: '#10b981', flexShrink: 0 }} />
+                                    Baixar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           )}
                           {(l.status === 'rascunho') && (
                             <button title="Excluir" onClick={() => handleDelete(l.id)}
