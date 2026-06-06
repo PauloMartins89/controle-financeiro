@@ -53,7 +53,7 @@ const RULES = [
 
   // E-commerce
   { p: /AMAZON(?!\s*PRIME|\s*VIDEO|\s*AWS)/i, name: 'Amazon',            cat: 'Compras',      rateio: 'pessoal' },
-  { p: /MERCADO\s*LIVRE|MELI\s*/i,           name: 'Mercado Livre',      cat: 'Compras',      rateio: 'pessoal' },
+  { p: /MERCADO\s*LIVRE|\bMELI\b/i,           name: 'Mercado Livre',      cat: 'Compras',      rateio: 'pessoal' },
   { p: /SHOPEE/i,                             name: 'Shopee',             cat: 'Compras',      rateio: 'pessoal' },
   { p: /AMERICANAS/i,                         name: 'Americanas',         cat: 'Compras',      rateio: 'pessoal' },
   { p: /MAGAZINE\s*LUIZA|MAGALU/i,           name: 'Magazine Luiza',     cat: 'Compras',      rateio: 'pessoal' },
