@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Header from '../components/Header'
 import Avatar from '../components/Avatar'
@@ -7,11 +7,11 @@ import useStore from '../store/useStore'
 import { formatCurrency, formatDate, getCategoryIcon, CATEGORIAS, TIPOS_DIVISAO, STATUS_OPTIONS } from '../lib/utils'
 
 // Valor "efetivo" mensal de uma despesa.
-// - Lançamentos antigos parcelados (1 linha com valor total + parcelas>1, sem
-//   lote_parcelamento) → divide o valor pelo nº de parcelas.
-// - Lançamentos novos (1 despesa por mês com lote_parcelamento) → usa valor
-//   como está (já é o valor da parcela).
-// - Lançamentos à vista → valor total.
+// - Lan�amentos antigos parcelados (1 linha com valor total + parcelas>1, sem
+//   lote_parcelamento) ? divide o valor pelo n� de parcelas.
+// - Lan�amentos novos (1 despesa por m�s com lote_parcelamento) ? usa valor
+//   como est� (j� � o valor da parcela).
+// - Lan�amentos � vista ? valor total.
 function valorEfetivo(e) {
   if (e.minha_parte && Number(e.minha_parte) > 0) return Number(e.minha_parte)
   if (e.parcelas && e.parcelas > 1 && !e.lote_parcelamento) {
@@ -22,12 +22,12 @@ function valorEfetivo(e) {
 import {
   PencilIcon, TrashIcon, MagnifyingGlassIcon,
   CheckCircleIcon, XMarkIcon, Squares2X2Icon, ListBulletIcon,
-  FunnelIcon, ChevronDownIcon, CreditCardIcon, BanknotesIcon,
-  ArrowUturnLeftIcon, PhotoIcon,
+  FunnelIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon,
+  CreditCardIcon, BanknotesIcon, ArrowUturnLeftIcon, PhotoIcon,
 } from '@heroicons/react/24/outline'
 import { toast } from 'react-hot-toast'
 
-// ─── Comprovante Thumbnail ────────────────────────────────────────────────────
+// --- Comprovante Thumbnail ----------------------------------------------------
 function ComprovanteIcon({ url }) {
   const [open, setOpen] = useState(false)
   if (!url) return null
@@ -60,7 +60,7 @@ function ComprovanteIcon({ url }) {
   )
 }
 
-// ─── NF Details expandível ───────────────────────────────────────────────────
+// --- NF Details expand�vel ---------------------------------------------------
 function NFDetails({ exp }) {
   const [open, setOpen] = useState(false)
   const temDados = exp.cnpj || exp.produto || exp.nfe_url || exp.forma_pagamento || exp.endereco
@@ -84,7 +84,7 @@ function NFDetails({ exp }) {
             <button onClick={() => setOpen(false)} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
               <XMarkIcon style={{ width: 18, height: 18 }} />
             </button>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>📄 Dados da Nota Fiscal</div>
+            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>?? Dados da Nota Fiscal</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, fontFamily: 'monospace' }}>
               {[
                 ['cnpj',            exp.cnpj],
@@ -104,7 +104,7 @@ function NFDetails({ exp }) {
                   <span style={{ color: 'var(--text-secondary)', minWidth: 140, flexShrink: 0 }}>{col}</span>
                   <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>:</span>
                   {col === 'nfe_url' && val && val !== 'null'
-                    ? <a href={val} target="_blank" rel="noopener noreferrer" style={{ color: '#818cf8', wordBreak: 'break-all' }}>{val.length > 40 ? val.slice(0, 40) + '…' : val}</a>
+                    ? <a href={val} target="_blank" rel="noopener noreferrer" style={{ color: '#818cf8', wordBreak: 'break-all' }}>{val.length > 40 ? val.slice(0, 40) + '�' : val}</a>
                     : <span style={{ color: val === 'null' || !val ? 'var(--text-secondary)' : 'var(--text-primary)', opacity: val === 'null' || !val ? 0.4 : 1 }}>{val || 'null'}</span>
                   }
                 </div>
@@ -126,14 +126,22 @@ const EMPTY_FORM = {
   minha_parte: '',
 }
 
-// ─── Expense Modal ────────────────────────────────────────────────────────────
-function ExpenseModal({ expense, onClose, onSave }) {
+// --- Expense Modal ------------------------------------------------------------
+function ExpenseModal({ expense, onClose, onSave, navIndex, navTotal, onPrev, onNext }) {
   const people = useStore(s => s.people)
   const groups = useStore(s => s.groups)
   const ownerId = useStore(s => s.ownerId)
   const owner = people.find(p => p.id === ownerId) || people.find(p => p.is_owner) || people[0]
   const [form, setForm] = useState(expense ? { ...expense, valor: String(expense.valor) } : { ...EMPTY_FORM, pago_por: '', participantes: [] })
   const initDone = useRef(false)
+
+  // Reinicializa form ao navegar para outra despesa
+  useEffect(() => {
+    if (expense) {
+      setForm({ ...expense, valor: String(expense.valor) })
+    }
+  }, [expense?.id])
+
   useEffect(() => {
     if (!expense && ownerId && !initDone.current) {
       initDone.current = true
@@ -159,16 +167,29 @@ function ExpenseModal({ expense, onClose, onSave }) {
       <div className="modal" style={{ maxWidth: 600 }}>
         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: 17, fontWeight: 700 }}>{expense ? 'Editar Despesa' : 'Nova Despesa'}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-            <XMarkIcon style={{ width: 22, height: 22 }} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {navTotal > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={onPrev} disabled={navIndex <= 0} title="Despesa anterior" style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--bg-secondary)', border: '1px solid var(--border)', cursor: navIndex <= 0 ? 'not-allowed' : 'pointer', color: navIndex <= 0 ? 'var(--text-secondary)' : 'var(--text-primary)', opacity: navIndex <= 0 ? 0.35 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ChevronLeftIcon style={{ width: 14, height: 14 }} />
+                </button>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', minWidth: 52, textAlign: 'center' }}>{navIndex + 1}/{navTotal}</span>
+                <button onClick={onNext} disabled={navIndex >= navTotal - 1} title="Pr�xima despesa" style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--bg-secondary)', border: '1px solid var(--border)', cursor: navIndex >= navTotal - 1 ? 'not-allowed' : 'pointer', color: navIndex >= navTotal - 1 ? 'var(--text-secondary)' : 'var(--text-primary)', opacity: navIndex >= navTotal - 1 ? 0.35 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ChevronRightIcon style={{ width: 14, height: 14 }} />
+                </button>
+              </div>
+            )}
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <XMarkIcon style={{ width: 22, height: 22 }} />
+            </button>
+          </div>
         </div>
 
         <div style={{ padding: '20px 24px', display: 'grid', gap: 16 }}>
           {/* Row 1 */}
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
             <div>
-              <label className="label">Descrição *</label>
+              <label className="label">Descri��o *</label>
               <input className="input" placeholder="Ex: Aluguel, Supermercado..." value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
             </div>
             <div>
@@ -183,7 +204,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
               <input
                 className="input"
                 type="number" step="0.01"
-                placeholder={minhaParteSugerida ? `sugestão: ${minhaParteSugerida}` : 'R$ do meu bolso'}
+                placeholder={minhaParteSugerida ? `sugest�o: ${minhaParteSugerida}` : 'R$ do meu bolso'}
                 value={form.minha_parte}
                 onChange={e => setForm(f => ({ ...f, minha_parte: e.target.value }))}
                 style={{ borderColor: form.minha_parte ? 'rgba(99,102,241,0.5)' : undefined }}
@@ -192,7 +213,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
                 <button type="button"
                   onClick={() => setForm(f => ({ ...f, minha_parte: minhaParteSugerida }))}
                   style={{ marginTop: 4, fontSize: 10, color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-                  ↑ usar {formatCurrency(parseFloat(minhaParteSugerida))} (divisão igual)
+                  ? usar {formatCurrency(parseFloat(minhaParteSugerida))} (divis�o igual)
                 </button>
               )}
             </div>
@@ -213,7 +234,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
             <div>
               <label className="label">Grupo</label>
               <select className="input" value={form.grupo_id} onChange={e => setForm(f => ({ ...f, grupo_id: e.target.value }))}>
-                <option value="">— Sem grupo —</option>
+                <option value="">� Sem grupo �</option>
                 {groups.map(g => <option key={g.id} value={g.id}>{g.icone} {g.nome}</option>)}
               </select>
             </div>
@@ -227,12 +248,12 @@ function ExpenseModal({ expense, onClose, onSave }) {
                 {owner && (
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: owner.cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0 }}>{owner.avatar}</div>
                 )}
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{owner?.nome || 'Você'}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: 'rgba(250,204,21,0.15)', color: '#fbbf24', border: '1px solid rgba(250,204,21,0.3)', marginLeft: 'auto' }}>👑 Você</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{owner?.nome || 'Voc�'}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: 'rgba(250,204,21,0.15)', color: '#fbbf24', border: '1px solid rgba(250,204,21,0.3)', marginLeft: 'auto' }}>?? Voc�</span>
               </div>
             </div>
             <div>
-              <label className="label">Tipo de divisão</label>
+              <label className="label">Tipo de divis�o</label>
               <select className="input" value={form.tipo_divisao} onChange={e => setForm(f => ({ ...f, tipo_divisao: e.target.value }))}>
                 {TIPOS_DIVISAO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
@@ -241,7 +262,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
 
           {/* Participantes */}
           <div>
-            <label className="label">Participantes <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: 11 }}>— quem entra no rateio (inclua-se se quiser dividir)</span></label>
+            <label className="label">Participantes <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: 11 }}>� quem entra no rateio (inclua-se se quiser dividir)</span></label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {people.map(p => {
                 const sel = form.participantes.includes(p.id)
@@ -260,11 +281,11 @@ function ExpenseModal({ expense, onClose, onSave }) {
                     }}
                   >
                     <div style={{ width: 20, height: 20, borderRadius: '50%', background: sel ? p.cor : 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'white', flexShrink: 0 }}>
-                      {sel ? '✓' : p.avatar}
+                      {sel ? '?' : p.avatar}
                     </div>
                     {p.nome}
                     {isOwnerPerson && (
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 8, background: 'rgba(250,204,21,0.2)', color: '#fbbf24', border: '1px solid rgba(250,204,21,0.4)' }}>👑</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 8, background: 'rgba(250,204,21,0.2)', color: '#fbbf24', border: '1px solid rgba(250,204,21,0.4)' }}>??</span>
                     )}
                     {sel && form.tipo_divisao === 'igual' && valorNum > 0 && (
                       <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(0,0,0,0.25)', padding: '1px 5px', borderRadius: 6 }}>{formatCurrency(shareIgual)}</span>
@@ -275,7 +296,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
             </div>
             {form.participantes.length > 0 && valorNum > 0 && form.tipo_divisao === 'igual' && (
               <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
-                {form.participantes.length} participante{form.participantes.length > 1 ? 's' : ''} · {formatCurrency(shareIgual)} cada
+                {form.participantes.length} participante{form.participantes.length > 1 ? 's' : ''} � {formatCurrency(shareIgual)} cada
               </div>
             )}
           </div>
@@ -302,7 +323,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="label">Observações</label>
+            <label className="label">Observa��es</label>
             <textarea className="input" rows={2} placeholder="Notas opcionais..." value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} style={{ resize: 'vertical' }} />
           </div>
         </div>
@@ -310,7 +331,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button className="btn-ghost" onClick={onClose}>Cancelar</button>
           <button className="btn-primary" onClick={handleSave}>
-            {expense ? 'Salvar alterações' : 'Adicionar despesa'}
+            {expense ? 'Salvar altera��es' : 'Adicionar despesa'}
           </button>
         </div>
       </div>
@@ -318,7 +339,7 @@ function ExpenseModal({ expense, onClose, onSave }) {
   )
 }
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+// --- Status badge -------------------------------------------------------------
 function StatusBadge({ status }) {
   const map = {
     pendente: { label: 'Pendente', bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
@@ -333,7 +354,7 @@ function StatusBadge({ status }) {
   )
 }
 
-// ─── Expense Card (grid view) ─────────────────────────────────────────────────
+// --- Expense Card (grid view) -------------------------------------------------
 function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) {
   const temMinhaParte = exp.minha_parte && Number(exp.minha_parte) > 0 && Number(exp.minha_parte) !== exp.valor
   return (
@@ -375,9 +396,9 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
           )}
           {exp.parcelas > 1 && (
             <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-              • {exp.lote_parcelamento
-                ? `${exp.parcela_atual}/${exp.parcelas} · total ${formatCurrency(exp.valor_total || exp.valor * exp.parcelas)}`
-                : `${exp.parcelas}x · total ${formatCurrency(exp.valor)}`}
+              � {exp.lote_parcelamento
+                ? `${exp.parcela_atual}/${exp.parcelas} � total ${formatCurrency(exp.valor_total || exp.valor * exp.parcelas)}`
+                : `${exp.parcelas}x � total ${formatCurrency(exp.valor)}`}
             </span>
           )}
         </div>
@@ -385,7 +406,7 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
         {/* Meta */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{formatDate(exp.data)}</span>
-          {exp.conta && exp.conta.includes('••••') && (
+          {exp.conta && exp.conta.includes('����') && (
             <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6, background: 'rgba(130,10,209,0.13)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.25)', whiteSpace: 'nowrap' }}>
               {exp.conta.replace(/^.*Nubank\s*/i, '')}
             </span>
@@ -401,7 +422,7 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
               {grupo.icone} {grupo.nome}
             </span>
           )}
-          {exp.recorrente && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>🔁</span>}
+          {exp.recorrente && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>??</span>}
         </div>
       </div>
 
@@ -439,12 +460,23 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// --- Main Page ----------------------------------------------------------------
 export default function Despesas() {
   const [searchParams] = useSearchParams()
   const { expenses, groups, people, cards, addExpense, updateExpense, deleteExpense, markAsPaid, markAsPending, limparParticipantesZerados } = useStore()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [editingIndex, setEditingIndex] = useState(-1)
+
+  function openEdit(exp) {
+    const idx = filtered.findIndex(e => e.id === exp.id)
+    setEditing(exp); setEditingIndex(idx); setShowModal(true)
+  }
+  function navEdit(delta) {
+    const next = editingIndex + delta
+    if (next < 0 || next >= filtered.length) return
+    setEditing(filtered[next]); setEditingIndex(next)
+  }
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterGroup, setFilterGroup] = useState('')
@@ -458,15 +490,15 @@ export default function Despesas() {
   function selectAll() { setSelectedIds(new Set(filtered.map(e => e.id))) }
   function clearSelection() { setSelectedIds(new Set()) }
   async function deleteSelected() {
-    if (!window.confirm(`Deletar ${selectedIds.size} despesa(s)? Essa ação não pode ser desfeita.`)) return
+    if (!window.confirm(`Deletar ${selectedIds.size} despesa(s)? Essa a��o n�o pode ser desfeita.`)) return
     for (const id of selectedIds) await deleteExpense(id)
     setSelectedIds(new Set())
     toast.success(`${selectedIds.size} despesa(s) deletada(s)`)
   }
   async function deleteFiltered() {
     const cardName = filterCard && filterCard !== '__none__' ? cards.find(c => c.id === filterCard)?.nome : null
-    const label = cardName ? `do cartão "${cardName}"` : 'com os filtros atuais'
-    if (!window.confirm(`Apagar todas as ${filtered.length} despesa(s) ${label}? Essa ação não pode ser desfeita.`)) return
+    const label = cardName ? `do cart�o "${cardName}"` : 'com os filtros atuais'
+    if (!window.confirm(`Apagar todas as ${filtered.length} despesa(s) ${label}? Essa a��o n�o pode ser desfeita.`)) return
     for (const e of filtered) await deleteExpense(e.id)
     setFilterCard('')
     toast.success(`${filtered.length} despesa(s) apagada(s)`)
@@ -488,7 +520,7 @@ export default function Despesas() {
     return true
   }).sort((a, b) => new Date(b.data) - new Date(a.data)), [expenses, search, filterStatus, filterGroup, filterCat, filterCard])
 
-  // ── Agrupamento por cartão (sem misturar despesas) ────────────────────
+  // -- Agrupamento por cart�o (sem misturar despesas) --------------------
   const groupedByCard = useMemo(() => {
     const buckets = new Map() // key = card_id || '__none__'
     for (const e of filtered) {
@@ -496,7 +528,7 @@ export default function Despesas() {
       if (!buckets.has(key)) buckets.set(key, [])
       buckets.get(key).push(e)
     }
-    // Monta lista de cartões na ordem: cartões cadastrados primeiro, depois "Sem cartão"
+    // Monta lista de cart�es na ordem: cart�es cadastrados primeiro, depois "Sem cart�o"
     const result = []
     for (const card of cards) {
       if (buckets.has(card.id)) {
@@ -506,11 +538,11 @@ export default function Despesas() {
     if (buckets.has('__none__')) {
       result.push({ card: null, items: buckets.get('__none__') })
     }
-    // Cartões sem cadastro (caso card_id aponte para cartão removido)
+    // Cart�es sem cadastro (caso card_id aponte para cart�o removido)
     for (const [key, items] of buckets.entries()) {
       if (key === '__none__') continue
       if (!cards.some(c => c.id === key)) {
-        result.push({ card: { id: key, nome: 'Cartão removido', cor: '#94a3b8', bandeira: '—' }, items, orphan: true })
+        result.push({ card: { id: key, nome: 'Cart�o removido', cor: '#94a3b8', bandeira: '�' }, items, orphan: true })
       }
     }
     return result
@@ -524,7 +556,7 @@ export default function Despesas() {
   function handleSave(data) {
     if (editing) updateExpense(editing.id, data)
     else addExpense(data)
-    setShowModal(false); setEditing(null)
+    setShowModal(false); setEditing(null); setEditingIndex(-1)
   }
 
   function clearFilters() {
@@ -537,11 +569,11 @@ export default function Despesas() {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
-      <Header title="Despesas" subtitle="Gerencie todos os lançamentos" action={{ label: 'Nova Despesa', onClick: () => { setEditing(null); setShowModal(true) } }} />
+      <Header title="Despesas" subtitle="Gerencie todos os lan�amentos" action={{ label: 'Nova Despesa', onClick: () => { setEditing(null); setShowModal(true) } }} />
 
       <div style={{ padding: '20px 28px' }}>
 
-        {/* ── Banner de migração: participantes com 0 (legado) ── */}
+        {/* -- Banner de migra��o: participantes com 0 (legado) -- */}
         {(() => {
           const legados = expenses.filter(e =>
             e.tipo_divisao === 'valor_fixo' && e.valores_fixos &&
@@ -550,10 +582,10 @@ export default function Despesas() {
           if (legados === 0) return null
           return (
             <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 18 }}>⚠️</span>
+              <span style={{ fontSize: 18 }}>??</span>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>{legados} despesa(s) com participantes "fantasma"</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Imports antigos incluíam o titular mesmo com R$ 0,00 atribuído. Limpe para corrigir a exibição dos chips.</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Imports antigos inclu�am o titular mesmo com R$ 0,00 atribu�do. Limpe para corrigir a exibi��o dos chips.</div>
               </div>
               <button
                 onClick={() => {
@@ -568,12 +600,12 @@ export default function Despesas() {
           )
         })()}
 
-        {/* ── Summary Stats ── */}
+        {/* -- Summary Stats -- */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 22 }}>
           {[
-            { label: 'Total filtrado', value: filtered.reduce((s, e) => s + valorEfetivo(e), 0), color: '#6366f1', icon: '🧾', count: `${filtered.length} lançamentos` },
-            { label: 'Pendente', value: totalPendente, color: '#f59e0b', icon: '⏳', count: `${countPendente} a pagar` },
-            { label: 'Pago', value: totalPago, color: '#10b981', icon: '✅', count: `${filtered.length - countPendente} quitadas` },
+            { label: 'Total filtrado', value: filtered.reduce((s, e) => s + valorEfetivo(e), 0), color: '#6366f1', icon: '??', count: `${filtered.length} lan�amentos` },
+            { label: 'Pendente', value: totalPendente, color: '#f59e0b', icon: '?', count: `${countPendente} a pagar` },
+            { label: 'Pago', value: totalPago, color: '#10b981', icon: '?', count: `${filtered.length - countPendente} quitadas` },
           ].map(s => (
             <div key={s.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 18px', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: s.color, borderRadius: '14px 14px 0 0' }} />
@@ -589,7 +621,7 @@ export default function Despesas() {
           ))}
         </div>
 
-        {/* ── Filter Bar ── */}
+        {/* -- Filter Bar -- */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 18px', marginBottom: 18, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Search */}
           <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 200 }}>
@@ -612,14 +644,14 @@ export default function Despesas() {
           </select>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <select className="input" value={filterCard} onChange={e => setFilterCard(e.target.value)} style={{ width: 165, paddingTop: 7, paddingBottom: 7 }}>
-              <option value="">Todos os cartões</option>
-              <option value="__none__">💵 Sem cartão</option>
-              {cards.map(c => <option key={c.id} value={c.id}>💳 {c.nome}</option>)}
+              <option value="">Todos os cart�es</option>
+              <option value="__none__">?? Sem cart�o</option>
+              {cards.map(c => <option key={c.id} value={c.id}>?? {c.nome}</option>)}
             </select>
             {filterCard && filterCard !== '__none__' && filtered.length > 0 && (
               <button
                 onClick={deleteFiltered}
-                title={`Apagar todas as ${filtered.length} despesas deste cartão`}
+                title={`Apagar todas as ${filtered.length} despesas deste cart�o`}
                 style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               >
                 <TrashIcon style={{ width: 15, height: 15 }} />
@@ -630,7 +662,7 @@ export default function Despesas() {
           {/* Active filters badge + clear */}
           {activeFilters > 0 && (
             <button onClick={clearFilters} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#818cf8', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
-              <FunnelIcon style={{ width: 13, height: 13 }} /> {activeFilters} filtro{activeFilters > 1 ? 's' : ''} · limpar
+              <FunnelIcon style={{ width: 13, height: 13 }} /> {activeFilters} filtro{activeFilters > 1 ? 's' : ''} � limpar
             </button>
           )}
 
@@ -639,32 +671,32 @@ export default function Despesas() {
             onClick={() => selectedIds.size > 0 ? clearSelection() : selectAll()}
             style={{ display: 'flex', alignItems: 'center', gap: 5, background: selectedIds.size > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.04)', border: `1px solid ${selectedIds.size > 0 ? 'rgba(239,68,68,0.3)' : 'var(--border)'}`, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: selectedIds.size > 0 ? '#ef4444' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}
           >
-            {selectedIds.size > 0 ? `✕ ${selectedIds.size} selecionada${selectedIds.size > 1 ? 's' : ''}` : 'Selecionar'}
+            {selectedIds.size > 0 ? `? ${selectedIds.size} selecionada${selectedIds.size > 1 ? 's' : ''}` : 'Selecionar'}
           </button>
           {selectedIds.size > 0 && (
             <button onClick={deleteSelected} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', color: '#ef4444', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
-              🗑 Deletar {selectedIds.size}
+              ?? Deletar {selectedIds.size}
             </button>
           )}
 
           {/* View toggle */}
           <div style={{ display: 'flex', gap: 2, background: 'var(--bg-secondary)', borderRadius: 9, padding: 3, border: '1px solid var(--border)', marginLeft: 'auto' }}>
-            <button onClick={() => setViewMode('byCard')} title="Agrupado por cartão" style={{ width: 30, height: 30, borderRadius: 7, background: viewMode === 'byCard' ? 'rgba(99,102,241,0.2)' : 'transparent', border: viewMode === 'byCard' ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: viewMode === 'byCard' ? '#818cf8' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={() => setViewMode('byCard')} title="Agrupado por cart�o" style={{ width: 30, height: 30, borderRadius: 7, background: viewMode === 'byCard' ? 'rgba(99,102,241,0.2)' : 'transparent', border: viewMode === 'byCard' ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: viewMode === 'byCard' ? '#818cf8' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CreditCardIcon style={{ width: 16, height: 16 }} />
             </button>
-            <button onClick={() => setViewMode('list')} title="Visualização em lista" style={{ width: 30, height: 30, borderRadius: 7, background: viewMode === 'list' ? 'rgba(99,102,241,0.2)' : 'transparent', border: viewMode === 'list' ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: viewMode === 'list' ? '#818cf8' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={() => setViewMode('list')} title="Visualiza��o em lista" style={{ width: 30, height: 30, borderRadius: 7, background: viewMode === 'list' ? 'rgba(99,102,241,0.2)' : 'transparent', border: viewMode === 'list' ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: viewMode === 'list' ? '#818cf8' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <ListBulletIcon style={{ width: 16, height: 16 }} />
             </button>
-            <button onClick={() => setViewMode('grid')} title="Visualização em grade" style={{ width: 30, height: 30, borderRadius: 7, background: viewMode === 'grid' ? 'rgba(99,102,241,0.2)' : 'transparent', border: viewMode === 'grid' ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: viewMode === 'grid' ? '#818cf8' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={() => setViewMode('grid')} title="Visualiza��o em grade" style={{ width: 30, height: 30, borderRadius: 7, background: viewMode === 'grid' ? 'rgba(99,102,241,0.2)' : 'transparent', border: viewMode === 'grid' ? '1px solid rgba(99,102,241,0.3)' : '1px solid transparent', cursor: 'pointer', color: viewMode === 'grid' ? '#818cf8' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Squares2X2Icon style={{ width: 16, height: 16 }} />
             </button>
           </div>
         </div>
 
-        {/* ── Empty State ── */}
+        {/* -- Empty State -- */}
         {filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 32px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🧾</div>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>??</div>
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>Nenhuma despesa encontrada</div>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
               {activeFilters > 0 || search ? 'Tente ajustar os filtros.' : 'Adicione sua primeira despesa.'}
@@ -675,7 +707,7 @@ export default function Despesas() {
           </div>
         )}
 
-        {/* ── By-Card View (despesas agrupadas por cartão, sem mistura) ── */}
+        {/* -- By-Card View (despesas agrupadas por cart�o, sem mistura) -- */}
         {viewMode === 'byCard' && filtered.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {groupedByCard.map(({ card, items, orphan }) => {
@@ -688,7 +720,7 @@ export default function Despesas() {
               const isCard = !!card && !orphan
               return (
                 <div key={key} className="card" style={{ padding: 0, overflow: 'hidden', borderLeft: `4px solid ${cor}` }}>
-                  {/* Header do cartão */}
+                  {/* Header do cart�o */}
                   <div onClick={() => toggleCardCollapse(key)} style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', background: 'var(--bg-secondary)', borderBottom: collapsed ? 'none' : '1px solid var(--border)' }}>
                     <div style={{ width: 40, height: 40, borderRadius: 10, background: `${cor}22`, border: `1px solid ${cor}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {isCard
@@ -697,14 +729,14 @@ export default function Despesas() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 15, fontWeight: 800 }}>{card ? card.nome : 'Sem cartão / Dinheiro'}</span>
+                        <span style={{ fontSize: 15, fontWeight: 800 }}>{card ? card.nome : 'Sem cart�o / Dinheiro'}</span>
                         {card && card.bandeira && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: `${cor}22`, color: cor, border: `1px solid ${cor}44`, textTransform: 'uppercase' }}>{card.bandeira}</span>}
                         {orphan && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>REMOVIDO</span>}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                         {items.length} despesa{items.length !== 1 ? 's' : ''}
-                        {subtotalPend > 0 && <> · <span style={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(subtotalPend)} pendente</span></>}
-                        {subtotalPago > 0 && <> · <span style={{ color: '#10b981', fontWeight: 600 }}>{formatCurrency(subtotalPago)} pago</span></>}
+                        {subtotalPend > 0 && <> � <span style={{ color: '#f59e0b', fontWeight: 600 }}>{formatCurrency(subtotalPend)} pendente</span></>}
+                        {subtotalPago > 0 && <> � <span style={{ color: '#10b981', fontWeight: 600 }}>{formatCurrency(subtotalPago)} pago</span></>}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -714,7 +746,7 @@ export default function Despesas() {
                     <ChevronDownIcon style={{ width: 18, height: 18, color: 'var(--text-secondary)', transition: 'transform 0.2s', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0)' }} />
                   </div>
 
-                  {/* Despesas do cartão */}
+                  {/* Despesas do cart�o */}
                   {!collapsed && (
                     <>
                       {items.map((exp, i) => {
@@ -741,14 +773,14 @@ export default function Despesas() {
                                 <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.descricao}</div>
                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
                                   <span>{exp.categoria}</span>
-                                  {exp.conta && exp.conta.includes('••••') && (
+                                  {exp.conta && exp.conta.includes('����') && (
                                     <span style={{ fontSize: 10, fontWeight: 700, padding: '0px 5px', borderRadius: 5, background: 'rgba(130,10,209,0.13)', color: '#a855f7', border: '1px solid rgba(130,10,209,0.25)' }}>
                                       {exp.conta.replace(/^.*Nubank\s*/i, '')}
                                     </span>
                                   )}
-                                  {pagador && pagador.nome && pagador.nome.trim().length > 1 && <><span>· por</span><span style={{ fontWeight: 600, color: pagador.cor }}>{pagador.nome.split(' ')[0]}</span></>}
-                                  {exp.parcelas > 1 && <span style={{ color: '#818cf8' }}>· {exp.parcela_atual ?? 1}/{exp.parcelas}x</span>}
-                                  {exp._veiculo && <span style={{ color: '#06b6d4' }}>🚗 {exp._veiculo}</span>}
+                                  {pagador && pagador.nome && pagador.nome.trim().length > 1 && <><span>� por</span><span style={{ fontWeight: 600, color: pagador.cor }}>{pagador.nome.split(' ')[0]}</span></>}
+                                  {exp.parcelas > 1 && <span style={{ color: '#818cf8' }}>� {exp.parcela_atual ?? 1}/{exp.parcelas}x</span>}
+                                  {exp._veiculo && <span style={{ color: '#06b6d4' }}>?? {exp._veiculo}</span>}
                                   <ComprovanteIcon url={exp.comprovante_url} />
                                   <NFDetails exp={exp} />
                                 </div>
@@ -760,7 +792,7 @@ export default function Despesas() {
                                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                                   {exp.lote_parcelamento
                                     ? `${exp.parcela_atual}/${exp.parcelas} de ${formatCurrency(exp.valor_total || exp.valor * exp.parcelas)}`
-                                    : `parc · total ${formatCurrency(exp.valor)}`}
+                                    : `parc � total ${formatCurrency(exp.valor)}`}
                                 </div>
                               )}
                             </div>
@@ -768,7 +800,7 @@ export default function Despesas() {
                             <div>
                               {grupo
                                 ? <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>{grupo.icone} {grupo.nome}</span>
-                                : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>}
+                                : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>�</span>}
                             </div>
                             <div><StatusBadge status={exp.status} /></div>
                             <div style={{ display: 'flex', gap: 5, justifyContent: 'flex-end' }}>
@@ -781,7 +813,7 @@ export default function Despesas() {
                                   <ArrowUturnLeftIcon style={{ width: 14, height: 14 }} />
                                 </button>
                               )}
-                              <button title="Editar" onClick={() => { setEditing(exp); setShowModal(true) }} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 7, padding: '5px', cursor: 'pointer', color: '#818cf8', display: 'flex' }}>
+                              <button title="Editar" onClick={() => { openEdit(exp) }} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 7, padding: '5px', cursor: 'pointer', color: '#818cf8', display: 'flex' }}>
                                 <PencilIcon style={{ width: 14, height: 14 }} />
                               </button>
                               <button title="Excluir" onClick={() => deleteExpense(exp.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, padding: '5px', cursor: 'pointer', color: '#ef4444', display: 'flex' }}>
@@ -791,12 +823,12 @@ export default function Despesas() {
                           </div>
                         )
                       })}
-                      {/* Subtotal do cartão (rodapé) */}
+                      {/* Subtotal do cart�o (rodap�) */}
                       <div style={{ padding: '11px 18px', background: `${cor}10`, borderTop: `1px solid ${cor}33`, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 18, fontSize: 12 }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>{items.length} lançamento{items.length !== 1 ? 's' : ''}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>{items.length} lan�amento{items.length !== 1 ? 's' : ''}</span>
                         <span style={{ color: 'var(--text-secondary)' }}>Pago: <strong style={{ color: '#10b981' }}>{formatCurrency(subtotalPago)}</strong></span>
                         <span style={{ color: 'var(--text-secondary)' }}>Pendente: <strong style={{ color: '#f59e0b' }}>{formatCurrency(subtotalPend)}</strong></span>
-                        <span style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5, fontSize: 11 }}>Total {card ? card.nome : 'sem cartão'}:</span>
+                        <span style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5, fontSize: 11 }}>Total {card ? card.nome : 'sem cart�o'}:</span>
                         <strong style={{ fontSize: 16, color: cor }}>{formatCurrency(subtotal)}</strong>
                       </div>
                     </>
@@ -805,15 +837,15 @@ export default function Despesas() {
               )
             })}
 
-            {/* ── Consolidação final por cartão ── */}
+            {/* -- Consolida��o final por cart�o -- */}
             <div className="card" style={{ padding: 18, border: '1px solid rgba(99,102,241,0.3)', background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.04))' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                 <CreditCardIcon style={{ width: 20, height: 20, color: '#a855f7' }} />
-                <h3 style={{ fontSize: 15, fontWeight: 800 }}>Consolidação por Cartão</h3>
+                <h3 style={{ fontSize: 15, fontWeight: 800 }}>Consolida��o por Cart�o</h3>
               </div>
               <div style={{ display: 'grid', gap: 6 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 80px 1fr 1fr 1fr', padding: '8px 12px', fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: 0.5 }}>
-                  <span>Cartão</span>
+                  <span>Cart�o</span>
                   <span style={{ textAlign: 'center' }}>Qtd</span>
                   <span style={{ textAlign: 'right' }}>Pago</span>
                   <span style={{ textAlign: 'right' }}>Pendente</span>
@@ -833,7 +865,7 @@ export default function Despesas() {
                           {card ? <CreditCardIcon style={{ width: 14, height: 14, color: cor }} /> : <BanknotesIcon style={{ width: 14, height: 14, color: cor }} />}
                         </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700 }}>{card ? card.nome : 'Sem cartão / Dinheiro'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700 }}>{card ? card.nome : 'Sem cart�o / Dinheiro'}</div>
                           <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{pct.toFixed(1)}% do total</div>
                         </div>
                       </div>
@@ -857,7 +889,7 @@ export default function Despesas() {
           </div>
         )}
 
-        {/* ── Grid View ── */}
+        {/* -- Grid View -- */}
         {viewMode === 'grid' && filtered.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
             {filtered.map(exp => {
@@ -866,7 +898,7 @@ export default function Despesas() {
               return (
                 <ExpenseCard
                   key={exp.id} exp={exp} grupo={grupo} pagador={pagador}
-                  onEdit={() => { setEditing(exp); setShowModal(true) }}
+                  onEdit={() => { openEdit(exp) }}
                   onDelete={() => deleteExpense(exp.id)}
                   onPay={() => markAsPaid(exp.id)}
                   onUnpay={() => markAsPending(exp.id)}
@@ -876,12 +908,12 @@ export default function Despesas() {
           </div>
         )}
 
-        {/* ── List View ── */}
+        {/* -- List View -- */}
         {viewMode === 'list' && filtered.length > 0 && (
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             {/* Table header */}
             <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 130px 100px 130px 120px 110px 120px', padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
-              {['Descrição','Valor','Data','Categoria','Grupo','Status','Ações'].map(h => (
+              {['Descri��o','Valor','Data','Categoria','Grupo','Status','A��es'].map(h => (
                 <span key={h} style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</span>
               ))}
             </div>
@@ -910,8 +942,8 @@ export default function Despesas() {
                       <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exp.descricao}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
                         {pagador && <><span>por</span><span style={{ fontWeight: 600, color: pagador.cor }}>{pagador.nome.split(' ')[0]}</span></>}
-                        {exp.parcelas > 1 && <span style={{ color: '#818cf8' }}>• {exp.parcela_atual ?? 1}/{exp.parcelas}x</span>}
-                        {exp.recorrente && <span>🔁</span>}
+                        {exp.parcelas > 1 && <span style={{ color: '#818cf8' }}>� {exp.parcela_atual ?? 1}/{exp.parcelas}x</span>}
+                        {exp.recorrente && <span>??</span>}
                         <ComprovanteIcon url={exp.comprovante_url} />
                         <NFDetails exp={exp} />
                       </div>
@@ -927,7 +959,7 @@ export default function Despesas() {
                       <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
                         {exp.lote_parcelamento
                           ? `${exp.parcela_atual}/${exp.parcelas} de ${formatCurrency(exp.valor_total || exp.valor * exp.parcelas)}`
-                          : `parc · total ${formatCurrency(exp.valor)}`}
+                          : `parc � total ${formatCurrency(exp.valor)}`}
                       </div>
                     )}
                   </div>
@@ -945,7 +977,7 @@ export default function Despesas() {
                   <div>
                     {grupo
                       ? <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>{grupo.icone} {grupo.nome}</span>
-                      : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>}
+                      : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>�</span>}
                   </div>
 
                   {/* Status */}
@@ -968,7 +1000,7 @@ export default function Despesas() {
                         <ArrowUturnLeftIcon style={{ width: 15, height: 15 }} />
                       </button>
                     )}
-                    <button title="Editar" onClick={() => { setEditing(exp); setShowModal(true) }} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 7, padding: '6px', cursor: 'pointer', color: '#818cf8', display: 'flex', transition: 'background 0.15s' }}
+                    <button title="Editar" onClick={() => { openEdit(exp) }} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 7, padding: '6px', cursor: 'pointer', color: '#818cf8', display: 'flex', transition: 'background 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.2)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
                     >
@@ -987,7 +1019,7 @@ export default function Despesas() {
           </div>
         )}
 
-        {/* ── Footer count ── */}
+        {/* -- Footer count -- */}
         {filtered.length > 0 && (
           <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: 'var(--text-secondary)' }}>
             <span>{filtered.length} registro{filtered.length !== 1 ? 's' : ''}</span>
@@ -1001,7 +1033,15 @@ export default function Despesas() {
       </div>
 
       {showModal && (
-        <ExpenseModal expense={editing} onClose={() => { setShowModal(false); setEditing(null) }} onSave={handleSave} />
+        <ExpenseModal
+          expense={editing}
+          onClose={() => { setShowModal(false); setEditing(null); setEditingIndex(-1) }}
+          onSave={handleSave}
+          navIndex={editingIndex}
+          navTotal={editing ? filtered.length : 0}
+          onPrev={() => navEdit(-1)}
+          onNext={() => navEdit(1)}
+        />
       )}
     </div>
   )
