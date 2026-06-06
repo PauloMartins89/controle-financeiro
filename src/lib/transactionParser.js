@@ -505,7 +505,8 @@ function parseNubankFatura(lines) {
     if (!line) continue
 
     // Detectar início de seção de faturas futuras → parar completamente
-    if (reStop.test(line)) { flush(); stopped = true }
+    // Só para se já coletou transações (evita parar no resumo do topo da fatura)
+    if (reStop.test(line) && txns.length > 0) { flush(); stopped = true }
     if (stopped) continue
 
     if (reSkip.test(line)) continue
