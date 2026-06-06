@@ -495,9 +495,19 @@ function parseNubankFatura(lines) {
     if (text && !pDesc && pDia) pDesc = text
   }
 
+  // Marcador de parada: ao entrar em "Próximas faturas" ou seções futuras, para de importar
+  const reStop = /próximas?\s+fatura|proximas?\s+fatura|parcelamentos?\s+futuros?|lançamentos?\s+futuros?|futuras?\s+cobran/i
+
+  let stopped = false
+
   for (const rawLine of lines) {
     const line = rawLine.trim()
     if (!line) continue
+
+    // Detectar início de seção de faturas futuras → parar completamente
+    if (reStop.test(line)) { flush(); stopped = true }
+    if (stopped) continue
+
     if (reSkip.test(line)) continue
 
     // Linha apenas com valor monetário (coluna direita do PDF)
@@ -524,7 +534,7 @@ function parseNubankFatura(lines) {
     }
     processText(line)
   }
-  flush()
+  if (!stopped) flush()
 
   return txns.length > 0 ? txns : null
 }
