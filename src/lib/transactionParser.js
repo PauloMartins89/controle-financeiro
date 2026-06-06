@@ -441,7 +441,9 @@ function parseNubankFatura(lines) {
   const reAmtEnd  = /R\$\s*((?:\d{1,3}\.)*\d{1,3},\d{2})\s*$/i
   const reAmtOnly = /^R\$\s*((?:\d{1,3}\.)*\d{1,3},\d{2})\s*$/i
   // Linhas a ignorar: cabeçalhos, rodapés, créditos/pagamentos da fatura
-  const reSkip = /^(CAMILA|FATURA\s|EMISS|RESUMO|PROX|PRÓX|LIMIT|IOF\s+de|IOF\s*"|Recarga\s+de|Convers|USD\s|Encargo|Saldo\s|Nu\s+Pagamento|CNPJ|SAC\s|Ouvidoria|Juros|Pagamento\s+recebido|Pagamento\s+da|Pagamento\s+m|Parcelamento\s+d|Composi|Nunca|Lembre|Valor\s+m|Multa|Mora\s|Total\s+da|Cr[eé]dito|DE\s+\d)/i
+  const reSkip = /^(CAMILA|FATURA\s|EMISS|RESUMO|PROX|PRÓX|LIMIT|\bIOF\b|IOF\s|Recarga\s+de|Convers|USD\s|Encargo|Ajuste|Retroativo|Estorno\s+IOF|Saldo\s|Nu\s+Pagamento|CNPJ|SAC\s|Ouvidoria|Juros|Pagamento\s+recebido|Pagamento\s+da\s+fatura|Pagamento\s+em\s|Pagamento\s+m|Parcelamento\s+d|Composi|Nunca|Lembre|Valor\s+m|Multa|Mora\s|Total\s+da|Total\s+em\s|Cr[eé]dito\s+em\s|DE\s+\d)/i
+  // Filtro adicional: linhas que CONTÊM IOF ou retroativo em qualquer posição
+  const reSkipContains = /\bIOF\b|retroativo/i
 
   // ── Pré-extração: todos os números de cartão distintos no PDF
   // Garante que mesmo se a detecção por linha falhar, temos fallback
@@ -509,7 +511,7 @@ function parseNubankFatura(lines) {
     if (reStop.test(line) && txns.length > 0) { flush(); stopped = true }
     if (stopped) continue
 
-    if (reSkip.test(line)) continue
+    if (reSkip.test(line) || reSkipContains.test(line)) continue
 
     // Linha apenas com valor monetário (coluna direita do PDF)
     if (reAmtOnly.test(line)) {
