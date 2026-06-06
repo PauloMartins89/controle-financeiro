@@ -1779,6 +1779,7 @@ export default function Lancamentos() {
   const [expandedDiario, setExpandedDiario] = useState(new Set())
   const [reprocessingId, setReprocessingId] = useState(null)
   const [comprovanteMenuId, setComprovanteMenuId] = useState(null)
+  const [comprovanteViewer, setComprovanteViewer] = useState(null) // { url, isPdf }
   const [formTemplates, setFormTemplates] = useState({})
 
   function toggleDiario(id) {
@@ -2809,7 +2810,12 @@ export default function Lancamentos() {
                                   onClick={e => e.stopPropagation()}
                                   style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 1000, background: 'var(--bg-card, #1c1c1e)', border: '1px solid var(--border, #2d2d2f)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden', minWidth: 160 }}>
                                   <button
-                                    onClick={() => { window.open(l.comprovante_url, '_blank'); setComprovanteMenuId(null) }}
+                                    onClick={() => {
+                                      const url = l.comprovante_url
+                                      const isPdf = url.toLowerCase().includes('.pdf') || url.toLowerCase().includes('application/pdf')
+                                      setComprovanteViewer({ url, isPdf })
+                                      setComprovanteMenuId(null)
+                                    }}
                                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 13, fontWeight: 500 }}
                                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'none'}>
@@ -2818,12 +2824,18 @@ export default function Lancamentos() {
                                   </button>
                                   <div style={{ height: 1, background: 'var(--border, #2d2d2f)', margin: '0 10px' }} />
                                   <button
-                                    onClick={() => {
-                                      const a = document.createElement('a')
-                                      a.href = l.comprovante_url
-                                      a.download = `comprovante_${l.id.slice(0,8)}`
-                                      a.target = '_blank'
-                                      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                                    onClick={async () => {
+                                      try {
+                                        const res = await fetch(l.comprovante_url)
+                                        const blob = await res.blob()
+                                        const blobUrl = URL.createObjectURL(blob)
+                                        const a = document.createElement('a')
+                                        a.href = blobUrl
+                                        a.download = `comprovante_${l.id.slice(0,8)}`
+                                        document.body.appendChild(a); a.click()
+                                        document.body.removeChild(a)
+                                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+                                      } catch { window.open(l.comprovante_url, '_blank') }
                                       setComprovanteMenuId(null)
                                     }}
                                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 13, fontWeight: 500 }}
@@ -3173,6 +3185,47 @@ export default function Lancamentos() {
           </div>
         )
       })()}
+
+      {/* Modal: Visualizador de Comprovante */}
+      {comprovanteViewer && (
+        <div
+          onClick={() => setComprovanteViewer(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.88)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: '92vw', maxHeight: '90vh', width: comprovanteViewer.isPdf ? '900px' : 'auto', display: 'flex', flexDirection: 'column', borderRadius: 12, overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}>
+            {/* Header */}
+            <div style={{ background: '#1c1c1e', borderBottom: '1px solid #2d2d2f', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#e5e7eb' }}>Comprovante</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(comprovanteViewer.url)
+                      const blob = await res.blob()
+                      const blobUrl = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = blobUrl
+                      a.download = 'comprovante'
+                      document.body.appendChild(a); a.click()
+                      document.body.removeChild(a)
+                      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+                    } catch { window.open(comprovanteViewer.url, '_blank') }
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 7, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                  <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Baixar
+                </button>
+                <button onClick={() => setComprovanteViewer(null)} style={{ padding: 5, borderRadius: 7, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center' }}>
+                  <XMarkIcon style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+            </div>
+            {/* Conteúdo */}
+            {comprovanteViewer.isPdf
+              ? <iframe src={comprovanteViewer.url} title="Comprovante PDF" style={{ width: '100%', height: '80vh', border: 'none', background: '#fff' }} />
+              : <img src={comprovanteViewer.url} alt="Comprovante" style={{ maxWidth: '90vw', maxHeight: '80vh', objectFit: 'contain', display: 'block', background: '#111' }} />
+            }
+          </div>
+        </div>
+      )}
     </div>
   )
 }
