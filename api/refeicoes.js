@@ -668,12 +668,18 @@ export default async function handler(req, res) {
       .select('*, refei_restaurantes(nome, telefone_wa, confirma_pedido)')
       .eq('id', solicitacaoId).maybeSingle()
     if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
-    if (sol.status !== 'consolidado') return res.status(409).json({ error: 'Pedido precisa estar consolidado' })
+    if (!['aprovado', 'consolidado'].includes(sol.status)) return res.status(409).json({ error: 'Pedido precisa estar aprovado ou consolidado' })
     const now = new Date().toISOString()
     const { data: itens } = await db.from('refei_itens').select('*').eq('solicitacao_id', sol.id).order('colaborador_nome')
     const rest = sol.refei_restaurantes
     const precisaConfirmar = !!rest?.confirma_pedido
     console.log(`[refeicoes] enviar_restaurante | sol=${solicitacaoId} | rest=${rest?.nome} | confirma_pedido=${rest?.confirma_pedido} | precisaConfirmar=${precisaConfirmar} | telefone_wa=${rest?.telefone_wa}`)
+
+    // Auto-consolida se ainda estava em aprovado
+    if (sol.status === 'aprovado') {
+      await db.from('refei_solicitacoes').update({ status: 'consolidado', consolidado_em: now }).eq('id', sol.id)
+      await logEvento(db, { solicitacaoId: sol.id, tipo: 'consolidado', descricao: 'Pedido consolidado automaticamente antes do envio', ator: 'Sistema', atorTipo: 'sistema' })
+    }
 
     // Se restaurante não requer confirmação, já avança para confirmado_restaurante
     const novoStatus = precisaConfirmar ? 'enviado_restaurante' : 'confirmado_restaurante'

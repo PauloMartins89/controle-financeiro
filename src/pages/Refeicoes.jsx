@@ -979,15 +979,9 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
       </div>
     )
 
-    if (sol.status === 'aprovado') return (
-      <button onClick={() => execAcao('consolidar')} disabled={saving} style={{ ...btnBase, background: '#6366f1', color: '#fff' }}>
-        ?? Consolidar Pedido
-      </button>
-    )
-
-    if (sol.status === 'consolidado') return (
+    if (['aprovado', 'consolidado'].includes(sol.status)) return (
       <button onClick={() => execAcao('enviar_restaurante')} disabled={saving} style={{ ...btnBase, background: '#8b5cf6', color: '#fff' }}>
-        ?? Marcar como Enviado ao Restaurante
+        🏪 Enviar ao Restaurante
       </button>
     )
 
