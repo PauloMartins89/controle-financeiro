@@ -133,6 +133,8 @@ const navGroups = [
       { to: '/lider/epi/solicitacoes',        icon: ShieldCheckIcon,           label: 'Solicitações EPI',    moduleKey: 'smartlider' },
       { to: '/lider/cadastros/epis',          icon: ShieldCheckIcon,           label: 'Catálogo EPIs',       moduleKey: 'smartlider' },
       { to: '/lider/epc/catalogo',            icon: WrenchScrewdriverIcon,     label: 'Catálogo EPCs',       moduleKey: 'smartlider' },
+      { divider: true,                        label: '── Segurança',                                                             moduleKey: 'smartlider' },
+      { to: '/lider/cadastros/dds',           icon: DocumentTextIcon,          label: 'Temas de DDS',        moduleKey: 'smartlider' },
       { divider: true,                        label: '── Admin',                                                                moduleKey: 'smartlider' },
       { to: '/lider/admin',                   icon: Cog6ToothIcon,             label: 'Usuários App',        moduleKey: 'smartlider', empresaAdminOnly: true },
     ],

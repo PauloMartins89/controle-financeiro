@@ -55,6 +55,7 @@ import LiderCadastroMaquinas from './pages/LiderCadastroMaquinas'
 import LiderCadastroImplementos from './pages/LiderCadastroImplementos'
 import LiderCadastroProdutos from './pages/LiderCadastroProdutos'
 import LiderCadastroEpis from './pages/LiderCadastroEpis'
+import LiderCadastroDDS from './pages/LiderCadastroDDS'
 import LiderCadastroLideres from './pages/LiderCadastroLideres'
 import LiderOcorrencias from './pages/LiderOcorrencias'
 import LiderDashboard from './pages/LiderDashboard'
@@ -615,6 +616,7 @@ export default function App() {
                   <Route path="/lider/cadastros/implementos" element={<LiderCadastroImplementos />} />
                   <Route path="/lider/cadastros/produtos" element={<LiderCadastroProdutos />} />
                   <Route path="/lider/cadastros/epis" element={<LiderCadastroEpis />} />
+                  <Route path="/lider/cadastros/dds" element={<LiderCadastroDDS />} />
                   <Route path="/lider/cadastros/lideres" element={<LiderCadastroLideres />} />
                   <Route path="/lider/ocorrencias" element={<LiderOcorrencias />} />
                   <Route path="/manutencao" element={<Navigate to="/manutencao/dashboard" replace />} />
