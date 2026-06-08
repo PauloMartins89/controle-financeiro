@@ -94,10 +94,10 @@ export default function LiderCadastroDDS() {
       setUploading(true)
       const ext  = imageFile.name.split('.').pop()
       const path = `dds-temas/${workspaceId}/${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('smartlider').upload(path, imageFile, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('maquinas').upload(path, imageFile, { upsert: true })
       setUploading(false)
       if (upErr) { toast.error('Erro ao enviar imagem: ' + upErr.message); setSaving(false); return }
-      const { data: { publicUrl } } = supabase.storage.from('smartlider').getPublicUrl(path)
+      const { data: { publicUrl } } = supabase.storage.from('maquinas').getPublicUrl(path)
       imagemUrl = publicUrl
     }
 
