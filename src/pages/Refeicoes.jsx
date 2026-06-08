@@ -985,7 +985,7 @@ function DetailModal({ sol, onClose, onUpdated, useFlowEngine, userId, workspace
       </button>
     )
 
-    if (['enviado_restaurante', 'em_acompanhamento'].includes(sol.status)) return (
+    if (['enviado_restaurante', 'confirmado_restaurante', 'em_acompanhamento'].includes(sol.status)) return (
       <button onClick={() => execAcao('registrar_entrega')} disabled={saving} style={{ ...btnBase, background: '#10b981', color: '#fff' }}>
         ?? Registrar Entrega
       </button>

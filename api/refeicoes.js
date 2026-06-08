@@ -664,14 +664,14 @@ export default async function handler(req, res) {
   if (req.method === 'POST' && action === 'enviar_restaurante') {
     const { solicitacaoId, userId } = req.body || {}
     if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
-    const { data: sol } = await db.from('refei_solicitacoes')
-      .select('*, refei_restaurantes(nome, telefone_wa, confirma_pedido)')
-      .eq('id', solicitacaoId).maybeSingle()
+    const { data: sol } = await db.from('refei_solicitacoes').select('*').eq('id', solicitacaoId).maybeSingle()
     if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
     if (!['aprovado', 'consolidado'].includes(sol.status)) return res.status(409).json({ error: 'Pedido precisa estar aprovado ou consolidado' })
     const now = new Date().toISOString()
-    const { data: itens } = await db.from('refei_itens').select('*').eq('solicitacao_id', sol.id).order('colaborador_nome')
-    const rest = sol.refei_restaurantes
+    const [{ data: itens }, { data: rest }] = await Promise.all([
+      db.from('refei_itens').select('*').eq('solicitacao_id', sol.id).order('colaborador_nome'),
+      db.from('refei_restaurantes').select('nome, telefone_wa, confirma_pedido').eq('id', sol.restaurante_id).maybeSingle(),
+    ])
     const precisaConfirmar = !!rest?.confirma_pedido
     console.log(`[refeicoes] enviar_restaurante | sol=${solicitacaoId} | rest=${rest?.nome} | confirma_pedido=${rest?.confirma_pedido} | precisaConfirmar=${precisaConfirmar} | telefone_wa=${rest?.telefone_wa}`)
 
@@ -760,7 +760,7 @@ export default async function handler(req, res) {
     if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
     const { data: sol } = await db.from('refei_solicitacoes').select('*').eq('id', solicitacaoId).maybeSingle()
     if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
-    if (!['enviado_restaurante', 'em_acompanhamento'].includes(sol.status)) return res.status(409).json({ error: 'Status inválido para registrar entrega' })
+    if (!['enviado_restaurante', 'confirmado_restaurante', 'em_acompanhamento'].includes(sol.status)) return res.status(409).json({ error: 'Status inválido para registrar entrega' })
     const now = new Date().toISOString()
     await db.from('refei_solicitacoes').update({ status: 'entregue', entregue_em: now }).eq('id', sol.id)
     await logEvento(db, { solicitacaoId: sol.id, tipo: 'entrega_registrada', descricao: 'Entrega registrada pelo operador', ator: 'Operador', atorTipo: 'admin' })
