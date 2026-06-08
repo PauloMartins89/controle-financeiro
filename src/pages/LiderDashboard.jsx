@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   CalendarDaysIcon, UsersIcon, WrenchScrewdriverIcon,
   ShieldCheckIcon, ArrowPathIcon, ClockIcon, CheckCircleIcon,
-  ArrowTrendingUpIcon, ChartBarIcon,
+  ArrowTrendingUpIcon, ChartBarIcon, MapIcon, ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 
 function fmtData(iso) {
@@ -94,6 +94,8 @@ export default function LiderDashboard() {
     { label: 'Avaliações',      sub: 'Avaliação das equipes',                         path: '/lider/apontamentos',   Icon: CheckCircleIcon,  color: '#ec4899' },
     { label: 'Aferição',        sub: 'Vazão e volume calda',                          path: '/lider/apontamentos',   Icon: ChartBarIcon,     color: '#f97316' },
     { label: 'Controle EPI',    sub: 'Entrega e validade de EPIs',                    path: '/lider/epi/solicitacoes', Icon: ShieldCheckIcon, color: '#ef4444' },
+    { label: 'Mapa de Campo',   sub: 'Mapa de apontamentos e localização',             path: '/mapa-maquina',         Icon: MapIcon,          color: '#14b8a6' },
+    { label: 'Ocorrências',     sub: 'Registros de ocorrências no campo',              path: '/lider/ocorrencias',    Icon: ExclamationTriangleIcon, color: '#f97316' },
     { label: 'Cadastros',       sub: 'Colaboradores, máquinas, produtos e EPIs',      path: '/lider/cadastros',      Icon: UsersIcon,        color: '#64748b' },
   ]
 

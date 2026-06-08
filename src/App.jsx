@@ -58,6 +58,7 @@ import LiderCadastroEpis from './pages/LiderCadastroEpis'
 import LiderCadastroDDS from './pages/LiderCadastroDDS'
 import LiderCadastroLideres from './pages/LiderCadastroLideres'
 import LiderOcorrencias from './pages/LiderOcorrencias'
+import LiderDDS from './pages/LiderDDS'
 import LiderDashboard from './pages/LiderDashboard'
 import SmartLiderAdmin from './pages/SmartLiderAdmin'
 import LiderTurnos from './pages/LiderTurnos'
@@ -619,6 +620,7 @@ export default function App() {
                   <Route path="/lider/cadastros/dds" element={<LiderCadastroDDS />} />
                   <Route path="/lider/cadastros/lideres" element={<LiderCadastroLideres />} />
                   <Route path="/lider/ocorrencias" element={<LiderOcorrencias />} />
+                  <Route path="/lider/dds" element={<LiderDDS />} />
                   <Route path="/manutencao" element={<Navigate to="/manutencao/dashboard" replace />} />
                   <Route path="/manutencao/dashboard" element={<ManutencaoDashboard />} />
                   <Route path="/manutencao/operacoes/os" element={<ManutencaoOS />} />
