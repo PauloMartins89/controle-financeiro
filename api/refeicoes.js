@@ -665,34 +665,53 @@ export default async function handler(req, res) {
     const { solicitacaoId, userId } = req.body || {}
     if (!solicitacaoId) return res.status(400).json({ error: 'solicitacaoId obrigatório' })
     const { data: sol } = await db.from('refei_solicitacoes')
-      .select('*, refei_restaurantes(nome, telefone_wa)')
+      .select('*, refei_restaurantes(nome, telefone_wa, confirma_pedido)')
       .eq('id', solicitacaoId).maybeSingle()
     if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
     if (sol.status !== 'consolidado') return res.status(409).json({ error: 'Pedido precisa estar consolidado' })
     const now = new Date().toISOString()
     const { data: itens } = await db.from('refei_itens').select('*').eq('solicitacao_id', sol.id).order('colaborador_nome')
-    await db.from('refei_solicitacoes').update({ status: 'enviado_restaurante', env_restaurante_em: now }).eq('id', sol.id)
-    await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_restaurante', descricao: `Pedido enviado ao restaurante ${sol.refei_restaurantes?.nome || ''}`.trim(), ator: 'Sistema', atorTipo: 'sistema', dados: { restaurante: sol.refei_restaurantes?.nome } })
+    const rest = sol.refei_restaurantes
+    const precisaConfirmar = !!rest?.confirma_pedido
+
+    // Se restaurante não requer confirmação, já avança para confirmado_restaurante
+    const novoStatus = precisaConfirmar ? 'enviado_restaurante' : 'confirmado_restaurante'
+    const updatePayload = precisaConfirmar
+      ? { status: 'enviado_restaurante',      env_restaurante_em:  now }
+      : { status: 'confirmado_restaurante',   env_restaurante_em:  now, confirmado_rest_em: now }
+
+    await db.from('refei_solicitacoes').update(updatePayload).eq('id', sol.id)
+    await logEvento(db, { solicitacaoId: sol.id, tipo: 'enviado_restaurante', descricao: `Pedido enviado ao restaurante ${rest?.nome || ''}`.trim(), ator: 'Sistema', atorTipo: 'sistema', dados: { restaurante: rest?.nome } })
+
+    if (!precisaConfirmar) {
+      await logEvento(db, { solicitacaoId: sol.id, tipo: 'confirmado_restaurante', descricao: 'Auto-confirmado — restaurante não requer confirmação via link', ator: 'Sistema', atorTipo: 'sistema' })
+    }
+
     // Notifica restaurante via WA
-    if (sol.refei_restaurantes?.telefone_wa) {
+    if (rest?.telefone_wa) {
       const qtdRef  = (itens || []).filter(i => i.refeicao).length
       const qtdCafe = (itens || []).filter(i => i.cafe).length
       const nomes   = (itens || []).map(i => `• ${i.colaborador_nome}${i.refeicao ? ' 🍽️' : ''}${i.cafe ? ' ☕' : ''}`)
       const confirmarUrl = `${APP_URL}/confirmar-restaurante/${sol.token_restaurante}`
       const msg = [
-        `🏪 *Pedido Confirmado: ${sol.ticket || sol.numero_pedido}*`,
+        `🏪 *Pedido para Preparo: ${sol.ticket || sol.numero_pedido}*`,
         `📅 Data: ${fmtData(sol.data_refeicao)}`,
         `─────────────────────`,
         ...nomes,
         `─────────────────────`,
         `🍽️ ${qtdRef} refeição(ões)  ☕ ${qtdCafe} café(s)`,
         `*Total: ${fmtBRL(sol.valor_total)}*`,
-        ``,
-        `✅ Confirme o recebimento: ${confirmarUrl}`,
-      ].join('\n')
-      await sendWA(sol.refei_restaurantes.telefone_wa, msg)
+        precisaConfirmar ? `` : null,
+        precisaConfirmar ? `✅ Confirme o recebimento: ${confirmarUrl}` : null,
+      ].filter(v => v !== null).join('\n')
+      await sendWA(rest.telefone_wa, msg)
     }
-    return res.status(200).json({ ok: true, mensagem: 'Pedido enviado ao restaurante! 🏪' })
+
+    return res.status(200).json({
+      ok: true,
+      mensagem: precisaConfirmar ? 'Pedido enviado ao restaurante! 🏪' : 'Pedido enviado e auto-confirmado! 🏪✅',
+      status: novoStatus,
+    })
   }
 
   // ── POST: confirmar recebimento pelo restaurante (token_restaurante) ─────────
