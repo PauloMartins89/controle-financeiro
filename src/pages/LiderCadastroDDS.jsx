@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
@@ -17,15 +17,19 @@ const CAT_COLOR = {
 
 export default function LiderCadastroDDS() {
   const { workspaceId } = useStore()
-  const [records,   setRecords]   = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [saving,    setSaving]    = useState(false)
-  const [busca,     setBusca]     = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [editId,    setEditId]    = useState(null)
-  const [form,      setForm]      = useState({
+  const [records,    setRecords]    = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [saving,     setSaving]     = useState(false)
+  const [uploading,  setUploading]  = useState(false)
+  const [busca,      setBusca]      = useState('')
+  const [showModal,  setShowModal]  = useState(false)
+  const [editId,     setEditId]     = useState(null)
+  const [form,       setForm]       = useState({
     titulo: '', categoria: 'Segurança', conteudo: '', imagem_url: '', ativo: true,
   })
+  const [imageFile,    setImageFile]    = useState(null)   // File selecionado
+  const [imagePreview, setImagePreview] = useState(null)   // URL de preview local
+  const fileInputRef = useRef(null)
 
   useEffect(() => { if (workspaceId) load() }, [workspaceId]) // eslint-disable-line
 
@@ -44,6 +48,8 @@ export default function LiderCadastroDDS() {
   function openNew() {
     setEditId(null)
     setForm({ titulo: '', categoria: 'Segurança', conteudo: '', imagem_url: '', ativo: true })
+    setImageFile(null)
+    setImagePreview(null)
     setShowModal(true)
   }
 
@@ -56,18 +62,51 @@ export default function LiderCadastroDDS() {
       imagem_url: r.imagem_url ?? '',
       ativo:      r.ativo,
     })
+    setImageFile(null)
+    setImagePreview(r.imagem_url || null)
     setShowModal(true)
+  }
+
+  function onFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { toast.error('Selecione uma imagem válida'); return }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Imagem muito grande (máx. 5 MB)'); return }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  function removeImage() {
+    setImageFile(null)
+    setImagePreview(null)
+    setForm(p => ({ ...p, imagem_url: '' }))
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   async function save() {
     if (!form.titulo.trim()) { toast.error('Título obrigatório'); return }
     setSaving(true)
+
+    let imagemUrl = form.imagem_url || null
+
+    // Upload da imagem se um novo arquivo foi selecionado
+    if (imageFile) {
+      setUploading(true)
+      const ext  = imageFile.name.split('.').pop()
+      const path = `dds-temas/${workspaceId}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('smartlider').upload(path, imageFile, { upsert: true })
+      setUploading(false)
+      if (upErr) { toast.error('Erro ao enviar imagem: ' + upErr.message); setSaving(false); return }
+      const { data: { publicUrl } } = supabase.storage.from('smartlider').getPublicUrl(path)
+      imagemUrl = publicUrl
+    }
+
     const payload = {
-      titulo:      form.titulo.trim(),
-      categoria:   form.categoria,
-      conteudo:    form.conteudo || null,
-      imagem_url:  form.imagem_url || null,
-      ativo:       form.ativo,
+      titulo:       form.titulo.trim(),
+      categoria:    form.categoria,
+      conteudo:     form.conteudo || null,
+      imagem_url:   imagemUrl,
+      ativo:        form.ativo,
       workspace_id: workspaceId,
     }
     const { error } = editId
@@ -171,20 +210,43 @@ export default function LiderCadastroDDS() {
               placeholder="Descreva o tema do DDS. Este texto será exibido no app para o líder ler com a equipe."
             />
           </Field>
-          <Field label="URL da Imagem (opcional)">
+          <Field label="Imagem (opcional)">
             <input
-              style={inp}
-              value={form.imagem_url}
-              onChange={e => setForm(p => ({ ...p, imagem_url: e.target.value }))}
-              placeholder="https://..."
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={onFileChange}
             />
-            {form.imagem_url && (
-              <img
-                src={form.imagem_url}
-                alt="preview"
-                style={{ marginTop: 8, width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8 }}
-                onError={e => (e.target.style.display = 'none')}
-              />
+            {imagePreview ? (
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={imagePreview}
+                  alt="preview"
+                  style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 8, display: 'block' }}
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  style={{
+                    position: 'absolute', top: 6, right: 6,
+                    background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none',
+                    borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  }}>
+                  ✕ Remover
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  ...inp, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 8, cursor: 'pointer', background: 'var(--bg)', border: '2px dashed var(--border)',
+                  color: 'var(--text-secondary)', fontWeight: 600, padding: '14px 0',
+                }}>
+                {uploading ? '⏳ Enviando…' : '📎 Selecionar imagem'}
+              </button>
             )}
           </Field>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
