@@ -673,6 +673,7 @@ export default async function handler(req, res) {
     const { data: itens } = await db.from('refei_itens').select('*').eq('solicitacao_id', sol.id).order('colaborador_nome')
     const rest = sol.refei_restaurantes
     const precisaConfirmar = !!rest?.confirma_pedido
+    console.log(`[refeicoes] enviar_restaurante | sol=${solicitacaoId} | rest=${rest?.nome} | confirma_pedido=${rest?.confirma_pedido} | precisaConfirmar=${precisaConfirmar} | telefone_wa=${rest?.telefone_wa}`)
 
     // Se restaurante não requer confirmação, já avança para confirmado_restaurante
     const novoStatus = precisaConfirmar ? 'enviado_restaurante' : 'confirmado_restaurante'
