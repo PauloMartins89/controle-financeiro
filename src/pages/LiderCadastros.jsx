@@ -7,7 +7,7 @@ import {
   PlusIcon, PencilIcon, TrashIcon, XMarkIcon,
   MagnifyingGlassIcon, ArrowPathIcon,
   UsersIcon, UserGroupIcon, WrenchScrewdriverIcon, BeakerIcon, CubeIcon, ShieldCheckIcon,
-  MapPinIcon,
+  MapPinIcon, DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -19,7 +19,10 @@ const ABAS = [
   { key: 'implementos',   label: 'Implementos',   icon: BeakerIcon },
   { key: 'produtos',      label: 'Produtos',      icon: CubeIcon },
   { key: 'epis',          label: 'EPIs',           icon: ShieldCheckIcon },
+  { key: 'dds',           label: '🦺 DDS',         icon: DocumentTextIcon },
 ]
+
+const CAT_DDS = ['Segurança', 'Saúde', 'Meio Ambiente', 'Qualidade', 'Outros']
 
 // ── Campos por aba ────────────────────────────────────────────────────────────
 const FUNCOES = ['Operador', 'Auxiliar', 'Tratorista', 'Pulverizador', 'Mecânico', 'Motorista', 'Supervisor', 'Outro']
@@ -169,6 +172,7 @@ export default function LiderCadastros() {
   const [implementos,   setImpls]     = useState([])
   const [produtos,      setProdutos]  = useState([])
   const [epis,          setEpis]      = useState([])
+  const [dds,           setDds]       = useState([])
 
   // ── forms ──
   const [fFrente, setFFrente] = useState({ nome: '', codigo: '', ativo: true })
@@ -178,6 +182,7 @@ export default function LiderCadastros() {
   const [fImpl,   setFImpl]   = useState({ nome: '', codigo: '', modelo: '', largura_m: '', volume_recomendado_lha: '', ativo: true })
   const [fProd,   setFProd]   = useState({ nome: '', tipo: 'Herbicida', unidade: 'L', ativo: true })
   const [fEpi,    setFEpi]    = useState({ nome: '', categoria: 'Proteção da Cabeça', ca: '', vida_util_meses: '', ativo: true })
+  const [fDds,    setFDds]    = useState({ titulo: '', categoria: 'Segurança', conteudo: '', imagem_url: '', ativo: true })
 
   useEffect(() => { if (workspaceId) init() }, [workspaceId, aba]) // eslint-disable-line
 
@@ -211,8 +216,9 @@ export default function LiderCadastros() {
       setProdutos(data || [])
     } else if (aba === 'epis') {
       const { data } = await supabase.from('lider_epis').select('*').eq('workspace_id', wid).order('nome')
-      setEpis(data || [])
-    } else if (aba === 'epcs') {
+      setEpis(data || [])    } else if (aba === 'dds') {
+      const { data } = await supabase.from('dds_temas').select('*').eq('workspace_id', wid).order('categoria').order('titulo')
+      setDds(data || [])    } else if (aba === 'epcs') {
       const { data } = await supabase.from('lider_epcs').select('*').eq('workspace_id', wid).order('nome')
       setEpcs(data || [])
     } else if (aba === 'lideres') {
@@ -236,6 +242,7 @@ export default function LiderCadastros() {
     if (aba === 'implementos')   setFImpl({ nome: '', codigo: '', modelo: '', largura_m: '', volume_recomendado_lha: '', ativo: true })
     if (aba === 'produtos')      setFProd({ nome: '', tipo: 'Herbicida', unidade: 'L', ativo: true })
     if (aba === 'epis')          setFEpi({ nome: '', categoria: 'Proteção da Cabeça', ca: '', vida_util_meses: '', ativo: true })
+    if (aba === 'dds')           setFDds({ titulo: '', categoria: 'Segurança', conteudo: '', imagem_url: '', ativo: true })
     setShowModal(true)
   }
 
@@ -248,6 +255,7 @@ export default function LiderCadastros() {
     if (aba === 'implementos')   setFImpl({ nome: item.nome, codigo: item.codigo ?? '', modelo: item.modelo ?? '', largura_m: item.largura_m ?? '', volume_recomendado_lha: item.volume_recomendado_lha ?? '', ativo: item.ativo })
     if (aba === 'produtos')      setFProd({ nome: item.nome, tipo: item.tipo ?? 'Herbicida', unidade: item.unidade ?? 'L', ativo: item.ativo })
     if (aba === 'epis')          setFEpi({ nome: item.nome, categoria: item.categoria ?? 'Proteção da Cabeça', ca: item.ca ?? '', vida_util_meses: item.vida_util_meses ?? '', ativo: item.ativo })
+    if (aba === 'dds')           setFDds({ titulo: item.titulo, categoria: item.categoria ?? 'Segurança', conteudo: item.conteudo ?? '', imagem_url: item.imagem_url ?? '', ativo: item.ativo })
     setShowModal(true)
   }
 
@@ -262,6 +270,18 @@ export default function LiderCadastros() {
     if (aba === 'implementos')   { table = 'lider_implementos';   payload = { ...fImpl,   workspace_id: wid } }
     if (aba === 'produtos')      { table = 'lider_produtos';      payload = { ...fProd,   workspace_id: wid } }
     if (aba === 'epis')          { table = 'lider_epis';          payload = { ...fEpi,    workspace_id: wid, vida_util_meses: fEpi.vida_util_meses ? parseInt(fEpi.vida_util_meses) : null } }
+    if (aba === 'dds') {
+      if (!fDds.titulo.trim()) { toast.error('Título obrigatório'); return }
+      setSaving(true)
+      const p = { titulo: fDds.titulo.trim(), categoria: fDds.categoria, conteudo: fDds.conteudo || null, imagem_url: fDds.imagem_url || null, ativo: fDds.ativo, workspace_id: wid }
+      const { error } = editId
+        ? await supabase.from('dds_temas').update(p).eq('id', editId)
+        : await supabase.from('dds_temas').insert(p)
+      setSaving(false)
+      if (error) { toast.error(error.message); return }
+      toast.success(editId ? 'Tema atualizado!' : 'Tema cadastrado!')
+      setShowModal(false); init(); return
+    }
     if (!payload.nome?.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
     const { error } = editId
@@ -290,7 +310,7 @@ export default function LiderCadastros() {
   }
 
   // ── filtros ──────────────────────────────────────────────────────────────────
-  const filtrar = list => list.filter(r => r.nome?.toLowerCase().includes(busca.toLowerCase()))
+  const filtrar = list => list.filter(r => (r.nome ?? r.titulo ?? '').toLowerCase().includes(busca.toLowerCase()))
 
   // ── renderizar lista ─────────────────────────────────────────────────────────
   function renderLista() {
@@ -422,6 +442,25 @@ export default function LiderCadastros() {
           <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
             {e.categoria && <Badge text={e.categoria} />}
             {e.vida_util_meses && <Badge text={`${e.vida_util_meses} meses`} />}
+          </div>
+        </Row>
+      ))
+    }
+
+    if (aba === 'dds') {
+      const list = filtrar(dds)
+      return list.length === 0 ? empty() : list.map(d => (
+        <Row key={d.id} ativo={d.ativo}
+          onEdit={() => abrirEditar(d)}
+          onToggle={async () => { await supabase.from('dds_temas').update({ ativo: !d.ativo }).eq('id', d.id); init() }}
+          onDel={async () => { if (!window.confirm(`Excluir "${d.titulo}"?`)) return; await supabase.from('dds_temas').delete().eq('id', d.id); toast.success('Excluído'); init() }}>
+          <div>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{d.titulo}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+            <Badge text={d.categoria} />
+            {d.imagem_url && <Badge text='🖼 Imagem' />}
+            {d.conteudo && <Badge text={d.conteudo.length + ' chars'} />}
           </div>
         </Row>
       ))
@@ -676,6 +715,36 @@ export default function LiderCadastros() {
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             <input type="checkbox" checked={fEpi.ativo} onChange={e => setFEpi(p => ({ ...p, ativo: e.target.checked }))} />
+            Ativo
+          </label>
+        </Modal>
+      )}
+
+      {/* ── Modal DDS ─────────────────────────────────────────────────────── */}
+      {showModal && aba === 'dds' && (
+        <Modal title={editId ? 'Editar Tema DDS' : 'Novo Tema DDS'} onClose={() => setShowModal(false)} onSave={salvar} saving={saving}>
+          <Field label="Título *">
+            <input style={inp} value={fDds.titulo} onChange={e => setFDds(p => ({ ...p, titulo: e.target.value }))} placeholder="Ex: Uso correto do EPI" />
+          </Field>
+          <Field label="Categoria">
+            <Select value={fDds.categoria} onChange={v => setFDds(p => ({ ...p, categoria: v }))} options={CAT_DDS} />
+          </Field>
+          <Field label="Conteúdo (texto do diálogo)">
+            <textarea
+              style={{ ...inp, minHeight: 120, resize: 'vertical', fontFamily: 'inherit' }}
+              value={fDds.conteudo}
+              onChange={e => setFDds(p => ({ ...p, conteudo: e.target.value }))}
+              placeholder="Descreva o tema do DDS aqui. Este texto será exibido no app para o líder ler com a equipe."
+            />
+          </Field>
+          <Field label="URL da Imagem (opcional)">
+            <input style={inp} value={fDds.imagem_url} onChange={e => setFDds(p => ({ ...p, imagem_url: e.target.value }))} placeholder="https://..." />
+            {fDds.imagem_url && (
+              <img src={fDds.imagem_url} alt="preview" style={{ marginTop: 8, width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8 }} onError={e => e.target.style.display='none'} />
+            )}
+          </Field>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+            <input type="checkbox" checked={fDds.ativo} onChange={e => setFDds(p => ({ ...p, ativo: e.target.checked }))} />
             Ativo
           </label>
         </Modal>
