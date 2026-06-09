@@ -54,6 +54,7 @@ export default function LiderDDS() {
       .select(`
         id, data, turno, status, total_assinantes, concluido_em, created_at,
         lider_nome, equipe_nome,
+        lider_equipes!grupo_id ( nome, lider_nome ),
         dds_temas ( titulo, categoria )
       `)
       .eq('workspace_id', workspaceId)
@@ -129,7 +130,7 @@ export default function LiderDDS() {
     }
   }
 
-  const COLS = ['Data', 'Turno', 'Líder', 'Equipe', 'Tema', 'Categoria', 'Assinantes', 'Status', '']
+  const COLS = ['Data', 'Turno', 'Grupo', 'Líder', 'Tema', 'Categoria', 'Assinantes', 'Status', '']
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -228,8 +229,8 @@ export default function LiderDDS() {
                         >
                           <td style={{ padding: '11px 14px', fontWeight: 600, whiteSpace: 'nowrap' }}>{fmt(r.data)}</td>
                           <td style={{ padding: '11px 14px', whiteSpace: 'nowrap' }}>{TURNO_LABEL[r.turno] || r.turno || '—'}</td>
-                          <td style={{ padding: '11px 14px' }}>{r.lider_nome || '—'}</td>
-                          <td style={{ padding: '11px 14px' }}>{r.equipe_nome || '—'}</td>
+                          <td style={{ padding: '11px 14px' }}>{r.lider_equipes?.nome || r.equipe_nome || '—'}</td>
+                          <td style={{ padding: '11px 14px' }}>{r.lider_equipes?.lider_nome || r.lider_nome || '—'}</td>
                           <td style={{ padding: '11px 14px', maxWidth: 180 }}>
                             <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tema?.titulo || '—'}</span>
                           </td>
@@ -278,7 +279,9 @@ export default function LiderDDS() {
                 <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)', marginBottom: 2 }}>
                   {fmt(detalhe.data)} · {TURNO_LABEL[detalhe.turno] || detalhe.turno}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{detalhe.lider_nome} — {detalhe.equipe_nome}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {detalhe.lider_equipes?.nome || detalhe.equipe_nome || '—'} · {detalhe.lider_equipes?.lider_nome || detalhe.lider_nome || '—'}
+                </div>
               </div>
               <button onClick={() => setDetalhe(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-secondary)' }}>
                 <XMarkIcon style={{ width: 18, height: 18 }} />
