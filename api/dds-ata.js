@@ -104,101 +104,157 @@ async function gerarAtaPDF(registro, tema, assinaturas, empresa) {
     // ─── BLOCO TEMA ──────────────────────────────────────────────
     if (tema) {
       const TY = doc.y
-      doc.roundedRect(M, TY, W, 0, 6) // placeholder height
+
+      // Barra de cor categoria
       doc.roundedRect(M, TY, W, 4, 0).fillColor(catColor).fill()
+      // Container fundo
       doc.roundedRect(M, TY, W, 36, 6).fillColor(BGSFT).fill()
       doc.roundedRect(M, TY, W, 36, 6).lineWidth(0.5).strokeColor(BORDER).stroke()
 
       doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(11)
          .text(tema.titulo || '—', M + 14, TY + 8, { width: W - 28, lineBreak: false, ellipsis: true })
-      const cc = catColor
-      doc.fillColor(cc).font('Helvetica-Bold').fontSize(8.5)
+      doc.fillColor(catColor).font('Helvetica-Bold').fontSize(8.5)
          .text((tema.categoria || '').toUpperCase(), M + 14, TY + 22, { width: 120, lineBreak: false })
 
       doc.y = TY + 44
 
+      // Imagem do tema (se houver)
+      if (tema.imagem_url) {
+        try {
+          const imgRes = await fetch(tema.imagem_url)
+          if (imgRes.ok) {
+            const imgBuf = Buffer.from(await imgRes.arrayBuffer())
+            const MAX_H = 140
+            const MAX_W = W - 28
+            const IY = doc.y
+            doc.roundedRect(M, IY, W, MAX_H + 16, 6).fillColor(BGSFT).fill()
+            doc.roundedRect(M, IY, W, MAX_H + 16, 6).lineWidth(0.5).strokeColor(BORDER).stroke()
+            doc.image(imgBuf, M + 14, IY + 8, { fit: [MAX_W, MAX_H], align: 'center', valign: 'center' })
+            doc.y = IY + MAX_H + 24
+          }
+        } catch {}
+      }
+
       if (tema.conteudo) {
         const CY = doc.y
-        doc.roundedRect(M, CY, W, 1, 0) // measure
         doc.fillColor(INK).font('Helvetica').fontSize(9)
-           .text(tema.conteudo, M + 14, CY + 8, { width: W - 28, align: 'justify' })
-        const textH = doc.y - CY + 8
-        // draw border behind text
+           .text(tema.conteudo, M + 14, CY + 10, { width: W - 28, align: 'justify' })
+        const textH = doc.y - CY + 10
         doc.save()
-        doc.roundedRect(M, CY, W, textH + 8, 6)
+        doc.roundedRect(M, CY, W, textH + 10, 6)
            .lineWidth(0.5).strokeColor(BORDER).stroke()
         doc.restore()
-        doc.y = CY + textH + 10
+        doc.y = CY + textH + 14
       }
     }
 
-    doc.y += 6
+    doc.y += 10
 
-    // ─── TABELA DE ASSINATURAS ───────────────────────────────────
-    // Título da seção
+    // ─── TABELA DE ASSINATURAS — DESIGN PREMIUM ──────────────────
     doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(10)
        .text('LISTA DE PRESENÇA E ASSINATURAS', M, doc.y, { width: W })
     doc.y += 10
 
-    // Cabeçalho da tabela
-    const COL_N   = 28
-    const COL_NOM = 200
-    const COL_SIG = W - COL_N - COL_NOM - 6
-    const TH = 22
+    // Dimensões das colunas
+    const COL_N   = 36
+    const COL_NOM = 205
+    const COL_SIG = W - COL_N - COL_NOM
+    const TH = 24
+    const ROW_H = 62
 
+    // Cabeçalho
     doc.roundedRect(M, doc.y, W, TH, 4).fillColor(NAVY).fill()
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8.5)
-    const hy = doc.y + 7
-    doc.text('Nº', M + 8,       hy, { width: COL_N - 4,   lineBreak: false })
-    doc.text('Nome',  M + COL_N + 4, hy, { width: COL_NOM - 8, lineBreak: false })
-    doc.text('Assinatura', M + COL_N + COL_NOM + 4, hy, { width: COL_SIG - 8, lineBreak: false })
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8)
+    const hy = doc.y + 8
+    doc.text('Nº',          M + 10,                       hy, { width: COL_N - 8,   lineBreak: false })
+    doc.text('Colaborador', M + COL_N + 10,               hy, { width: COL_NOM - 16, lineBreak: false })
+    doc.text('Assinatura',  M + COL_N + COL_NOM + 10,     hy, { width: COL_SIG - 16, lineBreak: false })
     doc.y += TH
 
-    // Linhas de assinatura
-    const ROW_H = 50
     for (let i = 0; i < assinaturas.length; i++) {
       const a = assinaturas[i]
 
-      // checar quebra de página
       if (doc.y + ROW_H > 820) {
         doc.addPage()
         doc.y = M
+        // repetir cabeçalho
+        doc.roundedRect(M, doc.y, W, TH, 4).fillColor(NAVY).fill()
+        doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8)
+        const hy2 = doc.y + 8
+        doc.text('Nº',          M + 10,                       hy2, { width: COL_N - 8,    lineBreak: false })
+        doc.text('Colaborador', M + COL_N + 10,               hy2, { width: COL_NOM - 16, lineBreak: false })
+        doc.text('Assinatura',  M + COL_N + COL_NOM + 10,     hy2, { width: COL_SIG - 16, lineBreak: false })
+        doc.y += TH
       }
 
       const ry = doc.y
-      const bgFill = i % 2 === 0 ? '#ffffff' : BGSFT
-      doc.rect(M, ry, W, ROW_H).fillColor(bgFill).fill()
-      doc.rect(M, ry, W, ROW_H).lineWidth(0.4).strokeColor(BORDER).stroke()
 
-      const ty = ry + ROW_H / 2 - 4
-      doc.fillColor(INK).font('Helvetica-Bold').fontSize(9)
-         .text(String(i + 1), M + 8, ty, { width: COL_N - 4, lineBreak: false })
-      doc.fillColor(INK).font('Helvetica').fontSize(9)
-         .text(a.colaborador_nome || '—', M + COL_N + 4, ty, { width: COL_NOM - 8, lineBreak: false, ellipsis: true })
+      // Fundo branco limpo
+      doc.rect(M, ry, W, ROW_H).fillColor('#ffffff').fill()
+
+      // Borda esquerda colorida (acento premium)
+      doc.rect(M, ry, 3, ROW_H).fillColor(catColor).fill()
+
+      // Linha separadora inferior
+      doc.moveTo(M, ry + ROW_H).lineTo(M + W, ry + ROW_H).lineWidth(0.4).strokeColor(BORDER).stroke()
+
+      // Separador vertical entre colunas
+      const vx1 = M + COL_N
+      const vx2 = M + COL_N + COL_NOM
+      doc.moveTo(vx1, ry + 8).lineTo(vx1, ry + ROW_H - 8).lineWidth(0.3).strokeColor(BORDER).stroke()
+      doc.moveTo(vx2, ry + 8).lineTo(vx2, ry + ROW_H - 8).lineWidth(0.3).strokeColor(BORDER).stroke()
+
+      // Badge numérico circular
+      const badgeR = 11
+      const bx = M + COL_N / 2 + 3
+      const by = ry + ROW_H / 2
+      doc.circle(bx, by, badgeR).fillColor(NAVY).fill()
+      doc.fillColor('#fff').font('Helvetica-Bold').fontSize(8)
+         .text(String(i + 1), bx - badgeR, by - 5, { width: badgeR * 2, align: 'center', lineBreak: false })
+
+      // Nome do colaborador — centralizado verticalmente
+      const nomY = ry + ROW_H / 2 - 8
+      doc.fillColor(INK).font('Helvetica-Bold').fontSize(10)
+         .text(a.colaborador_nome || '—', M + COL_N + 12, nomY, { width: COL_NOM - 20, lineBreak: false, ellipsis: true })
+      // Data de assinatura (se disponível)
+      if (a.assinado_em) {
+        const dtFmt = new Date(a.assinado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        doc.fillColor(MUTED).font('Helvetica').fontSize(7.5)
+           .text(dtFmt, M + COL_N + 12, nomY + 14, { width: COL_NOM - 20, lineBreak: false })
+      }
 
       // Assinatura SVG → PNG
       if (a.assinatura_svg) {
         try {
-          const pngBuf = await svgToPng(a.assinatura_svg, 200, ROW_H - 10)
+          const pngBuf = await svgToPng(a.assinatura_svg, 220, ROW_H - 14)
           if (pngBuf) {
-            const sigX = M + COL_N + COL_NOM + 4
-            doc.image(pngBuf, sigX, ry + 5, { width: Math.min(COL_SIG - 8, 200), height: ROW_H - 10 })
+            const sigX = M + COL_N + COL_NOM + 8
+            doc.image(pngBuf, sigX, ry + 6, { width: Math.min(COL_SIG - 18, 220), height: ROW_H - 14 })
           }
         } catch {}
+      } else {
+        // Linha pontilhada de assinatura vazia
+        const lineY = ry + ROW_H - 16
+        doc.moveTo(M + COL_N + COL_NOM + 12, lineY)
+           .lineTo(M + W - 12, lineY)
+           .lineWidth(0.6).dash(3, { space: 3 }).strokeColor('#d1d5db').stroke()
+        doc.undash()
       }
 
       doc.y = ry + ROW_H
     }
 
-    // Linha de fechamento
-    const FY = doc.y + 8
-    doc.rect(M, FY, W, 28).fillColor(BGSFT).fill()
-    doc.rect(M, FY, W, 28).lineWidth(0.5).strokeColor(BORDER).stroke()
-    doc.fillColor(MUTED).font('Helvetica').fontSize(8.5)
-       .text(`Total de assinantes: ${assinaturas.length} colaborador(es)   ·   Status: ${registro.status === 'concluido' ? 'Concluído' : 'Em andamento'}${registro.concluido_em ? '   ·   Concluído em: ' + fmt(registro.concluido_em) : ''}`,
-             M + 10, FY + 9, { width: W - 20 })
+    // Rodapé da tabela
+    const FY = doc.y + 6
+    doc.roundedRect(M, FY, W, 30, 6).fillColor(NAVY + '0d').fill()
+    doc.roundedRect(M, FY, W, 30, 6).lineWidth(0.5).strokeColor(NAVY + '30').stroke()
+    doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(8.5)
+       .text(
+         `Total de assinantes: ${assinaturas.length} colaborador(es)   ·   Status: ${registro.status === 'concluido' ? 'Concluído' : 'Em andamento'}${registro.concluido_em ? '   ·   Concluído em: ' + fmt(registro.concluido_em) : ''}`,
+         M + 12, FY + 10, { width: W - 24 }
+       )
 
-    doc.y = FY + 36
+    doc.y = FY + 38
 
     // ─── RODAPÉ ──────────────────────────────────────────────────
     const range = doc.bufferedPageRange()
