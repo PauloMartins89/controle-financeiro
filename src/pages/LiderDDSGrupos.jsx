@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import useStore from '../store/useStore'
@@ -10,20 +10,20 @@ import {
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 const CORES = [
-  { value: '#6366f1', label: 'ðŸŸ£ Ãndigo'   },
-  { value: '#ef4444', label: 'ðŸ”´ Vermelho'  },
-  { value: '#3b82f6', label: 'ðŸ”µ Azul'     },
-  { value: '#10b981', label: 'ðŸŸ¢ Verde'    },
-  { value: '#f59e0b', label: 'ðŸŸ¡ Ã‚mbar'   },
-  { value: '#f97316', label: 'ðŸŸ  Laranja'  },
-  { value: '#8b5cf6', label: 'ðŸŸ£ Violeta'  },
-  { value: '#14b8a6', label: 'ðŸ©µ Teal'     },
-  { value: '#1e3a5f', label: 'ðŸ”µ Navy'     },
+  { value: '#6366f1', label: '🟣 Índigo'   },
+  { value: '#ef4444', label: '🔴 Vermelho'  },
+  { value: '#3b82f6', label: '🔵 Azul'     },
+  { value: '#10b981', label: '🟢 Verde'    },
+  { value: '#f59e0b', label: '🟡 Âmbar'   },
+  { value: '#f97316', label: '🟠 Laranja'  },
+  { value: '#8b5cf6', label: '🟣 Violeta'  },
+  { value: '#14b8a6', label: '🩵 Teal'     },
+  { value: '#1e3a5f', label: '🔵 Navy'     },
 ]
 
 const EMPTY = { nome: '', descricao: '', lider_nome: '', cor: '#6366f1', ativo: true }
 
-// â”€â”€ Componente de dupla lista (transfer list) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Componente de dupla lista (transfer list) ─────────────────────────────────
 function DualList({ disponiveis, associados, buscaDisp, buscaAssoc, selDisp, selAssoc, onClickDisp, onClickAssoc, onAdd, onRemove, setBuscaDisp, setBuscaAssoc }) {
   const pnlStyle = {
     flex: 1, border: '1px solid var(--border)', borderRadius: 10,
@@ -69,13 +69,13 @@ function DualList({ disponiveis, associados, buscaDisp, buscaAssoc, selDisp, sel
 
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
-      {/* Painel esquerdo â€” associados */}
+      {/* Painel esquerdo — associados */}
       <div style={pnlStyle}>
-        <div style={hdrStyle}>ðŸ‘¥ Associados ({associados.length})</div>
-        <input style={srchStyle} placeholder="Buscarâ€¦" value={buscaAssoc} onChange={e => setBuscaAssoc(e.target.value)} />
+        <div style={hdrStyle}>👥 Associados ({associados.length})</div>
+        <input style={srchStyle} placeholder="Buscar…" value={buscaAssoc} onChange={e => setBuscaAssoc(e.target.value)} />
         <div style={listStyle}>
           {filtAssoc.length === 0
-            ? <p style={{ padding: 12, fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>Nenhum lÃ­der associado</p>
+            ? <p style={{ padding: 12, fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>Nenhum líder associado</p>
             : filtAssoc.map(l => (
               <div key={l.id} style={itemStyle(selAssoc === l.id)} onClick={() => onClickAssoc(l.id)}>
                 {l.matricula ? `${l.matricula} :: ` : ''}{l.nome}
@@ -85,19 +85,19 @@ function DualList({ disponiveis, associados, buscaDisp, buscaAssoc, selDisp, sel
         </div>
       </div>
 
-      {/* BotÃµes centrais */}
+      {/* Botões centrais */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
-        {arrBtn(!selDisp,  onAdd,    'â†')}
-        {arrBtn(!selAssoc, onRemove, 'â†’')}
+        {arrBtn(!selDisp,  onAdd,    '←')}
+        {arrBtn(!selAssoc, onRemove, '→')}
       </div>
 
-      {/* Painel direito â€” disponÃ­veis */}
+      {/* Painel direito — disponíveis */}
       <div style={pnlStyle}>
-        <div style={hdrStyle}>ðŸ“‹ DisponÃ­veis ({disponiveis.length})</div>
-        <input style={srchStyle} placeholder="Buscarâ€¦" value={buscaDisp} onChange={e => setBuscaDisp(e.target.value)} />
+        <div style={hdrStyle}>📋 Disponíveis ({disponiveis.length})</div>
+        <input style={srchStyle} placeholder="Buscar…" value={buscaDisp} onChange={e => setBuscaDisp(e.target.value)} />
         <div style={listStyle}>
           {filtDisp.length === 0
-            ? <p style={{ padding: 12, fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>Todos jÃ¡ associados</p>
+            ? <p style={{ padding: 12, fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>Todos já associados</p>
             : filtDisp.map(l => (
               <div key={l.id} style={itemStyle(selDisp === l.id)} onClick={() => onClickDisp(l.id)}>
                 {l.matricula ? `${l.matricula} :: ` : ''}{l.nome}
@@ -110,7 +110,7 @@ function DualList({ disponiveis, associados, buscaDisp, buscaAssoc, selDisp, sel
   )
 }
 
-// â”€â”€ PÃ¡gina principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Página principal ──────────────────────────────────────────────────────────
 export default function LiderDDSGrupos() {
   const { workspaceId } = useStore()
 
@@ -126,7 +126,7 @@ export default function LiderDDSGrupos() {
   const [activeTab, setActiveTab] = useState('dados')
   const [form,      setForm]      = useState(EMPTY)
 
-  // dual-list lÃ­deres
+  // dual-list líderes
   const [todosLideres, setTodosLideres] = useState([])   // todos lider_perfis do workspace
   const [assocIds,     setAssocIds]     = useState(new Set())  // IDs associados ao grupo atual
   const [selAssoc,     setSelAssoc]     = useState(null) // selecionado no painel esquerdo
@@ -182,14 +182,14 @@ export default function LiderDDSGrupos() {
     setShowModal(true)
   }
 
-  // move disponÃ­vel â†’ associado
+  // move disponível → associado
   function addLider() {
     if (!selDisp) return
     setAssocIds(prev => new Set([...prev, selDisp]))
     setSelDisp(null)
   }
 
-  // move associado â†’ disponÃ­vel
+  // move associado → disponível
   function removeLider() {
     if (!selAssoc) return
     setAssocIds(prev => { const s = new Set(prev); s.delete(selAssoc); return s })
@@ -207,7 +207,7 @@ export default function LiderDDSGrupos() {
   }
 
   async function save() {
-    if (!form.nome.trim()) { toast.error('Nome obrigatÃ³rio'); setActiveTab('dados'); return }
+    if (!form.nome.trim()) { toast.error('Nome obrigatório'); setActiveTab('dados'); return }
     setSaving(true)
 
     const payload = {
@@ -229,12 +229,12 @@ export default function LiderDDSGrupos() {
       grupoId = data.id
     }
 
-    // Salva associaÃ§Ãµes: apaga todas e reinicia
+    // Salva associações: apaga todas e reinicia
     await supabase.from('dds_grupos_lideres').delete().eq('grupo_id', grupoId)
     if (assocIds.size > 0) {
       const rows = [...assocIds].map(lid => ({ grupo_id: grupoId, lider_id: lid }))
       const { error } = await supabase.from('dds_grupos_lideres').insert(rows)
-      if (error) { toast.error('Erro ao salvar lÃ­deres: ' + error.message); setSaving(false); return }
+      if (error) { toast.error('Erro ao salvar líderes: ' + error.message); setSaving(false); return }
     }
 
     setSaving(false)
@@ -249,10 +249,10 @@ export default function LiderDDSGrupos() {
   }
 
   async function del(r) {
-    if (!confirm(`Excluir grupo "${r.nome}"?\nTemas e sessÃµes vinculadas perderÃ£o a associaÃ§Ã£o.`)) return
+    if (!confirm(`Excluir grupo "${r.nome}"?\nTemas e sessões vinculadas perderão a associação.`)) return
     const { error } = await supabase.from('dds_grupos').delete().eq('id', r.id)
     if (error) { toast.error(error.message); return }
-    toast.success('Grupo excluÃ­do')
+    toast.success('Grupo excluído')
     load()
   }
 
@@ -269,7 +269,7 @@ export default function LiderDDSGrupos() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Header
         title="Grupos DDS"
-        subtitle="Programas temÃ¡ticos com lÃ­deres responsÃ¡veis"
+        subtitle="Programas temáticos com líderes responsáveis"
         action={{ label: 'Atualizar', icon: ArrowPathIcon, onClick: load }}
       />
 
@@ -277,19 +277,19 @@ export default function LiderDDSGrupos() {
 
         {/* KPIs */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
-          <KpiCard label="Total de grupos" value={records.length} icon="ðŸ—‚ï¸"  color="#6366f1" />
-          <KpiCard label="Grupos ativos"   value={ativos}         icon="âœ…"  color="#10b981" />
-          <KpiCard label="LÃ­deres cadastrados" value={todosLideres.length} icon="ðŸ‘¤" color="#3b82f6" />
+          <KpiCard label="Total de grupos" value={records.length} icon="🗂️"  color="#6366f1" />
+          <KpiCard label="Grupos ativos"   value={ativos}         icon="✅"  color="#10b981" />
+          <KpiCard label="Líderes cadastrados" value={todosLideres.length} icon="👤" color="#3b82f6" />
         </div>
 
         <Toolbar
           busca={busca} setBusca={setBusca}
           onRefresh={load} onNovo={openNew}
-          placeholder="Buscar por nome ou lÃ­derâ€¦"
+          placeholder="Buscar por nome ou líder…"
         />
 
         <DataTable
-          cols={['Grupo', 'LÃ­der Principal', 'DescriÃ§Ã£o', 'Status']}
+          cols={['Grupo', 'Líder Principal', 'Descrição', 'Status']}
           loading={loading}
           isEmpty={filtrados.length === 0}
         >
@@ -307,10 +307,10 @@ export default function LiderDDSGrupos() {
                 </div>,
                 r.lider_nome
                   ? <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 14 }}>ðŸ‘¤</span> {r.lider_nome}
+                      <span style={{ fontSize: 14 }}>👤</span> {r.lider_nome}
                     </span>
-                  : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>â€”</span>,
-                <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{r.descricao || 'â€”'}</span>,
+                  : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>,
+                <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{r.descricao || '—'}</span>,
                 <StatusChip ativo={r.ativo} />,
               ]}
             />
@@ -318,7 +318,7 @@ export default function LiderDDSGrupos() {
         </DataTable>
       </div>
 
-      {/* â”€â”€ Modal â”€â”€ */}
+      {/* ── Modal ── */}
       {showModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
@@ -352,7 +352,7 @@ export default function LiderDDSGrupos() {
             }}>
               {[
                 { key: 'dados',   label: 'Dados gerais' },
-                { key: 'lideres', label: `LÃ­deres${assocIds.size > 0 ? ` (${assocIds.size})` : ''}` },
+                { key: 'lideres', label: `Líderes${assocIds.size > 0 ? ` (${assocIds.size})` : ''}` },
               ].map(t => (
                 <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
                   background: 'none', border: 'none', cursor: 'pointer',
@@ -372,26 +372,26 @@ export default function LiderDDSGrupos() {
                   <Field label="Nome do grupo *">
                     <input
                       value={form.nome} onChange={e => f('nome', e.target.value)}
-                      placeholder="Ex: DDS de SeguranÃ§a Operacional"
+                      placeholder="Ex: DDS de Segurança Operacional"
                       style={inp}
                     />
                   </Field>
-                  <Field label="LÃ­der principal (texto livre)">
+                  <Field label="Líder principal (texto livre)">
                     <input
                       value={form.lider_nome} onChange={e => f('lider_nome', e.target.value)}
-                      placeholder="Nome do responsÃ¡vel pelo grupo"
+                      placeholder="Nome do responsável pelo grupo"
                       style={inp}
                     />
                   </Field>
-                  <Field label="DescriÃ§Ã£o">
+                  <Field label="Descrição">
                     <textarea
                       value={form.descricao} onChange={e => f('descricao', e.target.value)}
-                      placeholder="Objetivo e escopo do grupoâ€¦"
+                      placeholder="Objetivo e escopo do grupo…"
                       rows={3}
                       style={{ ...inp, resize: 'vertical', lineHeight: 1.5 }}
                     />
                   </Field>
-                  <Field label="Cor de identificaÃ§Ã£o">
+                  <Field label="Cor de identificação">
                     <Sel value={form.cor} onChange={v => f('cor', v)} options={CORES} />
                   </Field>
                   <Field label="Status">
@@ -407,7 +407,7 @@ export default function LiderDDSGrupos() {
               {activeTab === 'lideres' && (
                 <>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
-                    Selecione um lÃ­der e use as setas para associar (â†) ou remover (â†’) do grupo.
+                    Selecione um líder e use as setas para associar (←) ou remover (→) do grupo.
                   </p>
                   <DualList
                     associados={associados}
@@ -427,7 +427,7 @@ export default function LiderDDSGrupos() {
               )}
             </div>
 
-            {/* RodapÃ© com botÃµes */}
+            {/* Rodapé com botões */}
             <div style={{ display: 'flex', gap: 10, padding: '0 24px 24px', flexShrink: 0 }}>
               <button onClick={() => setShowModal(false)} disabled={saving} style={{
                 flex: 1, padding: '13px 0', borderRadius: 10, border: 'none',
@@ -438,7 +438,7 @@ export default function LiderDDSGrupos() {
                 flex: 2, padding: '13px 0', borderRadius: 10, border: 'none',
                 background: '#22c55e', color: '#fff', fontWeight: 800, fontSize: 15,
                 cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1,
-              }}>{saving ? 'Salvandoâ€¦' : 'Salvar'}</button>
+              }}>{saving ? 'Salvando…' : 'Salvar'}</button>
             </div>
           </div>
         </div>
