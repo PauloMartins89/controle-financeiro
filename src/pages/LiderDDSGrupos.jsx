@@ -21,7 +21,7 @@ const CORES = [
   { value: '#1e3a5f', label: '🔵 Navy'     },
 ]
 
-const EMPTY = { nome: '', descricao: '', lider_nome: '', cor: '#6366f1', ativo: true }
+const EMPTY = { nome: '', descricao: '', obrigatorio: false, cor: '#6366f1', ativo: true }
 
 // ── Componente de dupla lista (transfer list) ─────────────────────────────────
 function DualList({ disponiveis, associados, buscaDisp, buscaAssoc, selDisp, selAssoc, onClickDisp, onClickAssoc, onAdd, onRemove, setBuscaDisp, setBuscaAssoc }) {
@@ -140,7 +140,7 @@ export default function LiderDDSGrupos() {
     setLoading(true)
     const [{ data: grps }, { data: ldrs }] = await Promise.all([
       supabase.from('dds_grupos')
-        .select('id, nome, descricao, lider_nome, cor, ativo')
+        .select('id, nome, descricao, obrigatorio, cor, ativo')
         .eq('workspace_id', workspaceId)
         .order('nome'),
       supabase.from('lider_perfis')
@@ -175,7 +175,7 @@ export default function LiderDDSGrupos() {
 
   async function openEdit(r) {
     setEditId(r.id)
-    setForm({ nome: r.nome, descricao: r.descricao || '', lider_nome: r.lider_nome || '', cor: r.cor || '#6366f1', ativo: r.ativo })
+    setForm({ nome: r.nome, descricao: r.descricao || '', obrigatorio: !!r.obrigatorio, cor: r.cor || '#6366f1', ativo: r.ativo })
     setActiveTab('dados'); resetDualList()
     const ids = await loadAssociacoes(r.id)
     setAssocIds(ids)
@@ -214,7 +214,7 @@ export default function LiderDDSGrupos() {
       workspace_id: workspaceId,
       nome:       form.nome.trim(),
       descricao:  form.descricao || null,
-      lider_nome: form.lider_nome || null,
+      obrigatorio: form.obrigatorio,
       cor:        form.cor,
       ativo:      form.ativo,
     }
@@ -257,8 +257,7 @@ export default function LiderDDSGrupos() {
   }
 
   const filtrados = records.filter(r =>
-    r.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    (r.lider_nome || '').toLowerCase().includes(busca.toLowerCase())
+    r.nome.toLowerCase().includes(busca.toLowerCase())
   )
   const ativos = records.filter(r => r.ativo).length
 
@@ -289,7 +288,7 @@ export default function LiderDDSGrupos() {
         />
 
         <DataTable
-          cols={['Grupo', 'Líder Principal', 'Descrição', 'Status']}
+          cols={['Grupo', 'Obrigatório', 'Descrição', 'Status']}
           loading={loading}
           isEmpty={filtrados.length === 0}
         >
@@ -305,11 +304,9 @@ export default function LiderDDSGrupos() {
                   <div style={{ width: 12, height: 12, borderRadius: 3, background: r.cor || '#6366f1', flexShrink: 0 }} />
                   <span style={{ fontWeight: 700 }}>{r.nome}</span>
                 </div>,
-                r.lider_nome
-                  ? <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 14 }}>👤</span> {r.lider_nome}
-                    </span>
-                  : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>—</span>,
+                r.obrigatorio
+                  ? <span style={{ fontSize: 12, fontWeight: 700, color: '#ef4444' }}>Obrigatório</span>
+                  : <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Opcional</span>,
                 <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{r.descricao || '—'}</span>,
                 <StatusChip ativo={r.ativo} />,
               ]}
@@ -376,12 +373,23 @@ export default function LiderDDSGrupos() {
                       style={inp}
                     />
                   </Field>
-                  <Field label="Líder principal (texto livre)">
-                    <input
-                      value={form.lider_nome} onChange={e => f('lider_nome', e.target.value)}
-                      placeholder="Nome do responsável pelo grupo"
-                      style={inp}
-                    />
+                  <Field label="DDS obrigatório?">
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {[{ v: true, label: '✅ Sim — obrigatório' }, { v: false, label: '⬜ Não — opcional' }].map(opt => (
+                        <button
+                          key={String(opt.v)}
+                          type="button"
+                          onClick={() => f('obrigatorio', opt.v)}
+                          style={{
+                            flex: 1, padding: '10px 0', borderRadius: 9, cursor: 'pointer',
+                            fontWeight: 700, fontSize: 13, border: '2px solid',
+                            borderColor: form.obrigatorio === opt.v ? (opt.v ? '#ef4444' : '#22c55e') : 'var(--border)',
+                            background: form.obrigatorio === opt.v ? (opt.v ? '#ef444418' : '#22c55e18') : 'var(--bg-muted)',
+                            color: form.obrigatorio === opt.v ? (opt.v ? '#ef4444' : '#22c55e') : 'var(--text-secondary)',
+                          }}
+                        >{opt.label}</button>
+                      ))}
+                    </div>
                   </Field>
                   <Field label="Descrição">
                     <textarea
