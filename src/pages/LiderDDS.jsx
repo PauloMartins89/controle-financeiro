@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast'
 import {
   DocumentTextIcon, ArrowPathIcon, FunnelIcon, PrinterIcon,
   ChevronRightIcon, XMarkIcon, CheckCircleIcon, ClockIcon,
-  UsersIcon, CalendarDaysIcon, ShieldCheckIcon,
+  UsersIcon, CalendarDaysIcon, ShieldCheckIcon, ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline'
 
 const TURNO_LABEL = { manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' }
@@ -107,6 +107,31 @@ export default function LiderDDS() {
     }
   }
 
+  async function gerarPresenca() {
+    setGerandoPdf('presenca')
+    try {
+      const params = new URLSearchParams({ workspaceId })
+      if (filtroInicio) params.set('inicio', filtroInicio)
+      if (filtroFim)    params.set('fim',    filtroFim)
+      const res = await fetch(`/api/dds-presenca?${params}`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Erro ao gerar relatório'); return
+      }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `presenca-dds-${hoje}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      toast.error('Erro: ' + err.message)
+    } finally {
+      setGerandoPdf(null)
+    }
+  }
+
   async function gerarRelatorio() {
     setGerandoPdf('relatorio')
     try {
@@ -185,14 +210,24 @@ export default function LiderDDS() {
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>Até</div>
               <input type="date" value={filtroFim} onChange={e => setFiltroFim(e.target.value)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13 }} />
             </div>
-            <button
-              onClick={gerarRelatorio}
-              disabled={gerandoPdf === 'relatorio'}
-              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, background: '#6366f115', border: '1px solid #6366f140', color: '#6366f1', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: gerandoPdf === 'relatorio' ? 0.6 : 1 }}
-            >
-              <PrinterIcon style={{ width: 15, height: 15 }} />
-              {gerandoPdf === 'relatorio' ? 'Gerando...' : 'Relatório de Presença'}
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button
+                onClick={gerarPresenca}
+                disabled={!!gerandoPdf}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ef444415', border: '1px solid #ef444440', color: '#ef4444', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: gerandoPdf === 'presenca' ? 0.6 : 1 }}
+              >
+                <ClipboardDocumentListIcon style={{ width: 15, height: 15 }} />
+                {gerandoPdf === 'presenca' ? 'Gerando...' : 'Presenças e Faltas'}
+              </button>
+              <button
+                onClick={gerarRelatorio}
+                disabled={!!gerandoPdf}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#6366f115', border: '1px solid #6366f140', color: '#6366f1', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: gerandoPdf === 'relatorio' ? 0.6 : 1 }}
+              >
+                <PrinterIcon style={{ width: 15, height: 15 }} />
+                {gerandoPdf === 'relatorio' ? 'Gerando...' : 'Relatório de Presença'}
+              </button>
+            </div>
           </div>
 
           {/* Tabela */}

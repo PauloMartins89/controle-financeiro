@@ -87,7 +87,7 @@ async function gerarRelPDF(registros, filtros, empresa) {
     doc.fillColor(MUTED).font('Helvetica').fontSize(8.5)
        .text(`Período: ${periodoLabel}`, cx + 14, M + 48, { width: cw - 20 })
     doc.fillColor(MUTED).font('Helvetica').fontSize(8.5)
-       .text(`Gerado em: ${new Date().toLocaleString('pt-BR')}   ·   ${empresa || 'SmartPro'}`, cx + 14, M + 61, { width: cw - 20 })
+       .text(`Gerado em: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}   ·   ${empresa || 'SmartPro'}`, cx + 14, M + 61, { width: cw - 20 })
 
     doc.y = M + HH + 14
 
@@ -198,7 +198,7 @@ async function gerarRelPDF(registros, filtros, empresa) {
     for (let p = range.start; p < range.start + range.count; p++) {
       doc.switchToPage(p)
       doc.fillColor(MUTED).font('Helvetica').fontSize(7.5)
-         .text(`SmartLíder — Relatório DDS · ${periodoLabel} · Página ${p - range.start + 1}/${range.count}`,
+         .text(`SmartLíder — Relatório DDS · ${periodoLabel} · Gerado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} · Página ${p - range.start + 1}/${range.count}`,
                M, 820, { width: W, align: 'center' })
     }
 

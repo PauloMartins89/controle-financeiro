@@ -91,7 +91,7 @@ async function gerarAtaPDF(registro, tema, assinaturas, empresa) {
     const linhas = [
       `Data: ${fmt(registro.data)}   ·   Turno: ${TURNO[registro.turno] || registro.turno || '—'}`,
       `Líder: ${registro.lider_nome || '—'}   ·   Equipe: ${registro.equipe_nome || '—'}`,
-      `Gerado em: ${new Date().toLocaleString('pt-BR')}`,
+      `Gerado em: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`,  
     ]
     let ly = M + 48
     for (const l of linhas) {
@@ -218,7 +218,7 @@ async function gerarAtaPDF(registro, tema, assinaturas, empresa) {
          .text(a.colaborador_nome || '—', M + COL_N + 12, nomY, { width: COL_NOM - 20, lineBreak: false, ellipsis: true })
       // Data de assinatura (se disponível)
       if (a.assinado_em) {
-        const dtFmt = new Date(a.assinado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        const dtFmt = new Date(a.assinado_em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
         doc.fillColor(MUTED).font('Helvetica').fontSize(7.5)
            .text(dtFmt, M + COL_N + 12, nomY + 14, { width: COL_NOM - 20, lineBreak: false })
       }
@@ -261,7 +261,7 @@ async function gerarAtaPDF(registro, tema, assinaturas, empresa) {
     for (let p = range.start; p < range.start + range.count; p++) {
       doc.switchToPage(p)
       doc.fillColor(MUTED).font('Helvetica').fontSize(7.5)
-         .text(`SmartLíder — ATA DDS · Gerado em ${new Date().toLocaleString('pt-BR')} · Página ${p - range.start + 1}/${range.count}`,
+         .text(`SmartLíder — ATA DDS · Gerado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} · Página ${p - range.start + 1}/${range.count}`,
                M, 820, { width: W, align: 'center' })
     }
 
