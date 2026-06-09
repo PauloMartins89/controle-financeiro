@@ -25,29 +25,29 @@ export default function LiderCadastroDDS() {
   const [showModal,  setShowModal]  = useState(false)
   const [editId,     setEditId]     = useState(null)
   const [form,       setForm]       = useState({
-    titulo: '', categoria: 'Segurança', conteudo: '', imagem_url: '', ativo: true,
+    titulo: '', categoria: 'Segurança', conteudo: '', imagem_url: '', ativo: true, grupo_id: null,
   })
   const [imageFile,    setImageFile]    = useState(null)   // File selecionado
   const [imagePreview, setImagePreview] = useState(null)   // URL de preview local
   const fileInputRef = useRef(null)
+  const [grupos, setGrupos] = useState([])
 
   useEffect(() => { if (workspaceId) load() }, [workspaceId]) // eslint-disable-line
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase
-      .from('dds_temas')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('categoria')
-      .order('titulo')
+    const [{ data }, { data: grps }] = await Promise.all([
+      supabase.from('dds_temas').select('*').eq('workspace_id', workspaceId).order('categoria').order('titulo'),
+      supabase.from('dds_grupos').select('id, nome, cor').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
+    ])
     setRecords(data || [])
+    setGrupos(grps || [])
     setLoading(false)
   }
 
   function openNew() {
     setEditId(null)
-    setForm({ titulo: '', categoria: 'Segurança', conteudo: '', imagem_url: '', ativo: true })
+    setForm({ titulo: '', categoria: 'Segurança', conteudo: '', imagem_url: '', ativo: true, grupo_id: null })
     setImageFile(null)
     setImagePreview(null)
     setShowModal(true)
@@ -61,6 +61,7 @@ export default function LiderCadastroDDS() {
       conteudo:   r.conteudo ?? '',
       imagem_url: r.imagem_url ?? '',
       ativo:      r.ativo,
+      grupo_id:   r.grupo_id ?? null,
     })
     setImageFile(null)
     setImagePreview(r.imagem_url || null)
@@ -107,6 +108,7 @@ export default function LiderCadastroDDS() {
       conteudo:     form.conteudo || null,
       imagem_url:   imagemUrl,
       ativo:        form.ativo,
+      grupo_id:     form.grupo_id || null,
       workspace_id: workspaceId,
     }
     const { error } = editId
@@ -248,6 +250,20 @@ export default function LiderCadastroDDS() {
                 {uploading ? '⏳ Enviando…' : '📎 Selecionar imagem'}
               </button>
             )}
+          </Field>
+          <Field label="Grupo DDS">
+            <select
+              value={form.grupo_id ?? ''}
+              onChange={e => setForm(p => ({ ...p, grupo_id: e.target.value || null }))}
+              style={{ ...inp }}
+            >
+              <option value="">— Sem grupo —</option>
+              {grupos.map(g => (
+                <option key={g.id} value={g.id}>
+                  {g.nome}
+                </option>
+              ))}
+            </select>
           </Field>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             <input type="checkbox" checked={form.ativo} onChange={e => setForm(p => ({ ...p, ativo: e.target.checked }))} /> Ativo

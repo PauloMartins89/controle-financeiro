@@ -56,6 +56,7 @@ import LiderCadastroImplementos from './pages/LiderCadastroImplementos'
 import LiderCadastroProdutos from './pages/LiderCadastroProdutos'
 import LiderCadastroEpis from './pages/LiderCadastroEpis'
 import LiderCadastroDDS from './pages/LiderCadastroDDS'
+import LiderDDSGrupos from './pages/LiderDDSGrupos'
 import LiderCadastroLideres from './pages/LiderCadastroLideres'
 import LiderOcorrencias from './pages/LiderOcorrencias'
 import LiderDDS from './pages/LiderDDS'
@@ -618,6 +619,7 @@ export default function App() {
                   <Route path="/lider/cadastros/produtos" element={<LiderCadastroProdutos />} />
                   <Route path="/lider/cadastros/epis" element={<LiderCadastroEpis />} />
                   <Route path="/lider/cadastros/dds" element={<LiderCadastroDDS />} />
+                  <Route path="/lider/dds-grupos" element={<LiderDDSGrupos />} />
                   <Route path="/lider/cadastros/lideres" element={<LiderCadastroLideres />} />
                   <Route path="/lider/ocorrencias" element={<LiderOcorrencias />} />
                   <Route path="/lider/dds" element={<LiderDDS />} />

@@ -54,7 +54,7 @@ export default function LiderDDS() {
       .select(`
         id, data, turno, status, total_assinantes, concluido_em, created_at,
         lider_nome, equipe_nome,
-        lider_equipes!grupo_id ( nome, lider_nome ),
+        dds_grupos!grupo_id ( nome, lider_nome, cor ),
         dds_temas ( titulo, categoria )
       `)
       .eq('workspace_id', workspaceId)
@@ -229,8 +229,13 @@ export default function LiderDDS() {
                         >
                           <td style={{ padding: '11px 14px', fontWeight: 600, whiteSpace: 'nowrap' }}>{fmt(r.data)}</td>
                           <td style={{ padding: '11px 14px', whiteSpace: 'nowrap' }}>{TURNO_LABEL[r.turno] || r.turno || '—'}</td>
-                          <td style={{ padding: '11px 14px' }}>{r.lider_equipes?.nome || r.equipe_nome || '—'}</td>
-                          <td style={{ padding: '11px 14px' }}>{r.lider_equipes?.lider_nome || r.lider_nome || '—'}</td>
+                          <td style={{ padding: '11px 14px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                              {r.dds_grupos?.cor && <div style={{ width: 10, height: 10, borderRadius: 2, background: r.dds_grupos.cor, flexShrink: 0 }} />}
+                              {r.dds_grupos?.nome || r.equipe_nome || '—'}
+                            </div>
+                          </td>
+                          <td style={{ padding: '11px 14px' }}>{r.dds_grupos?.lider_nome || r.lider_nome || '—'}</td>
                           <td style={{ padding: '11px 14px', maxWidth: 180 }}>
                             <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tema?.titulo || '—'}</span>
                           </td>
@@ -280,7 +285,7 @@ export default function LiderDDS() {
                   {fmt(detalhe.data)} · {TURNO_LABEL[detalhe.turno] || detalhe.turno}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                  {detalhe.lider_equipes?.nome || detalhe.equipe_nome || '—'} · {detalhe.lider_equipes?.lider_nome || detalhe.lider_nome || '—'}
+                  {detalhe.dds_grupos?.nome || detalhe.equipe_nome || '—'} · {detalhe.dds_grupos?.lider_nome || detalhe.lider_nome || '—'}
                 </div>
               </div>
               <button onClick={() => setDetalhe(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--text-secondary)' }}>

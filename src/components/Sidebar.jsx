@@ -135,6 +135,7 @@ const navGroups = [
       { to: '/lider/epc/catalogo',            icon: WrenchScrewdriverIcon,     label: 'Catálogo EPCs',       moduleKey: 'smartlider' },
       { divider: true,                        label: '── Segurança',                                                             moduleKey: 'smartlider' },
       { to: '/lider/dds',                     icon: ShieldCheckIcon,           label: 'Sessões DDS',         moduleKey: 'smartlider' },
+      { to: '/lider/dds-grupos',              icon: UserGroupIcon,             label: 'Grupos DDS',          moduleKey: 'smartlider' },
       { to: '/lider/cadastros/dds',           icon: DocumentTextIcon,          label: 'Temas de DDS',        moduleKey: 'smartlider' },
       { divider: true,                        label: '── Admin',                                                                moduleKey: 'smartlider' },
       { to: '/lider/admin',                   icon: Cog6ToothIcon,             label: 'Usuários App',        moduleKey: 'smartlider', empresaAdminOnly: true },
