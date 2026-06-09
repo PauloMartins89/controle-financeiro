@@ -1,6 +1,9 @@
 node_modules/
 dist/
 
+# Supabase CLI temp files (podem conter connection strings)
+supabase/.temp/
+
 .env
 .env.local
 .env.prod
