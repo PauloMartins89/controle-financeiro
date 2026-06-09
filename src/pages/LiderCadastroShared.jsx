@@ -85,7 +85,7 @@ export function Toolbar({ busca, setBusca, onRefresh, onNovo, placeholder }) {
       <button onClick={onNovo} style={{
         display: 'flex', alignItems: 'center', gap: 6,
         padding: '9px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
-        fontWeight: 700, fontSize: 13, background: 'var(--primary)', color: '#fff', flexShrink: 0,
+        fontWeight: 700, fontSize: 13, background: '#22c55e', color: '#fff', flexShrink: 0,
       }}>
         <PlusIcon style={{ width: 16 }} /> Novo
       </button>
