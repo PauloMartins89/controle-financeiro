@@ -81,49 +81,79 @@ def extract_geo(pdf_path: str, verbose: bool = False) -> dict | None:
         sw_lat, ne_lat = min(lats), max(lats)
         sw_lng, ne_lng = min(lons), max(lons)
 
-        # LPTS: pares [x, y] em espaço de página PDF (origin bottom-left, em pontos)
-        crop_rect_pt = None  # (x0, y0_pdf, x1, y1_pdf)  — PDF convention (Y-up)
-        if len(lpts) >= 8:
+        # ── BBox do viewport ─────────────────────────────────────────────────
+        # O viewport define EXATAMENTE qual parte da página é a área geográfica.
+        # Legenda, cartela, régua e título ficam fora do BBox.
+        # BBox está em coordenadas de página PDF (origin bottom-left, em pontos).
+        crop_rect_pt = None
+        bbox = it.get('/BBox', None)
+        if bbox:
+            try:
+                bv = [float(v) for v in bbox]
+                # BBox = [x0,y0,x1,y1] — cantos opostos em coords PDF (Y-up, bottom-left)
+                # Usar min/max para normalizar (independente da ordem dos cantos)
+                bx0 = min(bv[0], bv[2])   # x esquerda
+                bx1 = max(bv[0], bv[2])   # x direita
+                by0 = min(bv[1], bv[3])   # y baixo (PDF Y-up)
+                by1 = max(bv[1], bv[3])   # y cima  (PDF Y-up)
+                frac_w = (bx1 - bx0) / page_w_pt
+                frac_h = (by1 - by0) / page_h_pt
+                if verbose:
+                    print(f'  Pagina:      {page_w_pt:.1f} x {page_h_pt:.1f} pt')
+                    print(f'  BBox (geo):  x={bx0:.1f}-{bx1:.1f} pt  y={by0:.1f}-{by1:.1f} pt (PDF Y-up)')
+                    print(f'  Cobertura:   {frac_w*100:.1f}% largo x {frac_h*100:.1f}% alto')
+                    marg_l = bx0/page_w_pt*100
+                    marg_r = (1 - bx1/page_w_pt)*100
+                    marg_b = by0/page_h_pt*100          # rodape em coords PDF
+                    marg_t = (1 - by1/page_h_pt)*100    # cabecalho em coords PDF
+                    print(f'  Margens:     E={marg_l:.1f}% D={marg_r:.1f}% Rodape={marg_b:.1f}% Cabecalho={marg_t:.1f}%')
+                if frac_w > 0.999 and frac_h > 0.999:
+                    if verbose:
+                        print(f'  OK: BBox cobre pagina inteira -- sem recorte')
+                    crop_rect_pt = None
+                else:
+                    if verbose:
+                        print(f'  RECORTE: imagem sera cortada ao BBox geografico')
+                    crop_rect_pt = (bx0, by0, bx1, by1)  # PDF Y-up convention
+            except Exception as e:
+                if verbose:
+                    print(f'  AVISO: BBox invalido ({e}) -- tentando LPTS')
+                bbox = None
+
+        # LPTS como fallback se BBox ausente
+        if bbox is None and len(lpts) >= 8:
             if verbose:
-                print(f'  Página:      {page_w_pt:.1f} × {page_h_pt:.1f} pt')
+                print(f'  Pagina:      {page_w_pt:.1f} x {page_h_pt:.1f} pt')
             raw_lx = [float(lpts[i])     for i in range(0, len(lpts), 2)]
             raw_ly = [float(lpts[i + 1]) for i in range(0, len(lpts), 2)]
 
-            # Detecta se LPTS é normalizado (0–1) ou em pontos de página (>1)
-            # GeoPDFs do Avenza/ArcGIS costumam usar normalizado; IBGE usa pontos
             is_normalized = max(raw_lx + raw_ly) <= 1.0
             if is_normalized:
-                # Converte para coordenadas de página em pontos
                 lx = [v * page_w_pt for v in raw_lx]
                 ly = [v * page_h_pt for v in raw_ly]
                 if verbose:
-                    print(f'  LPTS norm -> pts (normalizado detectado)')
+                    print(f'  LPTS norm -> pts (normalizado)')
             else:
                 lx, ly = raw_lx, raw_ly
 
             x0, x1 = min(lx), max(lx)
-            y0, y1 = min(ly), max(ly)   # PDF Y-up: y0=bottom, y1=top
-            crop_rect_pt = (x0, y0, x1, y1)
-
-            # Fração da página coberta pela área geográfica
+            y0, y1 = min(ly), max(ly)
             frac_w = (x1 - x0) / page_w_pt
             frac_h = (y1 - y0) / page_h_pt
-            margin_left_pct   = x0 / page_w_pt * 100
-            margin_bottom_pct = y0 / page_h_pt * 100
             if verbose:
-                print(f'  LPTS área:   x={x0:.1f}–{x1:.1f} pt  y={y0:.1f}–{y1:.1f} pt')
-                print(f'  Cobertura:   {frac_w*100:.1f}% largo × {frac_h*100:.1f}% alto')
-                print(f'  Margem E:    {margin_left_pct:.1f}%  Margem S: {margin_bottom_pct:.1f}%')
+                print(f'  LPTS area:   x={x0:.1f}-{x1:.1f} pt  y={y0:.1f}-{y1:.1f} pt')
+                print(f'  Cobertura:   {frac_w*100:.1f}% largo x {frac_h*100:.1f}% alto')
             if frac_w < 0.99 or frac_h < 0.99:
                 if verbose:
-                    print(f'  AVISO: Margens detectadas -- imagem sera recortada a area geografica')
+                    print(f'  RECORTE: imagem sera cortada ao LPTS geografico')
+                crop_rect_pt = (x0, y0, x1, y1)
             else:
                 if verbose:
-                    print(f'  OK: LPTS cobre a pagina inteira -- sem recorte necessario')
-                crop_rect_pt = None  # sem recorte
+                    print(f'  OK: LPTS cobre pagina inteira -- sem recorte')
+                crop_rect_pt = None
         else:
             if verbose:
-                print(f'  AVISO: LPTS ausente -- renderizando pagina completa (possivel offset)')
+                print(f'  AVISO: sem BBox nem LPTS -- renderizando pagina completa')
 
         if verbose:
             print(f'  GPTS SW: ({sw_lat:.6f}, {sw_lng:.6f})  NE: ({ne_lat:.6f}, {ne_lng:.6f})')
@@ -149,11 +179,14 @@ def render_pdf_png(pdf_path: str, dpi: int = 150,
 
     clip = None
     if geo and geo.get('crop_rect_pt'):
-        x0, y0_pdf, x1, y1_pdf = geo['crop_rect_pt']
+        x0_pdf, y0_pdf, x1_pdf, y1_pdf = geo['crop_rect_pt']
         ph = geo['page_h_pt']
-        # PyMuPDF usa coordenadas top-left (Y invertido em relação ao PDF)
-        # fitz.Rect(left, top, right, bottom) — tudo em pontos PDF
-        clip = fitz.Rect(x0, ph - y1_pdf, x1, ph - y0_pdf)
+        # BBox em PDF Y-up (y0=baixo, y1=cima) → fitz Y-down (top < bottom)
+        # fitz_top  = ph - y_max_pdf  (mais alto na tela = menor y fitz)
+        # fitz_bot  = ph - y_min_pdf
+        fitz_top = ph - y1_pdf   # y1_pdf é o topo em PDF coords (maior valor)
+        fitz_bot = ph - y0_pdf   # y0_pdf é o rodapé em PDF coords (menor valor)
+        clip = fitz.Rect(x0_pdf, fitz_top, x1_pdf, fitz_bot)
 
     pix       = page.get_pixmap(matrix=mat, alpha=False, clip=clip)
     png_bytes = pix.tobytes('png')
