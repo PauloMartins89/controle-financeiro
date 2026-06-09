@@ -188,10 +188,10 @@ export default function LiderDDS() {
             <button
               onClick={gerarRelatorio}
               disabled={gerandoPdf === 'relatorio'}
-              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: gerandoPdf === 'relatorio' ? 0.6 : 1 }}
+              style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, background: '#6366f115', border: '1px solid #6366f140', color: '#6366f1', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: gerandoPdf === 'relatorio' ? 0.6 : 1 }}
             >
               <PrinterIcon style={{ width: 15, height: 15 }} />
-              {gerandoPdf === 'relatorio' ? 'Gerando...' : '📋 Relatório de Presença'}
+              {gerandoPdf === 'relatorio' ? 'Gerando...' : 'Relatório de Presença'}
             </button>
           </div>
 
@@ -257,7 +257,7 @@ export default function LiderDDS() {
                                 onClick={e => gerarAta(r.id, e)}
                                 disabled={gerandoPdf === r.id}
                                 title="Gerar Ata DDS"
-                                style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700, opacity: gerandoPdf === r.id ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#6366f115', border: '1px solid #6366f140', color: '#6366f1', borderRadius: 7, padding: '5px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700, opacity: gerandoPdf === r.id ? 0.6 : 1, whiteSpace: 'nowrap' }}
                               >
                                 <PrinterIcon style={{ width: 12, height: 12 }} />
                                 {gerandoPdf === r.id ? '...' : 'Ata'}
@@ -334,10 +334,10 @@ export default function LiderDDS() {
               <button
                 onClick={e => gerarAta(detalhe.id, e)}
                 disabled={gerandoPdf === detalhe.id}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#1e3a5f', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 0', cursor: 'pointer', fontWeight: 700, fontSize: 14, marginBottom: 20, opacity: gerandoPdf === detalhe.id ? 0.6 : 1 }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#6366f115', border: '1px solid #6366f140', color: '#6366f1', borderRadius: 10, padding: '10px 0', cursor: 'pointer', fontWeight: 700, fontSize: 14, marginBottom: 20, opacity: gerandoPdf === detalhe.id ? 0.6 : 1 }}
               >
                 <PrinterIcon style={{ width: 16, height: 16 }} />
-                {gerandoPdf === detalhe.id ? 'Gerando PDF...' : '🖨️ Gerar Ata com Assinaturas'}
+                {gerandoPdf === detalhe.id ? 'Gerando PDF...' : 'Gerar Ata com Assinaturas'}
               </button>
 
               {/* Lista de assinaturas */}
