@@ -5,7 +5,7 @@ import useStore from '../store/useStore'
 import { toast } from 'react-hot-toast'
 import { Badge, StatusChip, KpiCard, Toolbar, DataTable, TR, Modal, Field, Sel, inp } from './LiderCadastroShared'
 
-const FUNCOES = ['Operador', 'Auxiliar', 'Tratorista', 'Pulverizador', 'Mecânico', 'Motorista', 'Supervisor', 'Outro']
+const FUNCOES = ['Operador', 'Auxiliar', 'Ajudante', 'Tratorista', 'Op. Motosserra', 'Op. Trator', 'Pulverizador', 'Mecânico', 'Motorista', 'Supervisor', 'Outro']
 
 export default function LiderCadastroColaboradores() {
   const { workspaceId } = useStore()
@@ -116,7 +116,16 @@ export default function LiderCadastroColaboradores() {
               <input style={inp} value={form.matricula} onChange={e => setForm(p => ({ ...p, matricula: e.target.value }))} placeholder="Ex: 00123" />
             </Field>
             <Field label="Cargo / Função">
-              <Sel value={form.cargo} onChange={v => setForm(p => ({ ...p, cargo: v }))} options={FUNCOES} />
+              <input
+                style={inp}
+                list="cargo-opcoes"
+                value={form.cargo}
+                onChange={e => setForm(p => ({ ...p, cargo: e.target.value }))}
+                placeholder="Ex: Operador, Ajudante, Op. Motosserra..."
+              />
+              <datalist id="cargo-opcoes">
+                {FUNCOES.map(f => <option key={f} value={f} />)}
+              </datalist>
             </Field>
           </div>
           <Field label="Equipe">
