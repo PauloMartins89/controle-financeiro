@@ -288,6 +288,33 @@ export default function LiderMapas() {
   const handleAdd = async () => {
     if (!form.nome.trim()) { toast.error('Nome obrigatório'); return }
     if (!wsId) { toast.error('Selecione um workspace'); return }
+
+    // Valida coordenadas GPS — obrigatórias para cursor funcional no app
+    const swLat = parseFloat(String(form.swLat).replace(',', '.'))
+    const swLng = parseFloat(String(form.swLng).replace(',', '.'))
+    const neLat = parseFloat(String(form.neLat).replace(',', '.'))
+    const neLng = parseFloat(String(form.neLng).replace(',', '.'))
+    if (!form.swLat || !form.swLng || !form.neLat || !form.neLng ||
+        isNaN(swLat) || isNaN(swLng) || isNaN(neLat) || isNaN(neLng)) {
+      toast.error('Coordenadas GPS obrigatórias. Use o script Python para GeoPDFs com GPS automático.')
+      return
+    }
+    if (swLat < -90 || swLat > 90 || neLat < -90 || neLat > 90) {
+      toast.error('Latitude inválida (deve estar entre -90 e 90)')
+      return
+    }
+    if (swLng < -180 || swLng > 180 || neLng < -180 || neLng > 180) {
+      toast.error('Longitude inválida (deve estar entre -180 e 180)')
+      return
+    }
+    if (swLat >= neLat) {
+      toast.error('SW Latitude deve ser menor que NE Latitude (SW = sul, NE = norte)')
+      return
+    }
+    if (swLng >= neLng) {
+      toast.error('SW Longitude deve ser menor que NE Longitude (SW = oeste, NE = leste)')
+      return
+    }
     setSaving(true)
     setUploadProgress(0)
     try {
@@ -323,10 +350,10 @@ export default function LiderMapas() {
         tamanho_bytes: sizeBytes || null,
         ativo:         true,
       }
-      if (form.swLat) record.sw_lat = parseFloat(form.swLat)
-      if (form.swLng) record.sw_lng = parseFloat(form.swLng)
-      if (form.neLat) record.ne_lat = parseFloat(form.neLat)
-      if (form.neLng) record.ne_lng = parseFloat(form.neLng)
+      record.sw_lat = swLat
+      record.sw_lng = swLng
+      record.ne_lat = neLat
+      record.ne_lng = neLng
 
       const { error: insErr } = await supabase.from('lider_mapas').insert(record)
       if (insErr) throw insErr
@@ -548,24 +575,31 @@ export default function LiderMapas() {
 
           {/* Coordenadas */}
           <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 14, marginTop: 4 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: S.textSub, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 }}>
-              Coordenadas WGS84 (graus decimais) — opcional para imagens sem GPS
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: S.textSub, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                Coordenadas WGS84 (graus decimais) *
+              </div>
+              <span style={{ fontSize: 10, color: S.yellow, fontWeight: 700, background: '#FEF3C7', borderRadius: 999, padding: '1px 7px' }}>Obrigatório</span>
+            </div>
+            <div style={{ fontSize: 12, color: S.textSub, marginBottom: 10, lineHeight: 1.5, background: '#F0FDF4', border: `1px solid #BBF7D0`, borderRadius: 8, padding: '8px 12px' }}>
+              📌 Sem coordenadas, o cursor GPS não funciona no app.<br/>
+              Para GeoPDFs, use o script Python (GPS automático).
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <Field label="SW Latitude">
-                <input style={inp} placeholder="-20.1234" value={form.swLat}
+              <Field label="SW Latitude *">
+                <input style={{ ...inp, borderColor: form.swLat ? S.border : S.yellow }} placeholder="-20.1234" value={form.swLat}
                   onChange={e => setForm(f => ({ ...f, swLat: e.target.value }))} />
               </Field>
-              <Field label="SW Longitude">
-                <input style={inp} placeholder="-51.4567" value={form.swLng}
+              <Field label="SW Longitude *">
+                <input style={{ ...inp, borderColor: form.swLng ? S.border : S.yellow }} placeholder="-51.4567" value={form.swLng}
                   onChange={e => setForm(f => ({ ...f, swLng: e.target.value }))} />
               </Field>
-              <Field label="NE Latitude">
-                <input style={inp} placeholder="-19.9876" value={form.neLat}
+              <Field label="NE Latitude *">
+                <input style={{ ...inp, borderColor: form.neLat ? S.border : S.yellow }} placeholder="-19.9876" value={form.neLat}
                   onChange={e => setForm(f => ({ ...f, neLat: e.target.value }))} />
               </Field>
-              <Field label="NE Longitude">
-                <input style={inp} placeholder="-51.1234" value={form.neLng}
+              <Field label="NE Longitude *">
+                <input style={{ ...inp, borderColor: form.neLng ? S.border : S.yellow }} placeholder="-51.1234" value={form.neLng}
                   onChange={e => setForm(f => ({ ...f, neLng: e.target.value }))} />
               </Field>
             </div>
