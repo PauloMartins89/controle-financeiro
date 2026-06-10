@@ -7,6 +7,34 @@ import {
   ArrowUpTrayIcon, CodeBracketIcon, CheckIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import * as pdfjsLib from 'pdfjs-dist'
+
+// Worker do pdfjs (Vite resolve via import.meta.url)
+try {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+  ).href
+} catch {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs'
+}
+
+// Renderiza página 1 do PDF para Blob PNG (scale 3x ≈ 216 DPI)
+async function renderPdfToBlob(file, onProgress) {
+  const arrayBuffer = await file.arrayBuffer()
+  onProgress(15)
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
+  onProgress(35)
+  const page = await pdf.getPage(1)
+  const viewport = page.getViewport({ scale: 3.0 })
+  const canvas = document.createElement('canvas')
+  canvas.width = viewport.width
+  canvas.height = viewport.height
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
+  onProgress(75)
+  return new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png'))
+}
 
 // ─── Paleta ────────────────────────────────────────────────────────────────
 const S = {
@@ -182,6 +210,7 @@ export default function LiderMapas() {
   const [modalDelete,  setModalDelete]  = useState(null)  // mapa obj
   const [saving,       setSaving]       = useState(false)
   const [novoNome,     setNovoNome]     = useState('')
+  const [converting,   setConverting]   = useState(false)  // PDF → PNG em andamento
   const fileRef = useRef(null)
 
   const emptyForm = { nome: '', tipo: 'acesso', swLat: '', swLng: '', neLat: '', neLng: '', file: null, imgUrl: '' }
@@ -476,25 +505,39 @@ export default function LiderMapas() {
             </div>
             {uploadMode === 'file' ? (
               <div>
-                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/tiff" style={{ display: 'none' }}
-                  onChange={e => {
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/tiff,application/pdf,.pdf" style={{ display: 'none' }}
+                  onChange={async e => {
                     const file = e.target.files[0]
                     if (!file) return
-                    if (!file.type.startsWith('image/')) {
-                      toast.error('Selecione uma imagem (PNG, JPG). Para GeoPDF use o script Python.')
-                      e.target.value = ''
-                      return
-                    }
                     const nomeSugerido = file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ')
-                    setForm(f => ({ ...f, file, nome: f.nome.trim() ? f.nome : nomeSugerido }))
+                    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                      setConverting(true)
+                      setUploadProgress(5)
+                      try {
+                        const blob = await renderPdfToBlob(file, setUploadProgress)
+                        const pngFile = new File([blob], file.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' })
+                        setForm(f => ({ ...f, file: pngFile, nome: f.nome.trim() ? f.nome : nomeSugerido }))
+                        toast.success('PDF convertido para imagem!')
+                      } catch (err) {
+                        toast.error('Erro ao converter PDF: ' + err.message)
+                      } finally {
+                        setConverting(false)
+                        setUploadProgress(0)
+                      }
+                    } else if (file.type.startsWith('image/')) {
+                      setForm(f => ({ ...f, file, nome: f.nome.trim() ? f.nome : nomeSugerido }))
+                    } else {
+                      toast.error('Formato não suportado. Use PNG, JPG ou PDF.')
+                      e.target.value = ''
+                    }
                   }} />
-                <button onClick={() => fileRef.current?.click()} style={{
+                <button onClick={() => fileRef.current?.click()} disabled={converting} style={{
                   width: '100%', padding: '10px 0', borderRadius: 8, border: `2px dashed ${S.border}`,
-                  background: S.pageBg, cursor: 'pointer', fontSize: 13, color: S.textSub,
+                  background: S.pageBg, cursor: converting ? 'default' : 'pointer', fontSize: 13, color: S.textSub,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}>
                   <ArrowUpTrayIcon style={{ width: 16, height: 16 }} />
-                  {form.file ? form.file.name : 'Selecionar PNG / JPG'}
+                  {converting ? 'Convertendo PDF...' : form.file ? form.file.name : 'Selecionar PNG, JPG ou PDF'}
                 </button>
               </div>
             ) : (
