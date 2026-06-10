@@ -233,7 +233,7 @@ export default function LiderMapas() {
     setLoading(true)
     const { data, error } = await supabase
       .from('lider_mapas')
-      .select('id, nome, tipo, imagem_url, tamanho_bytes, sw_lat, sw_lng, ne_lat, ne_lng, criado_em, pdf_origem')
+      .select('id, nome, tipo, imagem_url, tamanho_bytes, sw_lat, sw_lng, ne_lat, ne_lng, criado_em')
       .eq('workspace_id', wid)
       .order('criado_em', { ascending: false })
     if (error) toast.error('Erro ao carregar mapas')
