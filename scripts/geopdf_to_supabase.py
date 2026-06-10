@@ -262,6 +262,8 @@ def main():
                         help='Deleta mapa pelo nome (sem PDF = só deleta)')
     parser.add_argument('--replace', action='store_true',
                         help='Substitui mapa existente com o mesmo nome antes de importar')
+    parser.add_argument('--allow-no-geo', dest='allow_no_geo', action='store_true',
+                        help='Permite importar PDF sem metadados GPS (não recomendado — cursor não funcionará no app)')
     args = parser.parse_args()
 
     if not args.diagnose and not args.workspace:
@@ -314,7 +316,13 @@ def main():
             geo_h_km = abs(geo["ne_lat"] - geo["sw_lat"]) * 111.32
             print(f'  Área geo: {geo_w_km:.1f} km × {geo_h_km:.1f} km')
         else:
-            print('  AVISO: sem georreferenciamento, mapa sem coordenadas')
+            print(f'  ERRO: "{pdf_path.name}" não tem metadados de georreferenciamento (GPTS/LPTS).')
+            print('  Este PDF não é um GeoPDF. Use apenas PDFs exportados do Avenza, IBGE ou ArcGIS.')
+            print('  Para forçar importação sem GPS, use a flag --allow-no-geo (não recomendado).')
+            if not args.allow_no_geo:
+                print('[SKIP] Importação abortada.\n')
+                continue
+            print('  AVISO: importando sem coordenadas (--allow-no-geo ativo).')
             geo = {'sw_lat': None, 'sw_lng': None, 'ne_lat': None, 'ne_lng': None,
                    'crop_rect_pt': None, 'page_w_pt': None, 'page_h_pt': None}
 
