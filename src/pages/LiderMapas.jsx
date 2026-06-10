@@ -42,7 +42,8 @@ async function extrairGPSdoPDF(file) {
 }
 
 // Renderiza página 1 do PDF para Blob PNG (scale 3x ≈ 216 DPI)
-async function renderPdfToBlob(file, onProgress) {
+// cropRect opcional: { x0, x1, y0_pdf, y1_pdf, pageH } em pts PDF (Y-up)
+async function renderPdfToBlob(file, onProgress, cropRect = null) {
   const arrayBuffer = await file.arrayBuffer()
   onProgress(15)
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise
@@ -54,6 +55,22 @@ async function renderPdfToBlob(file, onProgress) {
   canvas.height = viewport.height
   await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
   onProgress(75)
+
+  if (cropRect) {
+    // PDF coords (Y-up) → canvas coords (Y-down, scale 3.0)
+    const s = 3.0
+    const pH = cropRect.pageH
+    const cx = Math.max(0, Math.round(cropRect.x0 * s))
+    const cy = Math.max(0, Math.round((pH - cropRect.y1_pdf) * s))
+    const cw = Math.min(Math.round((cropRect.x1 - cropRect.x0) * s), canvas.width  - cx)
+    const ch = Math.min(Math.round((cropRect.y1_pdf - cropRect.y0_pdf) * s), canvas.height - cy)
+    if (cw > 0 && ch > 0) {
+      const out = document.createElement('canvas')
+      out.width = cw ; out.height = ch
+      out.getContext('2d').drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch)
+      return new Promise((res, rej) => out.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png'))
+    }
+  }
   return new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), 'image/png'))
 }
 
@@ -564,11 +581,11 @@ export default function LiderMapas() {
                       setGpsAutoExtracted(false)
                       setUploadProgress(5)
                       try {
-                        // Executa conversão PNG e extração GPS em paralelo
-                        const [blob, gpsData] = await Promise.all([
-                          renderPdfToBlob(file, setUploadProgress),
-                          extrairGPSdoPDF(file),
-                        ])
+                        // 1. Extração GPS + cropRect (rápido, só metadados)
+                        setUploadProgress(10)
+                        const gpsData = await extrairGPSdoPDF(file)
+                        // 2. Renderiza e recorta à área geográfica (se BBox disponível)
+                        const blob = await renderPdfToBlob(file, setUploadProgress, gpsData?.cropRect ?? null)
                         const pngFile = new File([blob], file.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' })
                         setForm(f => ({
                           ...f,
