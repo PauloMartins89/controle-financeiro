@@ -153,7 +153,7 @@ def extract_geo(pdf_path: str, verbose: bool = False) -> dict | None:
                 crop_rect_pt = None
         else:
             if verbose:
-                print(f'  AVISO: sem BBox nem LPTS -- renderizando pagina completa')
+                print(f'  AVISO: sem LPTS -- renderizando pagina completa')
 
         if verbose:
             print(f'  GPTS SW: ({sw_lat:.6f}, {sw_lng:.6f})  NE: ({ne_lat:.6f}, {ne_lng:.6f})')
