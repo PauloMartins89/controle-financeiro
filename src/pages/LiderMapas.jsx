@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import { supabase } from '../lib/supabase'
 import {
@@ -199,6 +200,7 @@ const inp = {
 // ─── Card de mapa ────────────────────────────────────────────────────────────
 function MapCard({ mapa, onRename, onDelete }) {
   const [hover, setHover] = useState(false)
+  const navigate = useNavigate()
   return (
     <div
       onMouseEnter={() => setHover(true)}
@@ -258,6 +260,18 @@ function MapCard({ mapa, onRename, onDelete }) {
       <div style={{
         display: 'flex', borderTop: `1px solid ${S.border}`,
       }}>
+        <button onClick={() => navigate(`/lider/mapas/${mapa.id}/viewer`)} style={{
+          flex: 1, padding: '9px 0', border: 'none', background: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+          fontSize: 12, fontWeight: 600, color: '#3b82f6',
+          borderRight: `1px solid ${S.border}`,
+          transition: 'background 0.12s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+          onMouseLeave={e => e.currentTarget.style.background = 'none'}
+        >
+          <MapIcon style={{ width: 14, height: 14 }} /> Ver no mapa
+        </button>
         <button onClick={() => onRename(mapa)} style={{
           flex: 1, padding: '9px 0', border: 'none', background: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
