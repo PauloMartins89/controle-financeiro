@@ -2609,7 +2609,7 @@ export default function Lancamentos() {
                     <>
                       <ColHead colKey="data" label="DATA" />
                       {templateCols.map(c => (
-                        <ColHead key={c.key} colKey={`tmpl_${c.key}`} label={c.label.toUpperCase()} align={c.tipo === 'number' ? 'right' : 'left'} />
+                        <ColHead key={c.key} colKey={`tmpl_${c.key}`} label={c.label.toUpperCase()} align={c.type === 'number' ? 'right' : c.type === 'checkbox' ? 'center' : 'left'} />
                       ))}
                       <ColHead colKey="valor" label="VALOR" align="right" bg={valorColBg} />
                       <ColHead colKey="status" label="STATUS" />
@@ -2750,18 +2750,50 @@ export default function Lancamentos() {
                           {templateCols.map(c => {
                             const val = d[c.key]
                             const empty = val == null || val === ''
+
+                            // Checkbox — renderiza ✓ / ✗ colorido
+                            if (c.type === 'checkbox') {
+                              const checked = !empty && (val === true || val === 'true')
+                              return (
+                                <td key={c.key} style={{ padding: '9px 12px', textAlign: 'center' }}>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 20, height: 20, borderRadius: '50%',
+                                    background: checked ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)',
+                                    color: checked ? '#10b981' : '#ef4444',
+                                    fontSize: 12, fontWeight: 800,
+                                  }}>
+                                    {checked ? '✓' : '✗'}
+                                  </span>
+                                </td>
+                              )
+                            }
+
                             let display = '—'
                             if (!empty) {
-                              if (c.tipo === 'date' && /^\d{4}-\d{2}-\d{2}/.test(String(val))) {
+                              if (c.type === 'date' && /^\d{4}-\d{2}-\d{2}/.test(String(val))) {
                                 const [y, mo, dy] = String(val).split('T')[0].split('-')
                                 display = `${dy}/${mo}/${y}`
                               } else {
                                 display = String(val)
                               }
                             }
+                            const isLong = display.length > 42
+                            const isBold = c.key === 'numero_rdo'
                             return (
-                              <td key={c.key} style={{ padding: '9px 12px', textAlign: c.tipo === 'number' ? 'right' : 'left', fontSize: 12, whiteSpace: 'nowrap', color: empty ? LC.txtMuted : LC.txtPrimary }}>
-                                {display}
+                              <td key={c.key} title={isLong ? display : undefined}
+                                style={{
+                                  padding: '9px 12px',
+                                  textAlign: c.type === 'number' ? 'right' : 'left',
+                                  fontSize: 12,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  maxWidth: isLong ? 200 : undefined,
+                                  color: empty ? LC.txtMuted : isBold ? LC.accent : LC.txtPrimary,
+                                  fontWeight: isBold ? 800 : undefined,
+                                }}>
+                                {isLong ? display.slice(0, 40) + '…' : display}
                               </td>
                             )
                           })}
