@@ -184,6 +184,54 @@ VALUES (
       "show_in_pdf": true,
       "width": "full",
       "options": ""
+    },
+    {
+      "key": "assinatura_cliente_assinado",
+      "label": "Cliente — Assinado",
+      "type": "checkbox",
+      "required": false,
+      "section": "Aprovações",
+      "ocr_hint": "seção APROVAÇÕES lado esquerdo (ASSINATURA POR EXTENSO E MATRÍCULA CLIENTE) — há assinatura ou nome manuscrito? true se sim, false se o campo estiver em branco",
+      "show_in_table": true,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "assinatura_cliente_nome",
+      "label": "Cliente — Nome / Matrícula",
+      "type": "text",
+      "required": false,
+      "section": "Aprovações",
+      "ocr_hint": "nome por extenso e matrícula escritos pelo cliente no campo ASSINATURA POR EXTENSO E MATRÍCULA CLIENTE (lado esquerdo das aprovações)",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "assinatura_birigui_assinado",
+      "label": "Birigui — Assinado",
+      "type": "checkbox",
+      "required": false,
+      "section": "Aprovações",
+      "ocr_hint": "seção APROVAÇÕES lado direito (ASSINATURA POR EXTENSO BIRIGUI) — há assinatura ou nome manuscrito? true se sim, false se o campo estiver em branco",
+      "show_in_table": true,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "assinatura_birigui_nome",
+      "label": "Birigui — Nome por Extenso",
+      "type": "text",
+      "required": false,
+      "section": "Aprovações",
+      "ocr_hint": "nome por extenso do responsável Birigui escrito no campo ASSINATURA POR EXTENSO BIRIGUI (lado direito das aprovações)",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
     }
   ]'::jsonb
 );
