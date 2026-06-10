@@ -8,7 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import * as pdfjsLib from 'pdfjs-dist'
-import { PDFDocument, PDFName } from 'pdf-lib'
+import { PDFDocument, PDFName, PDFRef } from 'pdf-lib'
 
 // Worker do pdfjs (Vite resolve via import.meta.url)
 try {
@@ -24,7 +24,7 @@ try {
 // ─── Helpers pdf-lib (idênticos ao api/extrair-gps-pdf.js) ────────────────
 function _pdfResolve(ctx, obj) {
   if (!obj) return null
-  if (obj?.constructor?.name === 'PDFRef') return ctx.lookup(obj)
+  if (obj instanceof PDFRef) return ctx.lookup(obj)
   return obj
 }
 function _pdfNum(ctx, obj) {
