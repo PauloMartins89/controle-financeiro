@@ -2573,11 +2573,6 @@ export default function Lancamentos() {
         {/* Lista */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: 60, color: LC.txtMuted }}>Carregando...</div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 60 }}>
-            <TruckIcon style={{ width: 52, height: 52, color: LC.txtMuted, margin: '0 auto 16px' }} />
-            <p style={{ color: LC.txtSecondary, fontSize: 15 }}>Nenhum lançamento encontrado.</p>
-          </div>
         ) : (
           <div style={{ background: '#fff', border: `1px solid ${LC.border}`, borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           <div style={{ overflowX: 'auto' }}>
@@ -2624,7 +2619,12 @@ export default function Lancamentos() {
                 </tr>
               </thead>
               <tbody>
-                {sortedFiltered.map(l => {
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={20} style={{ textAlign: 'center', padding: 60 }}>
+                    <TruckIcon style={{ width: 52, height: 52, color: LC.txtMuted, margin: '0 auto 16px', display: 'block' }} />
+                    <p style={{ color: LC.txtSecondary, fontSize: 15, margin: 0 }}>Nenhum lançamento encontrado.</p>
+                  </td></tr>
+                ) : sortedFiltered.map(l => {
                   const isTransporte = (l.tipo_formulario || 'padrao') === 'transporte'
                   const isDiario = l.tipo_formulario === 'diario'
                   const d = l.dados_extras || {}
