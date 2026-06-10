@@ -195,6 +195,35 @@ def render_pdf_png(pdf_path: str, dpi: int = 150,
     return png_bytes, w, h
 
 
+# ── Lista / Deleta mapas ────────────────────────────────────────────────────
+def list_mapas(sb, workspace_id: str):
+    res = sb.table('lider_mapas').select('id, nome, tipo, criado_em') \
+             .eq('workspace_id', workspace_id).order('criado_em').execute()
+    if not res.data:
+        print('  Nenhum mapa encontrado no workspace')
+        return
+    for row in res.data:
+        print(f'  [{row["id"][:8]}]  {row["nome"]}  ({row["tipo"]})')
+
+
+def delete_mapa(sb, workspace_id: str, nome: str):
+    res = sb.table('lider_mapas').select('id, imagem_url') \
+             .eq('workspace_id', workspace_id).eq('nome', nome).execute()
+    if not res.data:
+        print(f'  "{nome}" não encontrado no workspace')
+        return
+    for row in res.data:
+        # Remove do storage
+        fname = row['imagem_url'].split('/')[-1].split('?')[0]
+        try:
+            sb.storage.from_('mapas-lider').remove([fname])
+        except Exception as e:
+            print(f'  AVISO storage: {e}')
+        # Remove do DB
+        sb.table('lider_mapas').delete().eq('id', row['id']).execute()
+        print(f'  ✓ Deletado: "{nome}" (id: {row["id"][:8]})')
+
+
 # ── Upload para Supabase Storage ──────────────────────────────────────────────
 def upload_storage(sb, filename: str, png_bytes: bytes) -> str:
     bucket = 'mapas-lider'
@@ -216,7 +245,7 @@ def insert_mapa(sb, record: dict) -> dict:
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description='Importa GeoPDF para lider_mapas')
-    parser.add_argument('pdf', nargs='+', help='Caminhos dos arquivos PDF')
+    parser.add_argument('pdf', nargs='*', help='Caminhos dos arquivos PDF')
     parser.add_argument('--workspace', default=None,
                         help='workspace_id (UUID) — obrigatório exceto com --diagnose')
     parser.add_argument('--tipo', default='acesso',
@@ -227,6 +256,12 @@ def main():
                         help='Resolução da imagem em DPI (padrão: 150)')
     parser.add_argument('--diagnose', action='store_true',
                         help='Só extrai metadados (GPTS/LPTS) sem importar')
+    parser.add_argument('--list', action='store_true',
+                        help='Lista todos os mapas do workspace')
+    parser.add_argument('--delete-nome', dest='delete_nome', default=None,
+                        help='Deleta mapa pelo nome (sem PDF = só deleta)')
+    parser.add_argument('--replace', action='store_true',
+                        help='Substitui mapa existente com o mesmo nome antes de importar')
     args = parser.parse_args()
 
     if not args.diagnose and not args.workspace:
@@ -243,6 +278,18 @@ def main():
             sys.exit(1)
         sb = create_client(supa_url, service_key)
 
+    # ── Modo --list ──────────────────────────────────────────────────────────
+    if args.list:
+        print(f'Mapas no workspace {args.workspace}:')
+        list_mapas(sb, args.workspace)
+        return
+
+    # ── Modo --delete-nome (sem PDFs = só deleta) ────────────────────────────
+    if args.delete_nome and not args.pdf:
+        delete_mapa(sb, args.workspace, args.delete_nome)
+        print('\nPronto.')
+        return
+
     for pdf_arg in args.pdf:
         pdf_path = Path(pdf_arg)
         if not pdf_path.exists():
@@ -251,6 +298,10 @@ def main():
 
         nome = args.nome or pdf_path.stem.replace('_', ' ').title()
         print(f'\n>>> {pdf_path.name}')
+
+        # Deleta versão anterior se --replace ou --delete-nome coincidir
+        if sb and (args.replace or args.delete_nome == nome):
+            delete_mapa(sb, args.workspace, nome)
 
         # 1. Coordenadas + LPTS (verbose sempre em --diagnose)
         geo = extract_geo(str(pdf_path), verbose=True)
