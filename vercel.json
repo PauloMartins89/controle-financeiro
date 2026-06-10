@@ -2,6 +2,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
+    "api/extrair-gps-pdf.js": {
+      "maxDuration": 30
+    },
     "api/pfd-processar.js": {
       "maxDuration": 300
     },

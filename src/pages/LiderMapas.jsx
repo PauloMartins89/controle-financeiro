@@ -20,6 +20,20 @@ try {
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs'
 }
 
+// Extrai coordenadas GPS do PDF via API serverless
+async function extrairGPSdoPDF(file) {
+  const arrayBuffer = await file.arrayBuffer()
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+  const res = await fetch('/api/extrair-gps-pdf', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pdfBase64: base64 }),
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.found ? data : null
+}
+
 // Renderiza página 1 do PDF para Blob PNG (scale 3x ≈ 216 DPI)
 async function renderPdfToBlob(file, onProgress) {
   const arrayBuffer = await file.arrayBuffer()
@@ -217,6 +231,7 @@ export default function LiderMapas() {
   const [form, setForm] = useState(emptyForm)
   const [uploadMode, setUploadMode] = useState('file') // 'file' | 'url'
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [gpsAutoExtracted, setGpsAutoExtracted] = useState(false) // GPS extraído automaticamente do PDF
 
   // ── Carrega workspaces ──────────────────────────────────────────────────
   useEffect(() => {
@@ -504,7 +519,7 @@ export default function LiderMapas() {
 
       {/* ── Modal: Adicionar mapa ── */}
       {modalAdd && (
-        <Modal title="Adicionar Mapa" onClose={() => { setModalAdd(false); setForm(emptyForm) }} width={520}>
+        <Modal title="Adicionar Mapa" onClose={() => { setModalAdd(false); setForm(emptyForm); setGpsAutoExtracted(false) }} width={520}>
           <Field label="Nome do mapa *">
             <input style={inp} placeholder="Ex: Fazenda Boa Vista — Acesso" value={form.nome}
               onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
@@ -539,12 +554,32 @@ export default function LiderMapas() {
                     const nomeSugerido = file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ')
                     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
                       setConverting(true)
+                      setGpsAutoExtracted(false)
                       setUploadProgress(5)
                       try {
-                        const blob = await renderPdfToBlob(file, setUploadProgress)
+                        // Executa conversão PNG e extração GPS em paralelo
+                        const [blob, gpsData] = await Promise.all([
+                          renderPdfToBlob(file, setUploadProgress),
+                          extrairGPSdoPDF(file),
+                        ])
                         const pngFile = new File([blob], file.name.replace(/\.pdf$/i, '.png'), { type: 'image/png' })
-                        setForm(f => ({ ...f, file: pngFile, nome: f.nome.trim() ? f.nome : nomeSugerido }))
-                        toast.success('PDF convertido para imagem!')
+                        setForm(f => ({
+                          ...f,
+                          file: pngFile,
+                          nome: f.nome.trim() ? f.nome : nomeSugerido,
+                          ...(gpsData ? {
+                            swLat: String(gpsData.sw_lat),
+                            swLng: String(gpsData.sw_lng),
+                            neLat: String(gpsData.ne_lat),
+                            neLng: String(gpsData.ne_lng),
+                          } : {})
+                        }))
+                        if (gpsData) {
+                          setGpsAutoExtracted(true)
+                          toast.success('GPS extraído automaticamente do PDF!')
+                        } else {
+                          toast('PDF convertido. Insira as coordenadas GPS manualmente.', { icon: '⚠️' })
+                        }
                       } catch (err) {
                         toast.error('Erro ao converter PDF: ' + err.message)
                       } finally {
@@ -552,6 +587,7 @@ export default function LiderMapas() {
                         setUploadProgress(0)
                       }
                     } else if (file.type.startsWith('image/')) {
+                      setGpsAutoExtracted(false)
                       setForm(f => ({ ...f, file, nome: f.nome.trim() ? f.nome : nomeSugerido }))
                     } else {
                       toast.error('Formato não suportado. Use PNG, JPG ou PDF.')
@@ -579,7 +615,10 @@ export default function LiderMapas() {
               <div style={{ fontSize: 11, fontWeight: 700, color: S.textSub, textTransform: 'uppercase', letterSpacing: 0.6 }}>
                 Coordenadas WGS84 (graus decimais) *
               </div>
-              <span style={{ fontSize: 10, color: S.yellow, fontWeight: 700, background: '#FEF3C7', borderRadius: 999, padding: '1px 7px' }}>Obrigatório</span>
+              {gpsAutoExtracted
+                ? <span style={{ fontSize: 10, color: '#15803D', fontWeight: 700, background: '#DCFCE7', borderRadius: 999, padding: '1px 7px' }}>📍 Extraído do PDF</span>
+                : <span style={{ fontSize: 10, color: S.yellow, fontWeight: 700, background: '#FEF3C7', borderRadius: 999, padding: '1px 7px' }}>Obrigatório</span>
+              }
             </div>
             <div style={{ fontSize: 12, color: S.textSub, marginBottom: 10, lineHeight: 1.5, background: '#F0FDF4', border: `1px solid #BBF7D0`, borderRadius: 8, padding: '8px 12px' }}>
               📌 Sem coordenadas, o cursor GPS não funciona no app.<br/>
