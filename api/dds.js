@@ -66,12 +66,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'workspaceId, turnoId e temaId obrigatórios' })
     }
     const hoje = (dataRefeicao || new Date().toISOString()).slice(0, 10)
-    // Garante que não duplica para o mesmo turno
+    // Evita duplicar o mesmo tema no mesmo turno no mesmo dia
     const { data: existente } = await db
       .from('dds_registros')
       .select('id, status')
       .eq('turno_id', turnoId)
       .eq('data', hoje)
+      .eq('tema_id', temaId)
       .maybeSingle()
     if (existente) {
       return res.status(200).json({ registroId: existente.id, jaExistia: true })

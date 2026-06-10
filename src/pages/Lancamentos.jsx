@@ -615,6 +615,8 @@ function LancamentoModal({ item, workspaceId, userId, enabledModules, formTempla
       }
       delete payload.id
       if (item?.id) {
+        // UPDATE: nunca sobrescrever workspace_id/user_id — evita migração acidental de dados
+        const { workspace_id: _ws, user_id: _uid, ...updatePayload } = payload
         // Detecta campos alterados para registrar no evento
         const camposAlterados = []
         const camposVisiveis = {
@@ -639,9 +641,9 @@ function LancamentoModal({ item, workspaceId, userId, enabledModules, formTempla
 
         // Se estava devolvido, ao editar volta automaticamente para aguardando_aprovacao
         const eraDevolvido = item.status === 'devolvido'
-        if (eraDevolvido) payload.status = 'aguardando_aprovacao'
+        if (eraDevolvido) updatePayload.status = 'aguardando_aprovacao'
 
-        const { error } = await supabase.from('lancamentos').update(payload).eq('id', item.id)
+        const { error } = await supabase.from('lancamentos').update(updatePayload).eq('id', item.id)
         if (error) throw error
 
         if (eraDevolvido) {

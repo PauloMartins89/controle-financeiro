@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Demo Parser Nubank — d7adffd4</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #e5e7eb; padding: 24px; }
+  h1 { color: #a78bfa; font-size: 1.3rem; margin-bottom: 2px; }
+  .sub { color: #6b7280; font-size: .8rem; margin-bottom: 28px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .card { background: #1c1c1e; border: 1px solid #2d2d2f; border-radius: 12px; padding: 18px; }
+  .card h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; margin-bottom: 14px; }
+  .bug { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #222; font-size: .82rem; }
+  .bug:last-child { border: none; }
+  .icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .bt { color: #f87171; font-weight: 600; margin-bottom: 3px; font-size: .83rem; }
+  .bd { color: #9ca3af; font-size: .77rem; line-height: 1.5; }
+  code { background: #111; border: 1px solid #333; border-radius: 4px; padding: 1px 5px; font-size: .78rem; color: #c4b5fd; }
+  .flow { background: #111; border-radius: 8px; padding: 14px 16px; font-family: monospace; font-size: .79rem; color: #d1d5db; line-height: 2; }
+  .flow .arrow { color: #4b5563; }
+  .flow .card-num { color: #a78bfa; font-weight: 700; }
+  .flow .ok { color: #34d399; }
+  .flow .dim { color: #4b5563; }
+  .result-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  .result-table th { color: #6b7280; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; padding: 6px 10px; border-bottom: 1px solid #2d2d2f; text-align: left; }
+  .result-table td { padding: 9px 10px; border-bottom: 1px solid #1a1a1a; vertical-align: middle; }
+  .result-table tr:last-child td { border: none; }
+  .badge { background: #7c3aed22; border: 1px solid #7c3aed; border-radius: 5px; padding: 2px 7px; color: #a78bfa; font-family: monospace; font-size: .75rem; white-space: nowrap; }
+  .valor { color: #f87171; font-family: monospace; }
+  .commit { background: #111; border: 1px solid #7c3aed44; border-radius: 8px; padding: 12px 16px; font-size: .8rem; color: #a78bfa; font-family: monospace; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>&#x1F527; Parser Nubank &mdash; Correcoes (commit d7adffd4)</h1>
+<p class="sub">3 bugs corrigidos + filtro de pagamentos de fatura</p>
+
+<div class="grid2">
+  <div class="card">
+    <h2>&#x1F41B; Bugs corrigidos</h2>
+    <div class="bug">
+      <span class="icon">&#x2705;</span>
+      <div>
+        <div class="bt">Bug 1 &mdash; flush() resetava pCard sem emitir</div>
+        <div class="bd">Quando nova data chegava, <code>flush()</code> limpava <code>pCard=null</code> mesmo sem emitir transacao. Agora so reseta quando uma transacao E emitida.</div>
+      </div>
+    </div>
+    <div class="bug">
+      <span class="icon">&#x2705;</span>
+      <div>
+        <div class="bt">Bug 2 &mdash; Cartao antes da data era descartado</div>
+        <div class="bd"><code>if (!pDia) continue</code> jogava fora o badge <code>&#x2022;&#x2022;&#x2022;&#x2022; 9244</code> quando aparecia antes da data no PDF. Agora <code>extractCard()</code> roda mesmo sem data ativa.</div>
+      </div>
+    </div>
+    <div class="bug">
+      <span class="icon">&#x2705;</span>
+      <div>
+        <div class="bt">Bug 3 &mdash; Fallback: extrai cartao do PDF inteiro</div>
+        <div class="bd">Todos os numeros distintos sao extraidos do blob completo. Se ha apenas 1 unico cartao, vira <code>defaultCard</code> e e atribuido a TODAS as transacoes.</div>
+      </div>
+    </div>
+    <div class="bug">
+      <span class="icon">&#x1F6AB;</span>
+      <div>
+        <div class="bt">Pagamentos de fatura filtrados</div>
+        <div class="bd">"Pagamento recebido", "Pagamento da fatura", "Credito" nao aparecem mais no import.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>&#x1F4CB; Fluxo do PDF.js &rarr; Parser</h2>
+    <p style="font-size:.75rem;color:#6b7280;margin-bottom:10px;">Ordem das linhas extraidas pelo PDF.js:</p>
+    <div class="flow">
+<span style="color:#a78bfa;font-weight:700">&#x2022;&#x2022;&#x2022;&#x2022; 9244</span>   <span style="color:#4b5563">&larr; badge antes da data</span>
+<span style="color:#4b5563">&darr;</span> extractCard() roda <span style="color:#34d399">&#x2713; pCard="9244"</span>
+
+<span style="color:#34d399">01 MAI</span>          <span style="color:#4b5563">&larr; data encontrada</span>
+<span style="color:#4b5563">&darr;</span> flush() sem emissao <span style="color:#34d399">&rarr; pCard preservado</span>
+<span style="color:#4b5563">&darr;</span> pDia="01", pMes="MAI"
+
+<span style="color:#34d399">Produtos Globo - Parcela 5/10</span>
+<span style="color:#4b5563">&darr;</span> pDesc setado
+
+<span style="color:#34d399">R$ 19,90</span>
+<span style="color:#4b5563">&darr;</span> pValor = 19.90
+
+<span style="color:#34d399">02 MAI</span> &rarr; flush() <span style="color:#34d399">EMITE &#x2713;</span>
+  conta: <span style="color:#a78bfa;font-weight:700">Nubank &#x2022;&#x2022;&#x2022;&#x2022; 9244</span>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <h2>&#x1F4C4; Resultado esperado apos reimport</h2>
+  <table class="result-table">
+    <thead>
+      <tr><th>Data</th><th>Descricao</th><th>Cartao</th><th>Valor</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="color:#6b7280;font-family:monospace">2026-05-01</td>
+        <td>Produtos Globo - Parcela 5/10</td>
+        <td><span class="badge">&#x2022;&#x2022;&#x2022;&#x2022; 9244</span></td>
+        <td class="valor">R$ 19,90</td>
+      </tr>
+      <tr>
+        <td style="color:#6b7280;font-family:monospace">2026-05-01</td>
+        <td>Lojas G - Parcela 5/12</td>
+        <td><span class="badge">&#x2022;&#x2022;&#x2022;&#x2022; 9244</span></td>
+        <td class="valor">R$ 18,97</td>
+      </tr>
+      <tr>
+        <td style="color:#6b7280;font-family:monospace">2026-05-01</td>
+        <td>Netflix - Parcela 2/6</td>
+        <td><span class="badge">&#x2022;&#x2022;&#x2022;&#x2022; 1851</span></td>
+        <td class="valor">R$ 55,90</td>
+      </tr>
+      <tr style="opacity:.35">
+        <td colspan="4" style="font-size:.75rem;color:#6b7280;text-align:center;font-style:italic">
+          &#x2717; "Pagamento recebido R$ 2.890,00" &rarr; filtrado, nao importado
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="commit">
+  &#x2713; d7adffd4 &mdash; "fix: parser Nubank - defaultCard por blob, pCard sobrevive flush, extrai cartao antes da data, filtra pagamentos"<br>
+  &#x2713; Deployed &rarr; https://smartpro.app.br<br><br>
+  <span style="color:#6b7280;">Proximo passo:</span> Ctrl+Shift+R no app &rarr; apagar despesas antigas &rarr; reimportar PDF
+</div>
+</body>
+</html>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #e5e7eb; margin: 0; padding: 24px; }
+  h1 { color: #a78bfa; margin-bottom: 4px; font-size: 1.4rem; }
+  .sub { color: #6b7280; font-size: .85rem; margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .card { background: #1c1c1e; border: 1px solid #2d2d2f; border-radius: 12px; padding: 20px; }
+  .card h2 { font-size: .95rem; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; margin: 0 0 16px; }
+  .label { font-size: .7rem; color: #6b7280; text-transform: uppercase; letter-spacing:.05em; margin-bottom: 4px; margin-top: 14px; }
+  .code { background: #111; border-radius: 8px; padding: 12px 16px; font-family: monospace; font-size: .82rem; color: #d1d5db; line-height: 1.7; white-space: pre-wrap; }
+  .line { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; border-bottom: 1px solid #222; }
+  .line:last-child { border: none; }
+  .badge { background: #7c3aed22; border: 1px solid #7c3aed; border-radius: 6px; padding: 2px 8px; font-size: .72rem; color: #a78bfa; white-space: nowrap; }
+  .badge.green { background: #05966922; border-color: #059669; color: #34d399; }
+  .badge.red { background: #dc262622; border-color: #dc2626; color: #f87171; }
+  .badge.blue { background: #1d4ed822; border-color: #1d4ed8; color: #60a5fa; }
+  .result { background: #111; border-radius: 8px; padding: 12px 16px; }
+  .row { display: grid; grid-template-columns: 80px 1fr 100px 80px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #222; font-size: .82rem; }
+  .row:last-child { border: none; }
+  .row .data { color: #6b7280; font-family: monospace; }
+  .row .desc { color: #e5e7eb; }
+  .row .card-badge { background: #7c3aed22; border: 1px solid #7c3aed; border-radius: 4px; padding: 1px 6px; color: #a78bfa; font-family: monospace; font-size: .75rem; }
+  .row .valor { color: #f87171; text-align: right; font-family: monospace; }
+  .fix-list { list-style: none; padding: 0; margin: 0; }
+  .fix-list li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #222; font-size: .85rem; }
+  .fix-list li:last-child { border: none; }
+  .fix-list .icon { font-size: 1.1rem; flex-shrink: 0; }
+  .fix-list .fix-title { color: #a78bfa; font-weight: 600; margin-bottom: 3px; }
+  .fix-list .fix-desc { color: #9ca3af; font-size: .8rem; }
+  .old { color: #f87171; }
+  .new { color: #34d399; }
+  .arrow { color: #6b7280; }
+  .commit { background: #1a1a2e; border: 1px solid #7c3aed44; border-radius: 8px; padding: 12px 16px; font-family: monospace; font-size: .82rem; color: #a78bfa; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>🔧 Correção: Parser Nubank Fatura</h1>
+<p class="sub">Commit 278446fd — O que mudou e por quê</p>
+
+<div class="grid">
+  <div class="card">
+    <h2>🐛 Problema Anterior</h2>
+    <p style="font-size:.84rem;color:#9ca3af;">O PDF.js extrai o texto em linhas separadas por coordenada Y. O parser antigo falhava em 3 pontos:</p>
+    <ul class="fix-list">
+      <li>
+        <span class="icon">❌</span>
+        <div>
+          <div class="fix-title">Dependia de encontrar "TRANSAÇÕES"</div>
+          <div class="fix-desc">O caractere <code>Ç</code> pode vir codificado diferente no PDF.js → inSection nunca virava true → 0 transações capturadas</div>
+        </div>
+      </li>
+      <li>
+        <span class="icon">❌</span>
+        <div>
+          <div class="fix-title">Regex de cartão muito restrito</div>
+          <div class="fix-desc">Só aceitava U+2022, U+00B7, U+25CF, U+2219. O PDF pode usar U+F0B7 (Symbol font) ou outros → nenhum cartão capturado</div>
+        </div>
+      </li>
+      <li>
+        <span class="icon">❌</span>
+        <div>
+          <div class="fix-title">Descrição exigia pCard !== null</div>
+          <div class="fix-desc">Se o cartão não era detectado, a descrição também não era salva → flush() descartava a transação</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>✅ Correção Aplicada</h2>
+    <ul class="fix-list">
+      <li>
+        <span class="icon">✅</span>
+        <div>
+          <div class="fix-title">Removido o flag inSection</div>
+          <div class="fix-desc">Processa todas as linhas do documento. A detecção de fatura Nubank (FATURA DD MON YYYY) já garante que é o arquivo certo.</div>
+        </div>
+      </li>
+      <li>
+        <span class="icon">✅</span>
+        <div>
+          <div class="fix-title">Regex do cartão mais amplo</div>
+          <div class="fix-desc">
+            <span class="old">Antes: <code>/[\u2022\u00B7\u25CF\u2219\.]{2,}\s*(\d{4})/</code></span><br>
+            <span class="new">Agora: <code>/[^\w\s]{2,}\s*(\d{4})/</code></span><br>
+            Aceita qualquer símbolo não-alfanumérico repetido + 4 dígitos
+          </div>
+        </div>
+      </li>
+      <li>
+        <span class="icon">✅</span>
+        <div>
+          <div class="fix-title">Descrição aceita sem cartão</div>
+          <div class="fix-desc">processText() agora salva a descrição mesmo sem pCard, usando apenas pDia como condição</div>
+        </div>
+      </li>
+      <li>
+        <span class="icon">✅</span>
+        <div>
+          <div class="fix-title">Ignora linhas de cabeçalho com ano</div>
+          <div class="fix-desc">"10 JUN 2026" → detecta o ano após o mês e descarta a linha, evitando falsos positivos</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div style="margin-top:24px;" class="card">
+  <h2>📄 Exemplo de Extração (PDF.js → Parser)</h2>
+  <div class="label">Linhas brutas do PDF.js (cada linha = Y coord diferente)</div>
+  <div class="code"><span style="color:#6b7280">// PDF.js extrai ~assim (3 colunas colapsam em linhas separadas):</span>
+<span style="color:#fbbf24">"01 MAI"</span>             <span style="color:#6b7280">← data isolada</span>
+<span style="color:#fbbf24">"•••• 1851"</span>         <span style="color:#6b7280">← cartão (Y diferente)</span>
+<span style="color:#fbbf24">"Produtos Globo"</span>    <span style="color:#6b7280">← descrição (Y diferente)</span>
+<span style="color:#fbbf24">"R$ 19,90"</span>          <span style="color:#6b7280">← valor (coluna direita)</span></div>
+
+  <div class="label" style="margin-top:20px;">Resultado após correção</div>
+  <div class="result">
+    <div class="row" style="font-size:.75rem;color:#6b7280;padding-bottom:8px;">
+      <span>DATA</span><span>DESCRIÇÃO</span><span>CARTÃO</span><span style="text-align:right">VALOR</span>
+    </div>
+    <div class="row">
+      <span class="data">2026-05-01</span>
+      <span class="desc">Produtos Globo</span>
+      <span class="card-badge">•••• 1851</span>
+      <span class="valor">R$ 19,90</span>
+    </div>
+    <div class="row">
+      <span class="data">2026-05-03</span>
+      <span class="desc">Netflix - Parcela 2/12</span>
+      <span class="card-badge">•••• 9244</span>
+      <span class="valor">R$ 55,90</span>
+    </div>
+    <div class="row">
+      <span class="data">2026-05-10</span>
+      <span class="desc">iFood</span>
+      <span class="card-badge">•••• 1851</span>
+      <span class="valor">R$ 87,00</span>
+    </div>
+  </div>
+</div>
+
+<div class="commit">
+  ✓ git commit 278446fd — "fix: parser Nubank fatura - remover dependencia de secao, broadcar regex cartao, aceitar desc sem cartao"<br>
+  ✓ Deployed → https://smartpro.app.br
+</div>
+
+</body>
+</html>

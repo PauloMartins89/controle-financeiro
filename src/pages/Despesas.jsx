@@ -133,12 +133,26 @@ function ExpenseModal({ expense, onClose, onSave, navIndex, navTotal, onPrev, on
   const ownerId = useStore(s => s.ownerId)
   const owner = people.find(p => p.id === ownerId) || people.find(p => p.is_owner) || people[0]
   const [form, setForm] = useState(expense ? { ...expense, valor: String(expense.valor) } : { ...EMPTY_FORM, pago_por: '', participantes: [] })
+  const [customSplits, setCustomSplits] = useState(() => {
+    // inicializa customSplits para não-owners a partir de valores_fixos existentes
+    if (!expense?.valores_fixos) return {}
+    const splits = {}
+    for (const [k, v] of Object.entries(expense.valores_fixos || {})) {
+      if (k !== expense.pago_por) splits[k] = String(v)
+    }
+    return splits
+  })
   const initDone = useRef(false)
 
   // Reinicializa form ao navegar para outra despesa
   useEffect(() => {
     if (expense) {
       setForm({ ...expense, valor: String(expense.valor) })
+      const splits = {}
+      for (const [k, v] of Object.entries(expense.valores_fixos || {})) {
+        if (k !== expense.pago_por) splits[k] = String(v)
+      }
+      setCustomSplits(splits)
     }
   }, [expense?.id])
 
@@ -155,12 +169,42 @@ function ExpenseModal({ expense, onClose, onSave, navIndex, navTotal, onPrev, on
 
   function handleSave() {
     if (!form.descricao || !form.valor) return
-    onSave({ ...form, pago_por: ownerId || form.pago_por, valor: parseFloat(form.valor) || 0, minha_parte: form.minha_parte ? parseFloat(form.minha_parte) || 0 : null })
+    const valorNum2 = parseFloat(form.valor) || 0
+    const minhaParteNum = parseFloat(form.minha_parte) || 0
+    const outrosIds = form.participantes.filter(id => id !== ownerId)
+
+    let vf = { ...(form.valores_fixos || {}) }
+    let tipoDivisao = form.tipo_divisao
+
+    // Se minha_parte foi informada, construir valores_fixos automaticamente
+    if (minhaParteNum > 0 && outrosIds.length > 0) {
+      tipoDivisao = 'valor_fixo'
+      if (ownerId) vf[ownerId] = minhaParteNum
+      const resto = valorNum2 - minhaParteNum
+      for (const pid of outrosIds) {
+        const custom = parseFloat(customSplits[pid])
+        vf[pid] = isNaN(custom) ? parseFloat((resto / outrosIds.length).toFixed(2)) : custom
+      }
+    }
+
+    onSave({
+      ...form,
+      pago_por: ownerId || form.pago_por,
+      valor: valorNum2,
+      minha_parte: minhaParteNum || null,
+      tipo_divisao: tipoDivisao,
+      valores_fixos: Object.keys(vf).length > 0 ? vf : (form.valores_fixos || {}),
+    })
   }
 
   const valorNum = parseFloat(form.valor) || 0
+  const minhaParteNum = parseFloat(form.minha_parte) || 0
+  const outrosParticipantes = form.participantes.filter(id => id !== ownerId)
+  const resto = valorNum - minhaParteNum
+  const restoPerPerson = outrosParticipantes.length > 0 ? resto / outrosParticipantes.length : 0
   const shareIgual = form.participantes.length ? valorNum / form.participantes.length : 0
   const minhaParteSugerida = shareIgual > 0 ? shareIgual.toFixed(2) : ''
+  const showSplit = minhaParteNum > 0 && outrosParticipantes.length > 0
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -294,12 +338,71 @@ function ExpenseModal({ expense, onClose, onSave, navIndex, navTotal, onPrev, on
                 )
               })}
             </div>
-            {form.participantes.length > 0 && valorNum > 0 && form.tipo_divisao === 'igual' && (
+            {form.participantes.length > 0 && valorNum > 0 && form.tipo_divisao === 'igual' && !showSplit && (
               <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-secondary)' }}>
                 {form.participantes.length} participante{form.participantes.length > 1 ? 's' : ''} � {formatCurrency(shareIgual)} cada
               </div>
             )}
           </div>
+
+          {/* —— Divisão por valor: breakdown automático —— */}
+          {showSplit && (
+            <div style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.18)', borderRadius: 10, padding: '12px 16px', display: 'grid', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 2 }}>Divisão de valores</div>
+              {/* Linha do owner */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: owner?.cor || '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{owner?.avatar}</div>
+                <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{owner?.nome || 'Você'}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', fontFamily: 'monospace' }}>{formatCurrency(minhaParteNum)}</span>
+              </div>
+              {/* Linhas dos outros participantes */}
+              {outrosParticipantes.map((pid, i) => {
+                const p = people.find(x => x.id === pid)
+                if (!p) return null
+                const isLast = i === outrosParticipantes.length - 1
+                const sugestao = parseFloat((restoPerPerson).toFixed(2))
+                const customVal = customSplits[pid]
+                const somaCustomAntes = outrosParticipantes.slice(0, i).reduce((s, pid2) => {
+                  const v = parseFloat(customSplits[pid2])
+                  return s + (isNaN(v) ? sugestao : v)
+                }, 0)
+                const autoLast = parseFloat((resto - somaCustomAntes).toFixed(2))
+                return (
+                  <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: p.cor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{p.avatar}</div>
+                    <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{p.nome}</span>
+                    {outrosParticipantes.length === 1 ? (
+                      <span style={{ fontSize: 13, fontWeight: 700, color: resto >= 0 ? '#10b981' : '#ef4444', fontFamily: 'monospace' }}>
+                        {formatCurrency(resto)} <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-secondary)' }}>(restante)</span>
+                      </span>
+                    ) : isLast ? (
+                      <span style={{ fontSize: 13, fontWeight: 700, color: autoLast >= 0 ? '#10b981' : '#ef4444', fontFamily: 'monospace' }}>
+                        {formatCurrency(autoLast)} <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-secondary)' }}>(restante)</span>
+                      </span>
+                    ) : (
+                      <input
+                        type="number" step="0.01"
+                        value={customVal ?? ''}
+                        placeholder={String(sugestao)}
+                        onChange={e => setCustomSplits(s => ({ ...s, [pid]: e.target.value }))}
+                        style={{ width: 90, padding: '4px 8px', borderRadius: 6, background: 'var(--bg-secondary)', border: '1px solid rgba(99,102,241,0.3)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, fontFamily: 'monospace', textAlign: 'right' }}
+                      />
+                    )}
+                  </div>
+                )
+              })}
+              {/* Total check */}
+              <div style={{ marginTop: 2, fontSize: 11, color: '#6b7280', borderTop: '1px dashed var(--border)', paddingTop: 6, display: 'flex', justifyContent: 'space-between' }}>
+                <span>Total: {formatCurrency(valorNum)}</span>
+                {outrosParticipantes.length === 1
+                  ? Math.abs(valorNum - minhaParteNum - resto) < 0.02
+                    ? <span style={{ color: '#10b981' }}>✓ fechado</span>
+                    : <span style={{ color: '#f87171' }}>⚠ não fecha</span>
+                  : null
+                }
+              </div>
+            </div>
+          )}
 
           {/* Parcelas + Recorrente + Status */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
@@ -355,7 +458,35 @@ function StatusBadge({ status }) {
 }
 
 // --- Expense Card (grid view) -------------------------------------------------
-function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) {
+function ParticipantesRow({ exp, people }) {
+  if (!exp.participantes || exp.participantes.length < 2 || !people) return null
+  const total = exp.participantes.reduce((s, pid) => {
+    const v = exp.tipo_divisao === 'igual'
+      ? exp.valor / exp.participantes.length
+      : (exp.valores_fixos?.[pid] ?? (exp.valor / exp.participantes.length))
+    return s + v
+  }, 0)
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+      {exp.participantes.map(pid => {
+        const p = people.find(x => x.id === pid)
+        if (!p) return null
+        const val = exp.tipo_divisao === 'igual'
+          ? exp.valor / exp.participantes.length
+          : (exp.valores_fixos?.[pid] ?? null)
+        return (
+          <span key={pid} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px 2px 3px', borderRadius: 20, background: `${p.cor}1a`, border: `1px solid ${p.cor}44`, fontSize: 11 }}>
+            <span style={{ width: 16, height: 16, borderRadius: '50%', background: p.cor, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{p.avatar}</span>
+            <span style={{ fontWeight: 600, color: p.cor }}>{p.nome.split(' ')[0]}</span>
+            {val !== null && <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> {formatCurrency(val)}</span>}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
+function ExpenseCard({ exp, grupo, pagador, people, onEdit, onDelete, onPay, onUnpay }) {
   const temMinhaParte = exp.minha_parte && Number(exp.minha_parte) > 0 && Number(exp.minha_parte) !== exp.valor
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.15s, box-shadow 0.15s' }}
@@ -424,6 +555,9 @@ function ExpenseCard({ exp, grupo, pagador, onEdit, onDelete, onPay, onUnpay }) 
           )}
           {exp.recorrente && <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>??</span>}
         </div>
+
+        {/* Participantes */}
+        <ParticipantesRow exp={exp} people={people} />
       </div>
 
       {/* Action bar */}
@@ -784,6 +918,25 @@ export default function Despesas() {
                                   <ComprovanteIcon url={exp.comprovante_url} />
                                   <NFDetails exp={exp} />
                                 </div>
+                                {/* Participantes na linha da lista */}
+                                {exp.participantes && exp.participantes.length >= 2 && (
+                                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 4 }}>
+                                    {exp.participantes.map(pid => {
+                                      const p = people.find(x => x.id === pid)
+                                      if (!p) return null
+                                      const val = exp.tipo_divisao === 'igual'
+                                        ? exp.valor / exp.participantes.length
+                                        : (exp.valores_fixos?.[pid] ?? null)
+                                      return (
+                                        <span key={pid} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 5px 1px 2px', borderRadius: 20, background: `${p.cor}1a`, border: `1px solid ${p.cor}44`, fontSize: 10 }}>
+                                          <span style={{ width: 13, height: 13, borderRadius: '50%', background: p.cor, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{p.avatar}</span>
+                                          <span style={{ fontWeight: 600, color: p.cor }}>{p.nome.split(' ')[0]}</span>
+                                          {val !== null && <span style={{ color: 'var(--text-secondary)' }}> {formatCurrency(val)}</span>}
+                                        </span>
+                                      )
+                                    })}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div>
@@ -897,7 +1050,7 @@ export default function Despesas() {
               const pagador = people.find(p => p.id === exp.pago_por)
               return (
                 <ExpenseCard
-                  key={exp.id} exp={exp} grupo={grupo} pagador={pagador}
+                  key={exp.id} exp={exp} grupo={grupo} pagador={pagador} people={people}
                   onEdit={() => { openEdit(exp) }}
                   onDelete={() => deleteExpense(exp.id)}
                   onPay={() => markAsPaid(exp.id)}
