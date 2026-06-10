@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import * as pdfjsLib from 'pdfjs-dist'
+import { PDFDocument, PDFName } from 'pdf-lib'
 
 // Worker do pdfjs (Vite resolve via import.meta.url)
 try {
@@ -20,25 +21,75 @@ try {
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs'
 }
 
-// Extrai coordenadas GPS do PDF via API serverless
+// ─── Helpers pdf-lib (idênticos ao api/extrair-gps-pdf.js) ────────────────
+function _pdfResolve(ctx, obj) {
+  if (!obj) return null
+  if (obj?.constructor?.name === 'PDFRef') return ctx.lookup(obj)
+  return obj
+}
+function _pdfNum(ctx, obj) {
+  const r = _pdfResolve(ctx, obj)
+  if (!r) return null
+  if (typeof r.numberValue === 'number') return r.numberValue
+  if (typeof r.value === 'function') { try { return r.value() } catch { return null } }
+  return null
+}
+
+// Extrai coordenadas GPS do PDF diretamente no browser (sem envio ao servidor)
 async function extrairGPSdoPDF(file) {
-  const arrayBuffer = await file.arrayBuffer()
-  const bytes = new Uint8Array(arrayBuffer)
-  // Converte para base64 em chunks (evita stack overflow em PDFs grandes)
-  let binary = ''
-  const CHUNK = 8192
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
-  }
-  const base64 = btoa(binary)
-  const res = await fetch('/api/extrair-gps-pdf', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pdfBase64: base64 }),
-  })
-  if (!res.ok) return null
-  const data = await res.json()
-  return data.found ? data : null
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const doc = await PDFDocument.load(new Uint8Array(arrayBuffer), {
+      ignoreEncryption: true, throwOnInvalidObject: false, updateMetadata: false,
+    })
+    const pages = doc.getPages()
+    if (!pages.length) return null
+    const page = pages[0]
+    const ctx  = doc.context
+    const vpRaw = _pdfResolve(ctx, page.node.get(PDFName.of('VP')))
+    if (!vpRaw) return null
+    const vpSize = vpRaw.size?.() ?? 0
+    for (let i = 0; i < vpSize; i++) {
+      const vpItem = _pdfResolve(ctx, vpRaw.get(i))
+      if (!vpItem) continue
+      const measure = _pdfResolve(ctx, vpItem.get?.(PDFName.of('Measure')))
+      if (!measure) continue
+      const gpts = _pdfResolve(ctx, measure.get?.(PDFName.of('GPTS')))
+      if (!gpts || (gpts.size?.() ?? 0) < 8) continue
+      const vals = []
+      for (let j = 0; j < gpts.size(); j++) {
+        const v = _pdfNum(ctx, gpts.get(j))
+        if (v !== null) vals.push(v)
+      }
+      if (vals.length < 8) continue
+      const lats = vals.filter((_, idx) => idx % 2 === 0)
+      const lons = vals.filter((_, idx) => idx % 2 === 1)
+      const bboxRaw = _pdfResolve(ctx, vpItem.get?.(PDFName.of('BBox')))
+      let cropRect = null
+      if (bboxRaw && (bboxRaw.size?.() ?? 0) >= 4) {
+        const bv = []
+        for (let k = 0; k < bboxRaw.size(); k++) {
+          const v = _pdfNum(ctx, bboxRaw.get(k))
+          if (v !== null) bv.push(v)
+        }
+        if (bv.length >= 4) {
+          const mb = page.getMediaBox()
+          cropRect = {
+            x0: Math.min(bv[0], bv[2]), x1: Math.max(bv[0], bv[2]),
+            y0_pdf: Math.min(bv[1], bv[3]), y1_pdf: Math.max(bv[1], bv[3]),
+            pageW: mb.width, pageH: mb.height,
+          }
+        }
+      }
+      return {
+        found: true,
+        sw_lat: Math.min(...lats), sw_lng: Math.min(...lons),
+        ne_lat: Math.max(...lats), ne_lng: Math.max(...lons),
+        cropRect,
+      }
+    }
+    return null
+  } catch { return null }
 }
 
 // Renderiza página 1 do PDF para Blob PNG (scale 3x ≈ 216 DPI)
