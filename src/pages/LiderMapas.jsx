@@ -477,7 +477,12 @@ export default function LiderMapas() {
             {uploadMode === 'file' ? (
               <div>
                 <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-                  onChange={e => setForm(f => ({ ...f, file: e.target.files[0] }))} />
+                  onChange={e => {
+                    const file = e.target.files[0]
+                    if (!file) return
+                    const nomeSugerido = file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ')
+                    setForm(f => ({ ...f, file, nome: f.nome.trim() ? f.nome : nomeSugerido }))
+                  }} />
                 <button onClick={() => fileRef.current?.click()} style={{
                   width: '100%', padding: '10px 0', borderRadius: 8, border: `2px dashed ${S.border}`,
                   background: S.pageBg, cursor: 'pointer', fontSize: 13, color: S.textSub,
