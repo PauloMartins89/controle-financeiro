@@ -74,7 +74,7 @@ export default function LiderTelemetria() {
 
   // Carrega workspaces
   useEffect(() => {
-    supabase.from('workspaces').select('id, nome').order('nome')
+    supabase.from('workspaces').select('id, nome').eq('tipo', 'empresa').order('nome')
       .then(({ data }) => {
         setWorkspaces(data ?? [])
         if (data?.length) setWsId(data[0].id)
@@ -87,17 +87,24 @@ export default function LiderTelemetria() {
     setLoading(true)
     setSessaoSel(null)
     setPontos([])
-    supabase
-      .from('lider_telemetria_sessoes')
-      .select(`
-        id, iniciado_em, finalizado_em, distancia_total_m,
-        duracao_min, pontos_count, velocidade_media_ms,
-        lider_perfis!user_id ( nome, matricula )
-      `)
-      .eq('workspace_id', wsId)
-      .order('iniciado_em', { ascending: false })
-      .limit(100)
-      .then(({ data }) => { setSessoes(data ?? []); setLoading(false) })
+
+    Promise.all([
+      supabase
+        .from('lider_telemetria_sessoes')
+        .select('id, iniciado_em, finalizado_em, distancia_total_m, duracao_min, pontos_count, velocidade_media_ms, user_id')
+        .eq('workspace_id', wsId)
+        .order('iniciado_em', { ascending: false })
+        .limit(100),
+      supabase
+        .from('lider_perfis')
+        .select('user_id, nome, matricula')
+        .eq('workspace_id', wsId),
+    ]).then(([{ data: sessData }, { data: perfisData }]) => {
+      const perfisMap = Object.fromEntries((perfisData ?? []).map(p => [p.user_id, p]))
+      const merged = (sessData ?? []).map(s => ({ ...s, lider_perfis: perfisMap[s.user_id] ?? null }))
+      setSessoes(merged)
+      setLoading(false)
+    })
   }, [wsId])
 
   // Carrega pontos da sessão selecionada
