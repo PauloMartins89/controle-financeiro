@@ -542,7 +542,8 @@ function LancamentoModal({ item, workspaceId, userId, enabledModules, formTempla
   const formTypesDisponiveis = getFormTypesParaWorkspace(enabledModules)
   const [tipoForm, setTipoForm] = useState(() => {
     const prev = item?.tipo_formulario || 'padrao'
-    return formTypesDisponiveis[prev] ? prev : Object.keys(formTypesDisponiveis)[0]
+    // Aceita tipo fixo (FORM_TYPES) ou tipo de template customizado (ex: 'rdo')
+    return (formTypesDisponiveis[prev] || (formTemplates || {})[prev]) ? prev : Object.keys(formTypesDisponiveis)[0]
   })
   const [form, setForm] = useState({
     tipo: 'receita',
@@ -819,6 +820,29 @@ function LancamentoModal({ item, workspaceId, userId, enabledModules, formTempla
               ? <TemplateCamposRenderer campos={formTemplate.campos} dados={dadosExtras} onChange={setDadosExtras} />
               : <FormTransporte dados={dadosExtras} onChange={setDadosExtras} />
             }
+            <div style={{ marginTop: 14 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>OBSERVAÇÕES</label>
+              <textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} placeholder="Observações adicionais..." value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
+            </div>
+          </div>
+        )}
+
+        {/* ── FORMULÁRIO DE TEMPLATE CUSTOMIZADO (ex: RDO Birigui) ── */}
+        {tipoForm !== 'padrao' && tipoForm !== 'transporte' && formTemplate?.campos?.length > 0 && (
+          <div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>DATA</label>
+                <input type="date" value={form.data} onChange={e => set('data', e.target.value)} style={{ ...inputStyle, padding: '9px 10px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>STATUS</label>
+                <select value={form.status} onChange={e => set('status', e.target.value)} style={{ ...inputStyle, padding: '9px 10px' }}>
+                  {Object.entries(STATUS_CONF).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <TemplateCamposRenderer campos={formTemplate.campos} dados={dadosExtras} onChange={setDadosExtras} />
             <div style={{ marginTop: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>OBSERVAÇÕES</label>
               <textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} placeholder="Observações adicionais..." value={form.observacoes} onChange={e => set('observacoes', e.target.value)} />
@@ -1273,6 +1297,15 @@ function DigitalizacaoModal({ workspaceId, userId, onClose, onSaved }) {
                 <input style={inputStyle} placeholder="Centro de custo" value={form.centro_custo} onChange={e => setF('centro_custo', e.target.value)} />
                 {form.observacoes && <textarea style={{ ...inputStyle, minHeight: 56, resize: 'vertical' }} value={form.observacoes} onChange={e => setF('observacoes', e.target.value)} />}
               </div>
+            )}
+
+            {/* Formulário de template customizado (ex: RDO Birigui) */}
+            {detectedType !== 'transporte' && detectedType !== 'padrao' && formTemplates[detectedType]?.campos?.length > 0 && (
+              <TemplateCamposRenderer
+                campos={formTemplates[detectedType].campos}
+                dados={dadosExtras}
+                onChange={setDadosExtras}
+              />
             )}
 
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
@@ -2482,12 +2515,15 @@ export default function Lancamentos() {
             <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: LC.txtMuted, pointerEvents: 'none' }} />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar Nº, placa, empresa, solicitante..." style={{ width: '100%', paddingLeft: 34, padding: '9px 12px 9px 34px', borderRadius: 9, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
           </div>
-          {/* Select formulário */}
+          {/* Select formulário — opções fixas + templates do workspace (isolado por workspace_id) */}
           <select value={filterForm} onChange={e => setFilterForm(e.target.value)}
             style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 180 }}>
             <option value="todos">Todos formulários</option>
             <option value="dm">Diário do Motorista</option>
             <option value="padrao">Padrão</option>
+            {Object.entries(formTemplates).map(([tipo, tmpl]) => (
+              <option key={tipo} value={tipo}>{tmpl.nome}</option>
+            ))}
           </select>
           {/* Select status */}
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}

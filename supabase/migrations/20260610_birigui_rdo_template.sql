@@ -1,0 +1,196 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Relatório Diário de Obra (RDO) — Birigui Limpeza Técnica
+-- Workspace: BIRIGUI - SOLUCOES SUSTENTAVEIS (71eee268-082e-49d9-a613-9387595ea6d5)
+-- Template tipo_base = 'rdo' → escopo automático por workspace_id/RLS
+-- Apenas Birigui verá este formulário na lista de filtros e no OCR
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Remove versão anterior caso exista (idempotente)
+DELETE FROM form_templates
+WHERE workspace_id = '71eee268-082e-49d9-a613-9387595ea6d5'
+  AND tipo_base = 'rdo';
+
+INSERT INTO form_templates (workspace_id, nome, tipo_base, ativo, campos)
+VALUES (
+  '71eee268-082e-49d9-a613-9387595ea6d5',
+  'Relatório Diário de Obra',
+  'rdo',
+  true,
+  '[
+    {
+      "key": "numero_rdo",
+      "label": "Nº do Relatório",
+      "type": "text",
+      "required": true,
+      "section": "Identificação",
+      "ocr_hint": "número do relatório impresso no canto superior direito do formulário (ex: 2351)",
+      "show_in_table": true,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "data",
+      "label": "Data",
+      "type": "date",
+      "required": true,
+      "section": "Identificação",
+      "ocr_hint": "data do relatório — use a data da primeira linha da tabela JORNADA DE TRABALHO, formato YYYY-MM-DD",
+      "show_in_table": true,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "empresa",
+      "label": "Empresa",
+      "type": "text",
+      "required": true,
+      "section": "Cliente",
+      "ocr_hint": "nome da empresa cliente no campo EMPRESA",
+      "show_in_table": true,
+      "show_in_pdf": true,
+      "width": "full",
+      "options": ""
+    },
+    {
+      "key": "cidade_estado",
+      "label": "Cidade / Estado",
+      "type": "text",
+      "required": false,
+      "section": "Cliente",
+      "ocr_hint": "cidade e estado no campo CIDADE / ESTADO",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "solicitante",
+      "label": "Solicitante",
+      "type": "text",
+      "required": false,
+      "section": "Cliente",
+      "ocr_hint": "nome do solicitante no campo SOLICITANTE",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "fone",
+      "label": "Fone",
+      "type": "text",
+      "required": false,
+      "section": "Cliente",
+      "ocr_hint": "telefone do solicitante no campo FONE",
+      "show_in_table": false,
+      "show_in_pdf": false,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "veiculo_placa",
+      "label": "Veículo Placa",
+      "type": "text",
+      "required": false,
+      "section": "Acompanhamento",
+      "ocr_hint": "placa do veículo no campo VEÍCULO PLACA",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "equipamento",
+      "label": "Equipamento",
+      "type": "text",
+      "required": false,
+      "section": "Acompanhamento",
+      "ocr_hint": "equipamento utilizado no campo EQUIPAMENTO (ex: hidrojato, bomba, etc.)",
+      "show_in_table": true,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "equipe_diurna",
+      "label": "Equipe Diurna",
+      "type": "textarea",
+      "required": false,
+      "section": "Acompanhamento",
+      "ocr_hint": "nomes dos colaboradores listados na coluna EQUIPE DIURNA",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "equipe_noturna",
+      "label": "Equipe Noturna",
+      "type": "textarea",
+      "required": false,
+      "section": "Acompanhamento",
+      "ocr_hint": "nomes dos colaboradores listados na coluna EQUIPE NOTURNA (deixe vazio se não houver turno noturno)",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "half",
+      "options": ""
+    },
+    {
+      "key": "acessorios",
+      "label": "Acessórios Utilizados",
+      "type": "textarea",
+      "required": false,
+      "section": "Acompanhamento",
+      "ocr_hint": "lista de acessórios registrados no campo ACESSÓRIOS UTILIZADOS",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "full",
+      "options": ""
+    },
+    {
+      "key": "locais_servico",
+      "label": "Local de Realização dos Serviços",
+      "type": "textarea",
+      "required": false,
+      "section": "Serviços",
+      "ocr_hint": "locais com checkbox marcado na seção LOCAL DE REALIZAÇÃO DOS SERVIÇOS — liste apenas os marcados separados por vírgula, ex: Rotinas-1, Caldeira de Recuperação-2, ETE-1. Opções disponíveis: Rotinas-1, Linha de Fibras-1, Linha de Fibras-2, Preparação Madeira-1, Preparação Madeira-2, Secagem-1, Secagem-2, Forno de Cal-1, Forno de Cal-2, Caldeira de Recuperação-1, Caldeira de Recuperação-2, Aterro Industrial, Sistema de Refrigeração, Caldeira de Força, ETE-1, ETE-2, Cap./Tratamento de água-1, Cap./Tratamento de água-2, Central Ar Compr-1, Central Ar Compr-2, TGs-1, TGs-2, DHO/Refeitório, Logística",
+      "show_in_table": true,
+      "show_in_pdf": true,
+      "width": "full",
+      "options": ""
+    },
+    {
+      "key": "jornada",
+      "label": "Jornada de Trabalho",
+      "type": "textarea",
+      "required": false,
+      "section": "Jornada",
+      "ocr_hint": "resumo da tabela JORNADA DE TRABALHO: para cada linha preenchida informe — data | entrada1 | saída1 | entrada2 | saída2 | total horas | serviço executado. Use quebra de linha entre as entradas.",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "full",
+      "options": ""
+    },
+    {
+      "key": "observacoes",
+      "label": "Observações",
+      "type": "textarea",
+      "required": false,
+      "section": "Observações",
+      "ocr_hint": "texto livre registrado no campo OBSERVAÇÕES",
+      "show_in_table": false,
+      "show_in_pdf": true,
+      "width": "full",
+      "options": ""
+    }
+  ]'::jsonb
+);
+
+-- Verificação
+SELECT id, nome, tipo_base, ativo,
+       jsonb_array_length(campos) AS total_campos
+FROM form_templates
+WHERE workspace_id = '71eee268-082e-49d9-a613-9387595ea6d5'
+  AND tipo_base = 'rdo';
