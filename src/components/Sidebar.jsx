@@ -9,7 +9,7 @@ import {
   ChevronDownIcon, ChevronRightIcon, ShieldCheckIcon, BellAlertIcon, ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon, MagnifyingGlassIcon, ClipboardDocumentListIcon,
   TrophyIcon, CheckCircleIcon, TagIcon, AdjustmentsHorizontalIcon, PuzzlePieceIcon, BoltIcon, BeakerIcon, DevicePhoneMobileIcon,
-  WrenchScrewdriverIcon, ExclamationTriangleIcon, MapPinIcon, CubeIcon, Squares2X2Icon,
+  WrenchScrewdriverIcon, ExclamationTriangleIcon, MapPinIcon, CubeIcon, Squares2X2Icon, MapIcon,
 } from '@heroicons/react/24/outline'
 import { useEffect, useState } from 'react'
 import useStore from '../store/useStore'
@@ -138,6 +138,7 @@ const navGroups = [
       { to: '/lider/dds-grupos',              icon: UserGroupIcon,             label: 'Grupos DDS',          moduleKey: 'smartlider' },
       { to: '/lider/cadastros/dds',           icon: DocumentTextIcon,          label: 'Temas de DDS',        moduleKey: 'smartlider' },
       { divider: true,                        label: '── Admin',                                                                moduleKey: 'smartlider' },
+      { to: '/lider/mapas',                   icon: MapIcon,                   label: 'Mapas de Campo',      moduleKey: 'smartlider', empresaAdminOnly: true },
       { to: '/lider/admin',                   icon: Cog6ToothIcon,             label: 'Usuários App',        moduleKey: 'smartlider', empresaAdminOnly: true },
     ],
   },

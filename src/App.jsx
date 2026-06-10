@@ -62,6 +62,7 @@ import LiderOcorrencias from './pages/LiderOcorrencias'
 import LiderDDS from './pages/LiderDDS'
 import LiderDashboard from './pages/LiderDashboard'
 import SmartLiderAdmin from './pages/SmartLiderAdmin'
+import LiderMapas from './pages/LiderMapas'
 import LiderTurnos from './pages/LiderTurnos'
 import LiderApontamentos from './pages/LiderApontamentos'
 import ManutencaoDashboard from './pages/ManutencaoDashboard'
@@ -604,6 +605,7 @@ export default function App() {
                   <Route path="/lider" element={<Navigate to="/lider/dashboard" replace />} />
                   <Route path="/lider/dashboard" element={<LiderDashboard />} />
                   <Route path="/lider/admin" element={<SmartLiderAdmin />} />
+                  <Route path="/lider/mapas" element={<LiderMapas />} />
                   <Route path="/lider/turnos" element={<LiderTurnos />} />
                   <Route path="/lider/apontamentos" element={<LiderApontamentos />} />
                   <Route path="/lider/epi/solicitacoes" element={<LiderEpi />} />
