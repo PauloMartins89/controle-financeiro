@@ -71,11 +71,13 @@ export default function LiderTelemetria() {
   const [pontos,       setPontos]       = useState([])
   const [loading,      setLoading]      = useState(false)
   const [tileMode,     setTileMode]     = useState('satellite')
+  const [queryError,   setQueryError]   = useState(null)
 
   // Carrega workspaces
   useEffect(() => {
     supabase.from('workspaces').select('id, nome').eq('tipo', 'empresa').order('nome')
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) setQueryError('workspaces: ' + error.message)
         setWorkspaces(data ?? [])
         if (data?.length) setWsId(data[0].id)
       })
@@ -99,7 +101,9 @@ export default function LiderTelemetria() {
         .from('lider_perfis')
         .select('user_id, nome, matricula')
         .eq('workspace_id', wsId),
-    ]).then(([{ data: sessData }, { data: perfisData }]) => {
+    ]).then(([{ data: sessData, error: errSess }, { data: perfisData, error: errPerfis }]) => {
+      if (errSess)   setQueryError('sessoes: ' + errSess.message)
+      if (errPerfis) setQueryError('perfis: ' + errPerfis.message)
       const perfisMap = Object.fromEntries((perfisData ?? []).map(p => [p.user_id, p]))
       const merged = (sessData ?? []).map(s => ({ ...s, lider_perfis: perfisMap[s.user_id] ?? null }))
       setSessoes(merged)
@@ -152,6 +156,12 @@ export default function LiderTelemetria() {
             </div>
           </div>
         </div>
+
+        {queryError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#b91c1c' }}>
+            ⚠️ Erro Supabase: <code>{queryError}</code>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16 }}>
 
