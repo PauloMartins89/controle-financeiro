@@ -1821,7 +1821,12 @@ export default function Lancamentos() {
 
   // Config por cliente (isolada por workspace). Ausente = comportamento legado.
   useEffect(() => {
-    if (workspaceId) loadWorkspaceConfig(workspaceId).then(setWsConfig)
+    if (workspaceId) loadWorkspaceConfig(workspaceId).then(cfg => {
+      setWsConfig(cfg)
+      // Filtro padrão configurável por workspace (ex: 'rdo' para Birigui, 'dm' legado)
+      const defaultFilter = getConfig(cfg, 'ui.lancamentos.default_filter', null)
+      if (defaultFilter) setFilterForm(defaultFilter)
+    })
   }, [workspaceId])
   // Cor de fundo da coluna VALOR — só pinta quem tiver a flag no workspace_config
   const valorColBg = getConfig(wsConfig, 'ui.lancamentos.valorColBg', null)
