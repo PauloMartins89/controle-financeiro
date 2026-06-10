@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
+import { loadWorkspaceConfig, getConfig } from '../lib/workspaceConfig'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import * as XLSX from 'xlsx'
@@ -1783,6 +1784,14 @@ export default function Lancamentos() {
   const [comprovanteMenuId, setComprovanteMenuId] = useState(null)
   const [comprovanteViewer, setComprovanteViewer] = useState(null) // { url, isPdf }
   const [formTemplates, setFormTemplates] = useState({})
+  const [wsConfig, setWsConfig] = useState({})
+
+  // Config por cliente (isolada por workspace). Ausente = comportamento legado.
+  useEffect(() => {
+    if (workspaceId) loadWorkspaceConfig(workspaceId).then(setWsConfig)
+  }, [workspaceId])
+  // Cor de fundo da coluna VALOR — só pinta quem tiver a flag no workspace_config
+  const valorColBg = getConfig(wsConfig, 'ui.lancamentos.valorColBg', null)
 
   function toggleDiario(id) {
     setExpandedDiario(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -2400,7 +2409,7 @@ export default function Lancamentos() {
   }
 
   // Helper: cabeçalho de coluna com ordenação crescente/decrescente
-  function ColHead({ colKey, label, align = 'left' }) {
+  function ColHead({ colKey, label, align = 'left', bg = null }) {
     const isSorted = sortKey === colKey
     const isAsc = isSorted && sortDir === 'asc'
     const isDesc = isSorted && sortDir === 'desc'
@@ -2414,7 +2423,7 @@ export default function Lancamentos() {
         style={{ padding: '9px 8px 9px 12px', textAlign: align, fontSize: 10.5, fontWeight: 700,
           color: isSorted ? LC.accent : LC.txtMuted, textTransform: 'uppercase',
           letterSpacing: 0.6, whiteSpace: 'nowrap', userSelect: 'none',
-          cursor: 'pointer', background: isSorted ? LC.accentLight : LC.secondary,
+          cursor: 'pointer', background: isSorted ? LC.accentLight : (bg || LC.secondary),
           borderBottom: `1px solid ${LC.border}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
           <span>{label}</span>
@@ -2557,7 +2566,7 @@ export default function Lancamentos() {
                       <ColHead colKey="kmAsf"       label="KM AST" align="right" />
                       <ColHead colKey="kmTer"       label="KM TER" align="right" />
                       <ColHead colKey="kmTotal"     label="KM TOTAL" align="right" />
-                      <ColHead colKey="valor"       label="VALOR" align="right" />
+                      <ColHead colKey="valor"       label="VALOR" align="right" bg={valorColBg} />
                       <ColHead colKey="status"      label="STATUS" />
                     </>
                   ) : (
@@ -2566,7 +2575,7 @@ export default function Lancamentos() {
                       {templateCols.map(c => (
                         <ColHead key={c.key} colKey={`tmpl_${c.key}`} label={c.label.toUpperCase()} align={c.tipo === 'number' ? 'right' : 'left'} />
                       ))}
-                      <ColHead colKey="valor" label="VALOR" align="right" />
+                      <ColHead colKey="valor" label="VALOR" align="right" bg={valorColBg} />
                       <ColHead colKey="status" label="STATUS" />
                     </>
                   )}
@@ -2689,7 +2698,7 @@ export default function Lancamentos() {
                             <span style={{ padding: '9px 10px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
                               {fmtCurrency(l.valor)}
                             </span>
-                          ), { textAlign: 'right' })}
+                          ), { textAlign: 'right', background: valorColBg || undefined })}
                           {/* STATUS */}
                           <td style={{ padding: '10px 10px' }}>
                             <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
@@ -2725,7 +2734,7 @@ export default function Lancamentos() {
                             <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
                               {fmtCurrency(l.valor)}
                             </span>
-                          ), { textAlign: 'right' })}
+                          ), { textAlign: 'right', background: valorColBg || undefined })}
                           {/* STATUS */}
                           <td style={{ padding: '10px 12px' }}>
                             <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
