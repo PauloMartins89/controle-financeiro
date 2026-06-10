@@ -476,10 +476,15 @@ export default function LiderMapas() {
             </div>
             {uploadMode === 'file' ? (
               <div>
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/tiff" style={{ display: 'none' }}
                   onChange={e => {
                     const file = e.target.files[0]
                     if (!file) return
+                    if (!file.type.startsWith('image/')) {
+                      toast.error('Selecione uma imagem (PNG, JPG). Para GeoPDF use o script Python.')
+                      e.target.value = ''
+                      return
+                    }
                     const nomeSugerido = file.name.replace(/\.[^/.]+$/, '').replace(/_/g, ' ')
                     setForm(f => ({ ...f, file, nome: f.nome.trim() ? f.nome : nomeSugerido }))
                   }} />
