@@ -2982,6 +2982,9 @@ export default function Lancamentos() {
                       const hChip = (label, val, color) => val && val !== '0' && val !== '0.0'
                         ? <span style={{ fontSize: 11, background: `${color}18`, color, padding: '2px 9px', borderRadius: 10, whiteSpace: 'nowrap', fontWeight: 600 }}>{label}: {val}h</span>
                         : null
+                      const processadoEm = d.processado_em
+                        ? new Date(d.processado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : null
                       return (
                         <tr>
                           <td colSpan={20} style={{ padding: 0, background: 'rgba(99,102,241,0.03)', borderBottom: `2px solid ${LC.accent}44` }}>
@@ -3006,6 +3009,7 @@ export default function Lancamentos() {
                                 {hChip('Feriado Diurno', d.h_feriado_diurnas, '#b45309')}
                                 {hChip('Feriado Noturno', d.h_feriado_noturnas, '#92400e')}
                                 {d.jornada_total_horas && <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.12)', color: LC.accent, padding: '2px 9px', borderRadius: 10, fontWeight: 700 }}>Total: {d.jornada_total_horas}h</span>}
+                                {processadoEm && <span style={{ fontSize: 11, background: 'rgba(100,116,139,0.1)', color: '#64748b', padding: '2px 9px', borderRadius: 10, marginLeft: 'auto' }}>⚙️ Processado em: {processadoEm}</span>}
                               </div>
 
                               {/* tabela de jornada se existir */}

@@ -620,7 +620,7 @@ async function processarBoletim(boletimId) {
           // Campos OCR espalhados no topo de dados_extras para que a tabela Lançamentos
           // leia dados_extras[campo] diretamente (templateCols usa d[c.key])
           // O objeto completo também fica em dados_extras.ocr como backup
-          dados_extras:    { boletim_id: boletimId, ocr: ocrResult, ...ocrResult },
+          dados_extras:    { boletim_id: boletimId, processado_em: new Date().toISOString(), ocr: ocrResult, ...ocrResult },
           comprovante_url: bol.imagem_url || '',
         })
         .select('id')
@@ -910,7 +910,7 @@ Retorne APENAS o JSON, sem comentários.`
         status:          'pendente',
         observacoes:     ocrRaw.observacao || ocrRaw.observacoes || '',
         tipo_formulario: 'maquina',
-        dados_extras:    { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) },
+        dados_extras:    { boletim_id: boletimId, processado_em: new Date().toISOString(), ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) },
         comprovante_url: bol.imagem_url || '',
       })
       .select('id')
