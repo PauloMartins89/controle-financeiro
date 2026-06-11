@@ -193,6 +193,29 @@ function calcPricingTotal(l, tarifasMap) {
   return (rsDiurno ?? 0) + (rsNoturno ?? 0)
 }
 
+// Calcula valor de um lançamento RDO usando horas classificadas pelo OCR × tarifas por período
+// Retorna número ou null (se não houver tarifa para o cliente)
+function calcRdoPricingTotal(l, tarifasMap) {
+  if (l.tipo_formulario !== 'rdo') return null
+  const d = l.dados_extras || {}
+  const empresa = (d.empresa || d.cliente || '').trim().toLowerCase()
+  let tarifa = empresa ? (tarifasMap[empresa] ?? null) : null
+  if (!tarifa && empresa) {
+    const found = Object.entries(tarifasMap).find(([k]) => empresa.includes(k) || k.includes(empresa))
+    if (found) tarifa = found[1]
+  }
+  if (!tarifa) return null
+  const h = (key) => parseFloat(String(d[key] || '0').replace(',', '.')) || 0
+  const total =
+    h('horas_diurnas')       * (Number(tarifa.valor_hora_diurno)           || 0) +
+    h('horas_noturnas')      * (Number(tarifa.valor_hora_noturno)          || 0) +
+    h('h_fds_diurnas')       * (Number(tarifa.valor_hora_fds_diurno)       || 0) +
+    h('h_fds_noturnas')      * (Number(tarifa.valor_hora_fds_noturno)      || 0) +
+    h('h_feriado_diurnas')   * (Number(tarifa.valor_hora_feriado_diurno)   || 0) +
+    h('h_feriado_noturnas')  * (Number(tarifa.valor_hora_feriado_noturno)  || 0)
+  return total > 0 ? parseFloat(total.toFixed(2)) : null
+}
+
 function mergeKmRows(ocrRows) {
   const base = DEFAULT_KM_ROWS.map(r => ({ ...r }))
   if (!ocrRows || !ocrRows.length) return base
@@ -2308,7 +2331,7 @@ export default function Lancamentos() {
         setFormTemplates(map)
       })
     supabase.from('diario_tarifas')
-      .select('cliente_nome, valor_hora_diurno, valor_hora_noturno, hora_inicio_diurno, hora_fim_diurno')
+      .select('cliente_nome, valor_hora_diurno, valor_hora_noturno, valor_hora_fds_diurno, valor_hora_fds_noturno, valor_hora_feriado_diurno, valor_hora_feriado_noturno, hora_inicio_diurno, hora_fim_diurno')
       .eq('workspace_id', workspaceId)
       .eq('ativo', true)
       .then(({ data: tData }) => {
@@ -2552,6 +2575,31 @@ export default function Lancamentos() {
           </select>
           {selectedIds.size > 0 && (
             <>
+              {/* Aplicar valorização — só aparece quando há RDOs com valor=0 e tarifa disponível */}
+              {(() => {
+                const rdosSemValor = filtered.filter(l =>
+                  selectedIds.has(l.id) && l.tipo_formulario === 'rdo' && (!l.valor || l.valor === 0) && calcRdoPricingTotal(l, tarifasMap) != null
+                )
+                if (rdosSemValor.length === 0) return null
+                return (
+                  <button onClick={async () => {
+                    const tid = toast.loading(`Aplicando valorização em ${rdosSemValor.length} RDO(s)...`)
+                    let ok = 0
+                    for (const l of rdosSemValor) {
+                      const valorCalc = calcRdoPricingTotal(l, tarifasMap)
+                      const { error } = await supabase.from('lancamentos').update({ valor: valorCalc }).eq('id', l.id)
+                      if (!error) {
+                        setLancamentos(prev => prev.map(x => x.id === l.id ? { ...x, valor: valorCalc } : x))
+                        ok++
+                      }
+                    }
+                    toast.success(`Valorização aplicada em ${ok} RDO(s)`, { id: tid })
+                  }} title={`Aplicar valorização calculada em ${rdosSemValor.length} RDO(s) selecionado(s)`}
+                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: 'rgba(2,132,199,0.12)', border: '1px solid rgba(2,132,199,0.3)', color: '#0284c7', cursor: 'pointer', fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    <BanknotesIcon style={{ width: 16, height: 16 }} /> Valorizar ({rdosSemValor.length})
+                  </button>
+                )
+              })()}
               <button onClick={() => {
                 const sels = filtered.filter(l => selectedIds.has(l.id))
                 const comLote = sels.filter(l => l.lote_cliente_id && lotesMap[l.lote_cliente_id])
@@ -2820,12 +2868,22 @@ export default function Lancamentos() {
                               </td>
                             )
                           })}
-                          {/* VALOR */}
-                          {EDITABLE_TD('valor', l.valor, (
-                            <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700, color: l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent }}>
-                              {fmtCurrency(l.valor)}
-                            </span>
-                          ), { textAlign: 'right', background: valorColBg || undefined })}
+                          {/* VALOR — se RDO e valor=0, mostra sugestão calculada */}
+                          {(() => {
+                            const rdoSugerido = isRdo ? calcRdoPricingTotal(l, tarifasMap) : null
+                            const temValor = l.valor && l.valor !== 0
+                            const mostrarSugestao = isRdo && !temValor && rdoSugerido != null
+                            return EDITABLE_TD('valor', l.valor, (
+                              <span style={{ padding: '9px 12px', display: 'block', whiteSpace: 'nowrap', textAlign: 'right', fontWeight: 700,
+                                color: mostrarSugestao ? '#0284c7' : l.tipo === 'receita' ? '#059669' : l.tipo === 'despesa' ? '#dc2626' : LC.accent,
+                                fontStyle: mostrarSugestao ? 'italic' : 'normal',
+                              }}>
+                                {mostrarSugestao
+                                  ? <span title="Valor calculado pelas tarifas — clique para confirmar">{fmtCurrency(rdoSugerido)} ✦</span>
+                                  : fmtCurrency(l.valor)}
+                              </span>
+                            ), { textAlign: 'right', background: valorColBg || undefined })
+                          })()}
                           {/* STATUS */}
                           <td style={{ padding: '10px 12px' }}>
                             <StatusChip status={l.status} lote={l.lote_cliente_id && lotesMap[l.lote_cliente_id] ? lotesMap[l.lote_cliente_id] : null} />
