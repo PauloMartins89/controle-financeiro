@@ -563,11 +563,11 @@ async function processarBoletim(boletimId) {
   if (!boletimTipo && bol.boletim_tipo_id) {
     const { data: tipoFallback } = await supabase
       .from('maquinas_boletim_tipos')
-      .select('id, nome, campos_json, imagem_url, modulo_destino')
+      .select('id, nome, campos_json, imagem_url, modulo_destino, form_template_id')
       .eq('id', bol.boletim_tipo_id)
       .single()
     boletimTipo = tipoFallback || null
-    console.log('[ocr-boletim] boletimTipo via fallback:', boletimTipo?.nome, '| modulo_destino:', boletimTipo?.modulo_destino)
+    console.log('[ocr-boletim] boletimTipo via fallback:', boletimTipo?.nome, '| modulo_destino:', boletimTipo?.modulo_destino, '| form_template_id:', boletimTipo?.form_template_id)
   } else {
     console.log('[ocr-boletim] boletimTipo via join:', boletimTipo?.nome, '| modulo_destino:', boletimTipo?.modulo_destino)
   }
@@ -595,13 +595,68 @@ async function processarBoletim(boletimId) {
           console.warn('[ocr-boletim] erro ao baixar imagem:', e.message)
         }
       }
-      const ocrResult = await runOCR(imageBase64, { template: tmpl })
+      const ocrResult      = await runOCR(imageBase64, { template: tmpl })
+      const tipoForm       = ocrResult.tipo_formulario || tmpl.tipo_base || 'formulario'
+      const dataBoletimTmpl = ocrResult.data || new Date().toISOString().slice(0, 10)
+
+      const descricaoLanc = tipoForm === 'rdo'
+        ? `RDO ${ocrResult.numero_rdo || ocrResult.numero_documento || '—'} | ${ocrResult.empresa || ''} | ${dataBoletimTmpl}`
+        : `${tmpl.nome} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletimTmpl}`
+
+      const { data: lancamentoTmpl } = await supabase
+        .from('lancamentos')
+        .insert({
+          workspace_id:    workspaceId,
+          user_id:         null,
+          tipo:            'receita',
+          descricao:       descricaoLanc,
+          valor:           0,
+          data:            dataBoletimTmpl,
+          categoria:       tipoForm === 'rdo' ? 'Serviços' : 'Campo',
+          centro_custo:    '',
+          status:          'pendente',
+          observacoes:     ocrResult.observacoes || '',
+          tipo_formulario: tipoForm,
+          dados_extras:    { boletim_id: boletimId, ocr: ocrResult },
+          comprovante_url: bol.imagem_url || '',
+        })
+        .select('id')
+        .single()
+
       await supabase.from('maquinas_boletins').update({
-        status:       'processado',
-        dados_extras: ocrResult,
-        data_boletim: ocrResult.data || null,
+        status:        'processado',
+        processado_em: new Date().toISOString(),
+        dados_extras:  ocrResult,
+        data_boletim:  dataBoletimTmpl,
+        lancamento_id: lancamentoTmpl?.id || null,
       }).eq('id', boletimId)
-      console.log(`[ocr-boletim] processado via form_template "${tmpl.nome}" — tipo=${ocrResult.tipo_formulario}`)
+
+      console.log(`[ocr-boletim] processado via form_template "${tmpl.nome}" — tipo=${tipoForm} — lancamento=${lancamentoTmpl?.id}`)
+
+      if (waPhone && tipoForm === 'rdo') {
+        const d = ocrResult
+        const horasInfo = [
+          d.horas_diurnas      ? `☀️ Diurnas: ${d.horas_diurnas}h`        : null,
+          d.horas_noturnas     ? `🌙 Noturnas: ${d.horas_noturnas}h`       : null,
+          d.h_fds_diurnas      ? `📅 FDS Diurnas: ${d.h_fds_diurnas}h`    : null,
+          d.h_fds_noturnas     ? `📅 FDS Noturnas: ${d.h_fds_noturnas}h`  : null,
+          d.h_feriado_diurnas  ? `🎉 Feriado D: ${d.h_feriado_diurnas}h`  : null,
+          d.h_feriado_noturnas ? `🎉 Feriado N: ${d.h_feriado_noturnas}h` : null,
+        ].filter(Boolean).join('\n')
+        const msgRdo = [
+          `✅ *RDO registrado!*`,
+          `📋 Nº: ${d.numero_rdo || d.numero_documento || '—'}`,
+          `🏢 Empresa: ${d.empresa || '—'}`,
+          `📅 Data: ${d.data || dataBoletimTmpl}`,
+          `⏱️ Jornada: ${d.jornada_inicio || '?'} → ${d.jornada_fim || '?'} (${d.jornada_total_horas || '?'}h)`,
+          horasInfo || null,
+          d.observacoes ? `📝 Obs: ${d.observacoes}` : null,
+        ].filter(Boolean).join('\n')
+        await zapiSendText(waPhone, msgRdo)
+      } else if (waPhone) {
+        await zapiSendText(waPhone, `✅ *${tmpl.nome}* registrado!\n📅 Data: ${dataBoletimTmpl}`)
+      }
+
       return ocrResult
     }
   }
