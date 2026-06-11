@@ -49,6 +49,7 @@ alter table configuracoes add constraint configuracoes_pkey primary key (user_id
 
 -- 3. Closures: a unique constraint em (mes) vira (user_id, mes)
 alter table closures drop constraint if exists closures_mes_key;
+alter table closures drop constraint if exists closures_user_mes_key;
 alter table closures add constraint closures_user_mes_key unique (user_id, mes);
 
 -- 4. Remove políticas permissivas antigas
@@ -65,6 +66,17 @@ drop policy if exists "allow_all_closures"  on closures;
 drop policy if exists "Allow all for anon"  on configuracoes;
 
 -- 5. Cria políticas de isolamento por usuário logado
+drop policy if exists "user_isolation" on pessoas;
+drop policy if exists "user_isolation" on grupos;
+drop policy if exists "user_isolation" on despesas;
+drop policy if exists "user_isolation" on cartoes;
+drop policy if exists "user_isolation" on recorrentes;
+drop policy if exists "user_isolation" on acertos;
+drop policy if exists "user_isolation" on veiculos;
+drop policy if exists "user_isolation" on negocios;
+drop policy if exists "user_isolation" on proventos;
+drop policy if exists "user_isolation" on closures;
+drop policy if exists "user_isolation" on configuracoes;
 create policy "user_isolation" on pessoas      for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "user_isolation" on grupos       for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "user_isolation" on despesas     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

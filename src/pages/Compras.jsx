@@ -8,7 +8,7 @@ import {
   XCircleIcon, ArrowPathIcon, MagnifyingGlassIcon,
   ExclamationTriangleIcon, DocumentTextIcon, BanknotesIcon,
   TruckIcon, FunnelIcon, PencilIcon, TrashIcon, ListBulletIcon,
-  ClipboardDocumentIcon, TrophyIcon,
+  ClipboardDocumentIcon, TrophyIcon, EyeIcon, ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -376,10 +376,23 @@ function ModalHistorico({ solicitacao, onClose }) {
         </div>
 
         {solicitacao.comprovante_url && (
-          <a href={solicitacao.comprovante_url} target="_blank" rel="noreferrer"
-            style={{ display: 'block', textAlign: 'center', marginTop: 10, padding: '9px', borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#818cf8', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-            Ver comprovante ↗
-          </a>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <a href={solicitacao.comprovante_url} target="_blank" rel="noreferrer"
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#818cf8', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+              <EyeIcon style={{ width: 14, height: 14 }} /> Visualizar
+            </a>
+            <button
+              onClick={() => {
+                const a = document.createElement('a')
+                a.href = solicitacao.comprovante_url
+                a.download = `comprovante_${solicitacao.id.slice(0, 8)}`
+                a.target = '_blank'
+                document.body.appendChild(a); a.click(); document.body.removeChild(a)
+              }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px', borderRadius: 8, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Baixar
+            </button>
+          </div>
         )}
 
         <button onClick={onClose} style={{ width: '100%', marginTop: 12, padding: '9px', borderRadius: 8, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>Fechar</button>
@@ -867,10 +880,23 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
             </div>
 
             {s.comprovante_url && (
-              <a href={s.comprovante_url} target="_blank" rel="noreferrer"
-                style={{ fontSize: 11, color: '#818cf8', textDecoration: 'none' }}>
-                Ver comprovante ↗
-              </a>
+              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                <a href={s.comprovante_url} target="_blank" rel="noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#818cf8', textDecoration: 'none', padding: '3px 7px', borderRadius: 5, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  <EyeIcon style={{ width: 11, height: 11 }} /> Visualizar
+                </a>
+                <button
+                  onClick={() => {
+                    const a = document.createElement('a')
+                    a.href = s.comprovante_url
+                    a.download = `comprovante_${s.id.slice(0, 8)}`
+                    a.target = '_blank'
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#10b981', padding: '3px 7px', borderRadius: 5, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', cursor: 'pointer' }}>
+                  <ArrowDownTrayIcon style={{ width: 11, height: 11 }} /> Baixar
+                </button>
+              </div>
             )}
           </div>
         </div>

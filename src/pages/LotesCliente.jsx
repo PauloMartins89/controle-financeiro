@@ -9,7 +9,7 @@ import {
   CheckCircleIcon, XCircleIcon, ClockIcon, PaperAirplaneIcon,
   ChevronDownIcon, ChevronUpIcon, PhotoIcon, DocumentTextIcon,
   ArrowPathIcon, PlusIcon, XMarkIcon, UserGroupIcon,
-  ArrowUpTrayIcon, BanknotesIcon, LinkIcon, ArrowDownTrayIcon,
+  ArrowUpTrayIcon, BanknotesIcon, LinkIcon, ArrowDownTrayIcon, EyeIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Status ────────────────────────────────────────────────────────────────────
@@ -925,6 +925,14 @@ function LoteCard({ lote, onRefresh }) {
   const [saving, setSaving] = useState(false)
   const [sigModal, setSigModal] = useState(false)
   const [downloadingPDF, setDownloadingPDF] = useState(false)
+  const [comprovanteMenu, setComprovanteMenu] = useState(false)
+
+  useEffect(() => {
+    if (!comprovanteMenu) return
+    const close = () => setComprovanteMenu(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [comprovanteMenu])
 
   async function handleDownloadPDFAssinado(e) {
     e.stopPropagation()
@@ -1043,10 +1051,44 @@ function LoteCard({ lote, onRefresh }) {
           {/* Ações */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
             {lote.comprovante_url && (
-              <button title="Ver comprovante" onClick={() => window.open(lote.comprovante_url, '_blank')}
-                style={{ padding: '6px 10px', borderRadius: 7, background: 'rgba(99,102,241,0.1)', border: 'none', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700 }}>
-                <PhotoIcon style={{ width: 14, height: 14 }} /> Comprovante
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  title="Ver / Baixar comprovante"
+                  onClick={e => { e.stopPropagation(); setComprovanteMenu(v => !v) }}
+                  style={{ padding: '6px 10px', borderRadius: 7, background: comprovanteMenu ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.1)', border: comprovanteMenu ? '1px solid rgba(99,102,241,0.4)' : '1px solid transparent', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700 }}>
+                  <PhotoIcon style={{ width: 14, height: 14 }} /> Comprovante
+                </button>
+                {comprovanteMenu && (
+                  <div
+                    onClick={e => e.stopPropagation()}
+                    style={{ position: 'absolute', left: 0, top: '100%', marginTop: 4, zIndex: 1000, background: 'var(--bg-card, #1c1c1e)', border: '1px solid var(--border, #2d2d2f)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden', minWidth: 160 }}>
+                    <button
+                      onClick={() => { window.open(lote.comprovante_url, '_blank'); setComprovanteMenu(false) }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 13, fontWeight: 500 }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                      <EyeIcon style={{ width: 15, height: 15, color: '#818cf8', flexShrink: 0 }} />
+                      Visualizar
+                    </button>
+                    <div style={{ height: 1, background: 'var(--border, #2d2d2f)', margin: '0 10px' }} />
+                    <button
+                      onClick={() => {
+                        const a = document.createElement('a')
+                        a.href = lote.comprovante_url
+                        a.download = `comprovante_lote_${lote.id.slice(0, 8)}`
+                        a.target = '_blank'
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a)
+                        setComprovanteMenu(false)
+                      }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: '#e5e7eb', fontSize: 13, fontWeight: 500 }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.1)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                      <ArrowDownTrayIcon style={{ width: 15, height: 15, color: '#10b981', flexShrink: 0 }} />
+                      Baixar
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
             {lote.status === 'aprovado_cliente' && (
               <button

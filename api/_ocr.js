@@ -28,6 +28,105 @@ async function groqWithRetry(groq, params, maxAttempts = 3) {
 // Helpers para extração com template
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Normaliza datas nos formatos DD/MM/YY, DD/MM/YYYY, DD-MM-YYYY → YYYY-MM-DD
+export function normalizarData(raw, hoje) {
+  if (!raw || typeof raw !== 'string') return hoje
+  const s = raw.trim()
+  // já está em YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  // DD/MM/YY ou DD/MM/YYYY ou DD-MM-YYYY
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/)
+  if (m) {
+    const d  = m[1].padStart(2, '0')
+    const mo = m[2].padStart(2, '0')
+    let y    = m[3]
+    if (y.length === 2) y = (parseInt(y) <= 50 ? '20' : '19') + y
+    return `${y}-${mo}-${d}`
+  }
+  return hoje
+}
+
+// Feriados nacionais fixos (MM-DD) e móveis calculados para um dado ano
+function feriadosDoAno(ano) {
+  // Fixos
+  const fixos = ['01-01','04-21','05-01','09-07','10-12','11-02','11-15','12-25']
+  // Páscoa (algoritmo de Meeus/Jones/Butcher)
+  const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4), k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7
+  const mm = Math.floor((a + 11 * h + 22 * l) / 451)
+  const mes = Math.floor((h + l - 7 * mm + 114) / 31)
+  const dia = ((h + l - 7 * mm + 114) % 31) + 1
+  const pascoa = new Date(ano, mes - 1, dia)
+  const moveis = [
+    new Date(pascoa.getTime() - 47 * 86400000), // carnaval (2ª)
+    new Date(pascoa.getTime() - 48 * 86400000), // carnaval (terça)
+    new Date(pascoa.getTime() - 2  * 86400000), // sexta-feira santa
+    pascoa,                                       // páscoa
+    new Date(pascoa.getTime() + 60 * 86400000),  // corpus christi
+  ].map(dt => `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`)
+  return new Set([...fixos, ...moveis])
+}
+
+// Classifica as horas de uma jornada em 6 categorias
+// data: 'YYYY-MM-DD', inicio/fim: 'HH:MM' (fim pode ser < inicio = virada de meia-noite)
+export function classificarHoras(dataStr, inicioStr, fimStr) {
+  const zero = { horas_diurnas:0, horas_noturnas:0, h_fds_diurnas:0, h_fds_noturnas:0, h_feriado_diurnas:0, h_feriado_noturnas:0 }
+  if (!dataStr || !inicioStr || !fimStr) return zero
+  try {
+    const [ano, mes, diaNum] = dataStr.split('-').map(Number)
+    const [hi, mi] = inicioStr.split(':').map(Number)
+    const [hf, mf] = fimStr.split(':').map(Number)
+    let minInicio = hi * 60 + mi
+    let minFim    = hf * 60 + mf
+    if (minFim <= minInicio) minFim += 24 * 60  // virada de meia-noite
+
+    const feriados = feriadosDoAno(ano)
+    const result   = { ...zero }
+
+    // Verifica cada minuto em blocos de 1 (otimizado: percorre por breakpoints)
+    // Breakpoints: 07:00 (420) e 22:00 (1320) do dia base, e +24h para dia seguinte
+    const breakpoints = [0, 420, 1320, 1440, 1860, 2760].filter(b => b >= minInicio && b <= minFim)
+    const ranges = []
+    let prev = minInicio
+    for (const bp of breakpoints) {
+      if (bp > prev) ranges.push([prev, bp])
+      prev = bp
+    }
+    if (prev < minFim) ranges.push([prev, minFim])
+
+    for (const [start, end] of ranges) {
+      const horas = (end - start) / 60
+      if (horas <= 0) continue
+      // Determina o dia real (pode ser o seguinte se start >= 1440)
+      const diasOffset = Math.floor(start / 1440)
+      const dtReal = new Date(ano, mes - 1, diaNum + diasOffset)
+      const dow    = dtReal.getDay()               // 0=Dom, 6=Sáb
+      const mmdd   = `${String(dtReal.getMonth()+1).padStart(2,'0')}-${String(dtReal.getDate()).padStart(2,'0')}`
+      const minDoDia = start % 1440
+      const isDiurno  = minDoDia >= 420 && minDoDia < 1320  // 07:00–22:00
+      const isFds     = dow === 0 || dow === 6
+      const isFeriado = feriados.has(mmdd)
+
+      if (isFeriado) {
+        if (isDiurno) result.h_feriado_diurnas  += horas
+        else          result.h_feriado_noturnas += horas
+      } else if (isFds) {
+        if (isDiurno) result.h_fds_diurnas  += horas
+        else          result.h_fds_noturnas += horas
+      } else {
+        if (isDiurno) result.horas_diurnas  += horas
+        else          result.horas_noturnas += horas
+      }
+    }
+    // Arredonda para 2 casas
+    for (const k of Object.keys(result)) result[k] = Math.round(result[k] * 100) / 100
+    return result
+  } catch { return zero }
+}
+
 // Constrói bloco de hints baseado nos campos do template
 function buildTemplateHints(campos) {
   if (!campos || campos.length === 0) return ''
@@ -254,6 +353,27 @@ ${skeletonComKm}`
   json.tipo_formulario      = tipoBase  // 'diario', 'transporte', 'despesa', etc.
   json._template_id         = template.id   || null
   json._template_nome       = nomeTemplate
+
+  // ── Pós-processamento para templates RDO (tipo_base = 'rdo') ──────────────
+  if (tipoBase === 'rdo') {
+    const hoje = new Date().toISOString().slice(0, 10)
+
+    // 1. Normaliza data DD/MM/YY → YYYY-MM-DD
+    if (json.data) json.data = normalizarData(json.data, hoje)
+
+    // 2. Calcula classificação de horas se tiver início + fim
+    if (json.jornada_inicio && json.jornada_fim && json.data) {
+      const horas = classificarHoras(json.data, json.jornada_inicio, json.jornada_fim)
+      // Só preenche campos que o OCR não preencheu (evita sobrescrever se ele acertou)
+      if (!json.horas_diurnas    || json.horas_diurnas    === '0') json.horas_diurnas    = String(horas.horas_diurnas)
+      if (!json.horas_noturnas   || json.horas_noturnas   === '0') json.horas_noturnas   = String(horas.horas_noturnas)
+      if (!json.h_fds_diurnas    || json.h_fds_diurnas    === '0') json.h_fds_diurnas    = String(horas.h_fds_diurnas)
+      if (!json.h_fds_noturnas   || json.h_fds_noturnas   === '0') json.h_fds_noturnas   = String(horas.h_fds_noturnas)
+      if (!json.h_feriado_diurnas  || json.h_feriado_diurnas  === '0') json.h_feriado_diurnas  = String(horas.h_feriado_diurnas)
+      if (!json.h_feriado_noturnas || json.h_feriado_noturnas === '0') json.h_feriado_noturnas = String(horas.h_feriado_noturnas)
+      console.log(`[runOCRComTemplate] horas classificadas: diurnas=${horas.horas_diurnas} noturnas=${horas.horas_noturnas} fds_d=${horas.h_fds_diurnas} fds_n=${horas.h_fds_noturnas} fer_d=${horas.h_feriado_diurnas} fer_n=${horas.h_feriado_noturnas}`)
+    }
+  }
 
   console.log(`[runOCRComTemplate] template="${nomeTemplate}" tipo=${tipoBase} campos_extraidos=${Object.keys(json).length}`)
   return json

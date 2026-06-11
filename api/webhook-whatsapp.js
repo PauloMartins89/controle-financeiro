@@ -508,7 +508,9 @@ export default async function handler(req, res) {
 
     const descricao = isTransporte
       ? `Nº ${d.numero_diario || '—'} | ${d.empresa || ''} | ${d.local_origem || ''} → ${d.local_destino || ''}`.trim()
-      : (d.descricao || 'Documento digitalizado via WhatsApp')
+      : (d.tipo_formulario === 'rdo' || d._template_nome?.includes('Relatório Diário'))
+        ? `RDO ${d.numero_rdo || d.numero_documento || '—'} | ${d.empresa || ''} | ${d.data || ''}`.trim()
+        : (d.descricao || 'Documento digitalizado via WhatsApp')
 
     const { error: dbError } = await supabase.from('lancamentos').insert({
       workspace_id:    wsConfig.workspace_id,
@@ -549,14 +551,39 @@ export default async function handler(req, res) {
       ].join('\n')
     } else {
       const fmtVal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorFinal)
-      confirmMsg = [
-        `✅ *Lançamento registrado!*`,
-        ``,
-        `📄 ${descricao}`,
-        `💰 ${fmtVal}`,
-        ``,
-        `_Status: Pendente de aprovação_`,
-      ].join('\n')
+      // Mensagem enriquecida para RDO Birigui
+      if (d.tipo_formulario === 'rdo' || d._template_nome?.includes('Relatório Diário')) {
+        const totalH = d.jornada_total_horas || '—'
+        const locais = d.locais_servico ? `\n📍 *Locais:* ${d.locais_servico}` : ''
+        const hDiur  = d.horas_diurnas   ? `\n☀️ *H Diurnas:* ${d.horas_diurnas}h` : ''
+        const hNot   = d.horas_noturnas  ? `\n🌙 *H Noturnas:* ${d.horas_noturnas}h` : ''
+        const hFds   = (parseFloat(d.h_fds_diurnas)||0) + (parseFloat(d.h_fds_noturnas)||0)
+        const hFer   = (parseFloat(d.h_feriado_diurnas)||0) + (parseFloat(d.h_feriado_noturnas)||0)
+        confirmMsg = [
+          `✅ *RDO registrado com sucesso!*`,
+          ``,
+          `📋 *Nº:* ${d.numero_rdo || d.numero_documento || '—'}`,
+          `📅 *Data:* ${d.data || '—'}`,
+          `🏢 *Empresa:* ${d.empresa || '—'}`,
+          `🔧 *Equipamento:* ${d.equipamento || '—'}`,
+          `⏱️ *Jornada:* ${d.jornada_inicio || '—'} → ${d.jornada_fim || '—'} (${totalH}h)`,
+          hDiur, hNot,
+          hFds > 0 ? `\n📅 *H FDS:* ${hFds}h` : '',
+          hFer > 0 ? `\n🎉 *H Feriado:* ${hFer}h` : '',
+          locais,
+          ``,
+          `_Status: Pendente de aprovação_`,
+        ].filter(l => l !== '').join('\n')
+      } else {
+        confirmMsg = [
+          `✅ *Lançamento registrado!*`,
+          ``,
+          `📄 ${descricao}`,
+          `💰 ${fmtVal}`,
+          ``,
+          `_Status: Pendente de aprovação_`,
+        ].join('\n')
+      }
     }
 
     await zapiSendText(fromPhone, confirmMsg)
