@@ -362,15 +362,15 @@ ${skeletonComKm}`
     if (json.data) json.data = normalizarData(json.data, hoje)
 
     // 2. Calcula classificação de horas se tiver início + fim
+    // Sempre sobrescreve com os valores calculados — o OCR não sabe dividir diurno/noturno
     if (json.jornada_inicio && json.jornada_fim && json.data) {
       const horas = classificarHoras(json.data, json.jornada_inicio, json.jornada_fim)
-      // Só preenche campos que o OCR não preencheu (evita sobrescrever se ele acertou)
-      if (!json.horas_diurnas    || json.horas_diurnas    === '0') json.horas_diurnas    = String(horas.horas_diurnas)
-      if (!json.horas_noturnas   || json.horas_noturnas   === '0') json.horas_noturnas   = String(horas.horas_noturnas)
-      if (!json.h_fds_diurnas    || json.h_fds_diurnas    === '0') json.h_fds_diurnas    = String(horas.h_fds_diurnas)
-      if (!json.h_fds_noturnas   || json.h_fds_noturnas   === '0') json.h_fds_noturnas   = String(horas.h_fds_noturnas)
-      if (!json.h_feriado_diurnas  || json.h_feriado_diurnas  === '0') json.h_feriado_diurnas  = String(horas.h_feriado_diurnas)
-      if (!json.h_feriado_noturnas || json.h_feriado_noturnas === '0') json.h_feriado_noturnas = String(horas.h_feriado_noturnas)
+      json.horas_diurnas      = String(horas.horas_diurnas)
+      json.horas_noturnas     = String(horas.horas_noturnas)
+      json.h_fds_diurnas      = String(horas.h_fds_diurnas)
+      json.h_fds_noturnas     = String(horas.h_fds_noturnas)
+      json.h_feriado_diurnas  = String(horas.h_feriado_diurnas)
+      json.h_feriado_noturnas = String(horas.h_feriado_noturnas)
       console.log(`[runOCRComTemplate] horas classificadas: diurnas=${horas.horas_diurnas} noturnas=${horas.horas_noturnas} fds_d=${horas.h_fds_diurnas} fds_n=${horas.h_fds_noturnas} fer_d=${horas.h_feriado_diurnas} fer_n=${horas.h_feriado_noturnas}`)
     }
   }
