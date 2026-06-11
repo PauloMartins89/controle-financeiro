@@ -192,25 +192,25 @@ function KpiCard({ icon: Icon, label, value, sub, color, iconBg }) {
   return (
     <div style={{
       background: C.white, border: `1px solid ${C.border}`,
-      borderRadius: 8, padding: '14px 16px',
+      borderRadius: 8, padding: '10px 12px',
       borderLeft: `3px solid ${color}`,
-      display: 'flex', alignItems: 'flex-start', gap: 12,
+      display: 'flex', alignItems: 'flex-start', gap: 8,
       boxShadow: '0 1px 4px rgba(0,0,0,0.06)', flex: 1, minWidth: 0,
     }}>
       <div style={{
-        width: 36, height: 36, borderRadius: 8, background: iconBg,
+        width: 28, height: 28, borderRadius: 6, background: iconBg,
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
-        <Icon style={{ width: 18, height: 18, color }} />
+        <Icon style={{ width: 14, height: 14, color }} />
       </div>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 2 }}>
           {label}
         </div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: C.text, lineHeight: 1, marginBottom: 2 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.text, lineHeight: 1, marginBottom: 2 }}>
           {value}
         </div>
-        <div style={{ fontSize: 11, color: C.textSec }}>{sub}</div>
+        <div style={{ fontSize: 10, color: C.textSec }}>{sub}</div>
       </div>
     </div>
   )
@@ -376,8 +376,8 @@ function DetailsDrawer({ record, lotesMap, navigate, onClose }) {
 // ─── TABLE CELL HELPERS ───────────────────────────────────────────────────────
 const Th = ({ children, align = 'left', width, group }) => (
   <th style={{
-    padding: group ? '7px 10px' : '8px 10px',
-    fontSize: group ? 10 : 11, fontWeight: 700,
+    padding: group ? '5px 6px' : '6px 6px',
+    fontSize: group ? 9 : 10, fontWeight: 700,
     letterSpacing: group ? 0.8 : 0.4,
     color: C.white,
     textAlign: align,
@@ -391,14 +391,17 @@ const Th = ({ children, align = 'left', width, group }) => (
 
 const Td = ({ children, align = 'left', muted, bold, green }) => (
   <td style={{
-    padding: '9px 10px',
-    fontSize: 12,
+    padding: '5px 6px',
+    fontSize: 11,
     color: green ? C.green : bold ? C.text : muted ? C.textSec : C.text,
     fontWeight: bold || green ? 700 : 400,
     textAlign: align,
     borderBottom: `1px solid ${C.border}`,
     borderRight: `1px solid #EEF2F7`,
     whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: 0,
   }}>
     {children}
   </td>
@@ -617,7 +620,7 @@ export default function LancamentosERP() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   const inputSel = {
-    padding: '7px 10px', borderRadius: 6, border: `1px solid ${C.border}`,
+    padding: '5px 8px', borderRadius: 5, border: `1px solid ${C.border}`,
     background: C.white, color: C.text, fontSize: 12, outline: 'none',
     cursor: 'pointer',
   }
@@ -628,10 +631,10 @@ export default function LancamentosERP() {
       {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
       <div style={{
         background: C.white, borderBottom: `1px solid ${C.border}`,
-        padding: '0 24px', position: 'sticky', top: 0, zIndex: 100,
+        padding: '0 16px', position: 'sticky', top: 0, zIndex: 100,
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 44 }}>
           {/* Título */}
           <div>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.navy, lineHeight: 1.2 }}>
@@ -649,7 +652,7 @@ export default function LancamentosERP() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar nº, empresa, placa..."
-                style={{ ...inputSel, paddingLeft: 30, width: 230 }}
+                style={{ ...inputSel, paddingLeft: 28, width: 200 }}
               />
             </div>
             <button
@@ -699,10 +702,10 @@ export default function LancamentosERP() {
       </div>
 
       {/* ══ MAIN CONTENT ════════════════════════════════════════════════════ */}
-      <div style={{ padding: '20px 24px', maxWidth: 1600, margin: '0 auto' }}>
+      <div style={{ padding: '12px 16px' }}>
 
         {/* ── KPI CARDS ────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
           <KpiCard icon={BanknotesIcon}          label="Receitas Apuradas"     value={fmtCurrency(totalReceitas)} sub="Total do período"        color={C.green}  iconBg="#F0FDF4" />
           <KpiCard icon={ArrowDownTrayIcon}      label="Despesas Lançadas"     value={fmtCurrency(totalDespesas)} sub="Total do período"        color={C.red}    iconBg="#FEF2F2" />
           <KpiCard icon={CurrencyDollarIcon}     label="Saldo Operacional"     value={fmtCurrency(saldoOp)}       sub="Receitas – Despesas"    color={C.blue}   iconBg="#EFF6FF" />
@@ -714,11 +717,11 @@ export default function LancamentosERP() {
         {/* ── FILTROS + AÇÕES ───────────────────────────────────────────── */}
         <div style={{
           background: C.white, border: `1px solid ${C.border}`, borderRadius: 8,
-          padding: '14px 16px', marginBottom: 16,
+          padding: '10px 12px', marginBottom: 10,
           boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}>
           {/* Linha 1: filtros */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 8 }}>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>TIPO DE DOCUMENTO</div>
               <select value={filterForm} onChange={e => setFilterForm(e.target.value)} style={inputSel}>
@@ -780,21 +783,21 @@ export default function LancamentosERP() {
           </div>
 
           {/* Linha 2: ações operacionais */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-              <SparklesIcon style={{ width: 14, height: 14, color: '#6366F1' }} /> Digitalizar OCR
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+              <SparklesIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Digitalizar OCR
             </button>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>
-              <PlusIcon style={{ width: 14, height: 14 }} /> Novo Lançamento
+            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
+              <PlusIcon style={{ width: 12, height: 12 }} /> Novo Lançamento
             </button>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.green, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-              <TableCellsIcon style={{ width: 14, height: 14 }} /> Exportar Excel
+            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+              <TableCellsIcon style={{ width: 12, height: 12 }} /> Exportar Excel
             </button>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.red, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-              <DocumentArrowDownIcon style={{ width: 14, height: 14 }} /> Gerar PDF
+            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.red, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+              <DocumentArrowDownIcon style={{ width: 12, height: 12 }} /> Gerar PDF
             </button>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-              <UserGroupIcon style={{ width: 14, height: 14, color: '#6366F1' }} /> Gerar Lote
+            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+              <UserGroupIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Gerar Lote
             </button>
           </div>
         </div>
@@ -803,30 +806,30 @@ export default function LancamentosERP() {
         <div style={{
           background: C.white, border: `1px solid ${C.border}`, borderRadius: 8,
           overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-          marginBottom: 20,
+          marginBottom: 12,
         }}>
           {/* Cabeçalho da seção */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 16px', borderBottom: `1px solid ${C.border}`,
+            padding: '8px 12px', borderBottom: `1px solid ${C.border}`,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ClipboardDocumentListIcon style={{ width: 16, height: 16, color: C.navy }} />
-              <span style={{ fontSize: 14, fontWeight: 800, color: C.navy }}>Lançamentos</span>
-              <span style={{ fontSize: 12, color: C.textSec, fontWeight: 400 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ClipboardDocumentListIcon style={{ width: 14, height: 14, color: C.navy }} />
+              <span style={{ fontSize: 13, fontWeight: 800, color: C.navy }}>Lançamentos</span>
+              <span style={{ fontSize: 11, color: C.textSec, fontWeight: 400 }}>
                 ({filtered.length} registro{filtered.length !== 1 ? 's' : ''})
               </span>
             </div>
             {loading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.textSec }}>
-                <ArrowPathIcon style={{ width: 13, height: 13 }} /> Carregando...
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: C.textSec }}>
+                <ArrowPathIcon style={{ width: 12, height: 12 }} /> Carregando...
               </div>
             )}
           </div>
 
           {/* Tabela com cabeçalhos agrupados */}
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, tableLayout: 'fixed' }}>
               <thead>
                 {/* Linha 1: grupos */}
                 <tr>
@@ -845,27 +848,27 @@ export default function LancamentosERP() {
                 </tr>
                 {/* Linha 2: colunas individuais */}
                 <tr style={{ background: '#1A2E4A' }}>
-                  <Th width={80}>Nº</Th>
-                  <Th width={90}>Data</Th>
-                  <Th width={110}>Cliente</Th>
-                  <Th width={120}>Solicitante</Th>
-                  <Th width={90}>Placa / Equip.</Th>
-                  <Th width={120}>Documento</Th>
-                  <Th width={62} align="center">Início</Th>
-                  <Th width={62} align="center">Fim</Th>
-                  <Th width={62} align="center">Total H</Th>
-                  <Th width={64} align="center">H Diurna</Th>
-                  <Th width={64} align="center">H Noturna</Th>
-                  <Th width={56} align="center">H FDS</Th>
-                  <Th width={64} align="center">H Feriado</Th>
-                  <Th width={68} align="center">Cliente Ass.</Th>
-                  <Th width={68} align="center">Empresa Ass.</Th>
-                  <Th width={80} align="center">OCR</Th>
-                  <Th width={80} align="center">Conferência</Th>
-                  <Th width={160}>Status</Th>
-                  <Th width={110} align="right">Valor (R$)</Th>
-                  <Th width={80} align="center">Lote</Th>
-                  <Th width={110} align="center">Ações</Th>
+                  <Th width={70}>Nº</Th>
+                  <Th width={76}>Data</Th>
+                  <Th width={130}>Cliente</Th>
+                  <Th width={100}>Solicitante</Th>
+                  <Th width={72}>Equip.</Th>
+                  <Th width={90}>Documento</Th>
+                  <Th width={50} align="center">Início</Th>
+                  <Th width={50} align="center">Fim</Th>
+                  <Th width={54} align="center">Total H</Th>
+                  <Th width={52} align="center">H Diur.</Th>
+                  <Th width={52} align="center">H Notur.</Th>
+                  <Th width={44} align="center">FDS</Th>
+                  <Th width={44} align="center">Fer.</Th>
+                  <Th width={52} align="center">Cli.</Th>
+                  <Th width={52} align="center">Emp.</Th>
+                  <Th width={64} align="center">OCR</Th>
+                  <Th width={64} align="center">Conf.</Th>
+                  <Th width={130}>Status</Th>
+                  <Th width={90} align="right">Valor (R$)</Th>
+                  <Th width={52} align="center">Lote</Th>
+                  <Th width={120} align="center">Ações</Th>
                 </tr>
               </thead>
               <tbody>
@@ -970,7 +973,7 @@ export default function LancamentosERP() {
                           <div style={{ position: 'relative' }}>
                             <button
                               onClick={() => setActionMenuId(isOpen ? null : l.id)}
-                              style={{ display: 'flex', alignItems: 'center', padding: '5px 6px', borderRadius: 5, border: `1px solid ${C.border}`, background: C.white, color: C.navy, cursor: 'pointer' }}
+                              style={{ display: 'flex', alignItems: 'center', padding: '3px 4px', borderRadius: 4, border: `1px solid ${C.border}`, background: C.white, color: C.navy, cursor: 'pointer' }}
                             >
                               <ChevronDownIcon style={{ width: 13, height: 13 }} />
                             </button>
@@ -1048,7 +1051,7 @@ export default function LancamentosERP() {
         </div>
 
         {/* ── PAINÉIS INFERIORES ────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
 
           {/* RESUMO DO PERÍODO */}
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
