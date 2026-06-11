@@ -467,6 +467,27 @@ export default function LancamentosERP() {
     setLancamentos(items)
     setLastUpdate(new Date())
 
+    // Auto-ajusta competência para o mês mais recente com dados
+    if (items.length > 0) {
+      const now2 = new Date()
+      const curY = now2.getFullYear(), curM = now2.getMonth() + 1
+      const hasCurrentMonth = items.some(l => {
+        if (!l.data) return false
+        const [y, m] = l.data.split('-').map(Number)
+        return y === curY && m === curM
+      })
+      if (!hasCurrentMonth) {
+        const datesWithData = items
+          .filter(l => l.data)
+          .map(l => { const [y, m] = l.data.split('-').map(Number); return { year: y, month: m } })
+        if (datesWithData.length > 0) {
+          // pega o mais recente
+          datesWithData.sort((a, b) => b.year - a.year || b.month - a.month)
+          setCompetencia(datesWithData[0])
+        }
+      }
+    }
+
     // Tarifas
     supabase.from('diario_tarifas')
       .select('cliente_nome')
