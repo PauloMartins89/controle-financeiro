@@ -2769,7 +2769,7 @@ export default function Lancamentos() {
                               ? new Date(d.processado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                               : '—'}
                           </td>
-                          {/* COLUNAS DO TEMPLATE */}}
+                          {/* COLUNAS DO TEMPLATE */}
                           {templateCols.map(c => {
                             const val = d[c.key]
                             const empty = val == null || val === ''
