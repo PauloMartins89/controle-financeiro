@@ -2162,21 +2162,22 @@ export default function Lancamentos() {
     const CINZA_LEVE    = [240, 247, 243]
 
     // ── Header/footer ─────────────────────────────────────────────────────────
+    const PAD = 8 // padding interno mínimo (textos no header/footer)
     const addHeaderFooter = (pageNum, totalPages) => {
       doc.setFillColor(...VERDE_ESCURO); doc.rect(0, 0, PW, 52, 'F')
       doc.setFillColor(...VERDE_MEDIO);  doc.rect(0, 52, PW, 6, 'F')
       doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...BRANCO)
-      doc.text('RELATÓRIO DE LANÇAMENTOS', 36, 24)
+      doc.text('RELATÓRIO DE LANÇAMENTOS', PAD, 24)
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(180, 220, 195)
-      doc.text(`Gerado em: ${geradoEm}   |   Total de registros: ${selecionados.length}`, 36, 38)
+      doc.text(`Gerado em: ${geradoEm}   |   Total de registros: ${selecionados.length}`, PAD, 38)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...BRANCO)
-      doc.text('SmartPro', PW - 36, 24, { align: 'right' })
+      doc.text('SmartPro', PW - PAD, 24, { align: 'right' })
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(180, 220, 195)
-      doc.text('Sistema de Controle Financeiro', PW - 36, 36, { align: 'right' })
+      doc.text('Sistema de Controle Financeiro', PW - PAD, 36, { align: 'right' })
       doc.setFillColor(...VERDE_ESCURO); doc.rect(0, PH - 24, PW, 24, 'F')
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...BRANCO)
       doc.text(`Página ${pageNum} de ${totalPages}   |   Confidencial — uso interno`, PW / 2, PH - 8, { align: 'center' })
-      doc.text(dataArq, PW - 36, PH - 8, { align: 'right' })
+      doc.text(dataArq, PW - PAD, PH - 8, { align: 'right' })
     }
 
     // ── Define todas as colunas possíveis ─────────────────────────────────────
@@ -2264,17 +2265,21 @@ export default function Lancamentos() {
       return { content: v, styles: { halign: col.halign, fontStyle: 'bold', fillColor: VERDE_ESCURO, textColor: col.key === 'valor' ? [134, 255, 178] : BRANCO } }
     })
 
-    // ── columnStyles dinâmico ─────────────────────────────────────────────────
+    // ── columnStyles — escala proporcional para preencher largura total (margin=0) ──
+    const availableWidth = PW  // margem zero: usa toda a largura da página
+    const totalFixedWidth = activeCols.reduce((s, c) => s + c.width, 0)
+    const scale = availableWidth / totalFixedWidth
     const columnStyles = {}
-    activeCols.forEach((col, ci) => { columnStyles[ci] = { cellWidth: col.width } })
+    activeCols.forEach((col, ci) => { columnStyles[ci] = { cellWidth: parseFloat((col.width * scale).toFixed(1)) } })
 
     // ── Render ────────────────────────────────────────────────────────────────
     autoTable(doc, {
       head: [activeCols.map(c => c.label)],
       body: [...rows, totalRowData],
-      startY: 70,
-      margin: { left: 28, right: 28, bottom: 36 },
-      styles: { fontSize: 7.5, cellPadding: { top: 5, right: 4, bottom: 5, left: 4 }, textColor: CINZA_TEXTO, lineColor: [200, 220, 210], lineWidth: 0.3, overflow: 'ellipsize' },
+      startY: 58,
+      margin: { left: 0, right: 0, bottom: 24 },
+      tableWidth: availableWidth,
+      styles: { fontSize: 7.5, cellPadding: { top: 5, right: 3, bottom: 5, left: 3 }, textColor: CINZA_TEXTO, lineColor: [200, 220, 210], lineWidth: 0.3, overflow: 'ellipsize' },
       headStyles: { fillColor: VERDE_MEDIO, textColor: BRANCO, fontStyle: 'bold', fontSize: 7.5, halign: 'center', minCellHeight: 20 },
       alternateRowStyles: { fillColor: CINZA_LEVE },
       columnStyles,
@@ -2289,14 +2294,14 @@ export default function Lancamentos() {
     const lastY = doc.lastAutoTable?.finalY || 200
     if (lastY + 80 < PH - 40) {
       doc.setDrawColor(...VERDE_MEDIO); doc.setLineWidth(0.5)
-      doc.line(28, lastY + 40, 200, lastY + 40)
-      doc.line(PW - 28, lastY + 40, PW - 200, lastY + 40)
+      doc.line(PAD, lastY + 40, 200, lastY + 40)
+      doc.line(PW - PAD, lastY + 40, PW - 200, lastY + 40)
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...CINZA_TEXTO)
-      doc.text('Responsável pela emissão', 28, lastY + 52)
-      doc.text('De acordo — Cliente', PW - 28, lastY + 52, { align: 'right' })
+      doc.text('Responsável pela emissão', PAD, lastY + 52)
+      doc.text('De acordo — Cliente', PW - PAD, lastY + 52, { align: 'right' })
       doc.setFontSize(6.5); doc.setTextColor(130, 150, 140)
-      doc.text('Data: ___/___/______', 28, lastY + 64)
-      doc.text('Data: ___/___/______', PW - 28, lastY + 64, { align: 'right' })
+      doc.text('Data: ___/___/______', PAD, lastY + 64)
+      doc.text('Data: ___/___/______', PW - PAD, lastY + 64, { align: 'right' })
     }
 
     doc.save(`lancamentos_${dataArq}.pdf`)
