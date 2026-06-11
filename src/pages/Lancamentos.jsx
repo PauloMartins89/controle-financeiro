@@ -2623,6 +2623,7 @@ export default function Lancamentos() {
                       ))}
                       <ColHead colKey="valor" label="VALOR" align="right" bg={valorColBg} />
                       <ColHead colKey="status" label="STATUS" />
+                      <ColHead colKey="processadoEm" label="PROCESSADO EM" />
                     </>
                   )}
                   <th style={{ padding: '9px 12px', width: 80, background: LC.secondary, borderBottom: `1px solid ${LC.border}` }} />
@@ -2827,6 +2828,12 @@ export default function Lancamentos() {
                                 {lotesMap[l.lote_cliente_id].cliente.length > 18 ? lotesMap[l.lote_cliente_id].cliente.slice(0, 18) + '…' : lotesMap[l.lote_cliente_id].cliente}
                               </div>
                             )}
+                          </td>
+                          {/* PROCESSADO EM */}
+                          <td style={{ padding: '9px 12px', whiteSpace: 'nowrap', fontSize: 11, color: d.processado_em ? LC.txtSecondary : LC.txtMuted }}>
+                            {d.processado_em
+                              ? new Date(d.processado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                              : '—'}
                           </td>
                         </>
                       )}
