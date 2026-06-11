@@ -2355,8 +2355,9 @@ export default function Lancamentos() {
   const filtered = lancamentos.filter(l => {
     const isDiario = l.tipo_formulario === 'diario'
     if (filterStatus === 'meus') {
-      if (isDiario) {
-        // Boletins diários criados por OCR: mostrar pendentes/aguardando aprovação
+      const isRdoOcr = l.tipo_formulario === 'rdo'
+      if (isDiario || isRdoOcr) {
+        // Boletins criados por OCR (diário ou RDO): mostrar pendentes/aguardando aprovação
         if (l.status !== 'pendente' && l.status !== 'aguardando_aprovacao' && l.status !== 'rascunho' && l.status !== 'devolvido') return false
       } else {
         if (l.status !== 'rascunho' && l.status !== 'devolvido') return false
