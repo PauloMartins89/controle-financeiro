@@ -2521,25 +2521,16 @@ export default function Lancamentos() {
             <MagnifyingGlassIcon style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: LC.txtMuted, pointerEvents: 'none' }} />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar Nº, placa, empresa, solicitante..." style={{ width: '100%', paddingLeft: 34, padding: '9px 12px 9px 34px', borderRadius: 9, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
           </div>
-          {/* Select formulário — opções filtradas por workspace_config (ui.lancamentos.form_filter_options) */}
-          {(() => {
-            // Se a config definir uma lista, só mostra essas opções; caso contrário, mostra tudo (legado)
-            const allowed = getConfig(wsConfig, 'ui.lancamentos.form_filter_options', null) // ex: ['rdo'] ou null
-            const showDm     = !allowed || allowed.includes('dm')
-            const showPadrao = !allowed || allowed.includes('padrao')
-            const tmplEntries = Object.entries(formTemplates).filter(([tipo]) => !allowed || allowed.includes(tipo))
-            return (
-              <select value={filterForm} onChange={e => setFilterForm(e.target.value)}
-                style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 180 }}>
-                {(!allowed || allowed.length > 1) && <option value="todos">Todos formulários</option>}
-                {showDm     && <option value="dm">Diário do Motorista</option>}
-                {showPadrao && <option value="padrao">Padrão</option>}
-                {tmplEntries.map(([tipo, tmpl]) => (
-                  <option key={tipo} value={tipo}>{tmpl.nome}</option>
-                ))}
-              </select>
-            )
-          })()}
+          {/* Select formulário — opções fixas + templates do workspace (isolado por workspace_id) */}
+          <select value={filterForm} onChange={e => setFilterForm(e.target.value)}
+            style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 180 }}>
+            <option value="todos">Todos formulários</option>
+            <option value="dm">Diário do Motorista</option>
+            <option value="padrao">Padrão</option>
+            {Object.entries(formTemplates).map(([tipo, tmpl]) => (
+              <option key={tipo} value={tipo}>{tmpl.nome}</option>
+            ))}
+          </select>
           {/* Select status */}
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
             style={{ padding: '9px 12px', borderRadius: 9, fontSize: 13, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, color: LC.txtPrimary, cursor: 'pointer', outline: 'none', minWidth: 170 }}>
