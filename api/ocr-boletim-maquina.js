@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
 import { runOCR, normalizarData, classificarHoras } from './_ocr.js'
+import { matchEmpresa } from './_fuzzy-match.js'
 
 // Groq Vision (Llama-4-Scout) — passa imagens como image_url (URL pública)
 async function callGroq(apiKey, messages) {
@@ -599,6 +600,29 @@ async function processarBoletim(boletimId) {
       const tipoForm       = ocrResult.tipo_formulario || tmpl.tipo_base || 'formulario'
       const dataBoletimTmpl = ocrResult.data || new Date().toISOString().slice(0, 10)
 
+      // ── Motor de identificação cruzada: canonicaliza empresa/cliente ────────
+      // Carrega nomes registrados em diario_tarifas para este workspace
+      if (ocrResult.empresa || ocrResult.cliente) {
+        const { data: tarifasRows } = await supabase
+          .from('diario_tarifas')
+          .select('cliente_nome')
+          .eq('workspace_id', workspaceId)
+          .eq('ativo', true)
+        const candidatos = (tarifasRows || []).map(t => t.cliente_nome).filter(Boolean)
+        if (candidatos.length > 0) {
+          const rawEmpresa = ocrResult.empresa || ocrResult.cliente || ''
+          const { canonical, confidence } = matchEmpresa(rawEmpresa, candidatos)
+          if (canonical) {
+            console.log(`[ocr-boletim] empresa canonicalizada: "${rawEmpresa}" → "${canonical}" (${confidence}%)`)
+            ocrResult.empresa_ocr_raw = rawEmpresa
+            ocrResult.empresa         = canonical
+            ocrResult.cliente         = canonical
+          } else {
+            console.log(`[ocr-boletim] empresa sem match suficiente: "${rawEmpresa}" (melhor confiança insuficiente)`)
+          }
+        }
+      }
+
       const descricaoLanc = tipoForm === 'rdo'
         ? `RDO ${ocrResult.numero_rdo || ocrResult.numero_documento || '—'} | ${ocrResult.empresa || ''} | ${dataBoletimTmpl}`
         : `${tmpl.nome} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletimTmpl}`
@@ -758,6 +782,26 @@ Retorne APENAS o JSON, sem comentários.`
 
   // Salva o OCR bruto
   await supabase.from('maquinas_boletins').update({ ocr_raw: ocrRaw }).eq('id', boletimId)
+
+  // ── Motor de identificação cruzada: canonicaliza empresa/cliente ──────────
+  if (ocrRaw.empresa || ocrRaw.cliente) {
+    const { data: tarifasLeg } = await supabase
+      .from('diario_tarifas')
+      .select('cliente_nome')
+      .eq('workspace_id', workspaceId)
+      .eq('ativo', true)
+    const candidatosLeg = (tarifasLeg || []).map(t => t.cliente_nome).filter(Boolean)
+    if (candidatosLeg.length > 0) {
+      const rawEmpLeg = ocrRaw.empresa || ocrRaw.cliente || ''
+      const { canonical: canLeg, confidence: confLeg } = matchEmpresa(rawEmpLeg, candidatosLeg)
+      if (canLeg) {
+        console.log(`[ocr-boletim] empresa canonicalizada (legado): "${rawEmpLeg}" → "${canLeg}" (${confLeg}%)`)
+        ocrRaw.empresa_ocr_raw = rawEmpLeg
+        ocrRaw.empresa         = canLeg
+        ocrRaw.cliente         = canLeg
+      }
+    }
+  }
 
   // ÔöÇÔöÇ Matching de campos ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
   // Mapeamento de chave OCR ÔåÆ tipo de campo para matching
