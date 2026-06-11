@@ -322,7 +322,9 @@ export default function App() {
       ])
       // Usa o workspace com mais módulos configurados (usuário pode ter múltiplos)
       const allWorkspaceIds = (wsMembers || []).map(m => m.workspace_id).filter(Boolean)
-      const workspaceId = allWorkspaceIds[0] || null
+      // Prefere workspace real (não-zero) sobre o workspace pessoal de finanças (00000000-...)
+      const NULL_WS = '00000000-0000-0000-0000-000000000000'
+      const workspaceId = allWorkspaceIds.find(id => id !== NULL_WS) || allWorkspaceIds[0] || null
       let enabledModules = null
       if (allWorkspaceIds.length > 0) {
         const { data: modulesData } = await supabase
