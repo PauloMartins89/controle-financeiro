@@ -81,6 +81,7 @@ import BoletinsDiarios from './pages/BoletinsDiarios'
 import EscanearRecibo from './pages/EscanearRecibo'
 import NotasFiscais from './pages/NotasFiscais'
 import Lancamentos from './pages/Lancamentos'
+import LancamentosERP from './pages/LancamentosERP'
 import Cadastros from './pages/Cadastros'
 import FormTemplates from './pages/FormTemplates'
 import Faturamento from './pages/Faturamento'
@@ -557,6 +558,7 @@ export default function App() {
                   <Route path="/escanear" element={<EscanearRecibo />} />
                   <Route path="/notas-fiscais" element={<NotasFiscais />} />
                   <Route path="/lancamentos" element={<Lancamentos />} />
+                  <Route path="/lancamentos-erp" element={<LancamentosERP />} />
                   <Route path="/cadastros" element={<Cadastros />} />
                   <Route path="/lotes-cliente" element={<LotesCliente />} />
                   <Route path="/form-templates" element={<FormTemplates />} />
