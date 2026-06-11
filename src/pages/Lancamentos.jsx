@@ -2182,7 +2182,33 @@ export default function Lancamentos() {
 
     // ── Define todas as colunas possíveis ─────────────────────────────────────
     // Cada coluna: { key, label, width, halign, getValue(l) }
-    const ALL_COLS = [
+    // ── Detecta se todos os selecionados são RDO ────────────────────────────
+    const isRdoPdf = selecionados.every(l => l.tipo_formulario === 'rdo')
+    const hNum = (l, key) => parseFloat(String(l.dados_extras?.[key] || '0').replace(',', '.')) || 0
+
+    // ── Colunas curadas para relatório de faturamento RDO ───────────────────
+    // Colunas de horas condicionais: só incluídas se ao menos 1 registro tiver valor > 0
+    const RDO_COLS_BASE = [
+      { key: 'data',          label: 'DATA',                width: 52,  halign: 'center', getValue: l => l.data ? l.data.split('-').reverse().join('/') : '' },
+      { key: 'nr_rdo',        label: 'NR RELATÓRIO',        width: 62,  halign: 'center', bold: true, getValue: l => l.dados_extras?.numero_rdo || l.dados_extras?.nro_boletim || '' },
+      { key: 'empresa',       label: 'EMPRESA',             width: 90,  halign: 'left',   bold: true, getValue: l => l.dados_extras?.empresa || l.dados_extras?.cliente || '' },
+      { key: 'equipamento',   label: 'EQUIPAMENTO',         width: 52,  halign: 'center', getValue: l => l.dados_extras?.equipamento || l.dados_extras?.modelo_equipamento || '' },
+      { key: 'local_servico', label: 'LOCAL DOS SERVIÇOS',  width: 110, halign: 'left',   getValue: l => (l.dados_extras?.locais_servico || l.dados_extras?.local_servico || '').slice(0,50) },
+      { key: 'jorn_inicio',   label: 'INÍCIO',              width: 40,  halign: 'center', getValue: l => l.dados_extras?.jornada_inicio || '' },
+      { key: 'jorn_fim',      label: 'FIM',                 width: 40,  halign: 'center', getValue: l => l.dados_extras?.jornada_fim    || '' },
+      { key: 'h_total',       label: 'TOTAL H',             width: 44,  halign: 'right',  bold: true, getValue: l => l.dados_extras?.jornada_total_horas || '' },
+      { key: 'h_diurnas',     label: 'H DIURNAS',           width: 52,  halign: 'right',  getValue: l => { const v = hNum(l,'horas_diurnas');    return v > 0 ? String(v) : '' } },
+      { key: 'h_noturnas',    label: 'H NOTURNAS',          width: 52,  halign: 'right',  getValue: l => { const v = hNum(l,'horas_noturnas');   return v > 0 ? String(v) : '' } },
+      // condicionais FDS/Feriado — filtradas abaixo se todas = 0
+      { key: 'h_fds_d',       label: 'H FDS DIUR.',         width: 48,  halign: 'right',  cond: true, getValue: l => { const v = hNum(l,'h_fds_diurnas');      return v > 0 ? String(v) : '' } },
+      { key: 'h_fds_n',       label: 'H FDS NOT.',          width: 48,  halign: 'right',  cond: true, getValue: l => { const v = hNum(l,'h_fds_noturnas');     return v > 0 ? String(v) : '' } },
+      { key: 'h_fer_d',       label: 'H FER. DIUR.',        width: 52,  halign: 'right',  cond: true, getValue: l => { const v = hNum(l,'h_feriado_diurnas');  return v > 0 ? String(v) : '' } },
+      { key: 'h_fer_n',       label: 'H FER. NOT.',         width: 52,  halign: 'right',  cond: true, getValue: l => { const v = hNum(l,'h_feriado_noturnas'); return v > 0 ? String(v) : '' } },
+      { key: 'valor',         label: 'VALOR',               width: 72,  halign: 'right',  bold: true, green: true, getValue: l => fmtCurrency(l.valor) },
+    ]
+
+    // ── Colunas genéricas para DM/outros ─────────────────────────────────────
+    const ALL_COLS = isRdoPdf ? RDO_COLS_BASE : [
       { key: 'data',        label: 'DATA',       width: 48,  halign: 'center', getValue: l => l.data ? l.data.split('-').reverse().join('/') : '' },
       { key: 'num_diario',  label: 'Nº DM',      width: 36,  halign: 'center', bold: true, getValue: l => l.dados_extras?.numero_diario || '' },
       { key: 'cdc',         label: 'CDC',        width: 52,  halign: 'left',   getValue: l => l.dados_extras?.cdc || '' },
@@ -2205,38 +2231,43 @@ export default function Lancamentos() {
       { key: 'obs',         label: 'OBSERVAÇÕES',width: 90,  halign: 'left',   getValue: l => (l.observacoes || l.dados_extras?.observacao || '').slice(0, 80) },
     ]
 
-    // ── Injeta colunas do template (campos marcados show_in_pdf !== false) ────
-    const tmplPdfCols = []
-    const stdKeys = new Set(['numero_diario','cliente','empresa','condutor','placa','local_origem','local_destino','solicitante','km_asfalto','km_terra','km_total','pedagio','pernoite','refeicao','outros_adicionais','desconto','observacao'])
-    Object.values(formTemplates).forEach(tmpl => {
-      if (!tmpl?.campos?.length || !tmpl.tipo_base) return
-      tmpl.campos
-        .filter(c => c.show_in_pdf !== false && !stdKeys.has(c.key))
-        .forEach(c => {
-          if (tmplPdfCols.find(p => p.key === `tmpl_${c.key}`)) return
-          const tipoBase = tmpl.tipo_base
-          tmplPdfCols.push({
-            key: `tmpl_${c.key}`,
-            label: c.label.toUpperCase(),
-            width: c.type === 'number' ? 52 : 72,
-            halign: c.type === 'number' ? 'right' : 'left',
-            getValue: l => {
-              if ((l.tipo_formulario || 'padrao') !== tipoBase) return ''
-              const v = l.dados_extras?.[c.key]
-              return v != null && v !== '' ? String(v) : ''
-            },
+    // ── Injeta colunas do template (campos marcados show_in_pdf !== false) — só para não-RDO ──
+    if (!isRdoPdf) {
+      const tmplPdfCols = []
+      const stdKeys = new Set(['numero_diario','cliente','empresa','condutor','placa','local_origem','local_destino','solicitante','km_asfalto','km_terra','km_total','pedagio','pernoite','refeicao','outros_adicionais','desconto','observacao'])
+      Object.values(formTemplates).forEach(tmpl => {
+        if (!tmpl?.campos?.length || !tmpl.tipo_base) return
+        tmpl.campos
+          .filter(c => c.show_in_pdf !== false && !stdKeys.has(c.key))
+          .forEach(c => {
+            if (tmplPdfCols.find(p => p.key === `tmpl_${c.key}`)) return
+            const tipoBase = tmpl.tipo_base
+            tmplPdfCols.push({
+              key: `tmpl_${c.key}`,
+              label: c.label.toUpperCase(),
+              width: c.type === 'number' ? 52 : 72,
+              halign: c.type === 'number' ? 'right' : 'left',
+              getValue: l => {
+                if ((l.tipo_formulario || 'padrao') !== tipoBase) return ''
+                const v = l.dados_extras?.[c.key]
+                return v != null && v !== '' ? String(v) : ''
+              },
+            })
           })
-        })
-    })
-    if (tmplPdfCols.length) {
-      const valorIdx = ALL_COLS.findIndex(c => c.key === 'valor')
-      ALL_COLS.splice(valorIdx, 0, ...tmplPdfCols)
+      })
+      if (tmplPdfCols.length) {
+        const valorIdx = ALL_COLS.findIndex(c => c.key === 'valor')
+        ALL_COLS.splice(valorIdx, 0, ...tmplPdfCols)
+      }
     }
 
-    // ── Filtra apenas colunas que têm ao menos 1 valor preenchido ─────────────
-    const activeCols = ALL_COLS.filter(col =>
-      selecionados.some(l => { const v = col.getValue(l); return v !== '' && v !== '—' && v != null })
-    )
+    // ── Filtra colunas: remove condicionais sem dados + colunas vazias ────────
+    const activeCols = ALL_COLS.filter(col => {
+      // Colunas condicionais (FDS/feriado): só inclui se ao menos 1 valor > 0
+      if (col.cond) return selecionados.some(l => col.getValue(l) !== '')
+      // Demais: exclui se todos vazios
+      return selecionados.some(l => { const v = col.getValue(l); return v !== '' && v !== '—' && v != null })
+    })
 
     // ── Monta linhas com apenas as colunas ativas ─────────────────────────────
     const rows = selecionados.map(l =>
@@ -2250,15 +2281,28 @@ export default function Lancamentos() {
     )
 
     // ── Linha de totais ───────────────────────────────────────────────────────
-    const totalValor = selecionados.reduce((s, l) => s + (l.valor || 0), 0)
-    const totalKmAsf = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).asfalto||0), 0)
-    const totalKmTer = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).terra||0), 0)
-    const totalKmTot = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).total||0), 0)
+    const totalValor   = selecionados.reduce((s, l) => s + (l.valor || 0), 0)
+    const totalKmAsf   = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).asfalto||0), 0)
+    const totalKmTer   = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).terra||0), 0)
+    const totalKmTot   = selecionados.reduce((s, l) => s + (calcKmTotais(l.dados_extras||{}).total||0), 0)
+    const totalHDiu    = selecionados.reduce((s, l) => s + hNum(l,'horas_diurnas'), 0)
+    const totalHNot    = selecionados.reduce((s, l) => s + hNum(l,'horas_noturnas'), 0)
+    const totalHFdsDiu = selecionados.reduce((s, l) => s + hNum(l,'h_fds_diurnas'), 0)
+    const totalHFdsNot = selecionados.reduce((s, l) => s + hNum(l,'h_fds_noturnas'), 0)
+    const totalHFerDiu = selecionados.reduce((s, l) => s + hNum(l,'h_feriado_diurnas'), 0)
+    const totalHFerNot = selecionados.reduce((s, l) => s + hNum(l,'h_feriado_noturnas'), 0)
+    const fmtH = v => v > 0 ? v.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : ''
     const TOTAL_MAP = {
-      km_asf: totalKmAsf > 0 ? totalKmAsf.toLocaleString('pt-BR') : '',
-      km_ter: totalKmTer > 0 ? totalKmTer.toLocaleString('pt-BR') : '',
-      km_tot: totalKmTot > 0 ? totalKmTot.toLocaleString('pt-BR') : '',
-      valor:  fmtCurrency(totalValor),
+      km_asf:    totalKmAsf > 0 ? totalKmAsf.toLocaleString('pt-BR') : '',
+      km_ter:    totalKmTer > 0 ? totalKmTer.toLocaleString('pt-BR') : '',
+      km_tot:    totalKmTot > 0 ? totalKmTot.toLocaleString('pt-BR') : '',
+      h_diurnas: fmtH(totalHDiu),
+      h_noturnas:fmtH(totalHNot),
+      h_fds_d:   fmtH(totalHFdsDiu),
+      h_fds_n:   fmtH(totalHFdsNot),
+      h_fer_d:   fmtH(totalHFerDiu),
+      h_fer_n:   fmtH(totalHFerNot),
+      valor:     fmtCurrency(totalValor),
     }
     const totalRowData = activeCols.map((col, ci) => {
       const v = TOTAL_MAP[col.key] || (ci === 0 ? 'TOTAIS' : '')
