@@ -617,7 +617,10 @@ async function processarBoletim(boletimId) {
           status:          'pendente',
           observacoes:     ocrResult.observacoes || '',
           tipo_formulario: tipoForm,
-          dados_extras:    { boletim_id: boletimId, ocr: ocrResult },
+          // Campos OCR espalhados no topo de dados_extras para que a tabela Lançamentos
+          // leia dados_extras[campo] diretamente (templateCols usa d[c.key])
+          // O objeto completo também fica em dados_extras.ocr como backup
+          dados_extras:    { boletim_id: boletimId, ocr: ocrResult, ...ocrResult },
           comprovante_url: bol.imagem_url || '',
         })
         .select('id')
@@ -626,7 +629,7 @@ async function processarBoletim(boletimId) {
       await supabase.from('maquinas_boletins').update({
         status:        'processado',
         processado_em: new Date().toISOString(),
-        dados_extras:  ocrResult,
+        ocr_raw:       ocrResult,
         data_boletim:  dataBoletimTmpl,
         lancamento_id: lancamentoTmpl?.id || null,
       }).eq('id', boletimId)
