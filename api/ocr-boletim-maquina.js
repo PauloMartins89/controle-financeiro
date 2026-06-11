@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
+import { runOCR, normalizarData, classificarHoras } from './_ocr.js'
 
 // Groq Vision (Llama-4-Scout) — passa imagens como image_url (URL pública)
 async function callGroq(apiKey, messages) {
@@ -546,7 +547,7 @@ async function processarBoletim(boletimId) {
     .select(`
       *,
       maquinas_colaboradores (id, nome, telefone_wa, workspace_id),
-      maquinas_boletim_tipos (id, nome, campos_json, imagem_url, modulo_destino)
+      maquinas_boletim_tipos (id, nome, campos_json, imagem_url, modulo_destino, form_template_id)
     `)
     .eq('id', boletimId)
     .single()
@@ -574,7 +575,38 @@ async function processarBoletim(boletimId) {
   // Atualiza status para 'processando'
   await supabase.from('maquinas_boletins').update({ status: 'processando' }).eq('id', boletimId)
 
-  // ÔöÇÔöÇ OCR via GPT-4 Vision ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Se o tipo de boletim tem form_template vinculado → usa runOCRComTemplate ──
+  if (boletimTipo?.form_template_id) {
+    console.log(`[ocr-boletim] form_template_id: ${boletimTipo.form_template_id} — usando runOCRComTemplate`)
+    const { data: tmpl } = await supabase
+      .from('form_templates')
+      .select('id, nome, tipo_base, campos')
+      .eq('id', boletimTipo.form_template_id)
+      .maybeSingle()
+    if (tmpl) {
+      // A imagem do boletim está em bol.imagem_url (URL pública) — converte para base64
+      let imageBase64 = ''
+      if (bol.imagem_url) {
+        try {
+          const resp = await fetch(bol.imagem_url)
+          const buf  = await resp.arrayBuffer()
+          imageBase64 = Buffer.from(buf).toString('base64')
+        } catch (e) {
+          console.warn('[ocr-boletim] erro ao baixar imagem:', e.message)
+        }
+      }
+      const ocrResult = await runOCR(imageBase64, { template: tmpl })
+      await supabase.from('maquinas_boletins').update({
+        status:       'processado',
+        dados_extras: ocrResult,
+        data_boletim: ocrResult.data || null,
+      }).eq('id', boletimId)
+      console.log(`[ocr-boletim] processado via form_template "${tmpl.nome}" — tipo=${ocrResult.tipo_formulario}`)
+      return ocrResult
+    }
+  }
+
+  // ── OCR legado via campos_json ───────────────────────────────────────────────
   const camposJson = boletimTipo?.campos_json || {}
   const camposDescricao = Object.entries(camposJson)
     .map(([k, v]) => `- ${k}: "${v.label}" (tipo: ${v.tipo})`)

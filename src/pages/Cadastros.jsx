@@ -834,7 +834,7 @@ const MAQ_SUBTABS = [
   { key: 'boletim_tipos', label: 'Tipos de Boletim', color: '#6366f1' },
 ]
 
-function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boletimTipos, onClose, onSave }) {
+function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boletimTipos, formTemplates, onClose, onSave }) {
   const [nome,          setNome]          = useState(item?.nome           || '')
   const [codigo,        setCodigo]        = useState(item?.codigo         || '')
   const [classeId,      setClasseId]      = useState(item?.classe_id      || '')
@@ -846,6 +846,7 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
   const [boletimTipoId, setBoletimTipoId] = useState(item?.boletim_tipo_id || '')
   const [moduloDestino,       setModuloDestino]       = useState(item?.modulo_destino        || '')
   const [identificadorVisual, setIdentificadorVisual] = useState(item?.identificador_visual || '')
+  const [formTemplateId,      setFormTemplateId]      = useState(item?.form_template_id     || '')
   const [imagemFile,          setImagemFile]          = useState(null)
   const [saving,        setSaving]        = useState(false)
 
@@ -891,7 +892,7 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
         imagemUrl = publicUrl
       }
       table   = 'maquinas_boletim_tipos'
-      payload = { workspace_id: workspaceId, nome: nome.trim(), descricao: descricao.trim() || null, imagem_url: imagemUrl, modulo_destino: moduloDestino || null, identificador_visual: identificadorVisual.trim() || null }
+      payload = { workspace_id: workspaceId, nome: nome.trim(), descricao: descricao.trim() || null, imagem_url: imagemUrl, modulo_destino: moduloDestino || null, identificador_visual: identificadorVisual.trim() || null, form_template_id: formTemplateId || null }
     }
 
     setSaving(true)
@@ -1071,6 +1072,19 @@ function MaqModal({ subtab, item, workspaceId, classes, modelos, frentes, boleti
                 </div>
               </div>
               <div>
+                <label style={labelStyle}>Template de Formulário (RDO)</label>
+                <select value={formTemplateId} onChange={e => setFormTemplateId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                  <option value="">— Usar campos_json (análise de imagem) —</option>
+                  {(formTemplates || []).map(t => (
+                    <option key={t.id} value={t.id}>{t.nome} ({t.tipo_base})</option>
+                  ))}
+                </select>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Se selecionado, o OCR usará os campos deste template ao invés do campos_json da imagem.
+                  Ideal para o RDO Birigui.
+                </div>
+              </div>
+              <div>
                 <label style={labelStyle}>Imagem do boletim em branco (template)</label>
                 <div style={{ marginTop: 6 }}>
                   {item?.imagem_url && !imagemFile && (
@@ -1125,6 +1139,7 @@ function MaquinasTab({ workspaceId }) {
   const [frentes,       setFrentes]       = useState([])
   const [colaboradores, setColaboradores] = useState([])
   const [boletimTipos,  setBoletimTipos]  = useState([])
+  const [formTemplates, setFormTemplates] = useState([])
   const [loading,       setLoading]       = useState(true)
   const [busca,         setBusca]         = useState('')
   const [modal,         setModal]         = useState(null)  // null | { subtab, item? }
@@ -1167,6 +1182,7 @@ function MaquinasTab({ workspaceId }) {
       supabase.from('maquinas_frentes').select('*, maquinas_boletim_tipos(nome)').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('maquinas_colaboradores').select('*, maquinas_frentes(nome)').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('maquinas_boletim_tipos').select('*').eq('workspace_id', workspaceId).order('nome'),
+      supabase.from('form_templates').select('id, nome, tipo_base').eq('workspace_id', workspaceId).eq('ativo', true).order('nome'),
     ])
     setClasses(cl.data || [])
     setModelos(mo.data || [])
@@ -1174,6 +1190,7 @@ function MaquinasTab({ workspaceId }) {
     setFrentes(fr.data || [])
     setColaboradores(co.data || [])
     setBoletimTipos(bt.data || [])
+    setFormTemplates(formTmpls.data || [])
     setLoading(false)
   }
 
@@ -1363,6 +1380,7 @@ function MaquinasTab({ workspaceId }) {
           modelos={modelos}
           frentes={frentes}
           boletimTipos={boletimTipos}
+          formTemplates={formTemplates}
           onClose={() => setModal(null)}
           onSave={() => { setModal(null); load() }}
         />
