@@ -2627,6 +2627,7 @@ export default function Lancamentos() {
                 ) : sortedFiltered.map(l => {
                   const isTransporte = (l.tipo_formulario || 'padrao') === 'transporte'
                   const isDiario = l.tipo_formulario === 'diario'
+                  const isRdo     = l.tipo_formulario === 'rdo'
                   const d = l.dados_extras || {}
                   const ocr = isDiario ? (d.ocr || {}) : {}
                   const km = isTransporte ? calcKmTotais(d) : null
@@ -2940,10 +2941,10 @@ export default function Lancamentos() {
                               <TrashIcon style={{ width: 15, height: 15 }} />
                             </button>
                           )}
-                          {/* Expand detail para boletins diários */}
-                          {isDiario && (
+                          {/* Expand detail para RDO */}
+                          {isRdo && (
                             <button
-                              title={expandedDiario.has(l.id) ? 'Fechar detalhes' : 'Ver linhas de jornada'}
+                              title={expandedDiario.has(l.id) ? 'Fechar detalhes RDO' : 'Ver detalhes do RDO'}
                               onClick={() => toggleDiario(l.id)}
                               style={{ padding: 5, borderRadius: 6, background: expandedDiario.has(l.id) ? LC.accentLight : 'transparent', border: 'none', cursor: 'pointer', color: LC.accent, display: 'flex', alignItems: 'center', transition: 'background 0.15s' }}
                               onMouseEnter={e => e.currentTarget.style.background = LC.accentLight}
@@ -2955,6 +2956,106 @@ export default function Lancamentos() {
                       </td>
                     </tr>
                     {/* ── Linha de detalhe expandível (somente boletins diários) ── */}
+                    {/* ── Linha expandida para RDO ── */}
+                    {expandedDiario.has(l.id) && isRdo && (() => {
+                      const eqDiu   = d.equipe_diurna  || ''
+                      const eqNot   = d.equipe_noturna || ''
+                      const acess   = d.acessorios     || ''
+                      const locais  = d.locais_servico || ''
+                      const obs     = d.observacoes    || ''
+                      const jornada = d.jornada        || ''
+                      const cliNome = d.assinatura_cliente_nome || ''
+                      const birNome = d.assinatura_birigui_nome || ''
+                      const cliOk   = d.assinatura_cliente_assinado === true || d.assinatura_cliente_assinado === 'true'
+                      const birOk   = d.assinatura_birigui_assinado === true || d.assinatura_birigui_assinado === 'true'
+                      const jornadaLinhas = jornada ? jornada.split(/\n/).filter(Boolean) : []
+                      const hChip = (label, val, color) => val && val !== '0' && val !== '0.0'
+                        ? <span style={{ fontSize: 11, background: `${color}18`, color, padding: '2px 9px', borderRadius: 10, whiteSpace: 'nowrap', fontWeight: 600 }}>{label}: {val}h</span>
+                        : null
+                      return (
+                        <tr>
+                          <td colSpan={20} style={{ padding: 0, background: 'rgba(99,102,241,0.03)', borderBottom: `2px solid ${LC.accent}44` }}>
+                            <div style={{ padding: '14px 32px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+                              {/* chips: equipes + acessórios + locais */}
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                {d.solicitante && <span style={{ fontSize: 11, background: '#e0f2fe', color: '#0369a1', padding: '2px 9px', borderRadius: 10, whiteSpace: 'nowrap' }}>Solicitante: <strong>{d.solicitante}</strong>{d.fone ? ` · ${d.fone}` : ''}</span>}
+                                {d.veiculo_placa && <span style={{ fontSize: 11, background: '#f1f5f9', color: '#475569', padding: '2px 9px', borderRadius: 10, fontFamily: 'monospace', fontWeight: 700 }}>{d.veiculo_placa}</span>}
+                                {eqDiu && <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 9px', borderRadius: 10 }}>☀️ Equipe Diurna: {eqDiu}</span>}
+                                {eqNot && <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '2px 9px', borderRadius: 10 }}>🌙 Equipe Noturna: {eqNot}</span>}
+                                {locais && <span style={{ fontSize: 11, background: '#f5f3ff', color: '#6d28d9', padding: '2px 9px', borderRadius: 10 }}>📍 {locais}</span>}
+                                {acess && <span style={{ fontSize: 11, background: '#fff7ed', color: '#c2410c', padding: '2px 9px', borderRadius: 10 }}>🔧 {acess}</span>}
+                              </div>
+
+                              {/* chips de horas */}
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                {hChip('Diurnas', d.horas_diurnas, '#059669')}
+                                {hChip('Noturnas', d.horas_noturnas, '#7c3aed')}
+                                {hChip('FDS Diurnas', d.h_fds_diurnas, '#0284c7')}
+                                {hChip('FDS Noturnas', d.h_fds_noturnas, '#1d4ed8')}
+                                {hChip('Feriado Diurno', d.h_feriado_diurnas, '#b45309')}
+                                {hChip('Feriado Noturno', d.h_feriado_noturnas, '#92400e')}
+                                {d.jornada_total_horas && <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.12)', color: LC.accent, padding: '2px 9px', borderRadius: 10, fontWeight: 700 }}>Total: {d.jornada_total_horas}h</span>}
+                              </div>
+
+                              {/* tabela de jornada se existir */}
+                              {jornadaLinhas.length > 0 && (
+                                <div style={{ overflowX: 'auto' }}>
+                                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11.5, background: 'var(--bg-card)', border: `1px solid ${LC.border}`, borderRadius: 8, overflow: 'hidden' }}>
+                                    <thead>
+                                      <tr style={{ background: LC.secondary }}>
+                                        {['DATA','ENTRADA','SAÍDA','ENT.2','SAÍ.2','TOTAL','SERVIÇO EXECUTADO'].map(h => (
+                                          <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap', borderBottom: `1px solid ${LC.border}` }}>{h}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {jornadaLinhas.map((linha, li) => {
+                                        const parts = linha.split('|').map(p => p.trim())
+                                        return (
+                                          <tr key={li} style={{ borderBottom: `1px solid ${LC.border}`, background: li % 2 === 0 ? 'var(--bg-card)' : LC.bg }}>
+                                            {parts.map((p, pi) => (
+                                              <td key={pi} style={{ padding: '6px 10px', whiteSpace: pi < 6 ? 'nowrap' : 'normal', fontFamily: pi > 0 && pi < 6 ? 'monospace' : undefined, color: pi === 5 ? LC.accent : LC.txtPrimary, fontWeight: pi === 5 ? 700 : undefined, maxWidth: pi === 6 ? 360 : undefined }}>{p || '—'}</td>
+                                            ))}
+                                          </tr>
+                                        )
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+
+                              {/* observações + assinaturas */}
+                              {(obs || cliNome || birNome) && (
+                                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', borderTop: `1px solid ${LC.border}`, paddingTop: 10 }}>
+                                  {obs && (
+                                    <div style={{ flex: 1, minWidth: 220 }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>Observações</span>
+                                      <p style={{ margin: '4px 0 0', fontSize: 11.5, color: LC.txtSecondary, lineHeight: 1.5 }}>{obs}</p>
+                                    </div>
+                                  )}
+                                  <div style={{ display: 'flex', gap: 32, alignItems: 'flex-start', flexShrink: 0 }}>
+                                    {cliNome && (
+                                      <div style={{ textAlign: 'center' }}>
+                                        <span style={{ fontSize: 10, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>{cliOk ? '✅' : '⬜'} Assinatura Cliente</span>
+                                        <span style={{ fontSize: 12, color: LC.txtPrimary, fontStyle: 'italic' }}>{cliNome}</span>
+                                      </div>
+                                    )}
+                                    {birNome && (
+                                      <div style={{ textAlign: 'center' }}>
+                                        <span style={{ fontSize: 10, fontWeight: 700, color: LC.txtMuted, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>{birOk ? '✅' : '⬜'} Assinatura Birigui</span>
+                                        <span style={{ fontSize: 12, color: LC.txtPrimary, fontStyle: 'italic' }}>{birNome}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })()}
+                    {/* ── Linha expandida para Diário de Campo (legado) ── */}
                     {expandedDiario.has(l.id) && isDiario && (() => {
                       const linhas = d.linhas_jornada || []
                       const sol = d.solicitante || ''
