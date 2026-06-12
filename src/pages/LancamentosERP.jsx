@@ -454,16 +454,30 @@ export default function LancamentosERP() {
   const loadData = useCallback(async () => {
     if (!workspaceId || !supabase) return
     setLoading(true)
-    const { data, error } = await supabase
-      .from('lancamentos')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('data', { ascending: false })
-      .order('created_at', { ascending: false })
+
+    // Dispara as 3 queries em paralelo
+    const mesIni = `${competenciaAjustada.current ? competencia.year : new Date().getFullYear()}-${String(competenciaAjustada.current ? competencia.month : new Date().getMonth() + 1).padStart(2, '0')}-01`
+    const [{ data, error }, { data: td }, ] = await Promise.all([
+      supabase
+        .from('lancamentos')
+        .select('id, data, created_at, status, tipo, valor, tipo_formulario, lote_cliente_id, comprovante_url, observacoes, dados_extras')
+        .eq('workspace_id', workspaceId)
+        .order('data', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase.from('diario_tarifas')
+        .select('cliente_nome')
+        .eq('workspace_id', workspaceId)
+        .eq('ativo', true),
+    ])
     if (error) { toast.error('Erro ao carregar lançamentos'); setLoading(false); return }
     const items = data || []
     setLancamentos(items)
     setLastUpdate(new Date())
+
+    // Processa tarifas (já veio em paralelo)
+    const tarifasM = {}
+    ;(td || []).forEach(t => { if (t.cliente_nome) tarifasM[t.cliente_nome.toLowerCase()] = t })
+    setTarifasMap(tarifasM)
 
     // Auto-ajusta competência para o mês mais recente com dados (só na primeira carga)
     if (items.length > 0 && !competenciaAjustada.current) {
@@ -486,18 +500,7 @@ export default function LancamentosERP() {
       }
     }
 
-    // Tarifas
-    supabase.from('diario_tarifas')
-      .select('cliente_nome')
-      .eq('workspace_id', workspaceId)
-      .eq('ativo', true)
-      .then(({ data: td }) => {
-        const m = {}
-        ;(td || []).forEach(t => { if (t.cliente_nome) m[t.cliente_nome.toLowerCase()] = t })
-        setTarifasMap(m)
-      })
-
-    // Lotes
+    // Lotes (paralelo ao processamento dos itens)
     const loteIds = [...new Set(items.map(l => l.lote_cliente_id).filter(Boolean))]
     if (loteIds.length > 0) {
       supabase.from('lotes_cliente').select('id, cliente, status').in('id', loteIds)
