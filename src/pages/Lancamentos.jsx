@@ -595,8 +595,18 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
     if (tipoForm === 'transporte') {
       const total = getValorTransporte(dadosExtras)
       setForm(f => ({ ...f, valor: String(total.toFixed(2)), tipo: 'receita' }))
+    } else if (tipoForm !== 'padrao' && !valorManual) {
+      // Auto-calcular valor para RDO quando tarifasMap disponível e valor é zero/vazio
+      const calc = calcRdoPricingTotal({ tipo_formulario: tipoForm, dados_extras: dadosExtras }, tarifasMap)
+      if (calc != null) {
+        setForm(f => {
+          const atual = parseFloat(String(f.valor).replace(',', '.')) || 0
+          if (!atual || atual === 0) return { ...f, valor: String(calc.toFixed(2)) }
+          return f
+        })
+      }
     }
-  }, [dadosExtras.valor_total, tipoForm])
+  }, [dadosExtras, tipoForm, tarifasMap])
 
   async function handleUpload(file) {
     if (!file || !supabase) return
@@ -617,9 +627,14 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
   }
 
   async function handleSave(statusOverride) {
-    const valorFinal = tipoForm === 'transporte'
+    let valorFinal = tipoForm === 'transporte'
       ? getValorTransporte(dadosExtras)
       : parseFloat(String(form.valor).replace(',', '.'))
+    // Para formulários RDO, se valor é 0/vazio, tentar calcular pelas tarifas
+    if (tipoForm !== 'padrao' && tipoForm !== 'transporte' && (!valorFinal || valorFinal === 0)) {
+      const calc = calcRdoPricingTotal({ tipo_formulario: tipoForm, dados_extras: dadosExtras }, tarifasMap)
+      if (calc != null) valorFinal = calc
+    }
     if (isNaN(valorFinal) || valorFinal < 0) { toast.error('Valor inválido'); return }
 
     const d = dadosExtras
