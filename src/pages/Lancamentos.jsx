@@ -562,7 +562,7 @@ function TemplateCamposRenderer({ campos, dados, onChange }) {
   )
 }
 
-export function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplates, onClose, onSaved }) {
+export function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplates, onClose, onSaved, hideTipoForm = false }) {
   const formTypesDisponiveis = getFormTypesParaWorkspace(enabledModules)
   const [tipoForm, setTipoForm] = useState(() => {
     const prev = item?.tipo_formulario || 'padrao'
@@ -739,6 +739,7 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
         )}
 
         {/* Seletor de tipo de formulário */}
+        {!hideTipoForm && (
         <div style={{ marginBottom: 20 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>TIPO DE FORMULÁRIO</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -759,6 +760,7 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
             })}
           </div>
         </div>
+        )}
 
         {/* ── FORMULÁRIO PADRÃO ── */}
         {tipoForm === 'padrao' && (

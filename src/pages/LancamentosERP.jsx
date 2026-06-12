@@ -1551,6 +1551,7 @@ export default function LancamentosERP() {
             userId={userId}
             enabledModules={enabledModules}
             formTemplates={formTemplates}
+            hideTipoForm
             onClose={() => setEditModal(null)}
             onSaved={() => { setEditModal(null); loadData() }}
           />
