@@ -104,13 +104,11 @@ function getEquipamento(l) {
 }
 function getClienteAss(l) {
   const d = l.dados_extras || {}
-  const v = String(d.assinatura_cliente || '').trim()
-  return v.length > 0 && v !== '—'
+  return d.assinatura_cliente_assinado === true || d.assinatura_cliente_assinado === 'true'
 }
 function getEmpresaAss(l) {
   const d = l.dados_extras || {}
-  const v = String(d.assinatura_empresa || '').trim()
-  return v.length > 0 && v !== '—'
+  return d.assinatura_birigui_assinado === true || d.assinatura_birigui_assinado === 'true'
 }
 function getOcrStatus(l) {
   const d = l.dados_extras || {}
@@ -324,8 +322,8 @@ function DetailsDrawer({ record, lotesMap, navigate, onClose }) {
           </Section>
 
           <Section title="Validação e Assinaturas">
-            <Field label="Assinatura Cliente" value={d.assinatura_cliente || (getClienteAss(record) ? 'Confirmada' : 'Pendente')} />
-            <Field label="Assinatura Empresa" value={d.assinatura_empresa || (getEmpresaAss(record) ? 'Confirmada' : 'Pendente')} />
+            <Field label="Assinatura Cliente" value={getClienteAss(record) ? `✓ Confirmada${d.assinatura_cliente_nome ? ` — ${d.assinatura_cliente_nome}` : ''}` : 'Pendente'} />
+            <Field label="Assinatura Birigui" value={getEmpresaAss(record) ? `✓ Confirmada${d.assinatura_birigui_nome ? ` — ${d.assinatura_birigui_nome}` : ''}` : 'Pendente'} />
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>OCR</div>
               {ocrSt === 'validado' && <span style={{ fontSize: 12, color: C.green, fontWeight: 700, background: '#F0FDF4', padding: '3px 9px', borderRadius: 4, border: '1px solid #86EFAC' }}>✓ Validado</span>}
