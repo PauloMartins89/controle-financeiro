@@ -1028,7 +1028,7 @@ export default function LancamentosERP() {
   }
 
   // ── Clientes únicos para filtro ───────────────────────────────────────────
-  const clientesUnicos = [...new Set(lancamentos.map(l => getEmpresa(l)).filter(e => e && e !== '—'))].sort()
+  const clientesUnicos = [...new Set(filtered.map(l => getEmpresa(l)).filter(e => e && e !== '—'))].sort()
 
   // ── Render ─────────────────────────────────────────────────────────────────
   const inputSel = {
