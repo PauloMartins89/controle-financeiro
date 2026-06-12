@@ -734,8 +734,8 @@ export default function LancamentosERP() {
       const df = getConfig(cfg, 'ui.lancamentos.default_filter', null)
       if (df) setFilterForm(df)
     })
-    supabase?.from('workspaces').select('name').eq('id', workspaceId).maybeSingle()
-      .then(({ data }) => { if (data?.name) setWsName(data.name) })
+    supabase?.from('workspaces').select('nome').eq('id', workspaceId).maybeSingle()
+      .then(({ data }) => { if (data?.nome) setWsName(data.nome) })
   }, [workspaceId])
 
   // ── Data load ──────────────────────────────────────────────────────────────
