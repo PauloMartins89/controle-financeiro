@@ -578,11 +578,14 @@ export default function LancamentosERP() {
       const [y, m] = l.data.split('-').map(Number)
       if (y !== competencia.year || m !== competencia.month) return false
     }
-    // Tipo formulário
+    // Tipo formulário — null/undefined é tratado como 'rdo' neste workspace
     if (filterForm && filterForm !== 'todos') {
       if (filterForm === 'dm') {
         if (!['diario', 'transporte'].includes(l.tipo_formulario || 'padrao')) return false
-      } else if ((l.tipo_formulario || 'padrao') !== filterForm) return false
+      } else {
+        const tf = l.tipo_formulario || 'rdo'
+        if (tf !== filterForm) return false
+      }
     }
     // Status
     if (filterStatus && filterStatus !== 'todos' && l.status !== filterStatus) return false
