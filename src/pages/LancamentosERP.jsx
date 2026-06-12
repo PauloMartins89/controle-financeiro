@@ -15,7 +15,7 @@ import { toast } from 'react-hot-toast'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
 import { loadWorkspaceConfig, getConfig } from '../lib/workspaceConfig'
-import { LancamentoModal } from './Lancamentos'
+import { LancamentoModal, calcRdoPricingTotal } from './Lancamentos'
 import {
   CurrencyDollarIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon,
   PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronDownIcon,
@@ -1551,7 +1551,9 @@ export default function LancamentosERP() {
             userId={userId}
             enabledModules={enabledModules}
             formTemplates={formTemplates}
+            tarifasMap={tarifasMap}
             hideTipoForm
+            erpMode
             onClose={() => setEditModal(null)}
             onSaved={() => { setEditModal(null); loadData() }}
           />

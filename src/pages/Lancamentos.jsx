@@ -196,7 +196,7 @@ function calcPricingTotal(l, tarifasMap) {
 
 // Calcula valor de um lançamento RDO usando horas classificadas pelo OCR × tarifas por período
 // Retorna número ou null (se não houver tarifa para o cliente)
-function calcRdoPricingTotal(l, tarifasMap) {
+export function calcRdoPricingTotal(l, tarifasMap) {
   if (l.tipo_formulario !== 'rdo') return null
   const d = l.dados_extras || {}
   const empresa = (d.empresa || d.cliente || '').trim().toLowerCase()
@@ -562,7 +562,7 @@ function TemplateCamposRenderer({ campos, dados, onChange }) {
   )
 }
 
-export function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplates, onClose, onSaved, hideTipoForm = false }) {
+export function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplates, onClose, onSaved, hideTipoForm = false, tarifasMap = {}, erpMode = false }) {
   const formTypesDisponiveis = getFormTypesParaWorkspace(enabledModules)
   const [tipoForm, setTipoForm] = useState(() => {
     const prev = item?.tipo_formulario || 'padrao'
@@ -584,6 +584,7 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
   })
   const [dadosExtras, setDadosExtras] = useState(item?.dados_extras || {})
   const [saving, setSaving] = useState(false)
+  const [valorManual, setValorManual] = useState(false) // true quando o usuário editou manualmente
   const formTemplate = (formTemplates || {})[tipoForm] || null
   const [uploadingImg, setUploadingImg] = useState(false)
   const fileRef = useRef()
@@ -716,7 +717,7 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: tipoForm === 'transporte' ? 680 : 540, maxHeight: '92vh', overflowY: 'auto', padding: 28 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', borderRadius: 16, width: '100%', maxWidth: erpMode ? 920 : (tipoForm === 'transporte' ? 680 : 540), maxHeight: '92vh', overflowY: 'auto', padding: erpMode ? '28px 32px' : 28 }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -856,7 +857,7 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
         {/* ── FORMULÁRIO DE TEMPLATE CUSTOMIZADO (ex: RDO Birigui) ── */}
         {tipoForm !== 'padrao' && tipoForm !== 'transporte' && formTemplate?.campos?.length > 0 && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: erpMode ? '1fr 1fr 1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>DATA</label>
                 <input type="date" value={form.data} onChange={e => set('data', e.target.value)} style={{ ...inputStyle, padding: '9px 10px' }} />
@@ -867,6 +868,47 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
                   {Object.entries(STATUS_CONF).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
               </div>
+              {erpMode && (() => {
+                const valorCalc = calcRdoPricingTotal({ tipo_formulario: tipoForm, dados_extras: dadosExtras }, tarifasMap)
+                const foiEditado = valorManual && form.valor !== '' && (valorCalc == null || parseFloat(form.valor) !== valorCalc)
+                return (
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 6, color: foiEditado ? '#D97706' : 'var(--text-secondary)' }}>
+                      VALOR TOTAL (R$){foiEditado ? ' — ✏ EDITADO MANUALMENTE' : valorCalc != null ? ' — CALCULADO AUTOMATICAMENTE' : ''}
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={form.valor}
+                        placeholder={valorCalc != null ? valorCalc.toFixed(2) : '0,00'}
+                        onChange={e => { set('valor', e.target.value); setValorManual(true) }}
+                        style={{
+                          ...inputStyle, padding: '9px 10px',
+                          fontWeight: 700, fontSize: 15,
+                          color: foiEditado ? '#D97706' : '#059669',
+                          border: foiEditado ? '2px solid #F59E0B' : valorCalc != null ? '2px solid #059669' : '1px solid var(--border)',
+                          background: foiEditado ? '#FFFBEB' : valorCalc != null ? '#F0FDF4' : 'var(--bg-card)',
+                        }}
+                      />
+                      {foiEditado && (
+                        <button
+                          onClick={() => { if (valorCalc != null) { set('valor', String(valorCalc)); setValorManual(false) } }}
+                          title="Restaurar valor calculado"
+                          style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#D97706', fontSize: 11, fontWeight: 700 }}
+                        >Restaurar</button>
+                      )}
+                    </div>
+                    {valorCalc != null && !foiEditado && (
+                      <div style={{ fontSize: 10, color: '#059669', marginTop: 3, fontWeight: 600 }}>
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorCalc)} — baseado nas tarifas cadastradas
+                      </div>
+                    )}
+                    {valorCalc == null && !foiEditado && (
+                      <div style={{ fontSize: 10, color: '#D97706', marginTop: 3 }}>Sem tarifa encontrada para esta empresa. Informe o valor manualmente.</div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
             <TemplateCamposRenderer campos={formTemplate.campos} dados={dadosExtras} onChange={setDadosExtras} />
             <div style={{ marginTop: 14 }}>
