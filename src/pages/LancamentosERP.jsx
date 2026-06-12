@@ -758,11 +758,7 @@ export default function LancamentosERP() {
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>TIPO DE DOCUMENTO</div>
               <select value={filterForm} onChange={e => setFilterForm(e.target.value)} style={inputSel}>
-                <option value="todos">Todos os tipos</option>
                 <option value="rdo">Relatório Diário de Obra</option>
-                <option value="dm">Diário do Motorista</option>
-                <option value="transporte">Transporte</option>
-                <option value="padrao">Padrão</option>
               </select>
             </div>
             <div>
