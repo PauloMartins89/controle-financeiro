@@ -991,15 +991,18 @@ export default function LancamentosERP() {
   const boletinsRecebidos = filtered.length
   const pendenteRevisao   = filtered.filter(l => l.status === 'rascunho' || l.status === 'aguardando_aprovacao' || l.status === 'pendente').length
   const comDivergencia    = filtered.filter(l => l.status === 'revisar' || l.status === 'reprovado').length
-  const validados         = filtered.filter(l => l.status === 'aprovado' || l.status === 'corrigido').length
-  const prontosLote       = filtered.filter(l => {
+  const aguardandoLote    = filtered.filter(l => {
     const lote = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null
     return (l.status === 'aprovado' || l.status === 'corrigido') && !lote
+  }).length
+  const prontosLote       = filtered.filter(l => {
+    const lote = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null
+    return lote && lote.status === 'aprovado_cliente'
   }).length
 
   // ── Donut: distribuição de status ─────────────────────────────────────────
   const statusDist = [
-    { label: 'Validados',         value: validados,                                                             color: C.green  },
+    { label: 'Aguardando Lote',   value: aguardandoLote,                                                        color: C.green  },
     { label: 'Revisão Pendente',  value: pendenteRevisao,                                                       color: C.amber  },
     { label: 'Com Divergência',   value: comDivergencia,                                                        color: C.red    },
     { label: 'Boletins Recebidos',value: filtered.filter(l => l.status === 'rascunho' || l.status === 'pendente').length, color: '#6366F1' },
@@ -1118,7 +1121,7 @@ export default function LancamentosERP() {
             { label: 'Boletins Recebidos', value: boletinsRecebidos,          color: C.blue,    accent: '#EFF6FF' },
             { label: 'Revisão Pendente',   value: pendenteRevisao,            color: C.amber,   accent: '#FFFBEB' },
             { label: 'Com Divergência',    value: comDivergencia,             color: C.red,     accent: '#FEF2F2' },
-            { label: 'Validados',          value: validados,                  color: C.green,   accent: '#F0FDF4' },
+            { label: 'Aguardando Lote',    value: aguardandoLote,             color: C.green,   accent: '#F0FDF4' },
             { label: 'Prontos para Lote',  value: prontosLote,                color: '#0EA5E9', accent: '#E0F2FE' },
           ].map(({ label, value, color, accent }, i, arr) => (
             <div key={label} style={{ flex: 1, padding: '10px 14px', borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : 'none', borderLeft: `3px solid ${color}`, background: accent, display: 'flex', flexDirection: 'column', gap: 2 }}>
