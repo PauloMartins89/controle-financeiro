@@ -1165,7 +1165,7 @@ export default function LancamentosERP() {
           padding: '10px 12px', marginBottom: 10,
           boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}>
-          {/* Linha 1: filtros */}
+          {/* Linha 1: filtros principais + botões */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 8 }}>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>TIPO DE DOCUMENTO</div>
@@ -1193,42 +1193,6 @@ export default function LancamentosERP() {
                 <option value="">Todos</option>
                 {clientesUnicos.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-            </div>
-            {/* Período mensal */}
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>COMPETÊNCIA</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <button onClick={prevCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
-                  <ChevronLeftIcon style={{ width: 14, height: 14 }} />
-                </button>
-                <span style={{ fontSize: 12, fontWeight: 700, color: dateFrom || dateTo ? C.textSec : C.navy, minWidth: 110, textAlign: 'center', opacity: dateFrom || dateTo ? 0.4 : 1 }}>
-                  {MONTHS[competencia.month - 1]}/{competencia.year}
-                </span>
-                <button onClick={nextCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
-                  <ChevronRightIcon style={{ width: 14, height: 14 }} />
-                </button>
-              </div>
-            </div>
-            {/* Separador */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8, color: C.textSec, fontSize: 11 }}>ou</div>
-            {/* Intervalo livre */}
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA INICIAL</div>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={e => setDateFrom(e.target.value)}
-                style={{ ...inputSel, minWidth: 130 }}
-              />
-            </div>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA FINAL</div>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={e => setDateTo(e.target.value)}
-                style={{ ...inputSel, minWidth: 130 }}
-              />
             </div>
             {/* Botões filtro */}
             <div style={{ display: 'flex', gap: 6, marginLeft: 4, alignSelf: 'flex-end' }}>
@@ -1285,6 +1249,43 @@ export default function LancamentosERP() {
             </div>
           </div>
 
+          {/* Linha 2: período */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+            {/* Competência mensal */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>COMPETÊNCIA</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={prevCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
+                  <ChevronLeftIcon style={{ width: 14, height: 14 }} />
+                </button>
+                <span style={{ fontSize: 12, fontWeight: 700, color: dateFrom || dateTo ? C.textSec : C.navy, minWidth: 110, textAlign: 'center', opacity: dateFrom || dateTo ? 0.4 : 1 }}>
+                  {MONTHS[competencia.month - 1]}/{competencia.year}
+                </span>
+                <button onClick={nextCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
+                  <ChevronRightIcon style={{ width: 14, height: 14 }} />
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2, color: C.textSec, fontSize: 11, fontWeight: 500 }}>ou</div>
+            {/* Data inicial */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA INICIAL</div>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateFrom ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
+            </div>
+            {/* Data final */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA FINAL</div>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateTo ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
+            </div>
+            {(dateFrom || dateTo) && (
+              <button onClick={() => { setDateFrom(''); setDateTo('') }}
+                style={{ alignSelf: 'flex-end', padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+                ✕ Limpar datas
+              </button>
+            )}
+          </div>
 
         </div>
 
