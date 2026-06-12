@@ -121,7 +121,7 @@ function getOcrStatus(l) {
 // ─── STATUS BADGE ERP ─────────────────────────────────────────────────────────
 const ERP_STATUS_MAP = {
   aguardando_aprovacao: { label: 'Revisão Pendente',         bg: '#FFFBEB', color: '#B45309', border: '#FCD34D' },
-  aprovado:             { label: 'Validado Internamente',    bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
+  aprovado:             { label: 'Aguardando Lote',          bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
   rascunho:             { label: 'Boletim Recebido',         bg: '#EFF6FF', color: '#1E40AF', border: '#BFDBFE' },
   devolvido:            { label: 'Em Revisão',               bg: '#FFF7ED', color: '#9A3412', border: '#FED7AA' },
   corrigido:            { label: 'Corrigido',                bg: '#EEF2FF', color: '#3730A3', border: '#A5B4FC' },
@@ -134,7 +134,7 @@ const ERP_STATUS_MAP = {
 }
 const ERP_LOTE_MAP = {
   aprovado_cliente: { label: 'Pronto para Lote',    bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
-  enviado_cliente:  { label: 'Lote Gerado',         bg: '#EEF2FF', color: '#3730A3', border: '#A5B4FC' },
+  enviado_cliente:  { label: 'Lote Enviado',        bg: '#EEF2FF', color: '#3730A3', border: '#A5B4FC' },
   recusado_cliente: { label: 'Lote Recusado',       bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
   rascunho:         { label: 'Em Lote',             bg: '#FFFBEB', color: '#B45309', border: '#FCD34D' },
 }
@@ -525,7 +525,7 @@ function AuditModal({ record, onClose }) {
       .then(({ data }) => setEvs(data || []))
   }, [record?.id])
   if (!record) return null
-  const TIPO_LABEL = { criado:'Boletim Recebido', editado:'Lançamento Editado', aprovado:'Validado Internamente', reprovado:'Divergência Registrada', devolvido:'Em Revisão', faturado:'Faturado', enviado_lote:'Lote Gerado', aprovado_cliente:'Pronto para Lote', revisado:'Revisado', corrigido:'Divergência Corrigida', processado_ia:'OCR Processado' }
+  const TIPO_LABEL = { criado:'Boletim Recebido', editado:'Lançamento Editado', aprovado:'Aguardando Lote', reprovado:'Divergência Registrada', devolvido:'Em Revisão', faturado:'Faturado', enviado_lote:'Lote Enviado', aprovado_cliente:'Pronto para Lote', revisado:'Revisado', corrigido:'Divergência Corrigida', processado_ia:'OCR Processado' }
   return (
     <div style={{ position:'fixed', inset:0, zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div onClick={onClose} style={{ position:'absolute', inset:0, background:'rgba(11,31,58,0.5)' }} />
