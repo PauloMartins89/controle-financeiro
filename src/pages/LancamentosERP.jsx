@@ -1150,14 +1150,13 @@ export default function LancamentosERP() {
         }}>
           {[
             ['Cliente', wsName],
-            ['Workspace', wsName],
             ['Competência', `${MONTHS[competencia.month - 1]}/${competencia.year}`],
             ['Status', filterStatus === 'todos' ? 'Todos' : (ERP_STATUS_MAP[filterStatus]?.label || filterStatus)],
           ].map(([label, value], i) => (
             <div key={label} style={{
               display: 'flex', alignItems: 'center', gap: 4,
               paddingRight: 16, marginRight: 16,
-              borderRight: i < 3 ? `1px solid ${C.border}` : 'none',
+              borderRight: i < 2 ? `1px solid ${C.border}` : 'none',
             }}>
               <span style={{ color: C.textSec }}>{label}:</span>
               <span style={{ color: C.navy, fontWeight: 700 }}>{value}</span>
