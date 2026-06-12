@@ -131,6 +131,21 @@ function getEmpresaAss(l) {
   const d = l.dados_extras || {}
   return d.assinatura_birigui_assinado === true || d.assinatura_birigui_assinado === 'true'
 }
+// Retorna lista de motivos de divergência detectados automaticamente
+function getDivergencias(l, tarifasMap) {
+  const motivos = []
+  const d = l.dados_extras || {}
+  // 1. Status manual de divergência
+  if (l.status === 'revisar' || l.status === 'reprovado') motivos.push('Marcado com divergência')
+  // 2. Valor zero (não calculou)
+  if (!l.valor || l.valor === 0) motivos.push('Valor R$ 0,00')
+  // 3. Sem assinatura do cliente
+  if (!getClienteAss(l)) motivos.push('Sem assinatura do cliente')
+  // 4. Horas totais zeradas
+  const totalH = calcTotalHorasJornada(d)
+  if (totalH != null && totalH === 0) motivos.push('Total de horas = 0')
+  return motivos
+}
 function getOcrStatus(l) {
   const d = l.dados_extras || {}
   if (!d.processado_em && !d.ocr) return null
@@ -1038,7 +1053,7 @@ export default function LancamentosERP() {
   const saldoOp           = totalReceitas - totalDespesas
   const boletinsRecebidos = filtered.length
   const pendenteRevisao   = filtered.filter(l => l.status === 'rascunho' || l.status === 'aguardando_aprovacao' || l.status === 'pendente').length
-  const comDivergencia    = filtered.filter(l => l.status === 'revisar' || l.status === 'reprovado').length
+  const comDivergencia    = filtered.filter(l => getDivergencias(l, tarifasMap).length > 0).length
   const aguardandoLote    = filtered.filter(l => {
     const lote = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null
     return (l.status === 'aprovado' || l.status === 'corrigido') && !lote
@@ -1435,11 +1450,19 @@ export default function LancamentosERP() {
                   const loteStatus = lote?.status || null
                   const clienteOk = getClienteAss(l)
                   const empresaOk = getEmpresaAss(l)
-                  const rowBg = idx % 2 === 0 ? C.white : '#F8FAFC'
+                  const divergencias = getDivergencias(l, tarifasMap)
+                  const temDivergencia = divergencias.length > 0
+                  const rowBg = temDivergencia ? '#FFF5F5' : (idx % 2 === 0 ? C.white : '#F8FAFC')
                   const isOpen = actionMenuId === l.id
 
                   return (
-                    <tr key={l.id} style={{ background: selecionados.has(l.id) ? '#EFF6FF' : rowBg, cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'} onMouseLeave={e => e.currentTarget.style.background = selecionados.has(l.id) ? '#EFF6FF' : rowBg} onClick={e => { if (e.target.type !== 'checkbox') setDrawerRecord(l) }}>
+                    <tr key={l.id}
+                      style={{ background: selecionados.has(l.id) ? '#EFF6FF' : rowBg, cursor: 'pointer', borderLeft: temDivergencia ? '3px solid #DC2626' : '3px solid transparent' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'}
+                      onMouseLeave={e => e.currentTarget.style.background = selecionados.has(l.id) ? '#EFF6FF' : rowBg}
+                      onClick={e => { if (e.target.type !== 'checkbox') setDrawerRecord(l) }}
+                      title={temDivergencia ? `⚠ ${divergencias.join(' · ')}` : undefined}
+                    >
                       <td style={{ padding: '5px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', width: 36 }}>
                         <input type="checkbox" style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#6366F1' }}
                           checked={selecionados.has(l.id)}
@@ -1473,9 +1496,13 @@ export default function LancamentosERP() {
                       <Td align="center" muted>{parseFloat(d.h_feriado_noturnas || 0) > 0 ? `${d.h_feriado_noturnas}h` : '—'}</Td>
                       {/* REVISÃO INTERNA */}
                       <Td align="center">
-                        {clienteOk
-                          ? <span style={{ color: C.green, fontWeight: 800, fontSize: 14 }}>✓</span>
-                          : <span style={{ color: '#CBD5E1', fontSize: 14 }}>—</span>}
+                        {temDivergencia
+                          ? <span title={divergencias.join('\n')} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: '#DC2626', fontSize: 12, fontWeight: 800, cursor: 'help' }}>
+                              ⚠ <span style={{ fontSize: 10, fontWeight: 700 }}>{divergencias.length}</span>
+                            </span>
+                          : clienteOk
+                            ? <span style={{ color: C.green, fontWeight: 800, fontSize: 14 }}>✓</span>
+                            : <span style={{ color: '#CBD5E1', fontSize: 14 }}>—</span>}
                       </Td>
                       <td
                         onClick={e => { e.stopPropagation(); if (!lote) toggleValidado(l) }}
