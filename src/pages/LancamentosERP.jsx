@@ -137,20 +137,24 @@ function getDivergencias(l, tarifasMap) {
   const d = l.dados_extras || {}
   // 1. Status manual de divergência
   if (l.status === 'revisar' || l.status === 'reprovado') motivos.push('Marcado com divergência')
-  // 2. Valor zero (não calculou)
+  // 2. Valor zero
   if (!l.valor || l.valor === 0) motivos.push('Valor R$ 0,00')
-  // 3. Sem assinatura do cliente
+  // 3. Tarifa não cadastrada (só para RDO com valor zero)
+  if ((!l.valor || l.valor === 0) && l.tipo_formulario === 'rdo' && tarifasMap) {
+    const empresa = ((d.empresa || d.cliente || '')).trim().toLowerCase()
+    const temTarifa = empresa && (tarifasMap[empresa] || Object.keys(tarifasMap).some(k => empresa.includes(k) || k.includes(empresa)))
+    if (!temTarifa) motivos.push('Tarifa não cadastrada')
+  }
+  // 4. Sem assinatura do cliente
   if (!getClienteAss(l)) motivos.push('Sem assinatura do cliente')
-  // 4. Horas totais zeradas
+  // 5. Horas totais zeradas
   const totalH = calcTotalHorasJornada(d)
   if (totalH != null && totalH === 0) motivos.push('Total de horas = 0')
   return motivos
 }
 function getOcrStatus(l) {
-  const d = l.dados_extras || {}
-  if (!d.processado_em && !d.ocr) return null
-  if (l.status === 'revisar') return 'divergencia'
-  return 'validado'
+  // mantido para compatibilidade mas não exibido na UI
+  return null
 }
 
 // ─── STATUS BADGE ERP ─────────────────────────────────────────────────────────
@@ -860,13 +864,20 @@ export default function LancamentosERP() {
     if (!workspaceId || !supabase) return
     setLoading(true)
 
-    // Dispara as 3 queries em paralelo
-    const mesIni = `${competenciaAjustada.current ? competencia.year : new Date().getFullYear()}-${String(competenciaAjustada.current ? competencia.month : new Date().getMonth() + 1).padStart(2, '0')}-01`
-    const [{ data, error }, { data: td }, ] = await Promise.all([
+    // Calcula intervalo do mês atual para filtrar na query
+    const now = new Date()
+    const y = competenciaAjustada.current ? competencia.year  : now.getFullYear()
+    const m = competenciaAjustada.current ? competencia.month : now.getMonth() + 1
+    const mesIni = `${y}-${String(m).padStart(2, '0')}-01`
+    const mesFim = new Date(y, m, 0).toISOString().slice(0, 10) // último dia do mês
+
+    const [{ data, error }, { data: td }] = await Promise.all([
       supabase
         .from('lancamentos')
         .select('id, data, created_at, status, tipo, valor, tipo_formulario, lote_cliente_id, comprovante_url, observacoes, dados_extras')
         .eq('workspace_id', workspaceId)
+        .gte('data', mesIni)
+        .lte('data', mesFim)
         .order('data', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase.from('diario_tarifas')
@@ -884,7 +895,7 @@ export default function LancamentosERP() {
     ;(td || []).forEach(t => { if (t.cliente_nome) tarifasM[t.cliente_nome.toLowerCase()] = t })
     setTarifasMap(tarifasM)
 
-    // ── Auto-calcula valor nos registros com valor = 0 ─────────────────────
+    // ── Auto-calcula valor nos registros com valor = 0 (só mês atual) ────────
     const semValor = items.filter(l => (!l.valor || l.valor === 0) && l.tipo_formulario === 'rdo')
     if (semValor.length > 0) {
       const atualizacoes = semValor
@@ -904,25 +915,9 @@ export default function LancamentosERP() {
     }
 
     // Auto-ajusta competência para o mês mais recente com dados (só na primeira carga)
-    if (items.length > 0 && !competenciaAjustada.current) {
-      competenciaAjustada.current = true
-      const now2 = new Date()
-      const curY = now2.getFullYear(), curM = now2.getMonth() + 1
-      const hasCurrentMonth = items.some(l => {
-        if (!l.data) return false
-        const [y, m] = l.data.split('-').map(Number)
-        return y === curY && m === curM
-      })
-      if (!hasCurrentMonth) {
-        const datesWithData = items
-          .filter(l => l.data)
-          .map(l => { const [y, m] = l.data.split('-').map(Number); return { year: y, month: m } })
-        if (datesWithData.length > 0) {
-          datesWithData.sort((a, b) => b.year - a.year || b.month - a.month)
-          setCompetencia(datesWithData[0])
-        }
-      }
-    }
+    // Agora que a query é filtrada: se não veio nada no mês atual, não há ajuste automático
+    // O usuário navega manualmente pelas setas de competência
+    competenciaAjustada.current = true
 
     // Lotes (paralelo ao processamento dos itens)
     const loteIds = [...new Set(items.map(l => l.lote_cliente_id).filter(Boolean))]
@@ -939,7 +934,7 @@ export default function LancamentosERP() {
     // (gerenciado por useEffect separado abaixo)
 
     setLoading(false)
-  }, [workspaceId])
+  }, [workspaceId, competencia])
 
   // Recarrega eventos sempre que o mês ou os lançamentos mudam
   useEffect(() => {
@@ -972,41 +967,12 @@ export default function LancamentosERP() {
     return () => document.removeEventListener('mousedown', h)
   }, [actionMenuId])
 
-  // Auto-ajusta competência quando o tipo de formulário muda (evita mês vazio)
-  useEffect(() => {
-    if (lancamentos.length === 0) return
-    const matchFn = (l) => {
-      if (!filterForm || filterForm === 'todos') return true
-      if (filterForm === 'dm') return ['diario', 'transporte'].includes(l.tipo_formulario || 'padrao')
-      return (l.tipo_formulario || 'padrao') === filterForm
-    }
-    const hasInCurrent = lancamentos.some(l => {
-      if (!matchFn(l) || !l.data) return false
-      const [y, m] = l.data.split('-').map(Number)
-      return y === competencia.year && m === competencia.month
-    })
-    if (!hasInCurrent) {
-      const dates = lancamentos
-        .filter(l => matchFn(l) && l.data)
-        .map(l => { const [y, m] = l.data.split('-').map(Number); return { year: y, month: m } })
-      if (dates.length > 0) {
-        dates.sort((a, b) => b.year - a.year || b.month - a.month)
-        setCompetencia(dates[0])
-      }
-    }
-  }, [filterForm, lancamentos]) // eslint-disable-line
-
   // ── Filtro ─────────────────────────────────────────────────────────────────
   const filtered = lancamentos.filter(l => {
-    // Período — se intervalo livre preenchido usa ele, senão usa competência
-    if (l.data) {
-      if (dateFrom || dateTo) {
-        if (dateFrom && l.data < dateFrom) return false
-        if (dateTo   && l.data > dateTo)   return false
-      } else {
-        const [y, m] = l.data.split('-').map(Number)
-        if (y !== competencia.year || m !== competencia.month) return false
-      }
+    // Período — query já filtra por competência; intervalo livre sobrepõe localmente
+    if (l.data && (dateFrom || dateTo)) {
+      if (dateFrom && l.data < dateFrom) return false
+      if (dateTo   && l.data > dateTo)   return false
     }
     // Tipo formulário — null/undefined é tratado como 'rdo' neste workspace
     if (filterForm && filterForm !== 'todos') {
