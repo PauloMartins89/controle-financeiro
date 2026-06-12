@@ -965,9 +965,9 @@ export default function LancamentosERP() {
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button
                             onClick={() => setDrawerRecord(l)}
-                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.border}`, background: C.white, color: C.navy, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 8px', borderRadius: 5, border: `1px solid ${C.border}`, background: C.white, color: C.navy, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
                           >
-                            <EyeIcon style={{ width: 13, height: 13 }} /> Ver detalhes
+                            <EyeIcon style={{ width: 12, height: 12, flexShrink: 0 }} /> Detalhes
                           </button>
                           <div style={{ position: 'relative' }}>
                             <button
