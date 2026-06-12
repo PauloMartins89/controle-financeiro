@@ -1379,10 +1379,16 @@ export default function LancamentosERP() {
                           ? <span style={{ color: C.green, fontWeight: 800, fontSize: 14 }}>✓</span>
                           : <span style={{ color: '#CBD5E1', fontSize: 14 }}>—</span>}
                       </Td>
-                      <td onClick={e => { e.stopPropagation(); toggleValidado(l) }} style={{ padding: '5px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', cursor: 'pointer' }} title={l.status === 'aprovado' ? 'Clique para reverter validação' : 'Clique para validar internamente'}>
-                        {l.status === 'aprovado'
+                      <td
+                        onClick={e => { e.stopPropagation(); if (!lote) toggleValidado(l) }}
+                        style={{ padding: '5px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', cursor: lote ? 'default' : 'pointer' }}
+                        title={lote ? 'Registro em lote — não pode ser alterado aqui' : (l.status === 'aprovado' ? 'Clique para reverter validação' : 'Clique para validar internamente')}
+                      >
+                        {lote
                           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: '#F0FDF4', border: '1.5px solid #059669', color: '#059669', fontSize: 11, fontWeight: 800 }}>✓ Validado</span>
-                          : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: '#F8FAFC', border: '1.5px dashed #CBD5E1', color: '#94A3B8', fontSize: 11, fontWeight: 600 }}>Validar</span>
+                          : l.status === 'aprovado'
+                            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: '#F0FDF4', border: '1.5px solid #059669', color: '#059669', fontSize: 11, fontWeight: 800 }}>✓ Validado</span>
+                            : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: '#F8FAFC', border: '1.5px dashed #CBD5E1', color: '#94A3B8', fontSize: 11, fontWeight: 600 }}>Validar</span>
                         }
                       </td>
                       {/* FINANCEIRO */}
