@@ -120,23 +120,23 @@ function getOcrStatus(l) {
 
 // ─── STATUS BADGE ERP ─────────────────────────────────────────────────────────
 const ERP_STATUS_MAP = {
-  aguardando_aprovacao: { label: 'Aguardando Aprovação',    bg: '#FFFBEB', color: '#B45309', border: '#FCD34D' },
-  aprovado:             { label: 'Aprovado',                 bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
-  rascunho:             { label: 'Em Elaboração',            bg: '#F8FAFC', color: '#475569', border: '#CBD5E1' },
+  aguardando_aprovacao: { label: 'Revisão Pendente',         bg: '#FFFBEB', color: '#B45309', border: '#FCD34D' },
+  aprovado:             { label: 'Validado Internamente',    bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
+  rascunho:             { label: 'Boletim Recebido',         bg: '#EFF6FF', color: '#1E40AF', border: '#BFDBFE' },
   devolvido:            { label: 'Em Revisão',               bg: '#FFF7ED', color: '#9A3412', border: '#FED7AA' },
   corrigido:            { label: 'Corrigido',                bg: '#EEF2FF', color: '#3730A3', border: '#A5B4FC' },
   faturado:             { label: 'Faturado',                 bg: '#F5F3FF', color: '#5B21B6', border: '#C4B5FD' },
-  reprovado:            { label: 'Reprovado',                bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
+  reprovado:            { label: 'Com Divergência',          bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
   cancelado:            { label: 'Cancelado',                bg: '#F8FAFC', color: '#475569', border: '#CBD5E1' },
-  pendente:             { label: 'Pendente de Assinatura',   bg: '#F8FAFC', color: '#64748B', border: '#CBD5E1' },
-  revisar:              { label: 'Divergência OCR',          bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
-  pago:                 { label: 'Pago',                     bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
+  pendente:             { label: 'OCR Processado',           bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
+  revisar:              { label: 'Com Divergência',          bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
+  pago:                 { label: 'Faturado',                 bg: '#F5F3FF', color: '#5B21B6', border: '#C4B5FD' },
 }
 const ERP_LOTE_MAP = {
-  aprovado_cliente: { label: 'Aprovado pelo Cliente', bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
-  enviado_cliente:  { label: 'Ag. Aprovação Cliente', bg: '#FFFBEB', color: '#B45309', border: '#FCD34D' },
-  recusado_cliente: { label: 'Recusado pelo Cliente', bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
-  rascunho:         { label: 'Em Lote',               bg: '#EEF2FF', color: '#3730A3', border: '#A5B4FC' },
+  aprovado_cliente: { label: 'Pronto para Lote',    bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
+  enviado_cliente:  { label: 'Lote Gerado',         bg: '#EEF2FF', color: '#3730A3', border: '#A5B4FC' },
+  recusado_cliente: { label: 'Lote Recusado',       bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
+  rascunho:         { label: 'Em Lote',             bg: '#FFFBEB', color: '#B45309', border: '#FCD34D' },
 }
 
 function ErpStatusBadge({ status, loteStatus }) {
@@ -484,7 +484,7 @@ function AuditModal({ record, onClose }) {
       .then(({ data }) => setEvs(data || []))
   }, [record?.id])
   if (!record) return null
-  const TIPO_LABEL = { criado:'Criado', editado:'Editado', aprovado:'Aprovado', reprovado:'Reprovado', devolvido:'Devolvido', faturado:'Faturado', enviado_lote:'Adicionado ao Lote', aprovado_cliente:'Aprovado pelo Cliente', revisado:'Revisado', editado:'Editado' }
+  const TIPO_LABEL = { criado:'Boletim Recebido', editado:'Lançamento Editado', aprovado:'Validado Internamente', reprovado:'Divergência Registrada', devolvido:'Em Revisão', faturado:'Faturado', enviado_lote:'Lote Gerado', aprovado_cliente:'Pronto para Lote', revisado:'Revisado', corrigido:'Divergência Corrigida', processado_ia:'OCR Processado' }
   return (
     <div style={{ position:'fixed', inset:0, zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div onClick={onClose} style={{ position:'absolute', inset:0, background:'rgba(11,31,58,0.5)' }} />
@@ -626,7 +626,7 @@ function AdicionarLoteModal({ record, workspaceId, onClose, onSaved }) {
     finally { setSaving(false) }
   }
 
-  const STATUS_LABEL = { rascunho: 'Em elaboração', enviado_cliente: 'Ag. aprovação' }
+  const STATUS_LABEL = { rascunho: 'Em lote (rascunho)', enviado_cliente: 'Lote gerado' }
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -911,20 +911,23 @@ export default function LancamentosERP() {
   const totalReceitas     = filtered.filter(l => l.tipo === 'receita').reduce((s, l) => s + (l.valor || 0), 0)
   const totalDespesas     = filtered.filter(l => l.tipo === 'despesa').reduce((s, l) => s + (l.valor || 0), 0)
   const saldoOp           = totalReceitas - totalDespesas
-  const pendentes         = filtered.filter(l => l.status === 'pendente').length
-  const agAprovacao       = filtered.filter(l => l.status === 'aguardando_aprovacao' || l.status === 'corrigido').length
-  const aprovados         = filtered.filter(l => {
+  const boletinsRecebidos = filtered.length
+  const pendenteRevisao   = filtered.filter(l => l.status === 'rascunho' || l.status === 'aguardando_aprovacao' || l.status === 'pendente').length
+  const comDivergencia    = filtered.filter(l => l.status === 'revisar' || l.status === 'reprovado').length
+  const validados         = filtered.filter(l => l.status === 'aprovado' || l.status === 'corrigido').length
+  const prontosLote       = filtered.filter(l => {
     const lote = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null
-    return l.status === 'aprovado' || lote?.status === 'aprovado_cliente'
+    return (l.status === 'aprovado' || l.status === 'corrigido') && !lote
   }).length
 
   // ── Donut: distribuição de status ─────────────────────────────────────────
   const statusDist = [
-    { label: 'Aprovado pelo Cliente', value: filtered.filter(l => { const lt = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null; return lt?.status === 'aprovado_cliente' || l.status === 'aprovado' }).length, color: C.green },
-    { label: 'Aguardando Aprovação',  value: agAprovacao, color: C.amber },
-    { label: 'Divergência OCR',       value: filtered.filter(l => l.status === 'revisar').length, color: C.red },
-    { label: 'Pendente de Assinatura',value: filtered.filter(l => l.status === 'pendente').length, color: '#94A3B8' },
-    { label: 'Em Elaboração',         value: filtered.filter(l => l.status === 'rascunho').length, color: '#6366F1' },
+    { label: 'Validados',         value: validados,                                                             color: C.green  },
+    { label: 'Revisão Pendente',  value: pendenteRevisao,                                                       color: C.amber  },
+    { label: 'Com Divergência',   value: comDivergencia,                                                        color: C.red    },
+    { label: 'Boletins Recebidos',value: filtered.filter(l => l.status === 'rascunho' || l.status === 'pendente').length, color: '#6366F1' },
+    { label: 'Em Revisão',        value: filtered.filter(l => l.status === 'devolvido').length,                 color: '#F97316' },
+    { label: 'Prontos para Lote', value: prontosLote,                                                           color: '#0EA5E9' },
   ]
 
   // ── Competência helpers ────────────────────────────────────────────────────
@@ -1033,12 +1036,12 @@ export default function LancamentosERP() {
 
         {/* ── KPI CARDS ────────────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
-          <KpiCard icon={BanknotesIcon}          label="Receitas Apuradas"     value={fmtCurrency(totalReceitas)} sub="Total do período"        color={C.green}  iconBg="#F0FDF4" />
-          <KpiCard icon={ArrowDownTrayIcon}      label="Despesas Lançadas"     value={fmtCurrency(totalDespesas)} sub="Total do período"        color={C.red}    iconBg="#FEF2F2" />
-          <KpiCard icon={CurrencyDollarIcon}     label="Saldo Operacional"     value={fmtCurrency(saldoOp)}       sub="Receitas – Despesas"    color={C.blue}   iconBg="#EFF6FF" />
-          <KpiCard icon={ExclamationTriangleIcon} label="Pendências"           value={pendentes}                  sub="Lançamentos pendentes"  color={C.amber}  iconBg="#FFFBEB" />
-          <KpiCard icon={ClockIcon}              label="Aguardando Aprovação"  value={agAprovacao}                sub="Aguardando cliente"     color="#D97706"  iconBg="#FEF3C7" />
-          <KpiCard icon={CheckCircleIcon}        label="Aprovados"             value={aprovados}                  sub="Aprovados pelo cliente" color={C.green}  iconBg="#F0FDF4" />
+          <KpiCard icon={BanknotesIcon}           label="Receitas Apuradas"    value={fmtCurrency(totalReceitas)} sub="Total do período"       color={C.green}  iconBg="#F0FDF4" />
+          <KpiCard icon={ClipboardDocumentListIcon} label="Boletins Recebidos"   value={boletinsRecebidos}          sub="No período filtrado"   color={C.blue}   iconBg="#EFF6FF" />
+          <KpiCard icon={ClockIcon}                 label="Pendentes de Revisão" value={pendenteRevisao}            sub="Aguardando conferência" color={C.amber}  iconBg="#FFFBEB" />
+          <KpiCard icon={CheckCircleIcon}           label="Validados"            value={validados}                  sub="Revisão interna OK"    color={C.green}  iconBg="#F0FDF4" />
+          <KpiCard icon={ExclamationTriangleIcon}   label="Com Divergência"      value={comDivergencia}             sub="Requer correção"       color={C.red}    iconBg="#FEF2F2" />
+          <KpiCard icon={TableCellsIcon}            label="Prontos para Lote"    value={prontosLote}                sub="Validados sem lote"    color="#0EA5E9"  iconBg="#E0F2FE" />
         </div>
 
         {/* ── FILTROS + AÇÕES ───────────────────────────────────────────── */}
@@ -1059,13 +1062,14 @@ export default function LancamentosERP() {
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>STATUS</div>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={inputSel}>
                 <option value="todos">Todos</option>
-                <option value="aguardando_aprovacao">Ag. Aprovação</option>
-                <option value="aprovado">Aprovado</option>
-                <option value="pendente">Pendente</option>
-                <option value="rascunho">Rascunho</option>
-                <option value="devolvido">Devolvido</option>
+                <option value="rascunho">Boletim Recebido</option>
+                <option value="pendente">OCR Processado</option>
+                <option value="aguardando_aprovacao">Revisão Pendente</option>
+                <option value="devolvido">Em Revisão</option>
+                <option value="revisar">Com Divergência</option>
+                <option value="corrigido">Corrigido</option>
+                <option value="aprovado">Validado Internamente</option>
                 <option value="faturado">Faturado</option>
-                <option value="revisar">Divergência OCR</option>
               </select>
             </div>
             <div>
@@ -1187,10 +1191,10 @@ export default function LancamentosERP() {
                     JORNADA
                   </th>
                   <th colSpan={2} style={{ background: C.groupVal, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
-                    VALIDAÇÃO
+                    REVISÃO INTERNA
                   </th>
                   <th colSpan={3} style={{ background: C.groupFin, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center' }}>
-                    FINANCEIRO
+                    FINANCEIRO / LOTE
                   </th>
                 </tr>
                 {/* Linha 2: colunas individuais */}
@@ -1211,8 +1215,8 @@ export default function LancamentosERP() {
                   <Th width={90} align="center">H FDS Noturnas</Th>
                   <Th width={100} align="center">H Feriado Diurnas</Th>
                   <Th width={100} align="center">H Feriado Noturnas</Th>
-                  <Th width={110} align="center">Cliente - Assinado</Th>
-                  <Th width={110} align="center">Birigui - Assinado</Th>
+                  <Th width={110} align="center">Conf. Interna</Th>
+                  <Th width={110} align="center">Validado</Th>
                   <Th width={110} align="right">Valor (R$)</Th>
                   <Th width={160}>Status</Th>
                   <Th width={130} align="center">Ações</Th>
@@ -1413,10 +1417,10 @@ export default function LancamentosERP() {
             </div>
           </div>
 
-          {/* STATUS DOS LANÇAMENTOS */}
+          {/* FILA DE REVISÃO */}
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
             <div style={{ background: C.groupJorn, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Status dos Lançamentos</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Fila de Revisão</div>
             </div>
             <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ flexShrink: 0 }}>
@@ -1438,10 +1442,10 @@ export default function LancamentosERP() {
             </div>
           </div>
 
-          {/* ÚLTIMAS ATIVIDADES */}
+          {/* AUDITORIA RECENTE */}
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
             <div style={{ background: C.groupVal, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Últimas Atividades</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Auditoria Recente</div>
             </div>
             <div style={{ padding: '10px 16px' }}>
               {eventos.length === 0 && (
@@ -1453,11 +1457,16 @@ export default function LancamentosERP() {
                 const dt = new Date(ev.created_at)
                 const dtStr = `${dt.toLocaleDateString('pt-BR')} ${dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
                 const label = {
-                  aprovado: 'aprovado pelo cliente',
-                  enviado_aprovacao: 'enviado para aprovação',
-                  processado_ia: 'OCR validado automaticamente',
-                  criado: 'lançamento criado',
-                  editado: 'editado',
+                  aprovado:           'validado internamente',
+                  enviado_aprovacao:  'enviado para revisão',
+                  processado_ia:      'OCR processado',
+                  criado:             'boletim recebido',
+                  editado:            'lançamento editado',
+                  devolvido:          'enviado para revisão',
+                  corrigido:          'divergência corrigida',
+                  reprovado:          'divergência registrada',
+                  enviado_lote:       'lote gerado',
+                  faturado:           'faturado',
                 }[ev.tipo] || ev.tipo
                 return (
                   <div key={ev.id} style={{ padding: '8px 0', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -1478,22 +1487,24 @@ export default function LancamentosERP() {
             </div>
           </div>
 
-          {/* ATALHOS RÁPIDOS */}
+          {/* AÇÕES DO MÓDULO */}
           <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
             <div style={{ background: C.groupFin, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Atalhos Rápidos</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Ações do Módulo</div>
             </div>
             <div style={{ padding: '8px 0' }}>
               {[
-                { label: 'Modelos de Formulário',     icon: ClipboardDocumentListIcon, path: '/form-templates' },
-                { label: 'Digitalizações',             icon: SparklesIcon,              path: '/boletins-diarios' },
-                { label: 'Relatórios Gerenciais',      icon: DocumentChartBarIcon,      path: '/central' },
-                { label: 'Auditoria de Lançamentos',   icon: BellAlertIcon,             path: '/lancamentos' },
-                { label: 'Configurações do Módulo',    icon: Cog6ToothIcon,             path: '/configuracoes' },
+                { label: 'Receber Boletim',          icon: DocumentArrowDownIcon,     path: '/lancamentos-erp', action: () => setEditModal('novo') },
+                { label: 'Digitalizar OCR',          icon: SparklesIcon,              path: '/boletins-diarios' },
+                { label: 'Revisar Pendências',       icon: ClockIcon,                 path: null, action: () => setFilterStatus('aguardando_aprovacao') },
+                { label: 'Ver Divergências',         icon: ExclamationTriangleIcon,   path: null, action: () => setFilterStatus('revisar') },
+                { label: 'Modelos de Formulário',    icon: ClipboardDocumentListIcon, path: '/form-templates' },
+                { label: 'Relatórios',               icon: DocumentChartBarIcon,      path: '/central' },
+                { label: 'Configurações',            icon: Cog6ToothIcon,             path: '/configuracoes' },
               ].map(item => (
                 <button
                   key={item.label}
-                  onClick={() => navigate(item.path)}
+                  onClick={() => item.action ? item.action() : navigate(item.path)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     width: '100%', padding: '11px 16px', background: 'none', border: 'none',
