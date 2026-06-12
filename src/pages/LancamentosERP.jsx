@@ -378,13 +378,13 @@ function DetailsDrawer({ record, lotesMap, navigate, onClose }) {
 // ─── TABLE CELL HELPERS ───────────────────────────────────────────────────────
 const Th = ({ children, align = 'left', width, group }) => (
   <th style={{
-    padding: group ? '5px 6px' : '6px 6px',
+    padding: group ? '5px 8px' : '6px 8px',
     fontSize: group ? 9 : 10, fontWeight: 700,
     letterSpacing: group ? 0.8 : 0.4,
     color: C.white,
     textAlign: align,
     whiteSpace: 'nowrap',
-    width: width || 'auto',
+    minWidth: width || 'auto',
     borderRight: `1px solid rgba(255,255,255,0.12)`,
   }}>
     {children}
@@ -393,7 +393,7 @@ const Th = ({ children, align = 'left', width, group }) => (
 
 const Td = ({ children, align = 'left', muted, bold, green }) => (
   <td style={{
-    padding: '5px 6px',
+    padding: '5px 8px',
     fontSize: 11,
     color: green ? C.green : bold ? C.text : muted ? C.textSec : C.text,
     fontWeight: bold || green ? 700 : 400,
@@ -401,9 +401,6 @@ const Td = ({ children, align = 'left', muted, bold, green }) => (
     borderBottom: `1px solid ${C.border}`,
     borderRight: `1px solid #EEF2F7`,
     whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    maxWidth: 0,
   }}>
     {children}
   </td>
@@ -858,7 +855,7 @@ export default function LancamentosERP() {
 
           {/* Tabela com cabeçalhos agrupados */}
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, tableLayout: 'fixed' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, tableLayout: 'auto' }}>
               <thead>
                 {/* Linha 1: grupos */}
                 <tr>
@@ -878,27 +875,27 @@ export default function LancamentosERP() {
                 {/* Linha 2: colunas individuais */}
                 <tr style={{ background: '#1A2E4A' }}>
                   <Th width={70}>Nº</Th>
-                  <Th width={76}>Data</Th>
-                  <Th width={110}>Processado em</Th>
-                  <Th width={130}>Empresa</Th>
-                  <Th width={100}>Solicitante</Th>
-                  <Th width={72}>Equip.</Th>
-                  <Th width={140}>Local Serv.</Th>
-                  <Th width={90}>Documento</Th>
-                  <Th width={50} align="center">Início</Th>
-                  <Th width={50} align="center">Fim</Th>
-                  <Th width={54} align="center">Total H</Th>
-                  <Th width={44} align="center">H Diur.</Th>
-                  <Th width={44} align="center">H Notur.</Th>
-                  <Th width={52} align="center">FDS Diur.</Th>
-                  <Th width={52} align="center">FDS Not.</Th>
-                  <Th width={52} align="center">Fer. Diur.</Th>
-                  <Th width={52} align="center">Fer. Not.</Th>
-                  <Th width={52} align="center">Cli.</Th>
-                  <Th width={52} align="center">Emp.</Th>
-                  <Th width={90} align="right">Valor (R$)</Th>
-                  <Th width={130}>Status</Th>
-                  <Th width={120} align="center">Ações</Th>
+                  <Th width={90}>Data</Th>
+                  <Th width={140}>Processado Em</Th>
+                  <Th width={200}>Empresa</Th>
+                  <Th width={140}>Solicitante</Th>
+                  <Th width={120}>Equipamento</Th>
+                  <Th width={220}>Local de Realização dos Serviços</Th>
+                  <Th width={110}>Documento</Th>
+                  <Th width={70} align="center">Início da Jornada</Th>
+                  <Th width={70} align="center">Fim da Jornada</Th>
+                  <Th width={80} align="center">Total de Horas</Th>
+                  <Th width={90} align="center">H Diurnas</Th>
+                  <Th width={90} align="center">H Noturnas</Th>
+                  <Th width={90} align="center">H FDS Diurnas</Th>
+                  <Th width={90} align="center">H FDS Noturnas</Th>
+                  <Th width={100} align="center">H Feriado Diurnas</Th>
+                  <Th width={100} align="center">H Feriado Noturnas</Th>
+                  <Th width={110} align="center">Cliente - Assinado</Th>
+                  <Th width={110} align="center">Birigui - Assinado</Th>
+                  <Th width={110} align="right">Valor (R$)</Th>
+                  <Th width={160}>Status</Th>
+                  <Th width={130} align="center">Ações</Th>
                 </tr>
               </thead>
               <tbody>
