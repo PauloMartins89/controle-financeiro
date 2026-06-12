@@ -1017,23 +1017,26 @@ export default function LancamentosERP() {
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.12)', width: 200, overflow: 'hidden',
                               }}>
                                 {[
-                                  { label: 'Visualizar documento', icon: DocumentTextIcon, action: () => l.comprovante_url && window.open(l.comprovante_url, '_blank') },
-                                  { label: 'Editar lançamento', icon: DocumentTextIcon, action: () => navigate(`/lancamentos?id=${l.id}`) },
-                                  { label: 'Gerar PDF', icon: DocumentArrowDownIcon, action: () => navigate(`/lancamentos?id=${l.id}`) },
-                                  { label: 'Adicionar ao lote', icon: UserGroupIcon, action: () => navigate(`/lancamentos?id=${l.id}`) },
-                                  { label: 'Ver auditoria', icon: MapPinIcon, action: () => navigate(`/lancamentos?id=${l.id}`) },
+                                  { label: 'Visualizar documento', icon: DocumentTextIcon, disabled: false, action: () => l.comprovante_url && window.open(l.comprovante_url, '_blank') },
+                                  { label: 'Editar lançamento',    icon: DocumentTextIcon,      disabled: true,  action: () => {} },
+                                  { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: true,  action: () => {} },
+                                  { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: true,  action: () => {} },
+                                  { label: 'Ver auditoria',        icon: MapPinIcon,             disabled: true,  action: () => {} },
                                 ].map(item => (
-                                  <button key={item.label} onClick={() => { item.action(); setActionMenuId(null) }} style={{
+                                  <button key={item.label} disabled={item.disabled} onClick={() => { item.action(); setActionMenuId(null) }} style={{
                                     display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                                     padding: '10px 14px', background: 'none', border: 'none',
-                                    color: C.text, fontSize: 12, cursor: 'pointer', textAlign: 'left',
+                                    color: item.disabled ? '#CBD5E1' : C.text, fontSize: 12,
+                                    cursor: item.disabled ? 'not-allowed' : 'pointer', textAlign: 'left',
                                     borderBottom: `1px solid ${C.border}`,
+                                    opacity: item.disabled ? 0.55 : 1,
                                   }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                                    onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.background = '#F8FAFC' }}
                                     onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                   >
-                                    <item.icon style={{ width: 14, height: 14, color: C.textSec }} />
+                                    <item.icon style={{ width: 14, height: 14, color: item.disabled ? '#CBD5E1' : C.textSec }} />
                                     {item.label}
+                                    {item.disabled && <span style={{ marginLeft: 'auto', fontSize: 9, color: '#CBD5E1', fontWeight: 600 }}>EM BREVE</span>}
                                   </button>
                                 ))}
                               </div>
