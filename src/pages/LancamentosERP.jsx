@@ -831,7 +831,7 @@ export default function LancamentosERP() {
         .order('data', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase.from('diario_tarifas')
-        .select('cliente_nome')
+        .select('*')
         .eq('workspace_id', workspaceId)
         .eq('ativo', true),
     ])
