@@ -48,6 +48,7 @@ const navGroups = [
     items: [
       { to: '/central',       icon: TableCellsIcon,            label: 'Central Gerencial',  moduleKey: 'gerencial' },
       { to: '/lancamentos',   icon: DocumentTextIcon,          label: 'Lançamentos',         moduleKey: 'gerencial' },
+      { to: '/lancamentos-erp', icon: BoltIcon,                label: 'Boletins ERP',        moduleKey: 'gerencial' },
       { to: '/gerencial/boletins-diarios', icon: ClipboardDocumentListIcon, label: 'Boletins Diários', moduleKey: 'gerencial' },
       { to: '/cadastros',     icon: UsersIcon,        label: 'Cadastros',         moduleKey: 'gerencial' },
       { to: '/lotes-cliente',   icon: UserGroupIcon,    label: 'Lotes Cliente',     moduleKey: 'gerencial' },
