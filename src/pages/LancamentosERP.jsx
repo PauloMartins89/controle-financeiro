@@ -745,6 +745,8 @@ export default function LancamentosERP() {
   const [editModal, setEditModal]       = useState(null)   // record a editar
   const [formTemplates, setFormTemplates] = useState({})
   const [loteModal, setLoteModal]       = useState(false)   // criar lote com selecionados
+  const [exportMenu, setExportMenu]     = useState(false)
+  const exportMenuRef                   = useRef(null)
   const [addLoteModal, setAddLoteModal] = useState(null)    // adicionar 1 registro a lote existente
   const [userId, setUserId]             = useState(null)
   const [visiblePanels, setVisiblePanels] = useState(() => new Set(['resumo', 'fila', 'auditoria', 'acoes']))
@@ -1206,6 +1208,46 @@ export default function LancamentosERP() {
                 onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('rdo') }}
                 style={{ padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
               >Limpar</button>
+              {/* Exportar dropdown */}
+              <div ref={exportMenuRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setExportMenu(v => !v)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                >
+                  <ArrowDownTrayIcon style={{ width: 13, height: 13, color: C.green }} /> Exportar <ChevronDownIcon style={{ width: 11, height: 11, color: C.textSec }} />
+                </button>
+                {exportMenu && (
+                  <div
+                    style={{ position: 'absolute', top: '100%', left: 0, zIndex: 500, background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.10)', minWidth: 220, marginTop: 4, overflow: 'hidden' }}
+                    onMouseLeave={() => setExportMenu(false)}
+                  >
+                    <div style={{ padding: '8px 12px 4px', fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5 }}>Por Período</div>
+                    <button onClick={() => { exportCSV(filtered, lotesMap); setExportMenu(false) }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: C.text, fontWeight: 600, textAlign: 'left' }}>
+                      <TableCellsIcon style={{ width: 13, height: 13, color: C.green }} />
+                      Excel — {MONTHS[competencia.month - 1]}/{competencia.year}
+                    </button>
+                    <button onClick={() => { printTable(filtered, lotesMap, competencia, wsName); setExportMenu(false) }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: C.text, fontWeight: 600, textAlign: 'left' }}>
+                      <DocumentArrowDownIcon style={{ width: 13, height: 13, color: C.red }} />
+                      PDF — {MONTHS[competencia.month - 1]}/{competencia.year}
+                    </button>
+                    {clientesUnicos.length > 0 && (
+                      <>
+                        <div style={{ height: 1, background: C.border, margin: '4px 0' }} />
+                        <div style={{ padding: '8px 12px 4px', fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5 }}>Por Cliente</div>
+                        {clientesUnicos.map(cli => {
+                          const rows = filtered.filter(l => getEmpresa(l) === cli)
+                          return (
+                            <button key={cli} onClick={() => { exportCSV(rows, lotesMap); setExportMenu(false) }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: C.text, fontWeight: 500, textAlign: 'left' }}>
+                              <TableCellsIcon style={{ width: 12, height: 12, color: C.green }} />
+                              {cli} <span style={{ marginLeft: 'auto', fontSize: 10, color: C.textSec, fontWeight: 400 }}>{rows.length} reg</span>
+                            </button>
+                          )
+                        })}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={loadData}
                 style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 12, cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}
