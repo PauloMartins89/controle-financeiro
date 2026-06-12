@@ -15,7 +15,7 @@ import { toast } from 'react-hot-toast'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
 import { loadWorkspaceConfig, getConfig } from '../lib/workspaceConfig'
-import { LancamentoModal, calcRdoPricingTotal } from './Lancamentos'
+import { LancamentoModal, calcRdoPricingTotal, registrarEvento } from './Lancamentos'
 import {
   CurrencyDollarIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon,
   PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronDownIcon,
@@ -755,6 +755,41 @@ export default function LancamentosERP() {
     supabase?.auth.getUser().then(({ data }) => setUserId(data?.user?.id || null))
   }, [])
 
+  // ── Validação rápida (toggle) ───────────────────────────────────────────
+  async function toggleValidado(l) {
+    const novoStatus = l.status === 'aprovado' ? 'rascunho' : 'aprovado'
+    try {
+      const { error } = await supabase.from('lancamentos').update({ status: novoStatus }).eq('id', l.id)
+      if (error) throw error
+      await registrarEvento({
+        lancamentoId: l.id,
+        tipo: novoStatus === 'aprovado' ? 'aprovado' : 'editado',
+        statusDe: l.status,
+        statusPara: novoStatus,
+        descricao: novoStatus === 'aprovado' ? 'Validado internamente pelo conferente' : 'Validação revertida',
+        usuarioId: userId,
+      })
+      toast.success(novoStatus === 'aprovado' ? 'Validado — Pronto para Lote!' : 'Validação revertida')
+      loadData()
+    } catch (e) { toast.error('Erro: ' + e.message) }
+  }
+
+  async function validarSelecionados() {
+    const ids = [...selecionados].filter(id => {
+      const l = lancamentos.find(x => x.id === id)
+      return l && l.status !== 'aprovado'
+    })
+    if (!ids.length) { toast('Todos já estão validados', { icon: 'ℹ️' }); return }
+    try {
+      const { error } = await supabase.from('lancamentos').update({ status: 'aprovado' }).in('id', ids)
+      if (error) throw error
+      await Promise.all(ids.map(id => registrarEvento({ lancamentoId: id, tipo: 'aprovado', statusPara: 'aprovado', descricao: 'Validação em lote pelo conferente', usuarioId: userId })))
+      toast.success(`${ids.length} boletim(ns) validado(s)`)
+      setSelecionados(new Set())
+      loadData()
+    } catch (e) { toast.error('Erro: ' + e.message) }
+  }
+
   // ── Form templates (para modal de edição) ─────────────────────────────────
   useEffect(() => {
     if (!workspaceId) return
@@ -1173,6 +1208,13 @@ export default function LancamentosERP() {
               <DocumentArrowDownIcon style={{ width: 12, height: 12 }} /> Gerar PDF
             </button>
             <button
+              onClick={validarSelecionados}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.green}`, background: selecionados.size > 0 ? '#F0FDF4' : 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}
+              title="Validar selecionados internamente"
+            >
+              <CheckCircleIcon style={{ width: 12, height: 12 }} /> Validar {selecionados.size > 0 && `(${selecionados.size})`}
+            </button>
+            <button
               onClick={() => {
                 const itens = filtered.filter(l => selecionados.has(l.id))
                 if (itens.length === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
@@ -1328,17 +1370,18 @@ export default function LancamentosERP() {
                       <Td align="center" muted>{parseFloat(d.h_fds_noturnas || 0) > 0 ? `${d.h_fds_noturnas}h` : '—'}</Td>
                       <Td align="center" muted>{parseFloat(d.h_feriado_diurnas || 0) > 0 ? `${d.h_feriado_diurnas}h` : '—'}</Td>
                       <Td align="center" muted>{parseFloat(d.h_feriado_noturnas || 0) > 0 ? `${d.h_feriado_noturnas}h` : '—'}</Td>
-                      {/* VALIDAÇÃO */}
+                      {/* REVISÃO INTERNA */}
                       <Td align="center">
                         {clienteOk
                           ? <span style={{ color: C.green, fontWeight: 800, fontSize: 14 }}>✓</span>
                           : <span style={{ color: '#CBD5E1', fontSize: 14 }}>—</span>}
                       </Td>
-                      <Td align="center">
-                        {empresaOk
-                          ? <span style={{ color: C.green, fontWeight: 800, fontSize: 14 }}>✓</span>
-                          : <span style={{ color: '#CBD5E1', fontSize: 14 }}>—</span>}
-                      </Td>
+                      <td onClick={e => { e.stopPropagation(); toggleValidado(l) }} style={{ padding: '5px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', cursor: 'pointer' }} title={l.status === 'aprovado' ? 'Clique para reverter validação' : 'Clique para validar internamente'}>
+                        {l.status === 'aprovado'
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: '#F0FDF4', border: '1.5px solid #059669', color: '#059669', fontSize: 11, fontWeight: 800 }}>✓ Validado</span>
+                          : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: '#F8FAFC', border: '1.5px dashed #CBD5E1', color: '#94A3B8', fontSize: 11, fontWeight: 600 }}>Validar</span>
+                        }
+                      </td>
                       {/* FINANCEIRO */}
                       <Td align="right" green bold>{fmtCurrency(l.valor)}</Td>
                       <Td>
