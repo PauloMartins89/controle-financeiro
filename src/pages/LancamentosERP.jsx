@@ -1314,9 +1314,26 @@ export default function LancamentosERP() {
               <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
                 style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateTo ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
             </div>
+            {/* Atalhos de período */}
+            <div style={{ alignSelf: 'flex-end', display: 'flex', gap: 4 }}>
+              {[10, 15, 30, 60].map(dias => {
+                const hoje = new Date()
+                const ini  = new Date(hoje); ini.setDate(hoje.getDate() - dias + 1)
+                const iniStr = ini.toISOString().slice(0, 10)
+                const fimStr = hoje.toISOString().slice(0, 10)
+                const ativo  = dateFrom === iniStr && dateTo === fimStr
+                return (
+                  <button key={dias}
+                    onClick={() => { setDateFrom(iniStr); setDateTo(fimStr) }}
+                    style={{ padding: '4px 8px', borderRadius: 5, border: `1px solid ${ativo ? C.blue : C.border}`, background: ativo ? '#EFF6FF' : 'transparent', color: ativo ? C.blue : C.textSec, fontSize: 11, cursor: 'pointer', fontWeight: ativo ? 700 : 500, height: 30 }}>
+                    {dias}d
+                  </button>
+                )
+              })}
+            </div>
             {(dateFrom || dateTo) && (
               <button onClick={() => { setDateFrom(''); setDateTo('') }}
-                style={{ alignSelf: 'flex-end', padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+                style={{ alignSelf: 'flex-end', padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 11, cursor: 'pointer', fontWeight: 600, height: 30 }}>
                 ✕ Limpar datas
               </button>
             )}
