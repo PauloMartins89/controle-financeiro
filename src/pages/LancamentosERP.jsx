@@ -883,6 +883,7 @@ export default function LancamentosERP() {
         const updMap = Object.fromEntries(atualizacoes.map(({ l, calc }) => [l.id, calc]))
         setLancamentos(items.map(l => updMap[l.id] ? { ...l, valor: updMap[l.id] } : l))
         setLastUpdate(new Date())
+        setLoading(false)
         return // evita setLancamentos(items) abaixo sobrescrever
       }
     }
