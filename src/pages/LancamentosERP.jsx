@@ -698,6 +698,7 @@ export default function LancamentosERP() {
   const [pageSize]                      = useState(25)
   const [drawerRecord, setDrawerRecord] = useState(null)
   const [actionMenuId, setActionMenuId] = useState(null)
+  const [actionMenuPos, setActionMenuPos] = useState({ top: 0, right: 0 })
   const [selecionados, setSelecionados] = useState(new Set())
   const [auditModal, setAuditModal]     = useState(null)
   const [editModal, setEditModal]       = useState(null)   // record a editar
@@ -1301,14 +1302,19 @@ export default function LancamentosERP() {
                           </button>
                           <div style={{ position: 'relative' }}>
                             <button
-                              onClick={() => setActionMenuId(isOpen ? null : l.id)}
+                              onClick={(e) => {
+                                if (isOpen) { setActionMenuId(null); return }
+                                const rect = e.currentTarget.getBoundingClientRect()
+                                setActionMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+                                setActionMenuId(l.id)
+                              }}
                               style={{ display: 'flex', alignItems: 'center', padding: '3px 4px', borderRadius: 4, border: `1px solid ${C.border}`, background: C.white, color: C.navy, cursor: 'pointer' }}
                             >
                               <ChevronDownIcon style={{ width: 13, height: 13 }} />
                             </button>
                             {isOpen && (
                               <div ref={actionMenuRef} style={{
-                                position: 'absolute', right: 0, top: '110%', zIndex: 500,
+                                position: 'fixed', right: actionMenuPos.right, top: actionMenuPos.top, zIndex: 9999,
                                 background: C.white, border: `1px solid ${C.border}`, borderRadius: 8,
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.12)', width: 200, overflow: 'hidden',
                               }}>
