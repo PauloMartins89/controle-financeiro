@@ -1811,6 +1811,7 @@ function EditFieldModal({ editState, onSave, onCancel, saving }) {
 
 export default function Lancamentos() {
   const { workspaceId, enabledModules, isPlatformAdmin } = useStore()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab]                   = useState('lancamentos')
   const [lancamentos, setLancamentos]   = useState([])
   const [loading, setLoading]           = useState(true)
