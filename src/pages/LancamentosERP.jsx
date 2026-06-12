@@ -869,6 +869,24 @@ export default function LancamentosERP() {
     ;(td || []).forEach(t => { if (t.cliente_nome) tarifasM[t.cliente_nome.toLowerCase()] = t })
     setTarifasMap(tarifasM)
 
+    // ── Auto-calcula valor nos registros com valor = 0 ─────────────────────
+    const semValor = items.filter(l => (!l.valor || l.valor === 0) && l.tipo_formulario === 'rdo')
+    if (semValor.length > 0) {
+      const atualizacoes = semValor
+        .map(l => ({ l, calc: calcRdoPricingTotal(l, tarifasM) }))
+        .filter(({ calc }) => calc != null && calc > 0)
+      if (atualizacoes.length > 0) {
+        await Promise.all(atualizacoes.map(({ l, calc }) =>
+          supabase.from('lancamentos').update({ valor: calc }).eq('id', l.id)
+        ))
+        // Atualiza localmente sem recarregar tudo
+        const updMap = Object.fromEntries(atualizacoes.map(({ l, calc }) => [l.id, calc]))
+        setLancamentos(items.map(l => updMap[l.id] ? { ...l, valor: updMap[l.id] } : l))
+        setLastUpdate(new Date())
+        return // evita setLancamentos(items) abaixo sobrescrever
+      }
+    }
+
     // Auto-ajusta competência para o mês mais recente com dados (só na primeira carga)
     if (items.length > 0 && !competenciaAjustada.current) {
       competenciaAjustada.current = true
