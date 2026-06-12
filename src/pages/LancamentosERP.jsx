@@ -1107,6 +1107,25 @@ export default function LancamentosERP() {
             <button onClick={loadData} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.blue, padding: 2, display: 'flex' }}>
               <ArrowPathIcon style={{ width: 14, height: 14 }} />
             </button>
+            <div style={{ width: 1, height: 18, background: C.border, margin: '0 4px' }} />
+            <button onClick={() => navigate('/boletins-diarios')} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+              <SparklesIcon style={{ width: 11, height: 11, color: '#6366F1' }} /> Digitalizar OCR
+            </button>
+            <button onClick={() => setEditModal('novo')} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
+              <PlusIcon style={{ width: 11, height: 11 }} /> Novo Lançamento
+            </button>
+            <button onClick={() => exportCSV(filtered, lotesMap)} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+              <TableCellsIcon style={{ width: 11, height: 11 }} /> Exportar Excel
+            </button>
+            <button onClick={() => printTable(filtered, lotesMap, competencia, wsName)} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.red, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+              <DocumentArrowDownIcon style={{ width: 11, height: 11 }} /> Gerar PDF
+            </button>
+            <button onClick={validarSelecionados} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.green}`, background: selecionados.size > 0 ? '#F0FDF4' : 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 700 }} title="Validar selecionados internamente">
+              <CheckCircleIcon style={{ width: 11, height: 11 }} /> Validar {selecionados.size > 0 && `(${selecionados.size})`}
+            </button>
+            <button onClick={() => { const itens = filtered.filter(l => selecionados.has(l.id)); if (itens.length === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }; setLoteModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: '#6366F1', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+              <UserGroupIcon style={{ width: 11, height: 11, color: '#6366F1' }} /> Gerar Lote {selecionados.size > 0 && `(${selecionados.size})`}
+            </button>
           </div>
         </div>
       </div>
@@ -1196,38 +1215,7 @@ export default function LancamentosERP() {
             </div>
           </div>
 
-          {/* Linha 2: ações operacionais */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-            <button onClick={() => navigate('/boletins-diarios')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-              <SparklesIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Digitalizar OCR
-            </button>
-            <button onClick={() => setEditModal('novo')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
-              <PlusIcon style={{ width: 12, height: 12 }} /> Novo Lançamento
-            </button>
-            <button onClick={() => exportCSV(filtered, lotesMap)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-              <TableCellsIcon style={{ width: 12, height: 12 }} /> Exportar Excel
-            </button>
-            <button onClick={() => printTable(filtered, lotesMap, competencia, wsName)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.red, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-              <DocumentArrowDownIcon style={{ width: 12, height: 12 }} /> Gerar PDF
-            </button>
-            <button
-              onClick={validarSelecionados}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.green}`, background: selecionados.size > 0 ? '#F0FDF4' : 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}
-              title="Validar selecionados internamente"
-            >
-              <CheckCircleIcon style={{ width: 12, height: 12 }} /> Validar {selecionados.size > 0 && `(${selecionados.size})`}
-            </button>
-            <button
-              onClick={() => {
-                const itens = filtered.filter(l => selecionados.has(l.id))
-                if (itens.length === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
-                setLoteModal(true)
-              }}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#6366F1', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
-            >
-              <UserGroupIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Gerar Lote {selecionados.size > 0 && `(${selecionados.size})`}
-            </button>
-          </div>
+
         </div>
 
         {/* ── TABELA ───────────────────────────────────────────────────── */}
