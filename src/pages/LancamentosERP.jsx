@@ -1,4 +1,4 @@
-/**
+﻿/**
  * LancamentosERP.jsx
  * Tela de Lançamentos no estilo ERP Operacional Robusto
  * Rota: /lancamentos-erp
@@ -185,6 +185,47 @@ function DonutChart({ data, size = 120 }) {
         )
       })}
     </svg>
+  )
+}
+
+// ─── SPARKLINE SVG ───────────────────────────────────────────────────────────
+function Sparkline({ values = [], width = 200, height = 36, color = '#1D4ED8' }) {
+  if (values.length < 2) return <svg width={width} height={height} />
+  const max = Math.max(...values, 1)
+  const pts = values.map((v, i) => [
+    (i / (values.length - 1)) * width,
+    height - 4 - ((v / max) * (height - 8)),
+  ])
+  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')
+  const fill = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ')
+    + ` L${width},${height} L0,${height} Z`
+  return (
+    <svg width={width} height={height} style={{ display: 'block' }}>
+      <path d={fill} fill={color} fillOpacity={0.08} />
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      {pts.map((p, i) => i === pts.length - 1
+        ? <circle key={i} cx={p[0]} cy={p[1]} r={3} fill={color} />
+        : null
+      )}
+    </svg>
+  )
+}
+
+// ─── BAR CHART HORIZONTAL ────────────────────────────────────────────────────
+ function HBarChart({ data }) {
+  const max = Math.max(...data.map(d => d.value), 1)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+      {data.map(({ label, value, color }) => (
+        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 130, fontSize: 11, color: C.textSec, textAlign: 'right', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+          <div style={{ flex: 1, height: 10, background: '#F1F5F9', borderRadius: 6, overflow: 'hidden' }}>
+            <div style={{ width: `${(value / max) * 100}%`, height: '100%', background: color, borderRadius: 6, transition: 'width 0.4s ease', minWidth: value > 0 ? 4 : 0 }} />
+          </div>
+          <div style={{ width: 22, fontSize: 11, fontWeight: 700, color: C.text, flexShrink: 0, textAlign: 'right' }}>{value}</div>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -706,6 +747,7 @@ export default function LancamentosERP() {
   const [loteModal, setLoteModal]       = useState(false)   // criar lote com selecionados
   const [addLoteModal, setAddLoteModal] = useState(null)    // adicionar 1 registro a lote existente
   const [userId, setUserId]             = useState(null)
+  const [visiblePanels, setVisiblePanels] = useState(() => new Set(['resumo', 'fila', 'auditoria', 'acoes']))
   const actionMenuRef                   = useRef(null)
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -1034,14 +1076,21 @@ export default function LancamentosERP() {
       {/* ══ MAIN CONTENT ════════════════════════════════════════════════════ */}
       <div style={{ padding: '12px 16px' }}>
 
-        {/* ── KPI CARDS ────────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8, marginBottom: 12 }}>
-          <KpiCard icon={BanknotesIcon}           label="Receitas Apuradas"    value={fmtCurrency(totalReceitas)} sub="Total do período"       color={C.green}  iconBg="#F0FDF4" />
-          <KpiCard icon={ClipboardDocumentListIcon} label="Boletins Recebidos"   value={boletinsRecebidos}          sub="No período filtrado"   color={C.blue}   iconBg="#EFF6FF" />
-          <KpiCard icon={ClockIcon}                 label="Pendentes de Revisão" value={pendenteRevisao}            sub="Aguardando conferência" color={C.amber}  iconBg="#FFFBEB" />
-          <KpiCard icon={CheckCircleIcon}           label="Validados"            value={validados}                  sub="Revisão interna OK"    color={C.green}  iconBg="#F0FDF4" />
-          <KpiCard icon={ExclamationTriangleIcon}   label="Com Divergência"      value={comDivergencia}             sub="Requer correção"       color={C.red}    iconBg="#FEF2F2" />
-          <KpiCard icon={TableCellsIcon}            label="Prontos para Lote"    value={prontosLote}                sub="Validados sem lote"    color="#0EA5E9"  iconBg="#E0F2FE" />
+        {/* ── KPI STRIP ──────────────────────────────────────────────────── */}
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, display: 'flex', alignItems: 'stretch', marginBottom: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          {[
+            { label: 'Receitas Apuradas',  value: fmtCurrency(totalReceitas), color: C.green,   accent: '#F0FDF4' },
+            { label: 'Boletins Recebidos', value: boletinsRecebidos,          color: C.blue,    accent: '#EFF6FF' },
+            { label: 'Revisão Pendente',   value: pendenteRevisao,            color: C.amber,   accent: '#FFFBEB' },
+            { label: 'Com Divergência',    value: comDivergencia,             color: C.red,     accent: '#FEF2F2' },
+            { label: 'Validados',          value: validados,                  color: C.green,   accent: '#F0FDF4' },
+            { label: 'Prontos para Lote',  value: prontosLote,                color: '#0EA5E9', accent: '#E0F2FE' },
+          ].map(({ label, value, color, accent }, i, arr) => (
+            <div key={label} style={{ flex: 1, padding: '10px 14px', borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : 'none', borderLeft: `3px solid ${color}`, background: accent, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color, lineHeight: 1.1 }}>{value}</div>
+            </div>
+          ))}
         </div>
 
         {/* ── FILTROS + AÇÕES ───────────────────────────────────────────── */}
@@ -1392,137 +1441,149 @@ export default function LancamentosERP() {
           )}
         </div>
 
-        {/* ── PAINÉIS INFERIORES ────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+        {/* ── CONTROLE DE PAINÉIS ───────────────────────────────────────── */}
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.6, marginRight: 2 }}>Painéis:</span>
+          {[
+            { key: 'resumo',    label: 'Resumo do Período' },
+            { key: 'fila',      label: 'Fila de Revisão' },
+            { key: 'auditoria', label: 'Auditoria Recente' },
+            { key: 'acoes',     label: 'Ações do Módulo' },
+          ].map(({ key, label }) => {
+            const on = visiblePanels.has(key)
+            return (
+              <button key={key}
+                onClick={() => setVisiblePanels(prev => { const n = new Set(prev); on ? n.delete(key) : n.add(key); return n })}
+                style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? C.blue : C.border}`, background: on ? '#EFF6FF' : C.white, color: on ? C.blue : C.textSec }}
+              >{on ? '✓ ' : ''}{label}</button>
+            )
+          })}
+          <span style={{ marginLeft: 'auto', fontSize: 10, color: C.textSec }}>{visiblePanels.size} de 4 visível{visiblePanels.size !== 1 ? 'is' : ''}</span>
+        </div>
 
-          {/* RESUMO DO PERÍODO */}
-          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-            <div style={{ background: C.navy, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Resumo do Período</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{MONTHS[competencia.month - 1]}/{competencia.year}</div>
-            </div>
-            <div style={{ padding: '14px 16px' }}>
-              {[
-                ['Total de Lançamentos', filtered.length, null],
-                ['Total de Horas Apuradas', fmtHorasTotal(filtered), null],
-                ['Horas Diurnas', fmtHorasSum(filtered, 'horas_diurnas'), C.blue],
-                ['Horas Noturnas', fmtHorasSum(filtered, 'horas_noturnas'), C.navy],
-                ['Valor Total Apurado', fmtCurrency(filtered.reduce((s, l) => s + (l.valor || 0), 0)), C.green],
-              ].map(([label, value, color]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: 12, color: C.textSec }}>{label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: color || C.text }}>{value}</span>
+        {/* ── PAINÉIS INFERIORES ──────────────────────────────────────────── */}
+        {visiblePanels.size > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${visiblePanels.size}, 1fr)`, gap: 10, marginBottom: 16 }}>
+
+          {/* RESUMO */}
+          {visiblePanels.has('resumo') && (() => {
+            const daysInMonth = new Date(competencia.year, competencia.month, 0).getDate()
+            const byDay = Array(daysInMonth).fill(0)
+            filtered.forEach(l => {
+              if (!l.data) return
+              const d = new Date(l.data + 'T12:00:00')
+              if (d.getMonth() + 1 === competencia.month && d.getFullYear() === competencia.year) byDay[d.getDate() - 1] += l.valor || 0
+            })
+            let acc = 0
+            const sparkVals = byDay.map(v => { acc += v; return acc })
+            return (
+              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ background: C.navy, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Resumo do Período</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>{MONTHS[competencia.month - 1]}/{competencia.year}</div>
+                  </div>
+                  <Sparkline values={sparkVals} width={80} height={28} color="#86EFAC" />
                 </div>
-              ))}
-            </div>
-          </div>
+                <div style={{ padding: '12px 16px' }}>
+                  {[
+                    ['Total de Boletins', filtered.length, null],
+                    ['Horas Apuradas',    fmtHorasTotal(filtered), null],
+                    ['Horas Diurnas',     fmtHorasSum(filtered, 'horas_diurnas'), C.blue],
+                    ['Horas Noturnas',    fmtHorasSum(filtered, 'horas_noturnas'), C.navy],
+                    ['Valor Total',       fmtCurrency(filtered.reduce((s, l) => s + (l.valor || 0), 0)), C.green],
+                  ].map(([label, value, color]) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: 11, color: C.textSec }}>{label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: color || C.text }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* FILA DE REVISÃO */}
-          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-            <div style={{ background: C.groupJorn, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Fila de Revisão</div>
-            </div>
-            <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ flexShrink: 0 }}>
-                <DonutChart data={statusDist} size={100} />
+          {visiblePanels.has('fila') && (
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: C.groupJorn, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Fila de Revisão</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>{filtered.length} boletins</div>
               </div>
-              <div style={{ flex: 1 }}>
-                {statusDist.filter(s => s.value > 0).map(s => (
-                  <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 11, color: C.textSec, flex: 1 }}>{s.label}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{s.value}</span>
-                  </div>
-                ))}
-                <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 11, color: C.textSec }}>Total</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: C.text }}>{filtered.length} (100%)</span>
+              <div style={{ padding: '14px 16px' }}>
+                <HBarChart data={statusDist} />
+                <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11, color: C.textSec }}>Total no período</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: C.text }}>{filtered.length}</span>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* AUDITORIA RECENTE */}
-          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-            <div style={{ background: C.groupVal, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Auditoria Recente</div>
-            </div>
-            <div style={{ padding: '10px 16px' }}>
-              {eventos.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: C.textSec, fontSize: 12 }}>Nenhum evento recente</div>
-              )}
-              {eventos.map(ev => {
-                const lanc = lancamentos.find(l => l.id === ev.lancamento_id)
-                const num = lanc ? getLanNum(lanc) : ev.lancamento_id?.slice(0, 6)
-                const dt = new Date(ev.created_at)
-                const dtStr = `${dt.toLocaleDateString('pt-BR')} ${dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-                const label = {
-                  aprovado:           'validado internamente',
-                  enviado_aprovacao:  'enviado para revisão',
-                  processado_ia:      'OCR processado',
-                  criado:             'boletim recebido',
-                  editado:            'lançamento editado',
-                  devolvido:          'enviado para revisão',
-                  corrigido:          'divergência corrigida',
-                  reprovado:          'divergência registrada',
-                  enviado_lote:       'lote gerado',
-                  faturado:           'faturado',
-                }[ev.tipo] || ev.tipo
-                return (
-                  <div key={ev.id} style={{ padding: '8px 0', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                    <div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: C.blue }}>{num}</span>
-                      <span style={{ fontSize: 12, color: C.text }}> {label}</span>
+          {visiblePanels.has('auditoria') && (
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: C.groupVal, padding: '10px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Auditoria Recente</div>
+              </div>
+              <div style={{ padding: '10px 16px' }}>
+                {eventos.length === 0 && <div style={{ textAlign: 'center', padding: '20px 0', color: C.textSec, fontSize: 12 }}>Nenhum evento recente</div>}
+                {eventos.map(ev => {
+                  const lanc = lancamentos.find(l => l.id === ev.lancamento_id)
+                  const num = lanc ? getLanNum(lanc) : ev.lancamento_id?.slice(0, 6)
+                  const dt = new Date(ev.created_at)
+                  const dtStr = `${dt.toLocaleDateString('pt-BR')} ${dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+                  const evLabel = { aprovado:'validado internamente', enviado_aprovacao:'enviado para revisão', processado_ia:'OCR processado', criado:'boletim recebido', editado:'lançamento editado', devolvido:'em revisão', corrigido:'divergência corrigida', reprovado:'divergência registrada', enviado_lote:'lote gerado', faturado:'faturado' }[ev.tipo] || ev.tipo
+                  return (
+                    <div key={ev.id} style={{ padding: '7px 0', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                      <div><span style={{ fontSize: 11, fontWeight: 700, color: C.blue }}>{num}</span><span style={{ fontSize: 11, color: C.text }}> {evLabel}</span></div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: 10, color: C.textSec }}>{dtStr}</div>
+                        <div style={{ fontSize: 10, color: C.textSec, opacity: 0.7 }}>{ev.usuario_nome || 'Sistema'}</div>
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 10, color: C.textSec }}>{dtStr}</div>
-                      <div style={{ fontSize: 10, color: C.textSec, opacity: 0.7 }}>{ev.usuario_nome || 'Sistema'}</div>
-                    </div>
-                  </div>
-                )
-              })}
-              <button onClick={() => navigate(`/lancamentos`)} style={{ width: '100%', marginTop: 10, padding: '7px', border: 'none', background: 'none', color: C.blue, fontSize: 12, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
-                Ver todas as atividades em Lançamentos →
-              </button>
+                  )
+                })}
+                <button onClick={() => navigate('/lancamentos')} style={{ width: '100%', marginTop: 8, padding: '6px', border: 'none', background: 'none', color: C.blue, fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>Ver todas →</button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* AÇÕES DO MÓDULO */}
-          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
-            <div style={{ background: C.groupFin, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Ações do Módulo</div>
-            </div>
-            <div style={{ padding: '8px 0' }}>
-              {[
-                { label: 'Receber Boletim',          icon: DocumentArrowDownIcon,     path: '/lancamentos-erp', action: () => setEditModal('novo') },
-                { label: 'Digitalizar OCR',          icon: SparklesIcon,              path: '/boletins-diarios' },
-                { label: 'Revisar Pendências',       icon: ClockIcon,                 path: null, action: () => setFilterStatus('aguardando_aprovacao') },
-                { label: 'Ver Divergências',         icon: ExclamationTriangleIcon,   path: null, action: () => setFilterStatus('revisar') },
-                { label: 'Modelos de Formulário',    icon: ClipboardDocumentListIcon, path: '/form-templates' },
-                { label: 'Relatórios',               icon: DocumentChartBarIcon,      path: '/central' },
-                { label: 'Configurações',            icon: Cog6ToothIcon,             path: '/configuracoes' },
-              ].map(item => (
-                <button
-                  key={item.label}
-                  onClick={() => item.action ? item.action() : navigate(item.path)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', padding: '11px 16px', background: 'none', border: 'none',
-                    borderBottom: `1px solid ${C.border}`, cursor: 'pointer', gap: 10,
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <item.icon style={{ width: 15, height: 15, color: C.textSec }} />
-                    <span style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>{item.label}</span>
-                  </div>
-                  <ChevronRightIcon style={{ width: 14, height: 14, color: C.textSec }} />
+          {visiblePanels.has('acoes') && (
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: C.groupFin, padding: '10px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Ações do Módulo</div>
+              </div>
+              <div style={{ padding: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'Receber Boletim',   icon: DocumentArrowDownIcon,   color: C.blue,    bg: '#EFF6FF', action: () => setEditModal('novo') },
+                  { label: 'Digitalizar OCR',   icon: SparklesIcon,            color: '#7C3AED', bg: '#F5F3FF', path: '/boletins-diarios' },
+                  { label: 'Revisar Pendências', icon: ClockIcon,              color: C.amber,   bg: '#FFFBEB', action: () => setFilterStatus('aguardando_aprovacao') },
+                  { label: 'Ver Divergências',  icon: ExclamationTriangleIcon, color: C.red,     bg: '#FEF2F2', action: () => setFilterStatus('revisar') },
+                  { label: 'Gerar Lote',        icon: TableCellsIcon,          color: '#0EA5E9', bg: '#E0F2FE', action: () => selecionados.size > 0 ? setLoteModal(true) : toast('Selecione os boletins primeiro', { icon: '⚠️' }) },
+                  { label: 'Relatórios',        icon: DocumentChartBarIcon,    color: C.green,   bg: '#F0FDF4', path: '/central' },
+                ].map(item => (
+                  <button key={item.label}
+                    onClick={() => item.action ? item.action() : navigate(item.path)}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '12px 8px', borderRadius: 8, border: `1px solid ${item.color}22`, background: item.bg, cursor: 'pointer' }}
+                    onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(0.96)' }}
+                    onMouseLeave={e => { e.currentTarget.style.filter = 'none' }}
+                  >
+                    <item.icon style={{ width: 18, height: 18, color: item.color }} />
+                    <span style={{ fontSize: 10, fontWeight: 600, color: item.color, textAlign: 'center', lineHeight: 1.2 }}>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{ padding: '0 12px 12px' }}>
+                <button onClick={() => navigate('/configuracoes')} style={{ width: '100%', padding: '7px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'none', color: C.textSec, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Cog6ToothIcon style={{ width: 13, height: 13 }} /> Configurações
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
+        )}
 
         {/* ── RODAPÉ ───────────────────────────────────────────────────── */}
         <div style={{
