@@ -520,19 +520,29 @@ function exportCSV(rows, lotesMap) {
 }
 
 function printTable(rows, lotesMap, competencia, wsName) {
+  // Colunas condicionais: só incluir se ao menos 1 registro tiver valor
+  const temFdsDiurnas    = rows.some(r => { const v = parseFloat((r.dados_extras||{}).h_fds_diurnas||0); return v > 0 })
+  const temFdsNoturnas   = rows.some(r => { const v = parseFloat((r.dados_extras||{}).h_fds_noturnas||0); return v > 0 })
+  const temFeriadoD      = rows.some(r => { const v = parseFloat((r.dados_extras||{}).h_feriado_diurnas||0); return v > 0 })
+  const temFeriadoN      = rows.some(r => { const v = parseFloat((r.dados_extras||{}).h_feriado_noturnas||0); return v > 0 })
+
   const cols = [
-    ['Nº',           r => getLanNum(r)],
-    ['Data',         r => fmtDate(r.data)],
-    ['Empresa',      r => getEmpresa(r)],
-    ['Solicitante',  r => getSolicitante(r)],
-    ['Equipamento',  r => getEquipamento(r)],
-    ['Total Horas',  r => fmtTotalHorasJornada(r.dados_extras)],
-    ['H Diurnas',    r => (r.dados_extras||{}).horas_diurnas||'—'],
-    ['H Noturnas',   r => (r.dados_extras||{}).horas_noturnas||'—'],
-    ['Cli. ✓',       r => getClienteAss(r) ? 'Sim' : 'Não'],
-    ['Biri. ✓',      r => getEmpresaAss(r) ? 'Sim' : 'Não'],
-    ['Valor (R$)',    r => fmtCurrency(r.valor)],
-    ['Status',        r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; const conf = (l?.status && ERP_LOTE_MAP[l.status]) || ERP_STATUS_MAP[r.status]; return conf?.label||r.status||'' }],
+    ['Nº',               r => getLanNum(r)],
+    ['Data',             r => fmtDate(r.data)],
+    ['Empresa',          r => getEmpresa(r)],
+    ['Solicitante',      r => getSolicitante(r)],
+    ['Equipamento',      r => getEquipamento(r)],
+    ['Total Horas',      r => fmtTotalHorasJornada(r.dados_extras)],
+    ['H Diurnas',        r => (r.dados_extras||{}).horas_diurnas||'—'],
+    ['H Noturnas',       r => (r.dados_extras||{}).horas_noturnas||'—'],
+    ...(temFdsDiurnas  ? [['H FDS Diurnas',    r => (r.dados_extras||{}).h_fds_diurnas||'—']] : []),
+    ...(temFdsNoturnas ? [['H FDS Noturnas',   r => (r.dados_extras||{}).h_fds_noturnas||'—']] : []),
+    ...(temFeriadoD    ? [['H Feriado Diur.',  r => (r.dados_extras||{}).h_feriado_diurnas||'—']] : []),
+    ...(temFeriadoN    ? [['H Feriado Not.',   r => (r.dados_extras||{}).h_feriado_noturnas||'—']] : []),
+    ['Cli. ✓',           r => getClienteAss(r) ? 'Sim' : 'Não'],
+    ['Biri. ✓',          r => getEmpresaAss(r) ? 'Sim' : 'Não'],
+    ['Valor (R$)',        r => fmtCurrency(r.valor)],
+    ['Status',           r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; const conf = (l?.status && ERP_LOTE_MAP[l.status]) || ERP_STATUS_MAP[r.status]; return conf?.label||r.status||'' }],
   ]
   const mo    = `${String(competencia.month).padStart(2,'0')}/${competencia.year}`
   const thead = cols.map(([h]) => `<th>${h}</th>`).join('')
