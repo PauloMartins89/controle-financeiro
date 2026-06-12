@@ -732,6 +732,8 @@ export default function LancamentosERP() {
   const [filterStatus, setFilterStatus] = useState('todos')
   const [filterForm, setFilterForm]     = useState('rdo')
   const [filterCliente, setFilterCliente] = useState('')
+  const [dateFrom, setDateFrom]         = useState('')
+  const [dateTo, setDateTo]             = useState('')
   const [search, setSearch]             = useState('')
 
   // UI
@@ -942,10 +944,15 @@ export default function LancamentosERP() {
 
   // ── Filtro ─────────────────────────────────────────────────────────────────
   const filtered = lancamentos.filter(l => {
-    // Período (competência)
+    // Período — se intervalo livre preenchido usa ele, senão usa competência
     if (l.data) {
-      const [y, m] = l.data.split('-').map(Number)
-      if (y !== competencia.year || m !== competencia.month) return false
+      if (dateFrom || dateTo) {
+        if (dateFrom && l.data < dateFrom) return false
+        if (dateTo   && l.data > dateTo)   return false
+      } else {
+        const [y, m] = l.data.split('-').map(Number)
+        if (y !== competencia.year || m !== competencia.month) return false
+      }
     }
     // Tipo formulário — null/undefined é tratado como 'rdo' neste workspace
     if (filterForm && filterForm !== 'todos') {
@@ -982,7 +989,7 @@ export default function LancamentosERP() {
   // ── Paginação ──────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paginated  = filtered.slice((page - 1) * pageSize, page * pageSize)
-  useEffect(() => { setPage(1) }, [filterForm, filterStatus, filterCliente, search, competencia])
+  useEffect(() => { setPage(1) }, [filterForm, filterStatus, filterCliente, search, competencia, dateFrom, dateTo])
   // Limpa seleção ao mudar filtro
   useEffect(() => { setSelecionados(new Set()) }, [filterForm, filterStatus, filterCliente, search, competencia])
 
@@ -1187,14 +1194,14 @@ export default function LancamentosERP() {
                 {clientesUnicos.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            {/* Período */}
+            {/* Período mensal */}
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>COMPETÊNCIA</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <button onClick={prevCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
                   <ChevronLeftIcon style={{ width: 14, height: 14 }} />
                 </button>
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.navy, minWidth: 110, textAlign: 'center' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: dateFrom || dateTo ? C.textSec : C.navy, minWidth: 110, textAlign: 'center', opacity: dateFrom || dateTo ? 0.4 : 1 }}>
                   {MONTHS[competencia.month - 1]}/{competencia.year}
                 </span>
                 <button onClick={nextCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
@@ -1202,10 +1209,31 @@ export default function LancamentosERP() {
                 </button>
               </div>
             </div>
+            {/* Separador */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 8, color: C.textSec, fontSize: 11 }}>ou</div>
+            {/* Intervalo livre */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA INICIAL</div>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                style={{ ...inputSel, minWidth: 130 }}
+              />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA FINAL</div>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                style={{ ...inputSel, minWidth: 130 }}
+              />
+            </div>
             {/* Botões filtro */}
             <div style={{ display: 'flex', gap: 6, marginLeft: 4, alignSelf: 'flex-end' }}>
               <button
-                onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('rdo') }}
+                onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('rdo'); setDateFrom(''); setDateTo('') }}
                 style={{ padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
               >Limpar</button>
               {/* Exportar dropdown */}
