@@ -934,7 +934,7 @@ export default function LancamentosERP() {
                       <Td bold>{getEmpresa(l)}</Td>
                       <Td>{getSolicitante(l)}</Td>
                       <Td muted>{getEquipamento(l)}</Td>
-                      {/* JORNADA */}}
+                      {/* JORNADA */}
                       <Td align="center" muted>{d.jornada_inicio || '—'}</Td>
                       <Td align="center" muted>{d.jornada_fim || '—'}</Td>
                       <Td align="center" bold>{d.jornada_total_horas ? `${d.jornada_total_horas}h` : (d.total_horas_dia ? `${d.total_horas_dia}h` : '—')}</Td>
