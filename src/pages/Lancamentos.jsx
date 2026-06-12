@@ -1,4 +1,5 @@
 ﻿import { useState, useRef, useCallback, useEffect, Fragment } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import Header from '../components/Header'
 import useStore from '../store/useStore'
@@ -1820,6 +1821,26 @@ export default function Lancamentos() {
   const [showModal, setShowModal]       = useState(false)
   const [showDigital, setShowDigital]   = useState(false)
   const [editItem, setEditItem]         = useState(null)
+  // Abre modal de novo lançamento automaticamente se vier de ?novo=1
+  useEffect(() => {
+    if (searchParams.get('novo') === '1') {
+      setEditItem(null)
+      setShowModal(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams])
+
+  // Abre modal de edição automaticamente se vier de ?id=<uuid>
+  useEffect(() => {
+    const id = searchParams.get('id')
+    if (!id || !workspaceId || !supabase) return
+    setSearchParams({}, { replace: true })
+    supabase.from('lancamentos').select('*').eq('id', id).eq('workspace_id', workspaceId).maybeSingle()
+      .then(({ data }) => {
+        if (data) { setEditItem(data); setShowModal(true) }
+        else toast.error('Lançamento não encontrado.')
+      })
+  }, [searchParams, workspaceId])
   const [rotaItem, setRotaItem]         = useState(null)
   const [expandedId, setExpandedId]     = useState(null)
   const [selectedIds, setSelectedIds]   = useState(new Set())
