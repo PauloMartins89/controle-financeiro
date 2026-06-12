@@ -404,6 +404,127 @@ const Td = ({ children, align = 'left', muted, bold, green }) => (
   </td>
 )
 
+// ─── EXPORT / PRINT HELPERS ─────────────────────────────────────────────────
+function exportCSV(rows, lotesMap) {
+  const cols = [
+    ['Nº',                 r => getLanNum(r)],
+    ['Data',               r => fmtDate(r.data)],
+    ['Processado Em',      r => fmtDateHora((r.dados_extras||{}).processado_em)],
+    ['Empresa',            r => getEmpresa(r)],
+    ['Solicitante',        r => getSolicitante(r)],
+    ['Equipamento',        r => getEquipamento(r)],
+    ['Início Jornada',     r => (r.dados_extras||{}).jornada_inicio || ''],
+    ['Fim Jornada',        r => (r.dados_extras||{}).jornada_fim || ''],
+    ['Total Horas',        r => (r.dados_extras||{}).jornada_total_horas || (r.dados_extras||{}).total_horas_dia || ''],
+    ['H Diurnas',          r => (r.dados_extras||{}).horas_diurnas || ''],
+    ['H Noturnas',         r => (r.dados_extras||{}).horas_noturnas || ''],
+    ['H FDS Diurnas',      r => (r.dados_extras||{}).h_fds_diurnas || ''],
+    ['H FDS Noturnas',     r => (r.dados_extras||{}).h_fds_noturnas || ''],
+    ['H Feriado Diurnas',  r => (r.dados_extras||{}).h_feriado_diurnas || ''],
+    ['H Feriado Noturnas', r => (r.dados_extras||{}).h_feriado_noturnas || ''],
+    ['Cliente Assinado',   r => getClienteAss(r) ? 'Sim' : 'Não'],
+    ['Birigui Assinado',   r => getEmpresaAss(r) ? 'Sim' : 'Não'],
+    ['Valor (R$)',          r => (r.valor||0).toFixed(2).replace('.',',')],
+    ['Status',             r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; const conf = (l?.status && ERP_LOTE_MAP[l.status]) || ERP_STATUS_MAP[r.status]; return conf?.label || r.status || '' }],
+  ]
+  const header = cols.map(([h]) => h).join(';')
+  const lines  = rows.map(r => cols.map(([,fn]) => { const v = String(fn(r)??''); return /[;"\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v }).join(';'))
+  const csv    = '\uFEFF' + [header, ...lines].join('\r\n')
+  const blob   = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url    = URL.createObjectURL(blob)
+  const a      = document.createElement('a')
+  a.href = url; a.download = `lancamentos-erp-${new Date().toISOString().slice(0,10)}.csv`
+  document.body.appendChild(a); a.click()
+  document.body.removeChild(a); URL.revokeObjectURL(url)
+}
+
+function printTable(rows, lotesMap, competencia, wsName) {
+  const cols = [
+    ['Nº',           r => getLanNum(r)],
+    ['Data',         r => fmtDate(r.data)],
+    ['Empresa',      r => getEmpresa(r)],
+    ['Solicitante',  r => getSolicitante(r)],
+    ['Equipamento',  r => getEquipamento(r)],
+    ['Total Horas',  r => { const d = r.dados_extras||{}; return d.jornada_total_horas||d.total_horas_dia||'—' }],
+    ['H Diurnas',    r => (r.dados_extras||{}).horas_diurnas||'—'],
+    ['H Noturnas',   r => (r.dados_extras||{}).horas_noturnas||'—'],
+    ['Cli. ✓',       r => getClienteAss(r) ? 'Sim' : 'Não'],
+    ['Biri. ✓',      r => getEmpresaAss(r) ? 'Sim' : 'Não'],
+    ['Valor (R$)',    r => fmtCurrency(r.valor)],
+    ['Status',        r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; const conf = (l?.status && ERP_LOTE_MAP[l.status]) || ERP_STATUS_MAP[r.status]; return conf?.label||r.status||'' }],
+  ]
+  const mo    = `${String(competencia.month).padStart(2,'0')}/${competencia.year}`
+  const thead = cols.map(([h]) => `<th>${h}</th>`).join('')
+  const tbody = rows.map(r => `<tr>${cols.map(([,fn]) => `<td>${fn(r)}</td>`).join('')}</tr>`).join('')
+  const html  = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lançamentos ${mo}</title><style>
+    body{font-family:Arial,sans-serif;font-size:11px;margin:24px;color:#172033}
+    h2{color:#0B1F3A;margin:0 0 4px}p{color:#64748B;margin:0 0 14px;font-size:12px}
+    table{width:100%;border-collapse:collapse}th{background:#0B1F3A;color:#fff;padding:6px 8px;text-align:left;font-size:10px;letter-spacing:.5px}
+    td{padding:5px 8px;border-bottom:1px solid #eee;font-size:11px}tr:nth-child(even){background:#f8fafc}
+    @media print{@page{size:A4 landscape;margin:12mm}}
+  </style></head><body>
+    <h2>Lançamentos Operacionais — ${mo}</h2>
+    <p>${wsName} · ${rows.length} registro${rows.length!==1?'s':''} · Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+    <table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>
+    <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
+  </body></html>`
+  const w = window.open('', '_blank'); w.document.write(html); w.document.close()
+}
+
+// ─── AUDIT MODAL ──────────────────────────────────────────────────────────────
+function AuditModal({ record, onClose }) {
+  const [evs, setEvs] = useState(null)
+  useEffect(() => {
+    if (!record) return
+    supabase.from('lancamento_eventos')
+      .select('*')
+      .eq('lancamento_id', record.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setEvs(data || []))
+  }, [record?.id])
+  if (!record) return null
+  const TIPO_LABEL = { criado:'Criado', editado:'Editado', aprovado:'Aprovado', reprovado:'Reprovado', devolvido:'Devolvido', faturado:'Faturado', enviado_lote:'Adicionado ao Lote', aprovado_cliente:'Aprovado pelo Cliente', revisado:'Revisado', editado:'Editado' }
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div onClick={onClose} style={{ position:'absolute', inset:0, background:'rgba(11,31,58,0.5)' }} />
+      <div style={{ position:'relative', width:440, maxHeight:'80vh', background:C.white, borderRadius:12, boxShadow:'0 16px 48px rgba(0,0,0,0.2)', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+        <div style={{ background:C.navy, padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,0.6)', fontWeight:700, letterSpacing:.8, textTransform:'uppercase' }}>Histórico de Auditoria</div>
+            <div style={{ fontSize:15, fontWeight:800, color:C.white, marginTop:2 }}>{getLanNum(record)}</div>
+          </div>
+          <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none', borderRadius:6, cursor:'pointer', color:C.white, padding:6, display:'flex' }}>
+            <XMarkIcon style={{ width:16, height:16 }} />
+          </button>
+        </div>
+        <div style={{ overflowY:'auto', padding:'16px 20px', flex:1 }}>
+          {evs === null && <div style={{ textAlign:'center', padding:24, color:C.textSec, fontSize:13 }}>Carregando...</div>}
+          {evs !== null && evs.length === 0 && (
+            <div style={{ textAlign:'center', padding:24, color:C.textSec, fontSize:13 }}>Nenhum evento registrado</div>
+          )}
+          {evs !== null && evs.map(ev => {
+            const dt = new Date(ev.created_at)
+            const dtStr = `${dt.toLocaleDateString('pt-BR')} ${dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`
+            return (
+              <div key={ev.id} style={{ display:'flex', gap:12, paddingBottom:14, marginBottom:14, borderBottom:`1px solid ${C.border}` }}>
+                <div style={{ width:8, height:8, borderRadius:'50%', background:C.blue, marginTop:5, flexShrink:0 }} />
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:C.text }}>{TIPO_LABEL[ev.tipo] || ev.tipo}</div>
+                  {ev.descricao && <div style={{ fontSize:11, color:C.textSec, marginTop:2 }}>{ev.descricao}</div>}
+                  <div style={{ fontSize:10, color:C.textSec, marginTop:4, display:'flex', gap:8 }}>
+                    <span>{dtStr}</span>
+                    {ev.usuario_nome && <span>· {ev.usuario_nome}</span>}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function LancamentosERP() {
   const { workspaceId, isPlatformAdmin } = useStore()
@@ -433,6 +554,7 @@ export default function LancamentosERP() {
   const [drawerRecord, setDrawerRecord] = useState(null)
   const [actionMenuId, setActionMenuId] = useState(null)
   const [selecionados, setSelecionados] = useState(new Set())
+  const [auditModal, setAuditModal]     = useState(null)
   const actionMenuRef                   = useRef(null)
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -823,14 +945,14 @@ export default function LancamentosERP() {
             <button onClick={() => navigate('/lancamentos?novo=1')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
               <PlusIcon style={{ width: 12, height: 12 }} /> Novo Lançamento
             </button>
-            <button disabled style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#AAB', fontSize: 11, cursor: 'not-allowed', fontWeight: 600, opacity: 0.5 }}>
+            <button onClick={() => exportCSV(filtered, lotesMap)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
               <TableCellsIcon style={{ width: 12, height: 12 }} /> Exportar Excel
             </button>
-            <button disabled style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#AAB', fontSize: 11, cursor: 'not-allowed', fontWeight: 600, opacity: 0.5 }}>
+            <button onClick={() => printTable(filtered, lotesMap, competencia, wsName)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.red, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
               <DocumentArrowDownIcon style={{ width: 12, height: 12 }} /> Gerar PDF
             </button>
             <button disabled style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#AAB', fontSize: 11, cursor: 'not-allowed', fontWeight: 600, opacity: 0.5 }}>
-              <UserGroupIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Gerar Lote
+              <UserGroupIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Gerar Lote <span style={{ fontSize: 9, marginLeft: 2 }}>EM BREVE</span>
             </button>
           </div>
         </div>
@@ -1018,10 +1140,10 @@ export default function LancamentosERP() {
                               }}>
                                 {[
                                   { label: 'Visualizar documento', icon: DocumentTextIcon, disabled: false, action: () => l.comprovante_url && window.open(l.comprovante_url, '_blank') },
-                                  { label: 'Editar lançamento',    icon: DocumentTextIcon,      disabled: true,  action: () => {} },
-                                  { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: true,  action: () => {} },
+                                  { label: 'Editar lançamento',    icon: DocumentTextIcon,      disabled: false, action: () => navigate(`/lancamentos?id=${l.id}`) },
+                                  { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: false, action: () => printTable([l], lotesMap, competencia, wsName) },
                                   { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: true,  action: () => {} },
-                                  { label: 'Ver auditoria',        icon: MapPinIcon,             disabled: true,  action: () => {} },
+                                  { label: 'Ver auditoria',        icon: MapPinIcon,             disabled: false, action: () => setAuditModal(l) },
                                 ].map(item => (
                                   <button key={item.label} disabled={item.disabled} onClick={() => { item.action(); setActionMenuId(null) }} style={{
                                     display: 'flex', alignItems: 'center', gap: 8, width: '100%',
@@ -1233,6 +1355,9 @@ export default function LancamentosERP() {
           navigate={navigate}
           onClose={() => setDrawerRecord(null)}
         />
+      )}
+      {auditModal && (
+        <AuditModal record={auditModal} onClose={() => setAuditModal(null)} />
       )}
     </div>
   )
