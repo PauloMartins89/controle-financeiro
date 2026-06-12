@@ -625,7 +625,9 @@ export function LancamentoModal({ item, workspaceId, userId, enabledModules, for
     const d = dadosExtras
     const descricaoFinal = form.descricao.trim() || (tipoForm === 'transporte'
       ? `Nº ${d.numero_diario || '—'} | ${d.empresa || ''} | ${d.local_origem || ''} → ${d.local_destino || ''}`.trim()
-      : '')
+      : (tipoForm !== 'padrao'
+        ? `RDO – ${d.empresa || d.cliente || 'Empresa'} | ${form.data || ''}`.trim()
+        : ''))
     if (!descricaoFinal) { toast.error('Informe a descrição'); return }
 
     setSaving(true)
