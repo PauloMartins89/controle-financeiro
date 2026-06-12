@@ -104,11 +104,13 @@ function getEquipamento(l) {
 }
 function getClienteAss(l) {
   const d = l.dados_extras || {}
-  return !!(d.assinatura_cliente && d.assinatura_cliente !== '—' && d.assinatura_cliente.trim())
+  const v = String(d.assinatura_cliente || '').trim()
+  return v.length > 0 && v !== '—'
 }
 function getEmpresaAss(l) {
   const d = l.dados_extras || {}
-  return !!(d.assinatura_empresa && d.assinatura_empresa !== '—' && d.assinatura_empresa.trim())
+  const v = String(d.assinatura_empresa || '').trim()
+  return v.length > 0 && v !== '—'
 }
 function getOcrStatus(l) {
   const d = l.dados_extras || {}
@@ -415,13 +417,12 @@ export default function LancamentosERP() {
   // ── State ──────────────────────────────────────────────────────────────────
   const [lancamentos, setLancamentos]   = useState([])
   const [loading, setLoading]           = useState(true)
-  const [wsConfig, setWsConfig]         = useState({})
   const [wsName, setWsName]             = useState('Workspace')
   const [tarifasMap, setTarifasMap]     = useState({})
   const [lotesMap, setLotesMap]         = useState({})
   const [eventos, setEventos]           = useState([])
   const [lastUpdate, setLastUpdate]     = useState(null)
-  const [userId, setUserId]             = useState(null)
+  const competenciaAjustada             = useRef(false)
 
   // Filtros
   const now = new Date()
@@ -439,15 +440,12 @@ export default function LancamentosERP() {
   const actionMenuRef                   = useRef(null)
 
   // ── Auth ───────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    supabase?.auth.getUser().then(({ data }) => setUserId(data?.user?.id || null))
-  }, [])
+  // (auth handled by router guard)
 
   // ── Workspace config ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!workspaceId) return
     loadWorkspaceConfig(workspaceId).then(cfg => {
-      setWsConfig(cfg)
       const df = getConfig(cfg, 'ui.lancamentos.default_filter', null)
       if (df) setFilterForm(df)
     })
@@ -470,8 +468,9 @@ export default function LancamentosERP() {
     setLancamentos(items)
     setLastUpdate(new Date())
 
-    // Auto-ajusta competência para o mês mais recente com dados
-    if (items.length > 0) {
+    // Auto-ajusta competência para o mês mais recente com dados (só na primeira carga)
+    if (items.length > 0 && !competenciaAjustada.current) {
+      competenciaAjustada.current = true
       const now2 = new Date()
       const curY = now2.getFullYear(), curM = now2.getMonth() + 1
       const hasCurrentMonth = items.some(l => {
@@ -484,7 +483,6 @@ export default function LancamentosERP() {
           .filter(l => l.data)
           .map(l => { const [y, m] = l.data.split('-').map(Number); return { year: y, month: m } })
         if (datesWithData.length > 0) {
-          // pega o mais recente
           datesWithData.sort((a, b) => b.year - a.year || b.month - a.month)
           setCompetencia(datesWithData[0])
         }
@@ -513,19 +511,30 @@ export default function LancamentosERP() {
         })
     } else setLotesMap({})
 
-    // Eventos recentes (para painel Últimas Atividades)
-    const ids = items.slice(0, 30).map(l => l.id)
-    if (ids.length > 0) {
-      supabase.from('lancamento_eventos')
-        .select('*, lancamento_id')
-        .in('lancamento_id', ids)
-        .order('created_at', { ascending: false })
-        .limit(6)
-        .then(({ data: ev }) => setEventos(ev || []))
-    }
+    // Eventos recentes filtrados pelo mês atual (competência)
+    // (gerenciado por useEffect separado abaixo)
 
     setLoading(false)
   }, [workspaceId])
+
+  // Recarrega eventos sempre que o mês ou os lançamentos mudam
+  useEffect(() => {
+    if (!supabase || lancamentos.length === 0) { setEventos([]); return }
+    const idsDoMes = lancamentos
+      .filter(l => {
+        if (!l.data) return false
+        const [y, m] = l.data.split('-').map(Number)
+        return y === competencia.year && m === competencia.month
+      })
+      .map(l => l.id)
+    if (idsDoMes.length === 0) { setEventos([]); return }
+    supabase.from('lancamento_eventos')
+      .select('*, lancamento_id')
+      .in('lancamento_id', idsDoMes)
+      .order('created_at', { ascending: false })
+      .limit(6)
+      .then(({ data: ev }) => setEventos(ev || []))
+  }, [lancamentos, competencia]) // eslint-disable-line
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -676,10 +685,10 @@ export default function LancamentosERP() {
           fontSize: 12, color: C.textSec,
         }}>
           {[
-            ['Cliente', 'Birigui'],
+            ['Cliente', wsName],
             ['Workspace', wsName],
             ['Competência', `${MONTHS[competencia.month - 1]}/${competencia.year}`],
-            ['Status', 'Em conferência'],
+            ['Status', filterStatus === 'todos' ? 'Todos' : (ERP_STATUS_MAP[filterStatus]?.label || filterStatus)],
           ].map(([label, value], i) => (
             <div key={label} style={{
               display: 'flex', alignItems: 'center', gap: 4,
@@ -770,7 +779,7 @@ export default function LancamentosERP() {
             {/* Botões filtro */}
             <div style={{ display: 'flex', gap: 6, marginLeft: 4, alignSelf: 'flex-end' }}>
               <button
-                onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('rdo') }}
+                onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('todos') }}
                 style={{ padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
               >Limpar</button>
               <button
