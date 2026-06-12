@@ -61,7 +61,7 @@ const FORM_TYPES = {
 // enabledModules = null → sem restrição → mostra todos
 // enabledModules = array → se NENHUM form_key está na lista, mostra todos (retrocompatível)
 //                          se ao menos 1 form_key está, usa whitelist
-function getFormTypesParaWorkspace(enabledModules) {
+export function getFormTypesParaWorkspace(enabledModules) {
   if (!enabledModules) return FORM_TYPES
   const formKeys = Object.entries(FORM_TYPES).filter(([, v]) => enabledModules.includes(v.moduleKey))
   // Nenhum configurado explicitamente → retrocompatível: mostra padrão e transporte
@@ -224,7 +224,7 @@ function mergeKmRows(ocrRows) {
   return base
 }
 
-async function registrarEvento({ lancamentoId, tipo, statusDe = null, statusPara = null, descricao = null, usuarioId = null, usuarioNome = null, dados = {} }) {
+export async function registrarEvento({ lancamentoId, tipo, statusDe = null, statusPara = null, descricao = null, usuarioId = null, usuarioNome = null, dados = {} }) {
   if (!lancamentoId || !supabase) return
   await supabase.from('lancamento_eventos').insert({
     lancamento_id: lancamentoId,
@@ -562,7 +562,7 @@ function TemplateCamposRenderer({ campos, dados, onChange }) {
   )
 }
 
-function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplates, onClose, onSaved }) {
+export function LancamentoModal({ item, workspaceId, userId, enabledModules, formTemplates, onClose, onSaved }) {
   const formTypesDisponiveis = getFormTypesParaWorkspace(enabledModules)
   const [tipoForm, setTipoForm] = useState(() => {
     const prev = item?.tipo_formulario || 'padrao'

@@ -15,6 +15,7 @@ import { toast } from 'react-hot-toast'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
 import { loadWorkspaceConfig, getConfig } from '../lib/workspaceConfig'
+import { LancamentoModal } from './Lancamentos'
 import {
   CurrencyDollarIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon,
   PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronDownIcon,
@@ -217,7 +218,7 @@ function KpiCard({ icon: Icon, label, value, sub, color, iconBg }) {
 }
 
 // ─── DETAILS DRAWER ───────────────────────────────────────────────────────────
-function DetailsDrawer({ record, lotesMap, navigate, onClose }) {
+function DetailsDrawer({ record, lotesMap, navigate, onClose, onEdit }) {
   if (!record) return null
   const d = record.dados_extras || {}
   const status = record.status
@@ -358,14 +359,14 @@ function DetailsDrawer({ record, lotesMap, navigate, onClose }) {
             background: 'transparent', border: `1px solid ${C.border}`,
             color: C.textSec, cursor: 'pointer', fontSize: 13, fontWeight: 600,
           }}>Fechar</button>
-          <button onClick={() => { navigate('/lancamentos'); onClose() }} style={{
-            flex: 2, padding: '10px', borderRadius: 8,
+          <button onClick={() => { onEdit(record); onClose() }} style={
+            {flex: 2, padding: '10px', borderRadius: 8,
             background: C.navy, border: 'none',
             color: C.white, cursor: 'pointer', fontSize: 13, fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           }}>
             <ArrowTopRightOnSquareIcon style={{ width: 15, height: 15 }} />
-            Abrir em Lançamentos
+            Editar Lançamento
           </button>
         </div>
       </div>
@@ -671,7 +672,7 @@ function AdicionarLoteModal({ record, workspaceId, onClose, onSaved }) {
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function LancamentosERP() {
-  const { workspaceId, isPlatformAdmin } = useStore()
+  const { workspaceId, isPlatformAdmin, enabledModules } = useStore()
   const navigate = useNavigate()
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -699,13 +700,32 @@ export default function LancamentosERP() {
   const [actionMenuId, setActionMenuId] = useState(null)
   const [selecionados, setSelecionados] = useState(new Set())
   const [auditModal, setAuditModal]     = useState(null)
+  const [editModal, setEditModal]       = useState(null)   // record a editar
+  const [formTemplates, setFormTemplates] = useState({})
   const [loteModal, setLoteModal]       = useState(false)   // criar lote com selecionados
   const [addLoteModal, setAddLoteModal] = useState(null)    // adicionar 1 registro a lote existente
   const [userId, setUserId]             = useState(null)
   const actionMenuRef                   = useRef(null)
 
   // ── Auth ───────────────────────────────────────────────────────────────────
-  // (auth handled by router guard)
+  useEffect(() => {
+    supabase?.auth.getUser().then(({ data }) => setUserId(data?.user?.id || null))
+  }, [])
+
+  // ── Form templates (para modal de edição) ─────────────────────────────────
+  useEffect(() => {
+    if (!workspaceId) return
+    supabase?.from('form_templates')
+      .select('id, nome, tipo_base, campos')
+      .eq('workspace_id', workspaceId)
+      .eq('ativo', true)
+      .order('created_at', { ascending: false })
+      .then(({ data: tmpls }) => {
+        const map = {}
+        ;(tmpls || []).forEach(t => { if (t.tipo_base && !map[t.tipo_base]) map[t.tipo_base] = t })
+        setFormTemplates(map)
+      })
+  }, [workspaceId])
 
   // ── Workspace config ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -1089,7 +1109,7 @@ export default function LancamentosERP() {
             <button onClick={() => navigate('/boletins-diarios')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
               <SparklesIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Digitalizar OCR
             </button>
-            <button onClick={() => navigate('/lancamentos?novo=1')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
+            <button onClick={() => setEditModal('novo')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
               <PlusIcon style={{ width: 12, height: 12 }} /> Novo Lançamento
             </button>
             <button onClick={() => exportCSV(filtered, lotesMap)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
@@ -1294,7 +1314,7 @@ export default function LancamentosERP() {
                               }}>
                                 {[
                                   { label: 'Visualizar documento', icon: DocumentTextIcon, disabled: false, action: () => l.comprovante_url && window.open(l.comprovante_url, '_blank') },
-                                  { label: 'Editar lançamento',    icon: DocumentTextIcon,      disabled: false, action: () => navigate(`/lancamentos?id=${l.id}`) },
+                                  { label: 'Editar lançamento',    icon: DocumentTextIcon,      disabled: false, action: () => { setEditModal(l); setActionMenuId(null) } },
                                   { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: false, action: () => printTable([l], lotesMap, competencia, wsName) },
                                   { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: false, action: () => setAddLoteModal(l) },
                                   { label: 'Ver auditoria',        icon: MapPinIcon,             disabled: false, action: () => setAuditModal(l) },
@@ -1507,11 +1527,23 @@ export default function LancamentosERP() {
           record={drawerRecord}
           lotesMap={lotesMap}
           navigate={navigate}
+          onEdit={r => setEditModal(r)}
           onClose={() => setDrawerRecord(null)}
         />
       )}
       {auditModal && (
         <AuditModal record={auditModal} onClose={() => setAuditModal(null)} />
+      )}
+      {editModal && (
+        <LancamentoModal
+          item={editModal === 'novo' ? null : editModal}
+          workspaceId={workspaceId}
+          userId={userId}
+          enabledModules={enabledModules}
+          formTemplates={formTemplates}
+          onClose={() => setEditModal(null)}
+          onSaved={() => { setEditModal(null); loadData() }}
+        />
       )}
       {loteModal && (
         <CriarLoteModal
