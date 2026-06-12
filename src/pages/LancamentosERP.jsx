@@ -862,7 +862,7 @@ export default function LancamentosERP() {
               <thead>
                 {/* Linha 1: grupos */}
                 <tr>
-                  <th colSpan={7} style={{ background: C.groupId, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
+                  <th colSpan={6} style={{ background: C.groupId, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
                     IDENTIFICAÇÃO
                   </th>
                   <th colSpan={9} style={{ background: C.groupJorn, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
@@ -883,7 +883,6 @@ export default function LancamentosERP() {
                   <Th width={200}>Empresa</Th>
                   <Th width={140}>Solicitante</Th>
                   <Th width={120}>Equipamento</Th>
-                  <Th width={110}>Documento</Th>
                   <Th width={70} align="center">Início da Jornada</Th>
                   <Th width={70} align="center">Fim da Jornada</Th>
                   <Th width={80} align="center">Total de Horas</Th>
@@ -903,14 +902,14 @@ export default function LancamentosERP() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={21} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={20} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Carregando lançamentos...
                     </td>
                   </tr>
                 )}
                 {!loading && paginated.length === 0 && (
                   <tr>
-                    <td colSpan={21} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={20} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Nenhum lançamento encontrado para os filtros selecionados.
                     </td>
                   </tr>
@@ -935,15 +934,7 @@ export default function LancamentosERP() {
                       <Td bold>{getEmpresa(l)}</Td>
                       <Td>{getSolicitante(l)}</Td>
                       <Td muted>{getEquipamento(l)}</Td>
-                      <Td muted>
-                        {l.comprovante_url ? (
-                          <a href={l.comprovante_url} target="_blank" rel="noreferrer"
-                            style={{ color: C.blue, textDecoration: 'none', fontSize: 11 }}>
-                            {getDocName(l)}
-                          </a>
-                        ) : '—'}
-                      </Td>
-                      {/* JORNADA */}
+                      {/* JORNADA */}}
                       <Td align="center" muted>{d.jornada_inicio || '—'}</Td>
                       <Td align="center" muted>{d.jornada_fim || '—'}</Td>
                       <Td align="center" bold>{d.jornada_total_horas ? `${d.jornada_total_horas}h` : (d.total_horas_dia ? `${d.total_horas_dia}h` : '—')}</Td>
