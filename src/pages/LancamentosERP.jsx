@@ -864,20 +864,26 @@ export default function LancamentosERP() {
     if (!workspaceId || !supabase) return
     setLoading(true)
 
-    // Calcula intervalo do mês atual para filtrar na query
-    const now = new Date()
-    const y = competenciaAjustada.current ? competencia.year  : now.getFullYear()
-    const m = competenciaAjustada.current ? competencia.month : now.getMonth() + 1
-    const mesIni = `${y}-${String(m).padStart(2, '0')}-01`
-    const mesFim = new Date(y, m, 0).toISOString().slice(0, 10) // último dia do mês
+    // Se datas livres preenchidas, usa elas; senão usa o mês da competência
+    let queryIni, queryFim
+    if (dateFrom && dateTo) {
+      queryIni = dateFrom
+      queryFim = dateTo
+    } else {
+      const now = new Date()
+      const y = competenciaAjustada.current ? competencia.year  : now.getFullYear()
+      const m = competenciaAjustada.current ? competencia.month : now.getMonth() + 1
+      queryIni = `${y}-${String(m).padStart(2, '0')}-01`
+      queryFim = new Date(y, m, 0).toISOString().slice(0, 10) // último dia do mês
+    }
 
     const [{ data, error }, { data: td }] = await Promise.all([
       supabase
         .from('lancamentos')
         .select('id, data, created_at, status, tipo, valor, tipo_formulario, lote_cliente_id, comprovante_url, observacoes, dados_extras')
         .eq('workspace_id', workspaceId)
-        .gte('data', mesIni)
-        .lte('data', mesFim)
+        .gte('data', queryIni)
+        .lte('data', queryFim)
         .order('data', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase.from('diario_tarifas')
@@ -934,7 +940,7 @@ export default function LancamentosERP() {
     // (gerenciado por useEffect separado abaixo)
 
     setLoading(false)
-  }, [workspaceId, competencia])
+  }, [workspaceId, competencia, dateFrom, dateTo])
 
   // Recarrega eventos sempre que o mês ou os lançamentos mudam
   useEffect(() => {
