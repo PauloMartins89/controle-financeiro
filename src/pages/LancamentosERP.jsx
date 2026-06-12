@@ -1535,15 +1535,26 @@ export default function LancamentosERP() {
         <AuditModal record={auditModal} onClose={() => setAuditModal(null)} />
       )}
       {editModal && (
-        <LancamentoModal
-          item={editModal === 'novo' ? null : editModal}
-          workspaceId={workspaceId}
-          userId={userId}
-          enabledModules={enabledModules}
-          formTemplates={formTemplates}
-          onClose={() => setEditModal(null)}
-          onSaved={() => { setEditModal(null); loadData() }}
-        />
+        <div style={{
+          '--bg-card':       '#FFFFFF',
+          '--bg-primary':    '#F4F6FA',
+          '--bg-secondary':  '#F8FAFC',
+          '--border':        '#D8DEE9',
+          '--text-primary':  '#172033',
+          '--text-secondary':'#64748B',
+          '--shadow-card':   '0 8px 32px rgba(11,31,58,0.14)',
+          '--accent':        '#1D4ED8',
+        }}>
+          <LancamentoModal
+            item={editModal === 'novo' ? null : editModal}
+            workspaceId={workspaceId}
+            userId={userId}
+            enabledModules={enabledModules}
+            formTemplates={formTemplates}
+            onClose={() => setEditModal(null)}
+            onSaved={() => { setEditModal(null); loadData() }}
+          />
+        </div>
       )}
       {loteModal && (
         <CriarLoteModal
