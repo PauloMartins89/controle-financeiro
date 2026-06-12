@@ -65,9 +65,29 @@ function fmtHorasDecimal(h) {
   const mm = Math.round((total - hh) * 60)
   return `${hh}:${String(mm).padStart(2, '0')}`
 }
+// Calcula total de horas a partir de inicio/fim (sistema — ignora campo OCR)
+function calcTotalHorasJornada(d) {
+  const ini = d?.jornada_inicio || d?.hora_inicio || ''
+  const fim = d?.jornada_fim   || d?.hora_fim   || ''
+  if (!ini || !fim) {
+    // fallback: soma dos campos de horas individuais
+    const soma = ['horas_diurnas','horas_noturnas','h_fds_diurnas','h_fds_noturnas','h_feriado_diurnas','h_feriado_noturnas']
+      .reduce((s, k) => s + (parseFloat(String(d?.[k] || '0').replace(',', '.')) || 0), 0)
+    return soma > 0 ? soma : null
+  }
+  const [ih, im] = ini.split(':').map(Number)
+  const [fh, fm] = fim.split(':').map(Number)
+  let total = (fh * 60 + fm) - (ih * 60 + im)
+  if (total <= 0) total += 24 * 60  // jornada noturna que passa da meia-noite
+  return parseFloat((total / 60).toFixed(2))
+}
+function fmtTotalHorasJornada(d) {
+  const t = calcTotalHorasJornada(d)
+  return t != null ? `${t}h` : '—'
+}
 function fmtHorasTotal(lancs) {
   const total = lancs.reduce((s, l) => {
-    const v = parseFloat(l.dados_extras?.jornada_total_horas || l.dados_extras?.total_horas_dia || 0)
+    const v = calcTotalHorasJornada(l.dados_extras) ?? 0
     return s + (isNaN(v) ? 0 : v)
   }, 0)
   const hh = Math.floor(total)
@@ -356,7 +376,7 @@ function DetailsDrawer({ record, lotesMap, navigate, onClose, onEdit }) {
           <Section title="Jornada de Trabalho">
             <Field label="Início" value={d.jornada_inicio || '—'} />
             <Field label="Fim" value={d.jornada_fim || '—'} />
-            <Field label="Total de Horas" value={d.jornada_total_horas ? `${d.jornada_total_horas}h` : fmtHorasDecimal(d.total_horas_dia)} />
+            <Field label="Total de Horas" value={fmtTotalHorasJornada(d)} />
             <Field label="H Diurnas" value={d.horas_diurnas ? `${d.horas_diurnas}h` : '—'} />
             <Field label="H Noturnas" value={d.horas_noturnas ? `${d.horas_noturnas}h` : '—'} />
             <Field label="H FDS" value={(d.h_fds_diurnas || d.h_fds_noturnas) ? `${parseFloat(d.h_fds_diurnas||0)+parseFloat(d.h_fds_noturnas||0)}h` : '—'} />
@@ -457,7 +477,7 @@ function exportCSV(rows, lotesMap) {
     ['Equipamento',        r => getEquipamento(r)],
     ['Início Jornada',     r => (r.dados_extras||{}).jornada_inicio || ''],
     ['Fim Jornada',        r => (r.dados_extras||{}).jornada_fim || ''],
-    ['Total Horas',        r => (r.dados_extras||{}).jornada_total_horas || (r.dados_extras||{}).total_horas_dia || ''],
+    ['Total Horas',        r => { const t = calcTotalHorasJornada(r.dados_extras); return t != null ? String(t) : '' }],
     ['H Diurnas',          r => (r.dados_extras||{}).horas_diurnas || ''],
     ['H Noturnas',         r => (r.dados_extras||{}).horas_noturnas || ''],
     ['H FDS Diurnas',      r => (r.dados_extras||{}).h_fds_diurnas || ''],
@@ -487,7 +507,7 @@ function printTable(rows, lotesMap, competencia, wsName) {
     ['Empresa',      r => getEmpresa(r)],
     ['Solicitante',  r => getSolicitante(r)],
     ['Equipamento',  r => getEquipamento(r)],
-    ['Total Horas',  r => { const d = r.dados_extras||{}; return d.jornada_total_horas||d.total_horas_dia||'—' }],
+    ['Total Horas',  r => fmtTotalHorasJornada(r.dados_extras)],
     ['H Diurnas',    r => (r.dados_extras||{}).horas_diurnas||'—'],
     ['H Noturnas',   r => (r.dados_extras||{}).horas_noturnas||'—'],
     ['Cli. ✓',       r => getClienteAss(r) ? 'Sim' : 'Não'],
@@ -1425,7 +1445,7 @@ export default function LancamentosERP() {
                       {/* JORNADA */}
                       <Td align="center" muted>{d.jornada_inicio || '—'}</Td>
                       <Td align="center" muted>{d.jornada_fim || '—'}</Td>
-                      <Td align="center" bold>{d.jornada_total_horas ? `${d.jornada_total_horas}h` : (d.total_horas_dia ? `${d.total_horas_dia}h` : '—')}</Td>
+                      <Td align="center" bold>{fmtTotalHorasJornada(d)}</Td>
                       <Td align="center" muted>{d.horas_diurnas ? `${d.horas_diurnas}h` : '—'}</Td>
                       <Td align="center" muted>{d.horas_noturnas ? `${d.horas_noturnas}h` : '—'}</Td>
                       <Td align="center" muted>{parseFloat(d.h_fds_diurnas || 0) > 0 ? `${d.h_fds_diurnas}h` : '—'}</Td>
