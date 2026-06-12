@@ -862,13 +862,13 @@ export default function LancamentosERP() {
               <thead>
                 {/* Linha 1: grupos */}
                 <tr>
-                  <th colSpan={6} style={{ background: C.groupId, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
+                  <th colSpan={8} style={{ background: C.groupId, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
                     IDENTIFICAÇÃO
                   </th>
-                  <th colSpan={7} style={{ background: C.groupJorn, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
+                  <th colSpan={9} style={{ background: C.groupJorn, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
                     JORNADA
                   </th>
-                  <th colSpan={5} style={{ background: C.groupVal, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
+                  <th colSpan={2} style={{ background: C.groupVal, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
                     VALIDAÇÃO
                   </th>
                   <th colSpan={3} style={{ background: C.groupFin, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center' }}>
@@ -879,38 +879,39 @@ export default function LancamentosERP() {
                 <tr style={{ background: '#1A2E4A' }}>
                   <Th width={70}>Nº</Th>
                   <Th width={76}>Data</Th>
-                  <Th width={130}>Cliente</Th>
+                  <Th width={110}>Processado em</Th>
+                  <Th width={130}>Empresa</Th>
                   <Th width={100}>Solicitante</Th>
                   <Th width={72}>Equip.</Th>
+                  <Th width={140}>Local Serv.</Th>
                   <Th width={90}>Documento</Th>
                   <Th width={50} align="center">Início</Th>
                   <Th width={50} align="center">Fim</Th>
                   <Th width={54} align="center">Total H</Th>
-                  <Th width={52} align="center">H Diur.</Th>
-                  <Th width={52} align="center">H Notur.</Th>
-                  <Th width={44} align="center">FDS</Th>
-                  <Th width={44} align="center">Fer.</Th>
+                  <Th width={44} align="center">H Diur.</Th>
+                  <Th width={44} align="center">H Notur.</Th>
+                  <Th width={52} align="center">FDS Diur.</Th>
+                  <Th width={52} align="center">FDS Not.</Th>
+                  <Th width={52} align="center">Fer. Diur.</Th>
+                  <Th width={52} align="center">Fer. Not.</Th>
                   <Th width={52} align="center">Cli.</Th>
                   <Th width={52} align="center">Emp.</Th>
-                  <Th width={64} align="center">OCR</Th>
-                  <Th width={64} align="center">Conf.</Th>
-                  <Th width={130}>Status</Th>
                   <Th width={90} align="right">Valor (R$)</Th>
-                  <Th width={52} align="center">Lote</Th>
+                  <Th width={130}>Status</Th>
                   <Th width={120} align="center">Ações</Th>
                 </tr>
               </thead>
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={21} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={22} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Carregando lançamentos...
                     </td>
                   </tr>
                 )}
                 {!loading && paginated.length === 0 && (
                   <tr>
-                    <td colSpan={21} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={22} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Nenhum lançamento encontrado para os filtros selecionados.
                     </td>
                   </tr>
@@ -919,11 +920,8 @@ export default function LancamentosERP() {
                   const d = l.dados_extras || {}
                   const lote = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null
                   const loteStatus = lote?.status || null
-                  const ocrSt = getOcrStatus(l)
                   const clienteOk = getClienteAss(l)
                   const empresaOk = getEmpresaAss(l)
-                  const hFds = (parseFloat(d.h_fds_diurnas || 0) + parseFloat(d.h_fds_noturnas || 0)) || 0
-                  const hFer = (parseFloat(d.h_feriado_diurnas || 0) + parseFloat(d.h_feriado_noturnas || 0)) || 0
                   const rowBg = idx % 2 === 0 ? C.white : '#F8FAFC'
                   const isOpen = actionMenuId === l.id
 
@@ -934,9 +932,11 @@ export default function LancamentosERP() {
                         <span style={{ color: C.blue, fontSize: 11, fontWeight: 700 }}>{getLanNum(l)}</span>
                       </Td>
                       <Td muted>{fmtDate(l.data)}</Td>
+                      <Td muted>{d.processado_em ? fmtDateHora(d.processado_em) : '—'}</Td>
                       <Td bold>{getEmpresa(l)}</Td>
                       <Td>{getSolicitante(l)}</Td>
                       <Td muted>{getEquipamento(l)}</Td>
+                      <Td muted>{d.locais_servico || d.local_servico || d.local_realizacao || '—'}</Td>
                       <Td muted>
                         {l.comprovante_url ? (
                           <a href={l.comprovante_url} target="_blank" rel="noreferrer"
@@ -951,8 +951,10 @@ export default function LancamentosERP() {
                       <Td align="center" bold>{d.jornada_total_horas ? `${d.jornada_total_horas}h` : (d.total_horas_dia ? `${d.total_horas_dia}h` : '—')}</Td>
                       <Td align="center" muted>{d.horas_diurnas ? `${d.horas_diurnas}h` : '—'}</Td>
                       <Td align="center" muted>{d.horas_noturnas ? `${d.horas_noturnas}h` : '—'}</Td>
-                      <Td align="center" muted>{hFds > 0 ? `${hFds}h` : '—'}</Td>
-                      <Td align="center" muted>{hFer > 0 ? `${hFer}h` : '—'}</Td>
+                      <Td align="center" muted>{parseFloat(d.h_fds_diurnas || 0) > 0 ? `${d.h_fds_diurnas}h` : '—'}</Td>
+                      <Td align="center" muted>{parseFloat(d.h_fds_noturnas || 0) > 0 ? `${d.h_fds_noturnas}h` : '—'}</Td>
+                      <Td align="center" muted>{parseFloat(d.h_feriado_diurnas || 0) > 0 ? `${d.h_feriado_diurnas}h` : '—'}</Td>
+                      <Td align="center" muted>{parseFloat(d.h_feriado_noturnas || 0) > 0 ? `${d.h_feriado_noturnas}h` : '—'}</Td>
                       {/* VALIDAÇÃO */}
                       <Td align="center">
                         {clienteOk
@@ -964,31 +966,10 @@ export default function LancamentosERP() {
                           ? <span style={{ color: C.green, fontWeight: 800, fontSize: 14 }}>✓</span>
                           : <span style={{ color: '#CBD5E1', fontSize: 14 }}>—</span>}
                       </Td>
-                      <Td align="center">
-                        {ocrSt === 'validado' && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: C.green, background: '#F0FDF4', padding: '2px 7px', borderRadius: 4, border: '1px solid #86EFAC' }}>Validado</span>
-                        )}
-                        {ocrSt === 'divergencia' && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: C.red, background: '#FEF2F2', padding: '2px 7px', borderRadius: 4, border: '1px solid #FECACA' }}>Divergência</span>
-                        )}
-                        {!ocrSt && <span style={{ color: '#CBD5E1' }}>—</span>}
-                      </Td>
-                      <Td align="center">
-                        {empresaOk
-                          ? <span style={{ fontSize: 10, fontWeight: 700, color: C.navy, background: '#EFF6FF', padding: '2px 8px', borderRadius: 4 }}>Birigui</span>
-                          : <span style={{ color: '#CBD5E1' }}>—</span>}
-                      </Td>
-                      <Td>
-                        <ErpStatusBadge status={l.status} loteStatus={loteStatus} />
-                      </Td>
                       {/* FINANCEIRO */}
                       <Td align="right" green bold>{fmtCurrency(l.valor)}</Td>
-                      <Td align="center" muted>
-                        {lote ? (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: '#6366F1', background: '#EEF2FF', padding: '2px 7px', borderRadius: 4 }}>
-                            LOTE
-                          </span>
-                        ) : '—'}
+                      <Td>
+                        <ErpStatusBadge status={l.status} loteStatus={loteStatus} />
                       </Td>
                       {/* AÇÕES */}
                       <td style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', position: 'relative' }}>
