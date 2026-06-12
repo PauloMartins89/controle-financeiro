@@ -525,6 +525,150 @@ function AuditModal({ record, onClose }) {
   )
 }
 
+// ─── CRIAR LOTE MODAL ─────────────────────────────────────────────────────────
+function CriarLoteModal({ itens, workspaceId, userId, onClose, onSaved }) {
+  const [cliente, setCliente] = useState(() => {
+    const nomes = [...new Set(itens.map(l => l.dados_extras?.empresa || l.dados_extras?.cliente || '').filter(Boolean))]
+    return nomes.length === 1 ? nomes[0] : ''
+  })
+  const [saving, setSaving] = useState(false)
+  const totalVal = itens.reduce((s, l) => s + (l.valor || 0), 0)
+  const nomesDist = [...new Set(itens.map(l => l.dados_extras?.empresa || l.dados_extras?.cliente || '').filter(Boolean))]
+
+  async function confirmar() {
+    if (!cliente.trim()) { toast.error('Informe o nome do cliente.'); return }
+    setSaving(true)
+    try {
+      const { data: lote, error: errL } = await supabase
+        .from('lotes_cliente')
+        .insert({ workspace_id: workspaceId, cliente: cliente.trim(), created_by: userId, status: 'rascunho' })
+        .select('id').single()
+      if (errL) throw errL
+      const { error: errUp } = await supabase.from('lancamentos')
+        .update({ lote_cliente_id: lote.id })
+        .in('id', itens.map(l => l.id))
+      if (errUp) throw errUp
+      toast.success(`Lote criado com ${itens.length} lançamento(s).`)
+      onSaved()
+    } catch (e) { toast.error('Erro: ' + e.message) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(11,31,58,0.55)' }} />
+      <div style={{ position: 'relative', width: 460, background: C.white, borderRadius: 12, boxShadow: '0 16px 48px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+        <div style={{ background: C.navy, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 700, letterSpacing: .8, textTransform: 'uppercase' }}>Criar Lote para Cliente</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.white, marginTop: 2 }}>{itens.length} lançamento(s) selecionado(s)</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex' }}>
+            <XMarkIcon style={{ width: 16, height: 16 }} />
+          </button>
+        </div>
+        <div style={{ padding: '20px' }}>
+          {nomesDist.length > 1 && (
+            <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#92400E' }}>
+              ⚠️ <strong>Empresas diferentes:</strong> {nomesDist.join(' · ')}
+            </div>
+          )}
+          <label style={{ fontSize: 11, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: .5 }}>Cliente *</label>
+          <input
+            value={cliente} onChange={e => setCliente(e.target.value)} autoFocus
+            placeholder="Nome do cliente para o lote"
+            style={{ width: '100%', marginTop: 6, padding: '9px 12px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13, outline: 'none', boxSizing: 'border-box', color: C.text }}
+          />
+          <div style={{ marginTop: 14, padding: '12px 14px', background: '#F8FAFC', borderRadius: 8, border: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <span style={{ color: C.textSec }}><strong style={{ color: C.text }}>{itens.length}</strong> lançamento(s)</span>
+            <span style={{ fontWeight: 700, color: C.green }}>{fmtCurrency(totalVal)}</span>
+          </div>
+        </div>
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+          <button onClick={confirmar} disabled={saving || !cliente.trim()} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#6366F1', color: C.white, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: (saving || !cliente.trim()) ? 0.6 : 1 }}>
+            {saving ? 'Criando...' : 'Criar Lote'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── ADICIONAR A LOTE EXISTENTE MODAL ─────────────────────────────────────────
+function AdicionarLoteModal({ record, workspaceId, onClose, onSaved }) {
+  const [lotes, setLotes]     = useState(null)
+  const [chosen, setChosen]   = useState('')
+  const [saving, setSaving]   = useState(false)
+
+  useEffect(() => {
+    supabase.from('lotes_cliente')
+      .select('id, cliente, status, created_at')
+      .eq('workspace_id', workspaceId)
+      .in('status', ['rascunho', 'enviado_cliente'])
+      .order('created_at', { ascending: false })
+      .limit(30)
+      .then(({ data }) => setLotes(data || []))
+  }, [workspaceId])
+
+  async function confirmar() {
+    if (!chosen) { toast.error('Selecione um lote.'); return }
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('lancamentos')
+        .update({ lote_cliente_id: chosen })
+        .eq('id', record.id)
+      if (error) throw error
+      toast.success('Lançamento adicionado ao lote.')
+      onSaved()
+    } catch (e) { toast.error('Erro: ' + e.message) }
+    finally { setSaving(false) }
+  }
+
+  const STATUS_LABEL = { rascunho: 'Em elaboração', enviado_cliente: 'Ag. aprovação' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(11,31,58,0.55)' }} />
+      <div style={{ position: 'relative', width: 460, background: C.white, borderRadius: 12, boxShadow: '0 16px 48px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+        <div style={{ background: C.navy, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 700, letterSpacing: .8, textTransform: 'uppercase' }}>Adicionar ao Lote</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.white, marginTop: 2 }}>{getLanNum(record)}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex' }}>
+            <XMarkIcon style={{ width: 16, height: 16 }} />
+          </button>
+        </div>
+        <div style={{ padding: '20px', maxHeight: 360, overflowY: 'auto' }}>
+          {lotes === null && <div style={{ textAlign: 'center', padding: 24, color: C.textSec, fontSize: 13 }}>Carregando lotes...</div>}
+          {lotes !== null && lotes.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 24, color: C.textSec, fontSize: 13 }}>
+              Nenhum lote aberto encontrado.<br />
+              <span style={{ fontSize: 11 }}>Crie um lote primeiro selecionando registros.</span>
+            </div>
+          )}
+          {lotes !== null && lotes.map(lt => (
+            <label key={lt.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 8, border: `2px solid ${chosen === lt.id ? C.blue : C.border}`, marginBottom: 8, cursor: 'pointer', background: chosen === lt.id ? '#EFF6FF' : C.white, transition: 'all .15s' }}>
+              <input type="radio" name="lote" value={lt.id} checked={chosen === lt.id} onChange={() => setChosen(lt.id)} style={{ accentColor: C.blue }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{lt.cliente}</div>
+                <div style={{ fontSize: 11, color: C.textSec, marginTop: 2 }}>{STATUS_LABEL[lt.status] || lt.status} · {new Date(lt.created_at).toLocaleDateString('pt-BR')}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+          <button onClick={confirmar} disabled={saving || !chosen} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#6366F1', color: C.white, cursor: 'pointer', fontSize: 13, fontWeight: 700, opacity: (saving || !chosen) ? 0.6 : 1 }}>
+            {saving ? 'Salvando...' : 'Adicionar ao Lote'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function LancamentosERP() {
   const { workspaceId, isPlatformAdmin } = useStore()
@@ -555,6 +699,9 @@ export default function LancamentosERP() {
   const [actionMenuId, setActionMenuId] = useState(null)
   const [selecionados, setSelecionados] = useState(new Set())
   const [auditModal, setAuditModal]     = useState(null)
+  const [loteModal, setLoteModal]       = useState(false)   // criar lote com selecionados
+  const [addLoteModal, setAddLoteModal] = useState(null)    // adicionar 1 registro a lote existente
+  const [userId, setUserId]             = useState(null)
   const actionMenuRef                   = useRef(null)
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -951,8 +1098,15 @@ export default function LancamentosERP() {
             <button onClick={() => printTable(filtered, lotesMap, competencia, wsName)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.red, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
               <DocumentArrowDownIcon style={{ width: 12, height: 12 }} /> Gerar PDF
             </button>
-            <button disabled style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#AAB', fontSize: 11, cursor: 'not-allowed', fontWeight: 600, opacity: 0.5 }}>
-              <UserGroupIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Gerar Lote <span style={{ fontSize: 9, marginLeft: 2 }}>EM BREVE</span>
+            <button
+              onClick={() => {
+                const itens = filtered.filter(l => selecionados.has(l.id))
+                if (itens.length === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }
+                setLoteModal(true)
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#6366F1', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}
+            >
+              <UserGroupIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Gerar Lote {selecionados.size > 0 && `(${selecionados.size})`}
             </button>
           </div>
         </div>
@@ -1142,7 +1296,7 @@ export default function LancamentosERP() {
                                   { label: 'Visualizar documento', icon: DocumentTextIcon, disabled: false, action: () => l.comprovante_url && window.open(l.comprovante_url, '_blank') },
                                   { label: 'Editar lançamento',    icon: DocumentTextIcon,      disabled: false, action: () => navigate(`/lancamentos?id=${l.id}`) },
                                   { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: false, action: () => printTable([l], lotesMap, competencia, wsName) },
-                                  { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: true,  action: () => {} },
+                                  { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: false, action: () => setAddLoteModal(l) },
                                   { label: 'Ver auditoria',        icon: MapPinIcon,             disabled: false, action: () => setAuditModal(l) },
                                 ].map(item => (
                                   <button key={item.label} disabled={item.disabled} onClick={() => { item.action(); setActionMenuId(null) }} style={{
@@ -1358,6 +1512,23 @@ export default function LancamentosERP() {
       )}
       {auditModal && (
         <AuditModal record={auditModal} onClose={() => setAuditModal(null)} />
+      )}
+      {loteModal && (
+        <CriarLoteModal
+          itens={filtered.filter(l => selecionados.has(l.id))}
+          workspaceId={workspaceId}
+          userId={userId}
+          onClose={() => setLoteModal(false)}
+          onSaved={() => { setLoteModal(false); setSelecionados(new Set()); loadData() }}
+        />
+      )}
+      {addLoteModal && (
+        <AdicionarLoteModal
+          record={addLoteModal}
+          workspaceId={workspaceId}
+          onClose={() => setAddLoteModal(null)}
+          onSaved={() => { setAddLoteModal(null); loadData() }}
+        />
       )}
     </div>
   )
