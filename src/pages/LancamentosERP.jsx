@@ -434,6 +434,7 @@ export default function LancamentosERP() {
   const [pageSize]                      = useState(25)
   const [drawerRecord, setDrawerRecord] = useState(null)
   const [actionMenuId, setActionMenuId] = useState(null)
+  const [selecionados, setSelecionados] = useState(new Set())
   const actionMenuRef                   = useRef(null)
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -612,6 +613,8 @@ export default function LancamentosERP() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paginated  = filtered.slice((page - 1) * pageSize, page * pageSize)
   useEffect(() => { setPage(1) }, [filterForm, filterStatus, filterCliente, search, competencia])
+  // Limpa seleção ao mudar filtro
+  useEffect(() => { setSelecionados(new Set()) }, [filterForm, filterStatus, filterCliente, search, competencia])
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const totalReceitas     = filtered.filter(l => l.tipo === 'receita').reduce((s, l) => s + (l.valor || 0), 0)
@@ -842,12 +845,17 @@ export default function LancamentosERP() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '8px 12px', borderBottom: `1px solid ${C.border}`,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <ClipboardDocumentListIcon style={{ width: 14, height: 14, color: C.navy }} />
               <span style={{ fontSize: 13, fontWeight: 800, color: C.navy }}>Lançamentos</span>
               <span style={{ fontSize: 11, color: C.textSec, fontWeight: 400 }}>
                 ({filtered.length} registro{filtered.length !== 1 ? 's' : ''})
               </span>
+              {selecionados.size > 0 && (
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.blue, background: '#EFF6FF', padding: '2px 8px', borderRadius: 4, border: '1px solid #BFDBFE' }}>
+                  {selecionados.size} selecionado{selecionados.size !== 1 ? 's' : ''}
+                </span>
+              )}
             </div>
             {loading && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: C.textSec }}>
@@ -862,6 +870,18 @@ export default function LancamentosERP() {
               <thead>
                 {/* Linha 1: grupos */}
                 <tr>
+                  <th style={{ background: C.groupId, padding: '7px 8px', width: 36, borderRight: `1px solid rgba(255,255,255,0.2)` }}>
+                    <input type="checkbox" style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#6366F1' }}
+                      checked={paginated.length > 0 && paginated.every(l => selecionados.has(l.id))}
+                      onChange={e => {
+                        setSelecionados(prev => {
+                          const next = new Set(prev)
+                          paginated.forEach(l => e.target.checked ? next.add(l.id) : next.delete(l.id))
+                          return next
+                        })
+                      }}
+                    />
+                  </th>
                   <th colSpan={6} style={{ background: C.groupId, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
                     IDENTIFICAÇÃO
                   </th>
@@ -877,6 +897,7 @@ export default function LancamentosERP() {
                 </tr>
                 {/* Linha 2: colunas individuais */}
                 <tr style={{ background: '#1A2E4A' }}>
+                  <th style={{ width: 36, background: '#1A2E4A', padding: '6px 8px' }} />
                   <Th width={70}>Nº</Th>
                   <Th width={90}>Data</Th>
                   <Th width={140}>Processado Em</Th>
@@ -902,14 +923,14 @@ export default function LancamentosERP() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={20} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={21} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Carregando lançamentos...
                     </td>
                   </tr>
                 )}
                 {!loading && paginated.length === 0 && (
                   <tr>
-                    <td colSpan={20} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={21} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Nenhum lançamento encontrado para os filtros selecionados.
                     </td>
                   </tr>
@@ -924,7 +945,19 @@ export default function LancamentosERP() {
                   const isOpen = actionMenuId === l.id
 
                   return (
-                    <tr key={l.id} style={{ background: rowBg }} onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'} onMouseLeave={e => e.currentTarget.style.background = rowBg}>
+                    <tr key={l.id} style={{ background: selecionados.has(l.id) ? '#EFF6FF' : rowBg }} onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'} onMouseLeave={e => e.currentTarget.style.background = selecionados.has(l.id) ? '#EFF6FF' : rowBg}>
+                      <td style={{ padding: '5px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', width: 36 }}>
+                        <input type="checkbox" style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#6366F1' }}
+                          checked={selecionados.has(l.id)}
+                          onChange={e => {
+                            setSelecionados(prev => {
+                              const next = new Set(prev)
+                              e.target.checked ? next.add(l.id) : next.delete(l.id)
+                              return next
+                            })
+                          }}
+                        />
+                      </td>
                       {/* IDENTIFICAÇÃO */}
                       <Td bold>
                         <span style={{ color: C.blue, fontSize: 11, fontWeight: 700 }}>{getLanNum(l)}</span>
