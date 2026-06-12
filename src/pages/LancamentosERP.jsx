@@ -817,19 +817,19 @@ export default function LancamentosERP() {
 
           {/* Linha 2: ações operacionais */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+            <button onClick={() => navigate('/boletins-diarios')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
               <SparklesIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Digitalizar OCR
             </button>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
+            <button onClick={() => navigate('/lancamentos?novo=1')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
               <PlusIcon style={{ width: 12, height: 12 }} /> Novo Lançamento
             </button>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+            <button disabled style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#AAB', fontSize: 11, cursor: 'not-allowed', fontWeight: 600, opacity: 0.5 }}>
               <TableCellsIcon style={{ width: 12, height: 12 }} /> Exportar Excel
             </button>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.red, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+            <button disabled style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#AAB', fontSize: 11, cursor: 'not-allowed', fontWeight: 600, opacity: 0.5 }}>
               <DocumentArrowDownIcon style={{ width: 12, height: 12 }} /> Gerar PDF
             </button>
-            <button onClick={() => navigate('/lancamentos')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+            <button disabled style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: '#AAB', fontSize: 11, cursor: 'not-allowed', fontWeight: 600, opacity: 0.5 }}>
               <UserGroupIcon style={{ width: 12, height: 12, color: '#6366F1' }} /> Gerar Lote
             </button>
           </div>
@@ -946,7 +946,7 @@ export default function LancamentosERP() {
                   const isOpen = actionMenuId === l.id
 
                   return (
-                    <tr key={l.id} style={{ background: selecionados.has(l.id) ? '#EFF6FF' : rowBg }} onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'} onMouseLeave={e => e.currentTarget.style.background = selecionados.has(l.id) ? '#EFF6FF' : rowBg}>
+                    <tr key={l.id} style={{ background: selecionados.has(l.id) ? '#EFF6FF' : rowBg, cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'} onMouseLeave={e => e.currentTarget.style.background = selecionados.has(l.id) ? '#EFF6FF' : rowBg} onClick={e => { if (e.target.type !== 'checkbox') setDrawerRecord(l) }}>
                       <td style={{ padding: '5px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', width: 36 }}>
                         <input type="checkbox" style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#6366F1' }}
                           checked={selecionados.has(l.id)}
@@ -995,7 +995,7 @@ export default function LancamentosERP() {
                         <ErpStatusBadge status={l.status} loteStatus={loteStatus} />
                       </Td>
                       {/* AÇÕES */}
-                      <td style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', position: 'relative' }}>
+                      <td onClick={e => e.stopPropagation()} style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', position: 'relative' }}>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button
                             onClick={() => setDrawerRecord(l)}
@@ -1018,10 +1018,10 @@ export default function LancamentosERP() {
                               }}>
                                 {[
                                   { label: 'Visualizar documento', icon: DocumentTextIcon, action: () => l.comprovante_url && window.open(l.comprovante_url, '_blank') },
-                                  { label: 'Editar lançamento', icon: DocumentTextIcon, action: () => navigate('/lancamentos') },
-                                  { label: 'Gerar PDF', icon: DocumentArrowDownIcon, action: () => navigate('/lancamentos') },
-                                  { label: 'Adicionar ao lote', icon: UserGroupIcon, action: () => navigate('/lancamentos') },
-                                  { label: 'Ver auditoria', icon: MapPinIcon, action: () => navigate('/lancamentos') },
+                                  { label: 'Editar lançamento', icon: DocumentTextIcon, action: () => navigate(`/lancamentos?id=${l.id}`) },
+                                  { label: 'Gerar PDF', icon: DocumentArrowDownIcon, action: () => navigate(`/lancamentos?id=${l.id}`) },
+                                  { label: 'Adicionar ao lote', icon: UserGroupIcon, action: () => navigate(`/lancamentos?id=${l.id}`) },
+                                  { label: 'Ver auditoria', icon: MapPinIcon, action: () => navigate(`/lancamentos?id=${l.id}`) },
                                 ].map(item => (
                                   <button key={item.label} onClick={() => { item.action(); setActionMenuId(null) }} style={{
                                     display: 'flex', alignItems: 'center', gap: 8, width: '100%',
@@ -1167,8 +1167,8 @@ export default function LancamentosERP() {
                   </div>
                 )
               })}
-              <button onClick={() => navigate('/lancamentos')} style={{ width: '100%', marginTop: 10, padding: '7px', border: 'none', background: 'none', color: C.blue, fontSize: 12, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
-                Ver todas as atividades →
+              <button onClick={() => navigate(`/lancamentos`)} style={{ width: '100%', marginTop: 10, padding: '7px', border: 'none', background: 'none', color: C.blue, fontSize: 12, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
+                Ver todas as atividades em Lançamentos →
               </button>
             </div>
           </div>
@@ -1184,7 +1184,7 @@ export default function LancamentosERP() {
                 { label: 'Digitalizações',             icon: SparklesIcon,              path: '/boletins-diarios' },
                 { label: 'Relatórios Gerenciais',      icon: DocumentChartBarIcon,      path: '/central' },
                 { label: 'Auditoria de Lançamentos',   icon: BellAlertIcon,             path: '/lancamentos' },
-                { label: 'Configurações do Módulo',    icon: Cog6ToothIcon,             path: '/lancamentos' },
+                { label: 'Configurações do Módulo',    icon: Cog6ToothIcon,             path: '/configuracoes' },
               ].map(item => (
                 <button
                   key={item.label}
