@@ -548,6 +548,30 @@ export default function LancamentosERP() {
     return () => document.removeEventListener('mousedown', h)
   }, [actionMenuId])
 
+  // Auto-ajusta competência quando o tipo de formulário muda (evita mês vazio)
+  useEffect(() => {
+    if (lancamentos.length === 0) return
+    const matchFn = (l) => {
+      if (!filterForm || filterForm === 'todos') return true
+      if (filterForm === 'dm') return ['diario', 'transporte'].includes(l.tipo_formulario || 'padrao')
+      return (l.tipo_formulario || 'padrao') === filterForm
+    }
+    const hasInCurrent = lancamentos.some(l => {
+      if (!matchFn(l) || !l.data) return false
+      const [y, m] = l.data.split('-').map(Number)
+      return y === competencia.year && m === competencia.month
+    })
+    if (!hasInCurrent) {
+      const dates = lancamentos
+        .filter(l => matchFn(l) && l.data)
+        .map(l => { const [y, m] = l.data.split('-').map(Number); return { year: y, month: m } })
+      if (dates.length > 0) {
+        dates.sort((a, b) => b.year - a.year || b.month - a.month)
+        setCompetencia(dates[0])
+      }
+    }
+  }, [filterForm, lancamentos]) // eslint-disable-line
+
   // ── Filtro ─────────────────────────────────────────────────────────────────
   const filtered = lancamentos.filter(l => {
     // Período (competência)
@@ -779,7 +803,7 @@ export default function LancamentosERP() {
             {/* Botões filtro */}
             <div style={{ display: 'flex', gap: 6, marginLeft: 4, alignSelf: 'flex-end' }}>
               <button
-                onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('todos') }}
+                onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('rdo') }}
                 style={{ padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
               >Limpar</button>
               <button
