@@ -119,12 +119,12 @@ function isSubscriptionActive(sub) {
 function RequireSubscription({ children }) {
   const [checked, setChecked] = useState(false)
   const [allowed, setAllowed] = useState(false)
+  const [trialDias, setTrialDias] = useState(null) // null = sem aviso
 
   useEffect(() => {
     if (!supabase) { setAllowed(true); setChecked(true); return }
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { setAllowed(false); setChecked(true); return }
-      // Platform admin sempre tem acesso (verifica via banco)
       const { data: adminRow } = await supabase
         .from('platform_admins')
         .select('id')
@@ -136,7 +136,6 @@ function RequireSubscription({ children }) {
         .select('status, trial_expires_at, expires_at')
         .eq('user_id', data.user.id)
         .maybeSingle()
-      // Se ainda não existe registro, cria trial (fallback para usuários que confirmaram e-mail antes do trigger)
       if (!sub) {
         await supabase.from('assinaturas').upsert({
           user_id: data.user.id,
@@ -144,17 +143,52 @@ function RequireSubscription({ children }) {
           status: 'trial',
           trial_expires_at: new Date(Date.now() + 7 * 86400 * 1000).toISOString(),
         }, { onConflict: 'user_id' })
-        setAllowed(true) // trial recém criado, permite entrar
+        setTrialDias(7)
+        setAllowed(true)
       } else {
-        setAllowed(isSubscriptionActive(sub))
+        const ok = isSubscriptionActive(sub)
+        setAllowed(ok)
+        // Calcula dias restantes de trial para exibir banner
+        if (ok && sub.status === 'trial' && sub.trial_expires_at) {
+          const dias = Math.ceil((new Date(sub.trial_expires_at) - new Date()) / 86400000)
+          if (dias <= 7) setTrialDias(dias)
+        }
       }
       setChecked(true)
     })
   }, [])
 
-  if (!checked) return null
+  if (!checked) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0B1F3A' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+        <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.15)', borderTopColor: '#3B82F6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Verificando acesso...</span>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
   if (!allowed) return <Navigate to="/planos" replace />
-  return children
+  return (
+    <>
+      {trialDias !== null && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+          background: trialDias <= 1 ? '#DC2626' : trialDias <= 3 ? '#F59E0B' : '#1D4ED8',
+          color: '#fff', fontSize: 13, fontWeight: 600, textAlign: 'center',
+          padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+        }}>
+          <span>
+            {trialDias <= 0
+              ? '⚠️ Seu trial expirou hoje! '
+              : `⏳ Seu período de avaliação expira em ${trialDias} dia${trialDias !== 1 ? 's' : ''}. `}
+            <a href="/planos" style={{ color: '#fff', textDecoration: 'underline', fontWeight: 800 }}>Assinar agora →</a>
+          </span>
+          <button onClick={() => setTrialDias(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 4, color: '#fff', cursor: 'pointer', padding: '2px 8px', fontSize: 12 }}>✕</button>
+        </div>
+      )}
+      {children}
+    </>
+  )
 }
 
 // Rota padrão: redireciona para o primeiro módulo habilitado se Dashboard estiver desabilitado

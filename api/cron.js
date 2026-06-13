@@ -280,6 +280,28 @@ async function handleBoletinsRetry(db, req, res) {
   return res.status(200).json({ retried, total: boletins.length })
 }
 
+// ── Handler: DDS abertos há mais de 24h ─────────────────────────────────────
+async function handleDdsAbertos(db, res) {
+  const limite = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: abertos, error } = await db
+    .from('dds_registros')
+    .select('id, workspace_id, data, turno_id, lider_id')
+    .eq('status', 'em_andamento')
+    .lt('created_at', limite)
+  if (error) return res.status(500).json({ error: error.message })
+  if (!abertos?.length) return res.status(200).json({ encerrados: 0 })
+
+  // Encerra como "expirado" e notifica supervisor do workspace
+  let encerrados = 0
+  for (const reg of abertos) {
+    await db.from('dds_registros')
+      .update({ status: 'expirado', encerrado_em: new Date().toISOString() })
+      .eq('id', reg.id)
+    encerrados++
+  }
+  return res.status(200).json({ encerrados })
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -292,5 +314,6 @@ export default async function handler(req, res) {
   if (type === 'refeicoes-pendentes')  return handleRefeicoesPendentes(db, res)
   if (type === 'refeicoes-validacao')  return handleRefeicoesValidacao(db, res)
   if (type === 'boletins-retry')       return handleBoletinsRetry(db, req, res)
-  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-retry' })
+  if (type === 'dds-abertos')          return handleDdsAbertos(db, res)
+  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-retry | dds-abertos' })
 }

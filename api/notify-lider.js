@@ -1,18 +1,10 @@
 /**
  * POST /api/notify-lider
  *
- * Envia notificação WhatsApp ao supervisor quando um líder cria
- * uma solicitação de EPI ou Insumo pelo app SmartLíder.
+ * Body: { tipo: 'epi'|'insumo'|'epi_decisao'|'insumo_decisao', id }
  *
- * Body: {
- *   tipo : 'epi' | 'insumo'
- *   id   : uuid  — id da solicitação
- * }
- *
- * Configuração necessária (tabela configuracoes, por workspace):
- *   chave = 'lider_supervisor_telefone'  → telefone do supervisor (só números, com DDI)
- *
- * Chamada fire-and-forget pelo app (falhas não bloqueiam o fluxo).
+ * tipo = 'epi' | 'insumo'        → notifica supervisor de nova solicitação
+ * tipo = 'epi_decisao' | 'insumo_decisao' → notifica líder da decisão (aprovado/reprovado)
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -68,9 +60,14 @@ export default async function handler(req, res) {
 
   const { tipo, id } = req.body || {}
   if (!tipo || !id) return res.status(400).json({ error: 'tipo e id obrigatórios' })
-  if (!['epi', 'insumo'].includes(tipo)) return res.status(400).json({ error: 'tipo deve ser epi ou insumo' })
+  if (!['epi', 'insumo', 'epi_decisao', 'insumo_decisao'].includes(tipo)) return res.status(400).json({ error: 'tipo inválido' })
 
   const db = getDb()
+
+  // Notificação de decisão → líder
+  if (tipo === 'epi_decisao' || tipo === 'insumo_decisao') {
+    return handleDecisao(db, tipo, id, res)
+  }
 
   try {
     // ── 1. Buscar solicitação ─────────────────────────────────────────────
@@ -152,6 +149,49 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('[notify-lider] erro:', err)
+    return res.status(500).json({ error: err.message })
+  }
+}
+
+// ── Notifica LÍDER sobre decisão do supervisor (aprovado/reprovado) ───────────
+async function handleDecisao(db, tipo, id, res) {
+  const tabela = tipo === 'epi_decisao' ? 'lider_solicitacoes_epi' : 'lider_solicitacoes_insumo'
+  const tipoLabel = tipo === 'epi_decisao' ? 'EPI' : 'Insumo'
+  try {
+    const { data: sol } = await db.from(tabela).select('*').eq('id', id).single()
+    if (!sol) return res.status(404).json({ error: 'Solicitação não encontrada' })
+
+    // Busca telefone do líder via turno
+    const { data: turno } = await db
+      .from('lider_turnos')
+      .select('lider_nome, lider_id')
+      .eq('id', sol.turno_id)
+      .maybeSingle()
+
+    const { data: lider } = turno?.lider_id
+      ? await db.from('lider_lideres').select('telefone').eq('id', turno.lider_id).maybeSingle()
+      : { data: null }
+
+    const telefone = lider?.telefone?.replace(/\D/g, '')
+    if (!telefone) return res.status(200).json({ ok: false, motivo: 'lider_sem_telefone' })
+
+    const item = tipo === 'epi_decisao' ? sol.epi_nome : sol.produto_nome
+    const aprovado = sol.status === 'aprovado'
+    const msg = aprovado
+      ? `✅ *${tipoLabel} Aprovado!*\n\n` +
+        `${tipo === 'epi_decisao' ? `🦺 *EPI:* ${item}\n👷 *Colaborador:* ${sol.colaborador_nome || '—'}` : `📦 *Produto:* ${item}\n🔢 *Qtd:* ${sol.quantidade} ${sol.unidade || ''}`}\n` +
+        `📝 *Qtd aprovada:* ${sol.quantidade_aprovada || sol.quantidade}\n` +
+        (sol.observacao_aprovador ? `💬 *Obs:* ${sol.observacao_aprovador}\n` : '') +
+        `\nO item estará disponível em breve.`
+      : `❌ *${tipoLabel} Reprovado*\n\n` +
+        `${tipo === 'epi_decisao' ? `🦺 *EPI:* ${item}` : `📦 *Produto:* ${item}`}\n` +
+        (sol.motivo_reprovacao ? `📝 *Motivo:* ${sol.motivo_reprovacao}\n` : '') +
+        `\nEntre em contato com seu supervisor para mais detalhes.`
+
+    const ok = await sendWA(telefone, msg)
+    return res.status(200).json({ ok, enviado_para: telefone })
+  } catch (err) {
+    console.error('[notify-lider] decisao erro:', err)
     return res.status(500).json({ error: err.message })
   }
 }
