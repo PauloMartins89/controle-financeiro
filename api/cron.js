@@ -238,6 +238,57 @@ async function handleRefeicoesValidacao(db, res) {
   return res.status(200).json({ sent, validacoes: pedidos.length })
 }
 
+// ── Fila sequencial de boletins (recebido + erro) ───────────────────────────
+// Processa até 8 boletins por execução, 1 por vez, com 4s de intervalo.
+// Chamado a cada 5 min via cron → suporta ~96 boletins/hora sem saturar o Groq.
+async function handleBoletinsFila(db, req, res) {
+  const quatro_horas_atras = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+  const tres_min_atras     = new Date(Date.now() - 3 * 60 * 1000).toISOString()
+
+  // Pega boletins em status 'recebido' (novos) OU 'erro' (retry) — em ordem de chegada
+  const { data: boletins } = await db
+    .from('maquinas_boletins')
+    .select('id, numero, wa_from, status')
+    .in('status', ['recebido', 'erro'])
+    .gte('created_at', quatro_horas_atras)
+    .lte('updated_at', tres_min_atras)   // ignora os que acabaram de mudar (evita dupla execução)
+    .order('created_at', { ascending: true })
+    .limit(8)
+
+  if (!boletins?.length) return res.status(200).json({ processados: 0 })
+
+  const host = req.headers.host || process.env.APP_URL?.replace('https://', '')
+  const selfBase = `https://${host}`
+  let processados = 0
+
+  for (const bol of boletins) {
+    // Marca como 'processando' antes de disparar — evita dupla execução
+    await db.from('maquinas_boletins').update({ status: 'processando' }).eq('id', bol.id)
+    try {
+      // Espera resposta (OCR pode levar até 60s — maxDuration do endpoint)
+      const resp = await fetch(`${selfBase}/api/ocr-boletim-maquina`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boletimId: bol.id }),
+      })
+      if (resp.ok) {
+        processados++
+        console.log(`[cron:boletins-fila] ✓ ${bol.numero} (${bol.id})`)
+      } else {
+        console.warn(`[cron:boletins-fila] HTTP ${resp.status} para ${bol.id}`)
+        await db.from('maquinas_boletins').update({ status: 'erro' }).eq('id', bol.id)
+      }
+    } catch (e) {
+      console.error(`[cron:boletins-fila] falha ${bol.id}:`, e.message)
+      await db.from('maquinas_boletins').update({ status: 'erro' }).eq('id', bol.id)
+    }
+    // 4s entre chamadas para não saturar o Groq
+    await new Promise(r => setTimeout(r, 4000))
+  }
+
+  return res.status(200).json({ processados, total: boletins.length })
+}
+
 // ── Retry de boletins com erro (Gemini 503 etc.) ────────────────────────────
 // Reprocessa boletins em status 'erro' das últimas 4 horas (máx 5 por execução)
 async function handleBoletinsRetry(db, req, res) {
@@ -431,6 +482,7 @@ export default async function handler(req, res) {
   if (type === 'relatorio')              return handleRelatorio(db, res)
   if (type === 'refeicoes-pendentes')    return handleRefeicoesPendentes(db, res)
   if (type === 'refeicoes-validacao')    return handleRefeicoesValidacao(db, res)
+  if (type === 'boletins-fila')          return handleBoletinsFila(db, req, res)
   if (type === 'boletins-retry')         return handleBoletinsRetry(db, req, res)
   if (type === 'dds-abertos')            return handleDdsAbertos(db, res)
   if (type === 'cotacoes-expiradas')     return handleCotacoesExpiradas(db, res)

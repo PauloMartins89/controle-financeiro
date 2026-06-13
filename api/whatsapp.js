@@ -420,15 +420,9 @@ export default async function handler(req, res) {
               .single()
 
             if (!bolErr && bolRecord?.id) {
-              try {
-                await fetch(`${APP_URL}/api/ocr-boletim-maquina`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ boletimId: bolRecord.id }),
-                })
-              } catch (e) {
-                console.error('[whatsapp/boletim] ocr trigger:', e.message)
-              }
+              // OCR NÃO é disparado aqui — o cron boletins-fila processa em fila
+              // sequencial a cada 5 min, evitando sobrecarga paralela do Groq
+              console.log(`[whatsapp/boletim] boletim ${numero} (${bolRecord.id}) salvo — aguarda fila OCR`)
             } else if (bolErr) {
               console.error('[whatsapp/boletim] insert error:', bolErr.message)
             }
