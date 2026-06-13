@@ -466,6 +466,61 @@ async function handleOsPreventivas(db, res) {
   return res.status(200).json({ criadas })
 }
 
+// ── Handler: limpeza de arquivos órfãos em comprovantes/whatsapp/ ────────────
+// Remove arquivos com mais de 7 dias que não têm referência em nenhum lançamento.
+// Seguro: só apaga o que já foi confirmado como sem uso.
+async function handleStorageLimpeza(db, res) {
+  const BUCKET = 'comprovantes'
+  const PASTA  = 'whatsapp'
+  const DIAS   = 7
+  const limite = new Date(Date.now() - DIAS * 24 * 60 * 60 * 1000)
+
+  // Lista arquivos na pasta whatsapp/
+  const { data: arquivos, error: listErr } = await db.storage.from(BUCKET).list(PASTA, {
+    limit: 200,
+    sortBy: { column: 'created_at', order: 'asc' },
+  })
+  if (listErr) return res.status(500).json({ error: listErr.message })
+  if (!arquivos?.length) return res.status(200).json({ removidos: 0, total: 0 })
+
+  // Filtra apenas arquivos mais antigos que DIAS dias
+  const candidatos = arquivos.filter(f => {
+    const dt = f.created_at ? new Date(f.created_at) : null
+    return dt && dt < limite
+  })
+  if (!candidatos.length) return res.status(200).json({ removidos: 0, total: arquivos.length })
+
+  // Monta URLs públicas para cruzar com lancamentos.comprovante_url
+  const paths = candidatos.map(f => `${PASTA}/${f.name}`)
+  const urlBase = `${process.env.SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`
+  const urls = paths.map(p => `${urlBase}${p}`)
+
+  // Verifica quais URLs ainda são referenciadas em lancamentos
+  const { data: usados } = await db
+    .from('lancamentos')
+    .select('comprovante_url')
+    .in('comprovante_url', urls)
+  const urlsUsadas = new Set((usados || []).map(l => l.comprovante_url))
+
+  // Filtra apenas os realmente órfãos
+  const orphanPaths = paths.filter(p => !urlsUsadas.has(`${urlBase}${p}`))
+  if (!orphanPaths.length) return res.status(200).json({ removidos: 0, total: candidatos.length, orfaos: 0 })
+
+  // Remove em lotes de 50 (limite da API)
+  let removidos = 0
+  for (let i = 0; i < orphanPaths.length; i += 50) {
+    const lote = orphanPaths.slice(i, i + 50)
+    const { error: delErr } = await db.storage.from(BUCKET).remove(lote)
+    if (delErr) {
+      console.error('[cron:storage-limpeza] erro ao remover lote:', delErr.message)
+    } else {
+      removidos += lote.length
+    }
+  }
+  console.log(`[cron:storage-limpeza] ${removidos} arquivo(s) órfão(s) removidos de ${BUCKET}/${PASTA}/`)
+  return res.status(200).json({ removidos, total: candidatos.length, orfaos: orphanPaths.length })
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -483,5 +538,6 @@ export default async function handler(req, res) {
   if (type === 'cotacoes-expiradas')     return handleCotacoesExpiradas(db, res)
   if (type === 'flow-tokens-limpeza')    return handleFlowTokensLimpeza(db, res)
   if (type === 'os-preventivas')         return handleOsPreventivas(db, res)
-  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-retry | dds-abertos | cotacoes-expiradas | flow-tokens-limpeza | os-preventivas' })
+  if (type === 'storage-limpeza')        return handleStorageLimpeza(db, res)
+  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-fila | boletins-retry | dds-abertos | cotacoes-expiradas | flow-tokens-limpeza | os-preventivas | storage-limpeza' })
 }
