@@ -243,15 +243,12 @@ async function handleRefeicoesValidacao(db, res) {
 // Chamado a cada 5 min via cron → suporta ~96 boletins/hora sem saturar o Groq.
 async function handleBoletinsFila(db, req, res) {
   const quatro_horas_atras = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-  const tres_min_atras     = new Date(Date.now() - 3 * 60 * 1000).toISOString()
-
   // Pega boletins em status 'recebido' (novos) OU 'erro' (retry) — em ordem de chegada
   const { data: boletins } = await db
     .from('maquinas_boletins')
     .select('id, numero, wa_from, status')
     .in('status', ['recebido', 'erro'])
     .gte('created_at', quatro_horas_atras)
-    .lte('updated_at', tres_min_atras)   // ignora os que acabaram de mudar (evita dupla execução)
     .order('created_at', { ascending: true })
     .limit(8)
 
@@ -293,14 +290,12 @@ async function handleBoletinsFila(db, req, res) {
 // Reprocessa boletins em status 'erro' das últimas 4 horas (máx 5 por execução)
 async function handleBoletinsRetry(db, req, res) {
   const quatro_horas_atras = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-  const cinco_min_atras    = new Date(Date.now() - 5 * 60 * 1000).toISOString()
 
   const { data: boletins } = await db
     .from('maquinas_boletins')
     .select('id, numero, wa_from')
     .eq('status', 'erro')
     .gte('created_at', quatro_horas_atras)
-    .lte('updated_at', cinco_min_atras)   // só retenta se parado há >5 min
     .order('created_at', { ascending: true })
     .limit(5)
 
