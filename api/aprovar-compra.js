@@ -81,21 +81,23 @@ export default async function handler(req, res) {
       }).eq('id', sol.id)
       if (error) throw error
 
-      // Cria despesa contas a pagar
-      const fornDesc = sol.fornecedor_vencedor || sol.fornecedor
-      const { data: novaDespesa } = await db.from('despesas').insert({
-        workspace_id:  sol.workspace_id,
-        descricao:     `[Compra] ${sol.titulo}${fornDesc ? ' — ' + fornDesc : ''}`,
-        valor:         sol.valor_aprovado || sol.valor_estimado || 0,
-        data:          sol.data_necessidade || new Date().toISOString().split('T')[0],
-        categoria:     'Compras',
-        status:        'pendente',
-        observacoes:   `Pedido #${sol.id.slice(-6).toUpperCase()}${obs?.trim() ? ' | ' + obs.trim() : ''}`,
-        parcelas:      1,
-        parcela_atual: 1,
-      }).select('id').single()
-      if (novaDespesa?.id) {
-        await db.from('solicitacoes_compra').update({ despesa_id: novaDespesa.id }).eq('id', sol.id)
+      // Cria despesa contas a pagar — somente se não existir uma vinculada
+      if (!sol.despesa_id && sol.workspace_id) {
+        const fornDesc = sol.fornecedor_vencedor || sol.fornecedor
+        const { data: novaDespesa, error: errDesp } = await db.from('despesas').insert({
+          workspace_id:  sol.workspace_id,
+          descricao:     `[Compra] ${sol.titulo}${fornDesc ? ' — ' + fornDesc : ''}`,
+          valor:         sol.valor_aprovado || sol.valor_estimado || 0,
+          data:          sol.data_necessidade || new Date().toISOString().split('T')[0],
+          categoria:     'Compras',
+          status:        'pendente',
+          observacoes:   `Pedido #${sol.id.slice(-6).toUpperCase()}${obs?.trim() ? ' | ' + obs.trim() : ''}`,
+          parcelas:      1,
+          parcela_atual: 1,
+        }).select('id').single()
+        if (!errDesp && novaDespesa?.id) {
+          await db.from('solicitacoes_compra').update({ despesa_id: novaDespesa.id }).eq('id', sol.id)
+        }
       }
 
       notifyCompras('aprovado', sol.id)

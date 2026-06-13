@@ -103,12 +103,12 @@ export default async function handler(req, res) {
       .eq('id', lote.id)
     if (e1) return res.status(500).json({ error: e1.message })
 
-    // Volta lançamentos para rascunho
+    // Volta TODOS os lançamentos do lote para rascunho e desvincula o lote
+    // (inclui tanto 'aguardando_aprovacao' quanto 'rascunho' que já estavam no lote)
     await db
       .from('lancamentos')
-      .update({ status: 'rascunho' })
+      .update({ status: 'rascunho', lote_cliente_id: null })
       .eq('lote_cliente_id', lote.id)
-      .eq('status', 'aguardando_aprovacao')
 
     return res.status(200).json({ ok: true })
   }
