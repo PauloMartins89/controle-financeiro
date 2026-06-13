@@ -1,7 +1,69 @@
 import { createClient } from '@supabase/supabase-js'
+import sharp from 'sharp'
 import ws from 'ws'
 import { runOCR, normalizarData, classificarHoras } from './_ocr.js'
 import { matchEmpresa } from './_fuzzy-match.js'
+
+// ── Compressão de evidência pós-OCR ─────────────────────────────────────────
+// Baixa a imagem original, redimensiona para max 1600px / qualidade 75% WebP,
+// faz upload da versão comprimida e apaga o original.
+// Retorna a URL da evidência comprimida (ou a URL original em caso de falha).
+async function comprimirEvidencia(supabase, imagemUrlOriginal, storageBucket, storagePathOriginal) {
+  if (!imagemUrlOriginal || imagemUrlOriginal === 'pending') return imagemUrlOriginal
+  try {
+    // 1. Baixa imagem original
+    const resp = await fetch(imagemUrlOriginal)
+    if (!resp.ok) throw new Error(`fetch original falhou: ${resp.status}`)
+    const bufOriginal = Buffer.from(await resp.arrayBuffer())
+    const bytesOriginal = bufOriginal.length
+
+    // 2. Redimensiona: max 1600px de largura, mantém proporção, WebP 75%
+    const bufComprimido = await sharp(bufOriginal)
+      .resize({ width: 1600, withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toBuffer()
+    const bytesComprimido = bufComprimido.length
+    const reducao = (((bytesOriginal - bytesComprimido) / bytesOriginal) * 100).toFixed(1)
+    console.log(`[ocr-boletim] compressão: ${(bytesOriginal/1024).toFixed(0)}KB → ${(bytesComprimido/1024).toFixed(0)}KB (${reducao}% redução)`)
+
+    // 3. Upload da versão comprimida (mesmo path, sufixo _ev.webp)
+    const pathEvidencia = storagePathOriginal
+      ? storagePathOriginal.replace(/\.[^.]+$/, '_ev.webp')
+      : `maquinas/boletins/evidencias/${Date.now()}_ev.webp`
+    const { data: upEv, error: upEvErr } = await supabase.storage
+      .from(storageBucket)
+      .upload(pathEvidencia, bufComprimido, { contentType: 'image/webp', upsert: true })
+    if (upEvErr) throw new Error(`upload evidência falhou: ${upEvErr.message}`)
+
+    // 4. Obtém URL pública da evidência
+    const { data: pubEv } = supabase.storage.from(storageBucket).getPublicUrl(pathEvidencia)
+    const urlEvidencia = pubEv?.publicUrl || imagemUrlOriginal
+
+    // 5. Apaga original somente se evidência foi salva com sucesso
+    if (storagePathOriginal) {
+      const { error: delErr } = await supabase.storage.from(storageBucket).remove([storagePathOriginal])
+      if (delErr) console.warn(`[ocr-boletim] aviso: não removeu original (${storagePathOriginal}):`, delErr.message)
+      else console.log(`[ocr-boletim] original removido: ${storagePathOriginal}`)
+    }
+
+    return urlEvidencia
+  } catch (e) {
+    // Falha na compressão não deve travar o fluxo — mantém a imagem original
+    console.error('[ocr-boletim] comprimirEvidencia erro (mantendo original):', e.message)
+    return imagemUrlOriginal
+  }
+}
+
+// Extrai o storage path relativo a partir de uma URL pública do Supabase
+// Ex: "https://xxx.supabase.co/storage/v1/object/public/maquinas/maquinas/boletins/2026/..." → "maquinas/boletins/2026/..."
+function extrairStoragePath(url, bucket) {
+  if (!url) return null
+  try {
+    const marker = `/object/public/${bucket}/`
+    const idx = url.indexOf(marker)
+    return idx >= 0 ? url.slice(idx + marker.length) : null
+  } catch { return null }
+}
 
 // Groq Vision (Llama-4-Scout) — passa imagens como image_url (URL pública)
 async function callGroq(apiKey, messages) {
@@ -720,6 +782,16 @@ async function processarBoletim(boletimId) {
         await checkDuplicata(supabase, workspaceId, lancamentoTmpl.id, { ...ocrResult, data_boletim: dataBoletimTmpl })
       }
 
+      // Compressão de evidência pós-OCR (form_template path)
+      if (lancamentoTmpl?.id && bol.imagem_url && bol.imagem_url !== 'pending') {
+        const pathOrig = extrairStoragePath(bol.imagem_url, 'maquinas')
+        const urlEv = await comprimirEvidencia(supabase, bol.imagem_url, 'maquinas', pathOrig)
+        if (urlEv !== bol.imagem_url) {
+          await supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', lancamentoTmpl.id)
+          await supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId)
+        }
+      }
+
       console.log(`[ocr-boletim] processado via form_template "${tmpl.nome}" — tipo=${tipoForm} — lancamento=${lancamentoTmpl?.id}`)
 
       if (waPhone && tipoForm === 'rdo') {
@@ -993,6 +1065,16 @@ Retorne APENAS o JSON, sem comentários.`
       await checkDuplicata(supabase, workspaceId, lancamento.id, extrasGerencial)
     }
 
+    // Compressão de evidência pós-OCR (gerencial path)
+    if (lancamento?.id && bol.imagem_url && bol.imagem_url !== 'pending') {
+      const pathOrig = extrairStoragePath(bol.imagem_url, 'maquinas')
+      const urlEv = await comprimirEvidencia(supabase, bol.imagem_url, 'maquinas', pathOrig)
+      if (urlEv !== bol.imagem_url) {
+        await supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', lancamento.id)
+        await supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId)
+      }
+    }
+
     await supabase.from('maquinas_boletins').update({
       status:        'processado',
       processado_em: new Date().toISOString(),
@@ -1035,6 +1117,16 @@ Retorne APENAS o JSON, sem comentários.`
     if (lancamento?.id) {
       const extrasMaqCheck = { boletim_id: boletimId, ...mapOcrToExtras(ocrRaw, dataBoletim) }
       await checkDuplicata(supabase, workspaceId, lancamento.id, extrasMaqCheck)
+    }
+
+    // Compressão de evidência pós-OCR (maquinas path)
+    if (lancamento?.id && bol.imagem_url && bol.imagem_url !== 'pending') {
+      const pathOrig = extrairStoragePath(bol.imagem_url, 'maquinas')
+      const urlEv = await comprimirEvidencia(supabase, bol.imagem_url, 'maquinas', pathOrig)
+      if (urlEv !== bol.imagem_url) {
+        await supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', lancamento.id)
+        await supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId)
+      }
     }
 
     await supabase.from('maquinas_boletins').update({
