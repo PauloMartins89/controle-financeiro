@@ -816,6 +816,22 @@ export default async function handler(req, res) {
       await logEvento(db, { solicitacaoId: sol.id, tipo: 'ocorrencia_registrada', descricao: 'Líder registrou ocorrência na entrega', ator: sol.lider_nome, atorTipo: 'lider', dados: { ocorrencia } })
     }
     await logEvento(db, { solicitacaoId: sol.id, tipo: 'pedido_finalizado', descricao: resultado === 'correto' ? 'Pedido finalizado com sucesso' : 'Pedido finalizado com ocorrência registrada', ator: 'Sistema', atorTipo: 'sistema' })
+
+    // Gera lançamento de custo (despesa) se houver valor no pedido
+    if (sol.valor_total > 0 && sol.workspace_id) {
+      const descLanc = `Refeição ${sol.numero_pedido || sol.id.slice(-6).toUpperCase()} — ${sol.lider_nome || 'Equipe'}`
+      await db.from('lancamentos').insert({
+        workspace_id:   sol.workspace_id,
+        tipo:           'despesa',
+        tipo_formulario:'refeicao',
+        descricao:      descLanc,
+        valor:          sol.valor_total,
+        data:           sol.data_refeicao || now.slice(0, 10),
+        status:         'aprovado',
+        dados_extras:   { numero_pedido: sol.numero_pedido, lider_nome: sol.lider_nome, restaurante_id: sol.restaurante_id, solicitacao_id: sol.id },
+      }).select('id').single()
+    }
+
     return res.status(200).json({ ok: true, mensagem: resultado === 'correto' ? 'Pedido finalizado! 🏁' : 'Pedido finalizado com ocorrência registrada ⚠️' })
   }
 
@@ -851,6 +867,21 @@ export default async function handler(req, res) {
       await logEvento(db, { solicitacaoId: sol.id, tipo: 'ocorrencia_registrada', descricao: 'Líder registrou ocorrência na entrega via link', ator: sol.lider_nome, atorTipo: 'lider', dados: { ocorrencia } })
     }
     await logEvento(db, { solicitacaoId: sol.id, tipo: 'pedido_finalizado', descricao: resultado === 'correto' ? 'Pedido finalizado com sucesso' : 'Pedido finalizado com ocorrência registrada', ator: 'Sistema', atorTipo: 'sistema' })
+
+    // Gera lançamento de custo (despesa) se houver valor no pedido
+    if (sol.valor_total > 0 && sol.workspace_id) {
+      const descLanc = `Refeição ${sol.numero_pedido || sol.id.slice(-6).toUpperCase()} — ${sol.lider_nome || 'Equipe'}`
+      await db.from('lancamentos').insert({
+        workspace_id:   sol.workspace_id,
+        tipo:           'despesa',
+        tipo_formulario:'refeicao',
+        descricao:      descLanc,
+        valor:          sol.valor_total,
+        data:           sol.data_refeicao || now.slice(0, 10),
+        status:         'aprovado',
+        dados_extras:   { numero_pedido: sol.numero_pedido, lider_nome: sol.lider_nome, restaurante_id: sol.restaurante_id, solicitacao_id: sol.id },
+      }).select('id').single()
+    }
 
     return res.status(200).json({ ok: true, mensagem: resultado === 'correto' ? 'Pedido finalizado! 🏁' : 'Pedido finalizado com ocorrência registrada ⚠️' })
   }

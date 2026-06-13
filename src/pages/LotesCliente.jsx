@@ -14,10 +14,12 @@ import {
 
 // ── Status ────────────────────────────────────────────────────────────────────
 const STATUS_CONF = {
-  rascunho:          { label: 'Rascunho',           color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: DocumentTextIcon },
-  enviado_cliente:   { label: 'Aguardando Cliente', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: ClockIcon },
+  rascunho:          { label: 'Rascunho',              color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', icon: DocumentTextIcon },
+  enviado_cliente:   { label: 'Aguardando Cliente',    color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  icon: ClockIcon },
   aprovado_cliente:  { label: 'Aprovado pelo Cliente', color: '#10b981', bg: 'rgba(16,185,129,0.12)', icon: CheckCircleIcon },
   recusado_cliente:  { label: 'Recusado pelo Cliente', color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  icon: XCircleIcon },
+  faturado:          { label: 'Faturado',              color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', icon: BanknotesIcon },
+  pago:              { label: 'Pago / Recebido',       color: '#059669', bg: 'rgba(5,150,105,0.12)',  icon: CheckCircleIcon },
 }
 
 function StatusChip({ status }) {
@@ -1133,6 +1135,24 @@ function LoteCard({ lote, onRefresh }) {
                   <XCircleIcon style={{ width: 14, height: 14 }} />
                 </button>
               </>
+            )}
+            {lote.status === 'faturado' && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm(`Confirmar recebimento do pagamento do lote "${lote.cliente}"?`)) return
+                  const now = new Date().toISOString()
+                  const { error } = await supabase.from('lotes_cliente')
+                    .update({ status: 'pago', pago_em: now, updated_at: now })
+                    .eq('id', lote.id)
+                  if (error) { toast.error('Erro: ' + error.message); return }
+                  toast.success('Pagamento confirmado! Lote encerrado.')
+                  onRefresh()
+                }}
+                disabled={saving}
+                title="Confirmar recebimento do pagamento"
+                style={{ padding: '6px 12px', borderRadius: 7, background: 'rgba(5,150,105,0.12)', border: '1px solid rgba(5,150,105,0.3)', cursor: 'pointer', color: '#059669', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700 }}>
+                <BanknotesIcon style={{ width: 14, height: 14 }} /> Confirmar Recebimento
+              </button>
             )}
           </div>
 
