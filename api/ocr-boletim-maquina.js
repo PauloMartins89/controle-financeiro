@@ -537,6 +537,63 @@ function mapOcrToExtras(ocr, data) {
   }
 }
 
+// ── Detecção de duplicatas ────────────────────────────────────────────────────
+// Retorna string fingerprint dos campos-chave de conteúdo do lançamento.
+// Dois lançamentos com mesma fingerprint são tratados como duplicatas completas.
+function buildLancFingerprint(extras) {
+  const d = extras || {}
+  return [
+    String(d.empresa || d.cliente || '').toLowerCase().trim(),
+    String(d.data_boletim || d.data || '').slice(0, 10),
+    String(d.colaborador || d.operador || '').toLowerCase().trim(),
+    String(d.equipamento || '').toLowerCase().trim(),
+    String(parseFloat(d.jornada_total_horas || d.horas_trabalhadas || 0).toFixed(1)),
+    String(parseFloat(d.valor_total || 0).toFixed(2)),
+  ].join('|')
+}
+
+// Após inserir um lançamento, verifica se outro lançamento no mesmo workspace
+// tem o mesmo número de documento. Se os dados também forem idênticos (fingerprint),
+// marca o novo como duplicata (excluído dos cálculos na UI).
+async function checkDuplicata(supabase, workspaceId, newLancId, extras) {
+  const d = extras || {}
+  const numDoc = String(
+    d.numero_rdo || d.nro_boletim || d.numero_documento || d.numero_diario || ''
+  ).trim()
+  if (!numDoc) return // sem número de controle → não há como detectar duplicata
+
+  // Busca lançamentos anteriores com mesmo número no mesmo workspace
+  const { data: candidatos } = await supabase
+    .from('lancamentos')
+    .select('id, dados_extras')
+    .eq('workspace_id', workspaceId)
+    .neq('id', newLancId)
+    .eq('duplicata', false)
+    .or(
+      `dados_extras->>numero_rdo.eq.${numDoc},` +
+      `dados_extras->>numero_documento.eq.${numDoc},` +
+      `dados_extras->>nro_boletim.eq.${numDoc}`
+    )
+    .limit(10)
+
+  if (!candidatos?.length) return
+
+  const fpNovo = buildLancFingerprint(extras)
+  for (const cand of candidatos) {
+    const fpCand = buildLancFingerprint(cand.dados_extras || {})
+    if (fpNovo === fpCand) {
+      // Dados idênticos → marca novo como duplicata
+      await supabase.from('lancamentos')
+        .update({ duplicata: true, duplicata_de_id: cand.id })
+        .eq('id', newLancId)
+      console.log(`[ocr-boletim] DUPLICATA detectada: ${newLancId} → original ${cand.id} (doc Nº ${numDoc})`)
+      return
+    }
+  }
+  // Mesmo número mas dados diferentes → aceita normalmente, apenas loga
+  console.log(`[ocr-boletim] Nº doc ${numDoc} repetido mas dados diferentes — registrado normalmente`)
+}
+
 async function processarBoletim(boletimId) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('supabase n├úo configurado')
@@ -657,6 +714,11 @@ async function processarBoletim(boletimId) {
         data_boletim:  dataBoletimTmpl,
         lancamento_id: lancamentoTmpl?.id || null,
       }).eq('id', boletimId)
+
+      // Detecção de duplicata (form_template path)
+      if (lancamentoTmpl?.id) {
+        await checkDuplicata(supabase, workspaceId, lancamentoTmpl.id, { ...ocrResult, data_boletim: dataBoletimTmpl })
+      }
 
       console.log(`[ocr-boletim] processado via form_template "${tmpl.nome}" — tipo=${tipoForm} — lancamento=${lancamentoTmpl?.id}`)
 
@@ -926,6 +988,11 @@ Retorne APENAS o JSON, sem comentários.`
       console.error('[ocr-boletim] lancamento gerencial insert error:', lancErr.message)
     }
 
+    // Detecção de duplicata (gerencial path)
+    if (lancamento?.id) {
+      await checkDuplicata(supabase, workspaceId, lancamento.id, extrasGerencial)
+    }
+
     await supabase.from('maquinas_boletins').update({
       status:        'processado',
       processado_em: new Date().toISOString(),
@@ -962,6 +1029,12 @@ Retorne APENAS o JSON, sem comentários.`
 
     if (lancErr) {
       console.error('[ocr-boletim] lancamento insert error:', lancErr.message)
+    }
+
+    // Detecção de duplicata (maquinas path)
+    if (lancamento?.id) {
+      const extrasMaqCheck = { boletim_id: boletimId, ...mapOcrToExtras(ocrRaw, dataBoletim) }
+      await checkDuplicata(supabase, workspaceId, lancamento.id, extrasMaqCheck)
     }
 
     await supabase.from('maquinas_boletins').update({

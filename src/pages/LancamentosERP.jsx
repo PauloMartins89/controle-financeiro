@@ -890,7 +890,7 @@ export default function LancamentosERP() {
     const [{ data, error }, { data: td }] = await Promise.all([
       supabase
         .from('lancamentos')
-        .select('id, data, created_at, status, tipo, valor, tipo_formulario, lote_cliente_id, comprovante_url, observacoes, dados_extras')
+        .select('id, data, created_at, status, tipo, valor, tipo_formulario, lote_cliente_id, comprovante_url, observacoes, dados_extras, duplicata, duplicata_de_id')
         .eq('workspace_id', workspaceId)
         .gte('data', queryIni)
         .lte('data', queryFim)
@@ -1030,10 +1030,11 @@ export default function LancamentosERP() {
   useEffect(() => { setSelecionados(new Set()) }, [filterForm, filterStatus, filterCliente, search, competencia])
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
-  const totalReceitas     = filtered.filter(l => l.tipo === 'receita').reduce((s, l) => s + (l.valor || 0), 0)
-  const totalDespesas     = filtered.filter(l => l.tipo === 'despesa').reduce((s, l) => s + (l.valor || 0), 0)
+  const totalReceitas     = filtered.filter(l => l.tipo === 'receita' && !l.duplicata).reduce((s, l) => s + (l.valor || 0), 0)
+  const totalDespesas     = filtered.filter(l => l.tipo === 'despesa' && !l.duplicata).reduce((s, l) => s + (l.valor || 0), 0)
   const saldoOp           = totalReceitas - totalDespesas
-  const boletinsRecebidos = filtered.length
+  const boletinsRecebidos = filtered.filter(l => !l.duplicata).length
+  const totalDuplicatas   = filtered.filter(l => l.duplicata).length
   const pendenteRevisao   = filtered.filter(l => l.status === 'rascunho' || l.status === 'aguardando_aprovacao' || l.status === 'pendente').length
   const comDivergencia    = filtered.filter(l => getDivergencias(l, tarifasMap).length > 0).length
   const aguardandoLote    = filtered.filter(l => {
@@ -1186,6 +1187,7 @@ export default function LancamentosERP() {
             { label: 'Com Divergência',    value: comDivergencia,             color: C.red,     accent: '#FEF2F2' },
             { label: 'Aguardando Lote',    value: aguardandoLote,             color: C.green,   accent: '#F0FDF4' },
             { label: 'Prontos para Lote',  value: prontosLote,                color: '#0EA5E9', accent: '#E0F2FE' },
+            ...(totalDuplicatas > 0 ? [{ label: 'Duplicatas', value: totalDuplicatas, color: '#F59E0B', accent: '#FFFBEB' }] : []),
           ].map(({ label, value, color, accent }, i, arr) => (
             <div key={label} style={{ flex: 1, padding: '10px 14px', borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : 'none', borderLeft: `3px solid ${color}`, background: accent, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
@@ -1450,16 +1452,16 @@ export default function LancamentosERP() {
                   const empresaOk = getEmpresaAss(l)
                   const divergencias = getDivergencias(l, tarifasMap)
                   const temDivergencia = divergencias.length > 0
-                  const rowBg = temDivergencia ? '#FFF5F5' : (idx % 2 === 0 ? C.white : '#F8FAFC')
+                  const rowBg = l.duplicata ? '#FFFBEB' : (temDivergencia ? '#FFF5F5' : (idx % 2 === 0 ? C.white : '#F8FAFC'))
                   const isOpen = actionMenuId === l.id
 
                   return (
                     <tr key={l.id}
-                      style={{ background: selecionados.has(l.id) ? '#EFF6FF' : rowBg, cursor: 'pointer', borderLeft: temDivergencia ? '3px solid #DC2626' : '3px solid transparent' }}
+                      style={{ background: selecionados.has(l.id) ? '#EFF6FF' : rowBg, cursor: 'pointer', borderLeft: l.duplicata ? '3px solid #F59E0B' : (temDivergencia ? '3px solid #DC2626' : '3px solid transparent') }}
                       onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'}
                       onMouseLeave={e => e.currentTarget.style.background = selecionados.has(l.id) ? '#EFF6FF' : rowBg}
                       onClick={e => { if (e.target.type !== 'checkbox') setDrawerRecord(l) }}
-                      title={temDivergencia ? `⚠ ${divergencias.join(' · ')}` : undefined}
+                      title={l.duplicata ? '⚠ Registro duplicado — excluído dos cálculos' : (temDivergencia ? `⚠ ${divergencias.join(' · ')}` : undefined)}
                     >
                       <td style={{ padding: '5px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', width: 36 }}>
                         <input type="checkbox" style={{ cursor: 'pointer', width: 14, height: 14, accentColor: '#6366F1' }}
@@ -1476,6 +1478,9 @@ export default function LancamentosERP() {
                       {/* IDENTIFICAÇÃO */}
                       <Td bold>
                         <span style={{ color: C.blue, fontSize: 11, fontWeight: 700 }}>{getLanNum(l)}</span>
+                        {l.duplicata && (
+                          <span style={{ display: 'inline-block', marginLeft: 4, padding: '1px 5px', borderRadius: 3, fontSize: 9, fontWeight: 800, background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D' }}>DUPLICATA</span>
+                        )}
                       </Td>
                       <Td muted>{fmtDate(l.data)}</Td>
                       <Td muted>{d.processado_em ? fmtDateHora(d.processado_em) : '—'}</Td>
