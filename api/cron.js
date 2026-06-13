@@ -302,6 +302,124 @@ async function handleDdsAbertos(db, res) {
   return res.status(200).json({ encerrados })
 }
 
+// ── Handler: encerra cotações de compra com prazo vencido ───────────────────
+async function handleCotacoesExpiradas(db, res) {
+  const agora = new Date().toISOString()
+  // Busca solicitações com leilão aberto e prazo vencido
+  const { data: expiradas, error } = await db
+    .from('solicitacoes_compra')
+    .select('id, workspace_id, titulo, token_aprovador')
+    .eq('status', 'leilao_aberto')
+    .lt('prazo_cotacao', agora)
+  if (error) return res.status(500).json({ error: error.message })
+  if (!expiradas?.length) return res.status(200).json({ encerradas: 0 })
+
+  let encerradas = 0
+  for (const sol of expiradas) {
+    // Marca como leilão encerrado
+    await db.from('solicitacoes_compra')
+      .update({ status: 'leilao_encerrado', updated_at: agora })
+      .eq('id', sol.id)
+
+    // Marca cotações pendentes como expiradas
+    await db.from('cotacoes_compra')
+      .update({ status: 'expirado' })
+      .eq('solicitacao_id', sol.id)
+      .in('status', ['convidado', 'enviado'])
+
+    // Registra evento de auditoria
+    await db.from('solicitacao_compra_eventos').insert({
+      solicitacao_id: sol.id,
+      workspace_id:   sol.workspace_id,
+      acao:           'leilao_encerrado',
+      status_de:      'leilao_aberto',
+      status_para:    'leilao_encerrado',
+      observacao:     'Encerrado automaticamente por prazo vencido',
+      ator:           'cron',
+      criado_em:      agora,
+    }).catch(() => {}) // silencioso se tabela não existir ainda
+
+    encerradas++
+  }
+  return res.status(200).json({ encerradas })
+}
+
+// ── Handler: limpa flow_action_tokens expirados ──────────────────────────────
+async function handleFlowTokensLimpeza(db, res) {
+  const agora = new Date().toISOString()
+  const { data, error } = await db
+    .from('flow_action_tokens')
+    .delete()
+    .lt('expira_em', agora)
+    .in('status', ['pendente', 'expirado'])
+    .select('id')
+  if (error) return res.status(500).json({ error: error.message })
+  return res.status(200).json({ removidos: (data || []).length })
+}
+
+// ── Handler: cria OS preventivas a partir de manut_planos com proxima_data vencida ─
+async function handleOsPreventivas(db, res) {
+  const hoje = new Date().toISOString().slice(0, 10)
+  // Planos ativos com proxima_data <= hoje (vencidos ou vencendo hoje)
+  const { data: planos, error } = await db
+    .from('manut_planos')
+    .select('id, workspace_id, titulo, descricao, equipamento_id, equipamento_nome, periodicidade, proxima_data')
+    .eq('ativo', true)
+    .lte('proxima_data', hoje)
+    .not('proxima_data', 'is', null)
+  if (error) return res.status(500).json({ error: error.message })
+  if (!planos?.length) return res.status(200).json({ criadas: 0 })
+
+  // Mapa de periodicidade → dias
+  const PERIODICIDADE_DIAS = {
+    diaria: 1, semanal: 7, quinzenal: 15, mensal: 30,
+    trimestral: 90, semestral: 180, anual: 365,
+  }
+
+  let criadas = 0
+  for (const plano of planos) {
+    // Verifica se já existe OS aberta gerada por este plano (evita duplicatas)
+    const { data: osExistente } = await db
+      .from('manut_os')
+      .select('id')
+      .eq('plano_id', plano.id)
+      .in('status', ['aberta', 'em_andamento'])
+      .maybeSingle()
+    if (osExistente) continue // já tem OS em aberto para este plano
+
+    // Gera número sequencial simples
+    const seq = String(Date.now()).slice(-6)
+    const numero = `OS-PREV-${seq}`
+
+    await db.from('manut_os').insert({
+      workspace_id:    plano.workspace_id,
+      numero,
+      tipo:            'preventiva',
+      prioridade:      'media',
+      status:          'aberta',
+      plano_id:        plano.id,
+      equipamento_id:  plano.equipamento_id || null,
+      equipamento_nome: plano.equipamento_nome || null,
+      titulo:          `[PREVENTIVA] ${plano.titulo}`,
+      descricao:       plano.descricao || null,
+      solicitante:     'Cron Automático',
+      data_abertura:   hoje,
+      data_prevista:   hoje,
+    })
+
+    // Avança proxima_data conforme periodicidade
+    const dias = PERIODICIDADE_DIAS[plano.periodicidade] || 30
+    const proxima = new Date(hoje)
+    proxima.setDate(proxima.getDate() + dias)
+    await db.from('manut_planos')
+      .update({ ultima_execucao: hoje, proxima_data: proxima.toISOString().slice(0, 10), updated_at: new Date().toISOString() })
+      .eq('id', plano.id)
+
+    criadas++
+  }
+  return res.status(200).json({ criadas })
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -309,11 +427,14 @@ export default async function handler(req, res) {
   }
   const db = getDb()
   const type = req.query.type
-  if (type === 'lembretes')            return handleLembretes(db, res)
-  if (type === 'relatorio')            return handleRelatorio(db, res)
-  if (type === 'refeicoes-pendentes')  return handleRefeicoesPendentes(db, res)
-  if (type === 'refeicoes-validacao')  return handleRefeicoesValidacao(db, res)
-  if (type === 'boletins-retry')       return handleBoletinsRetry(db, req, res)
-  if (type === 'dds-abertos')          return handleDdsAbertos(db, res)
-  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-retry | dds-abertos' })
+  if (type === 'lembretes')              return handleLembretes(db, res)
+  if (type === 'relatorio')              return handleRelatorio(db, res)
+  if (type === 'refeicoes-pendentes')    return handleRefeicoesPendentes(db, res)
+  if (type === 'refeicoes-validacao')    return handleRefeicoesValidacao(db, res)
+  if (type === 'boletins-retry')         return handleBoletinsRetry(db, req, res)
+  if (type === 'dds-abertos')            return handleDdsAbertos(db, res)
+  if (type === 'cotacoes-expiradas')     return handleCotacoesExpiradas(db, res)
+  if (type === 'flow-tokens-limpeza')    return handleFlowTokensLimpeza(db, res)
+  if (type === 'os-preventivas')         return handleOsPreventivas(db, res)
+  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-retry | dds-abertos | cotacoes-expiradas | flow-tokens-limpeza | os-preventivas' })
 }

@@ -44,6 +44,22 @@
     {
       "path": "/api/cron?type=boletins-retry",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron?type=dds-abertos",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron?type=cotacoes-expiradas",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron?type=os-preventivas",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron?type=flow-tokens-limpeza",
+      "schedule": "0 3 * * 0"
     }
   ],
   "redirects": [
