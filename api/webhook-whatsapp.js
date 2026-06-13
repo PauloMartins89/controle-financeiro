@@ -102,7 +102,14 @@ async function processRefeiApproval(supabase, tokenCompact, acao, fromPhone) {
     aprovado_em:       acao === 'aprovado' ? new Date().toISOString() : null,
   }).eq('id', sol.id)
 
-  if (acao === 'aprovado') {
+  // Registra evento de auditoria
+  await supabase.from('refei_pedido_eventos').insert({
+    solicitacao_id: sol.id,
+    tipo:           acao === 'aprovado' ? 'aprovado' : 'reprovado',
+    descricao:      acao === 'aprovado' ? 'Pedido aprovado pelo supervisor via WhatsApp' : 'Pedido reprovado pelo supervisor via WhatsApp',
+    ator:           fromPhone,
+    ator_tipo:      'supervisor',
+  }).catch(e => console.error('[webhook-whatsapp] logEvento error:', e?.message))
     // Usa o fluxo automático: notifica restaurante e avança status
     const { data: itens } = await supabase.from('refei_itens').select('*').eq('solicitacao_id', sol.id)
     // Chama o endpoint interno de aprovação para reutilizar triggerRestauranteFlow
@@ -166,6 +173,15 @@ async function processRefeiValidacao(supabase, solId, resultado, fromPhone) {
     validado_em:         new Date().toISOString(),
     resultado_validacao: resultado,
   }).eq('id', sol.id)
+
+  // Registra evento de auditoria
+  await supabase.from('refei_pedido_eventos').insert({
+    solicitacao_id: sol.id,
+    tipo:           resultado === 'correto' ? 'entrega_confirmada' : 'ocorrencia_registrada',
+    descricao:      resultado === 'correto' ? 'Entrega confirmada pelo líder via WhatsApp' : 'Ocorrência registrada pelo líder via WhatsApp',
+    ator:           fromPhone,
+    ator_tipo:      'lider',
+  }).catch(e => console.error('[webhook-whatsapp] logEvento validacao error:', e?.message))
 
   const fmtData2 = d => d ? String(d).split('-').reverse().join('/') : '—'
   if (resultado === 'correto') {

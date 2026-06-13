@@ -33,6 +33,20 @@ function notifyCompras(evento, solicitacaoId) {
   }).catch(() => {})
 }
 
+// Registra evento de auditoria na solicitacao de compra (fire-and-forget)
+function logEventoCompra(db, { solicitacaoId, workspaceId, acao, statusDe, statusPara, obs, ator }) {
+  db.from('solicitacao_compra_eventos').insert({
+    solicitacao_id: solicitacaoId,
+    workspace_id:   workspaceId || null,
+    acao,
+    status_de:      statusDe || null,
+    status_para:    statusPara || null,
+    observacao:     obs || null,
+    ator:           ator || 'aprovador_externo',
+    criado_em:      new Date().toISOString(),
+  }).then(() => {}).catch(e => console.error('[aprovar-compra] logEvento error:', e?.message))
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -101,6 +115,7 @@ export default async function handler(req, res) {
       }
 
       notifyCompras('aprovado', sol.id)
+      logEventoCompra(db, { solicitacaoId: sol.id, workspaceId: sol.workspace_id, acao: 'aprovado', statusDe: sol.status, statusPara: 'aprovado', obs: obs?.trim() || null })
       return res.status(200).json({ ok: true, acao: 'aprovado' })
 
     } else if (acao === 'recusar') {
@@ -113,6 +128,7 @@ export default async function handler(req, res) {
       }).eq('id', sol.id)
       if (error) throw error
       notifyCompras('recusado', sol.id)
+      logEventoCompra(db, { solicitacaoId: sol.id, workspaceId: sol.workspace_id, acao: 'recusado', statusDe: sol.status, statusPara: 'recusado', obs: obs?.trim() })
       return res.status(200).json({ ok: true, acao: 'recusado' })
 
     } else if (acao === 'leilao') {
@@ -143,6 +159,7 @@ export default async function handler(req, res) {
       if (cErr) throw cErr
 
       notifyCompras('leilao_aberto', sol.id)
+      logEventoCompra(db, { solicitacaoId: sol.id, workspaceId: sol.workspace_id, acao: 'leilao_aberto', statusDe: sol.status, statusPara: 'leilao_aberto', obs: `${cotacoes.length} fornecedor(es) convidado(s)` })
       return res.status(200).json({ ok: true, acao: 'leilao_aberto', fornecedores: cotacoes.length })
     }
   } catch (e) {
