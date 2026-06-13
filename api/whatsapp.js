@@ -326,21 +326,9 @@ export default async function handler(req, res) {
         imgBuffer = Buffer.from(base64, 'base64').buffer
       }
 
-      // Upload sempre (independente do tipo)
-      try {
-        const db0 = getDb()
-        const fileName = `whatsapp/${Date.now()}_${from}.jpg`
-        const uploadData = Buffer.from(base64, 'base64')
-        const { data: uploaded, error: uploadErr } = await db0.storage
-          .from('comprovantes')
-          .upload(fileName, uploadData, { contentType: mimeType, upsert: false })
-        if (!uploadErr && uploaded) {
-          const { data: urlData } = db0.storage.from('comprovantes').getPublicUrl(uploaded.path)
-          comprovanteUrl = urlData?.publicUrl || null
-        }
-      } catch (_) {}
-
       // ── Boletim de Máquinas: verifica se é colaborador de campo ────────────
+      // NOTA: upload para comprovantes acontece APÓS este bloco (linha ~fim boletim)
+      // Boletins retornam antes de chegar no upload — eliminando duplicata de storage.
       {
         const dbBol = getDb()
         if (dbBol) {
@@ -412,7 +400,7 @@ export default async function handler(req, res) {
                 colaborador_id:  colaboradorBol.id,
                 boletim_tipo_id: boletimTipoId,
                 wa_from:         from,
-                imagem_url:      imagemUrl || comprovanteUrl || 'pending',
+                imagem_url:      imagemUrl || 'pending',  // sem fallback comprovantes — bucket maquinas é exclusivo para boletins
                 numero,
                 status:          'recebido',
               })
@@ -432,6 +420,21 @@ export default async function handler(req, res) {
         }
       }
       // ── fim boletim de máquinas ─────────────────────────────────────────────
+
+      // Upload para comprovantes — apenas para mensagens não-boletim (condutor, transporte, etc.)
+      // Boletins já retornaram acima e usam bucket 'maquinas' exclusivamente
+      try {
+        const db0 = getDb()
+        const fileName = `whatsapp/${Date.now()}_${from}.jpg`
+        const uploadData = Buffer.from(base64, 'base64')
+        const { data: uploaded, error: uploadErr } = await db0.storage
+          .from('comprovantes')
+          .upload(fileName, uploadData, { contentType: mimeType, upsert: false })
+        if (!uploadErr && uploaded) {
+          const { data: urlData } = db0.storage.from('comprovantes').getPublicUrl(uploaded.path)
+          comprovanteUrl = urlData?.publicUrl || null
+        }
+      } catch (_) {}
 
       // ── Check de condutor antecipado — se for condutor, pula classificação ──
       const _norm = from.replace(/\D/g, '')
