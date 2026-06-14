@@ -21,10 +21,10 @@ import {
   PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronDownIcon,
   ArrowTopRightOnSquareIcon, ArrowPathIcon, DocumentTextIcon,
   SparklesIcon, Cog6ToothIcon, DocumentChartBarIcon,
-  ClipboardDocumentListIcon, BoltIcon, BanknotesIcon,
-  ChevronLeftIcon, ChevronRightIcon, FunnelIcon, EyeIcon,
+  ClipboardDocumentListIcon, BanknotesIcon,
+  ChevronLeftIcon, ChevronRightIcon, FunnelIcon,
   DocumentArrowDownIcon, ArrowDownTrayIcon, TableCellsIcon,
-  PhotoIcon, UserGroupIcon, MapPinIcon, BellAlertIcon,
+  UserGroupIcon, BellAlertIcon,
   PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 
@@ -793,7 +793,7 @@ export default function LancamentosERP() {
 
   // UI
   const [page, setPage]                 = useState(1)
-  const [pageSize]                      = useState(25)
+  const pageSize                        = 25
   const [drawerRecord, setDrawerRecord] = useState(null)
   const [actionMenuId, setActionMenuId] = useState(null)
   const [actionMenuPos, setActionMenuPos] = useState({ top: 0, right: 0 })
@@ -814,7 +814,12 @@ export default function LancamentosERP() {
   }, [exportMenu])
   const [addLoteModal, setAddLoteModal] = useState(null)    // adicionar 1 registro a lote existente
   const [userId, setUserId]             = useState(null)
-  const [visiblePanels, setVisiblePanels] = useState(() => new Set(['resumo', 'fila', 'auditoria', 'acoes']))
+  const [visiblePanels, setVisiblePanels] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('erp_panels') || 'null')
+      return saved ? new Set(saved) : new Set(['resumo', 'fila', 'auditoria', 'acoes'])
+    } catch { return new Set(['resumo', 'fila', 'auditoria', 'acoes']) }
+  })
   const actionMenuRef                   = useRef(null)
 
   // ── Auth ───────────────────────────────────────────────────────────────────
@@ -1734,7 +1739,7 @@ export default function LancamentosERP() {
             const on = visiblePanels.has(key)
             return (
               <button key={key}
-                onClick={() => setVisiblePanels(prev => { const n = new Set(prev); on ? n.delete(key) : n.add(key); return n })}
+                onClick={() => setVisiblePanels(prev => { const n = new Set(prev); on ? n.delete(key) : n.add(key); localStorage.setItem('erp_panels', JSON.stringify([...n])); return n })}
                 style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: `1px solid ${on ? C.blue : C.border}`, background: on ? '#EFF6FF' : C.white, color: on ? C.blue : C.textSec }}
               >{on ? '✓ ' : ''}{label}</button>
             )
