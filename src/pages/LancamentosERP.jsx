@@ -25,6 +25,7 @@ import {
   ChevronLeftIcon, ChevronRightIcon, FunnelIcon, EyeIcon,
   DocumentArrowDownIcon, ArrowDownTrayIcon, TableCellsIcon,
   PhotoIcon, UserGroupIcon, MapPinIcon, BellAlertIcon,
+  PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 
 // ─── PALETA ERP ───────────────────────────────────────────────────────────────
@@ -777,14 +778,12 @@ export default function LancamentosERP() {
   const competenciaAjustada             = useRef(false)
 
   // Filtros (persistidos em localStorage)
-  const now = new Date()
-  const _savedFilters = (() => { try { return JSON.parse(localStorage.getItem('erp_filters') || '{}') } catch { return {} } })()
-  const [competencia, setCompetencia]   = useState(_savedFilters.competencia || { month: now.getMonth() + 1, year: now.getFullYear() })
-  const [filterStatus, setFilterStatus] = useState(_savedFilters.filterStatus || 'todos')
+  const [competencia, setCompetencia]   = useState(() => { try { const s = JSON.parse(localStorage.getItem('erp_filters') || '{}'); return s.competencia || { month: new Date().getMonth() + 1, year: new Date().getFullYear() } } catch { return { month: new Date().getMonth() + 1, year: new Date().getFullYear() } } })
+  const [filterStatus, setFilterStatus] = useState(() => { try { return JSON.parse(localStorage.getItem('erp_filters') || '{}').filterStatus || 'todos' } catch { return 'todos' } })
   const [filterForm, setFilterForm]     = useState('rdo')
-  const [filterCliente, setFilterCliente] = useState(_savedFilters.filterCliente || '')
-  const [dateFrom, setDateFrom]         = useState(_savedFilters.dateFrom || '')
-  const [dateTo, setDateTo]             = useState(_savedFilters.dateTo || '')
+  const [filterCliente, setFilterCliente] = useState(() => { try { return JSON.parse(localStorage.getItem('erp_filters') || '{}').filterCliente || '' } catch { return '' } })
+  const [dateFrom, setDateFrom]         = useState(() => { try { return JSON.parse(localStorage.getItem('erp_filters') || '{}').dateFrom || '' } catch { return '' } })
+  const [dateTo, setDateTo]             = useState(() => { try { return JSON.parse(localStorage.getItem('erp_filters') || '{}').dateTo || '' } catch { return '' } })
   const [search, setSearch]             = useState('')
 
   // Persiste filtros ao alterar
@@ -805,6 +804,14 @@ export default function LancamentosERP() {
   const [loteModal, setLoteModal]       = useState(false)   // criar lote com selecionados
   const [exportMenu, setExportMenu]     = useState(false)
   const exportMenuRef                   = useRef(null)
+
+  // Fecha export menu ao clicar fora
+  useEffect(() => {
+    if (!exportMenu) return
+    const h = (e) => { if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setExportMenu(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [exportMenu])
   const [addLoteModal, setAddLoteModal] = useState(null)    // adicionar 1 registro a lote existente
   const [userId, setUserId]             = useState(null)
   const [visiblePanels, setVisiblePanels] = useState(() => new Set(['resumo', 'fila', 'auditoria', 'acoes']))
@@ -1000,8 +1007,8 @@ export default function LancamentosERP() {
     return () => document.removeEventListener('mousedown', h)
   }, [actionMenuId])
 
-  // ── Filtro ─────────────────────────────────────────────────────────────────
-  const filtered = lancamentos.filter(l => {
+  // ── Filtro (memoizado — evita recriar array em cada render não relacionado) ───
+  const filtered = useMemo(() => lancamentos.filter(l => {
     // Período — query já filtra por competência; intervalo livre sobrepõe localmente
     if (l.data && (dateFrom || dateTo)) {
       if (dateFrom && l.data < dateFrom) return false
@@ -1037,7 +1044,7 @@ export default function LancamentosERP() {
       ) return false
     }
     return true
-  })
+  }), [lancamentos, filterForm, filterStatus, filterCliente, search, dateFrom, dateTo]) // eslint-disable-line
 
   // ── Paginação ──────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -1646,9 +1653,9 @@ export default function LancamentosERP() {
                               }}>
                                 {[
                                   { label: 'Visualizar documento', icon: DocumentTextIcon, disabled: !l.comprovante_url, action: () => window.open(l.comprovante_url, '_blank') },
-                                  { label: 'Editar lançamento',    icon: DocumentTextIcon,      disabled: false, action: () => { setEditModal(l); setActionMenuId(null) } },
+                                  { label: 'Editar lançamento',    icon: PencilSquareIcon,      disabled: false, action: () => { setEditModal(l); setActionMenuId(null) } },
                                   { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: false, action: () => printTable([l], lotesMap, competencia, wsName) },
-                                  { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: !!l.lote_cliente_id, action: () => setAddLoteModal(l) },
+                                  { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: !!l.lote_cliente_id, disabledLabel: 'JÁ EM LOTE', action: () => setAddLoteModal(l) },
                                   { label: 'Ver auditoria',        icon: ClipboardDocumentListIcon, disabled: false, action: () => setAuditModal(l) },
                                   { label: 'Excluir lançamento',    icon: XMarkIcon,              disabled: false, danger: true, action: () => excluirLancamento(l) },
                                 ].map(item => (
@@ -1665,7 +1672,7 @@ export default function LancamentosERP() {
                                   >
                                     <item.icon style={{ width: 14, height: 14, color: item.disabled ? '#CBD5E1' : item.danger ? '#DC2626' : C.textSec }} />
                                     {item.label}
-                                    {item.disabled && <span style={{ marginLeft: 'auto', fontSize: 9, color: '#CBD5E1', fontWeight: 600 }}>EM BREVE</span>}
+                                    {item.disabled && item.disabledLabel && <span style={{ marginLeft: 'auto', fontSize: 9, color: '#CBD5E1', fontWeight: 600 }}>{item.disabledLabel}</span>}
                                   </button>
                                 ))}
                               </div>
