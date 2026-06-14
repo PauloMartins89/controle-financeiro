@@ -1767,7 +1767,7 @@ export default function LancamentosERP() {
 
         {/* ── PAINÉIS INFERIORES ──────────────────────────────────────────── */}
         {visiblePanels.size > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${visiblePanels.size}, 1fr)`, gap: 10, marginBottom: 16 }}>
 
           {/* RESUMO */}
           {visiblePanels.has('resumo') && (() => {
