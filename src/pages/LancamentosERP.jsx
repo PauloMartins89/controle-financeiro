@@ -1169,18 +1169,38 @@ export default function LancamentosERP() {
       const empresa = getEmpresa(l).toLowerCase()
       if (!empresa.includes(filterCliente.toLowerCase())) return false
     }
-    // Busca
+    // Busca global — todos os campos do boletim
     if (search) {
       const q = search.toLowerCase()
       const d = l.dados_extras || {}
-      if (
-        !getLanNum(l).toLowerCase().includes(q) &&
-        !getEmpresa(l).toLowerCase().includes(q) &&
-        !getSolicitante(l).toLowerCase().includes(q) &&
-        !(d.placa || '').toLowerCase().includes(q) &&
-        !(d.equipamento || '').toLowerCase().includes(q) &&
-        !(d.numero_rdo || d.nro_boletim || '').toString().toLowerCase().includes(q)
-      ) return false
+      const campos = [
+        getLanNum(l),
+        l.data,
+        getEmpresa(l),
+        getCidadeUF(l),
+        getSolicitante(l),
+        getEquipamento(l),
+        d.placa, d.veiculo_placa,
+        d.numero_rdo, d.nro_boletim, d.numero_documento, d.numero_diario,
+        d.solicitante, d.condutor,
+        d.equipamento, d.modelo_equipamento,
+        d.local_servico, d.locais_servico, d.local_origem, d.local_destino,
+        d.frente, d.local_servico,
+        d.cidade, d.cidade_uf, d.cidade_estado, d.municipio,
+        d.unidade_empresa, d.unidade,
+        d.observacao, l.observacoes,
+        d.status_equipamento,
+        d.operador, d.motorista,
+        d.turno, d.jornada_inicio, d.jornada_fim,
+        l.descricao,
+        fmtCurrency(l.valor),
+        l.id.slice(0, 8),
+      ]
+      const match = campos.some(v => v && String(v).toLowerCase().includes(q))
+      if (!match) {
+        // fallback: busca em todo o JSON de dados_extras
+        if (!JSON.stringify(d).toLowerCase().includes(q)) return false
+      }
     }
     return true
   }), [lancamentos, filterForm, filterStatus, filterCliente, search, dateFrom, dateTo]) // eslint-disable-line
