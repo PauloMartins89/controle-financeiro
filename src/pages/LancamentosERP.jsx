@@ -502,6 +502,7 @@ const Th = ({ children, align = 'left', width, group }) => (
     minWidth: width || 'auto',
     borderRight: `1px solid rgba(255,255,255,0.15)`,
     background: 'rgba(0,0,0,0.18)',
+    textTransform: 'uppercase',
   }}>
     {children}
   </th>
