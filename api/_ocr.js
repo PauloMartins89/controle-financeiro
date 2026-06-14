@@ -165,7 +165,10 @@ function tipoBaseToFormType(tipo_base) {
 export async function runOCR(imageBase64, { forceTransporte = false, template = null } = {}) {
   const hoje = new Date().toISOString().slice(0, 10)
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-  const imgUrl = `data:image/jpeg;base64,${imageBase64}`
+  // Aceita URL pública diretamente (evita download+base64 desnecessários) ou string base64
+  const imgUrl = (imageBase64 && imageBase64.startsWith('http'))
+    ? imageBase64
+    : `data:image/jpeg;base64,${imageBase64}`
 
   // ── Se template com campos definidos → extração dinâmica ────────────────────
   if (template && Array.isArray(template.campos) && template.campos.length > 0) {

@@ -706,18 +706,8 @@ async function processarBoletim(boletimId) {
       .eq('id', boletimTipo.form_template_id)
       .maybeSingle()
     if (tmpl) {
-      // A imagem do boletim está em bol.imagem_url (URL pública) — converte para base64
-      let imageBase64 = ''
-      if (bol.imagem_url) {
-        try {
-          const resp = await fetch(bol.imagem_url)
-          const buf  = await resp.arrayBuffer()
-          imageBase64 = Buffer.from(buf).toString('base64')
-        } catch (e) {
-          console.warn('[ocr-boletim] erro ao baixar imagem:', e.message)
-        }
-      }
-      const ocrResult      = await runOCR(imageBase64, { template: tmpl })
+      // Passa a URL pública diretamente ao runOCR — evita download + base64 (~2s economizados)
+      const ocrResult      = await runOCR(bol.imagem_url || '', { template: tmpl })
       const tipoForm       = ocrResult.tipo_formulario || tmpl.tipo_base || 'formulario'
       const dataBoletimTmpl = ocrResult.data || new Date().toISOString().slice(0, 10)
 
@@ -779,19 +769,21 @@ async function processarBoletim(boletimId) {
         lancamento_id: lancamentoTmpl?.id || null,
       }).eq('id', boletimId)
 
-      // Detecção de duplicata (form_template path)
+      // Detecção de duplicata (form_template path) — não-bloqueante
       if (lancamentoTmpl?.id) {
-        await checkDuplicata(supabase, workspaceId, lancamentoTmpl.id, { ...ocrResult, data_boletim: dataBoletimTmpl })
+        checkDuplicata(supabase, workspaceId, lancamentoTmpl.id, { ...ocrResult, data_boletim: dataBoletimTmpl }).catch(() => {})
       }
 
-      // Compressão de evidência pós-OCR (form_template path)
+      // Compressão de evidência pós-OCR (form_template path) — não-bloqueante
       if (lancamentoTmpl?.id && bol.imagem_url && bol.imagem_url !== 'pending') {
-        const pathOrig = extrairStoragePath(bol.imagem_url, 'maquinas')
-        const urlEv = await comprimirEvidencia(supabase, bol.imagem_url, 'maquinas', pathOrig)
-        if (urlEv !== bol.imagem_url) {
-          await supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', lancamentoTmpl.id)
-          await supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId)
-        }
+        const _lancTmplId = lancamentoTmpl.id
+        const _imgOrig    = bol.imagem_url
+        comprimirEvidencia(supabase, _imgOrig, 'maquinas', extrairStoragePath(_imgOrig, 'maquinas')).then(urlEv => {
+          if (urlEv !== _imgOrig) {
+            supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', _lancTmplId).then(() => {})
+            supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId).then(() => {})
+          }
+        }).catch(() => {})
       }
 
       console.log(`[ocr-boletim] processado via form_template "${tmpl.nome}" — tipo=${tipoForm} — lancamento=${lancamentoTmpl?.id}`)
@@ -1062,19 +1054,21 @@ Retorne APENAS o JSON, sem comentários.`
       console.error('[ocr-boletim] lancamento gerencial insert error:', lancErr.message)
     }
 
-    // Detecção de duplicata (gerencial path)
+    // Detecção de duplicata (gerencial path) — não-bloqueante
     if (lancamento?.id) {
-      await checkDuplicata(supabase, workspaceId, lancamento.id, extrasGerencial)
+      checkDuplicata(supabase, workspaceId, lancamento.id, extrasGerencial).catch(() => {})
     }
 
-    // Compressão de evidência pós-OCR (gerencial path)
+    // Compressão de evidência pós-OCR (gerencial path) — não-bloqueante
     if (lancamento?.id && bol.imagem_url && bol.imagem_url !== 'pending') {
-      const pathOrig = extrairStoragePath(bol.imagem_url, 'maquinas')
-      const urlEv = await comprimirEvidencia(supabase, bol.imagem_url, 'maquinas', pathOrig)
-      if (urlEv !== bol.imagem_url) {
-        await supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', lancamento.id)
-        await supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId)
-      }
+      const _lancId2  = lancamento.id
+      const _imgOrig2 = bol.imagem_url
+      comprimirEvidencia(supabase, _imgOrig2, 'maquinas', extrairStoragePath(_imgOrig2, 'maquinas')).then(urlEv => {
+        if (urlEv !== _imgOrig2) {
+          supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', _lancId2).then(() => {})
+          supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId).then(() => {})
+        }
+      }).catch(() => {})
     }
 
     await supabase.from('maquinas_boletins').update({
@@ -1115,20 +1109,22 @@ Retorne APENAS o JSON, sem comentários.`
       console.error('[ocr-boletim] lancamento insert error:', lancErr.message)
     }
 
-    // Detecção de duplicata (maquinas path)
+    // Detecção de duplicata (maquinas path) — não-bloqueante
     if (lancamento?.id) {
       const extrasMaqCheck = { boletim_id: boletimId, ...mapOcrToExtras(ocrRaw, dataBoletim) }
-      await checkDuplicata(supabase, workspaceId, lancamento.id, extrasMaqCheck)
+      checkDuplicata(supabase, workspaceId, lancamento.id, extrasMaqCheck).catch(() => {})
     }
 
-    // Compressão de evidência pós-OCR (maquinas path)
+    // Compressão de evidência pós-OCR (maquinas path) — não-bloqueante
     if (lancamento?.id && bol.imagem_url && bol.imagem_url !== 'pending') {
-      const pathOrig = extrairStoragePath(bol.imagem_url, 'maquinas')
-      const urlEv = await comprimirEvidencia(supabase, bol.imagem_url, 'maquinas', pathOrig)
-      if (urlEv !== bol.imagem_url) {
-        await supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', lancamento.id)
-        await supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId)
-      }
+      const _lancId3  = lancamento.id
+      const _imgOrig3 = bol.imagem_url
+      comprimirEvidencia(supabase, _imgOrig3, 'maquinas', extrairStoragePath(_imgOrig3, 'maquinas')).then(urlEv => {
+        if (urlEv !== _imgOrig3) {
+          supabase.from('lancamentos').update({ comprovante_url: urlEv }).eq('id', _lancId3).then(() => {})
+          supabase.from('maquinas_boletins').update({ imagem_url: urlEv }).eq('id', boletimId).then(() => {})
+        }
+      }).catch(() => {})
     }
 
     await supabase.from('maquinas_boletins').update({
@@ -1169,9 +1165,9 @@ export default async function handler(req, res) {
   const { boletimId } = req.body || {}
   if (!boletimId) return res.status(400).json({ error: 'boletimId obrigat├│rio' })
 
-  // Processa primeiro (maxDuration: 60s) e s├│ depois responde
+  // Responde 202 imediatamente — processamento continua em background (Vercel permite após res.end())
+  res.status(202).json({ ok: true, boletimId })
   await processarBoletim(boletimId).catch(e =>
     console.error('[ocr-boletim-maquina] processarBoletim error:', e.message)
   )
-  res.status(200).json({ ok: true, boletimId })
 }
