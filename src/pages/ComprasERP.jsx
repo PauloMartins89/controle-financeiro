@@ -82,13 +82,43 @@ const SITE_COLORS = {
   'Amazon': '#FF9900',
 }
 
+// ─── PALETA ERP (alinhada com LancamentosERP) ─────────────────────────────────
+const C = {
+  navy:    '#0B1F3A',
+  blue:    '#1D4ED8',
+  green:   '#059669',
+  amber:   '#F59E0B',
+  red:     '#DC2626',
+  sky:     '#0EA5E9',
+  violet:  '#6366F1',
+  bgPage:  '#F4F6FA',
+  bgCard:  '#FFFFFF',
+  border:  '#D8DEE9',
+  text:    '#172033',
+  textSec: '#64748B',
+  white:   '#FFFFFF',
+}
+
 // ─── sub-component: Badge de status ──────────────────────────────────────────
+const STATUS_BADGE_MAP = {
+  pendente:             { label: 'Pendente',       bg: '#EFF6FF', color: '#1E40AF', border: '#BFDBFE' },
+  aguardando_aprovacao: { label: 'Ag. Aprovação',  bg: '#FFFBEB', color: '#B45309', border: '#FCD34D' },
+  em_cotacao:           { label: 'Em Cotação',     bg: '#F5F3FF', color: '#5B21B6', border: '#C4B5FD' },
+  leilao_aberto:        { label: 'Leilão',         bg: '#F0F9FF', color: '#0369A1', border: '#BAE6FD' },
+  leilao_encerrado:     { label: 'Leilão Enc.',    bg: '#EEF2FF', color: '#3730A3', border: '#A5B4FC' },
+  aprovado:             { label: 'Aprovado',       bg: '#F0FDF4', color: '#065F46', border: '#86EFAC' },
+  pedido_emitido:       { label: 'Pedido Emitido', bg: '#ECFDF5', color: '#047857', border: '#6EE7B7' },
+  recebido:             { label: 'Recebido',       bg: '#F0FDFA', color: '#0F766E', border: '#99F6E4' },
+  pago:                 { label: 'Pago',           bg: '#F8FAFC', color: '#475569', border: '#CBD5E1' },
+  recusado:             { label: 'Recusado',       bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
+}
 function StatusBadge({ status }) {
-  const s = STATUS_LABELS[status] || { label: status, color: '#6b7280' }
+  const s = STATUS_BADGE_MAP[status] || { label: status || '—', bg: '#F8FAFC', color: '#475569', border: '#CBD5E1' }
   return (
     <span style={{
-      padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700,
-      background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}30`,
+      display: 'inline-block', padding: '3px 9px', borderRadius: 4,
+      fontSize: 11, fontWeight: 700, letterSpacing: 0.2,
+      background: s.bg, color: s.color, border: `1px solid ${s.border}`,
       whiteSpace: 'nowrap',
     }}>{s.label}</span>
   )
@@ -199,32 +229,32 @@ function calcFiscalScore(d) {
 function FornecedorCardInline({ e, onAdd, added, selecionado, onToggle, onCnpj }) {
   const waHref = waLink(e.telefone)
   return (
-    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: selecionado ? '1.5px solid #0ea5e9' : '1px solid var(--border)', padding: 12 }}>
+    <div style={{ background: selecionado ? '#EFF6FF' : C.bgCard, borderRadius: 8, border: selecionado ? `1.5px solid ${C.blue}` : `1px solid ${C.border}`, padding: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
         <input type="checkbox" checked={selecionado} onChange={onToggle}
-          style={{ marginTop: 4, accentColor: '#0ea5e9', cursor: 'pointer', width: 14, height: 14, flexShrink: 0 }} />
+          style={{ marginTop: 4, accentColor: C.blue, cursor: 'pointer', width: 13, height: 13, flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nome}</div>
+          <div style={{ fontWeight: 700, fontSize: 12, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nome}</div>
           {e.rating && (
-            <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, letterSpacing: 0.3 }}>
+            <div style={{ fontSize: 11, color: C.amber, fontWeight: 700, letterSpacing: 0.3 }}>
               {'★'.repeat(Math.round(e.rating))}{'☆'.repeat(5 - Math.round(e.rating))} {e.rating.toFixed(1)}
-              {e.avaliacoes > 0 && <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> ({e.avaliacoes})</span>}
+              {e.avaliacoes > 0 && <span style={{ color: C.textSec, fontWeight: 400 }}> ({e.avaliacoes})</span>}
             </div>
           )}
-          {e.endereco && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.endereco}</div>}
+          {e.endereco && <div style={{ fontSize: 11, color: C.textSec, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.endereco}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-            {waHref && <a href={waHref} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#10b981', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}><PhoneIcon style={{ width: 11 }} />{e.telefone}</a>}
-            {e.website && <a href={e.website.startsWith('http') ? e.website : `https://${e.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#8b5cf6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}><GlobeAltIcon style={{ width: 11 }} />Site</a>}
-            {e.horario && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{e.horario}</span>}
+            {waHref && <a href={waHref} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: C.green, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}><PhoneIcon style={{ width: 11 }} />{e.telefone}</a>}
+            {e.website && <a href={e.website.startsWith('http') ? e.website : `https://${e.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: C.violet, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}><GlobeAltIcon style={{ width: 11 }} />Site</a>}
+            {e.horario && <span style={{ fontSize: 10, color: C.textSec }}>{e.horario}</span>}
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
           <button onClick={() => onCnpj(e)} title="Consultar CNPJ"
-            style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', cursor: 'pointer', color: '#6366f1', display: 'flex', alignItems: 'center', gap: 3 }}>
+            style={{ padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: '#EEF2FF', border: `1px solid #C7D2FE`, cursor: 'pointer', color: C.violet, display: 'flex', alignItems: 'center', gap: 3 }}>
             <IdentificationIcon style={{ width: 11 }} />CNPJ
           </button>
           <button onClick={() => onAdd(e)} disabled={added}
-            style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: added ? 'rgba(16,185,129,0.1)' : 'rgba(14,165,233,0.1)', border: added ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(14,165,233,0.3)', cursor: added ? 'default' : 'pointer', color: added ? '#10b981' : '#0ea5e9', display: 'flex', alignItems: 'center', gap: 3 }}>
+            style={{ padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: added ? '#F0FDF4' : '#EFF6FF', border: added ? '1px solid #86EFAC' : `1px solid #BFDBFE`, cursor: added ? 'default' : 'pointer', color: added ? C.green : C.blue, display: 'flex', alignItems: 'center', gap: 3 }}>
             {added ? <CheckCircleIcon style={{ width: 11 }} /> : <PlusCircleIcon style={{ width: 11 }} />}
             {added ? 'OK' : 'Add'}
           </button>
@@ -348,7 +378,7 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
 
   useEffect(() => { loadCidadesIBGE().then(setCidades) }, [])
 
-  const inp = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 12, outline: 'none', boxSizing: 'border-box' }
+  const inp = { width: '100%', padding: '7px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.bgCard, color: C.text, fontSize: 12, outline: 'none', boxSizing: 'border-box' }
 
   // ── buscar fornecedores (Google Maps via Serper) ──
   async function buscarFornecedores(produtoOverride) {
@@ -506,31 +536,31 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* header */}
-      <div style={{ padding: '12px 14px 0', borderBottom: '1px solid var(--border)' }}>
+      {/* header navy ERP */}
+      <div style={{ background: C.navy, padding: '12px 14px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 7, background: 'rgba(225,29,72,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <MagnifyingGlassIcon style={{ width: 14, color: '#e11d48' }} />
+          <div style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <MagnifyingGlassIcon style={{ width: 13, color: C.white }} />
           </div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>Radar de Compras</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: C.white, letterSpacing: 0.2 }}>Radar de Compras</div>
         </div>
         <div style={{ display: 'flex' }}>
           {abas.map(a => (
-            <button key={a.key} onClick={() => setAba(a.key)} style={{ flex: 1, padding: '7px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', borderBottom: aba === a.key ? '2px solid #e11d48' : '2px solid transparent', background: 'transparent', color: aba === a.key ? '#e11d48' : 'var(--text-secondary)' }}>{a.label}</button>
+            <button key={a.key} onClick={() => setAba(a.key)} style={{ flex: 1, padding: '7px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', borderBottom: aba === a.key ? `2px solid ${C.white}` : '2px solid transparent', background: 'transparent', color: aba === a.key ? C.white : 'rgba(255,255,255,0.5)' }}>{a.label}</button>
           ))}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px', background: C.bgPage }}>
 
         {/* ── aba Fornecedor ── */}
         {aba === 'fornecedor' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {/* formulário */}
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 10 }}>O que você precisa cotar?</div>
+            <div style={{ background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}`, padding: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>O que você precisa cotar?</div>
               <div style={{ marginBottom: 8 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>Produto *</label>
+                <label style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>Produto *</label>
                 <AutocompleteInput value={bProduto} onChange={setBProduto}
                   onSelect={s => setBProduto(typeof s === 'string' ? s : s.label)}
                   sugestoes={SUGESTOES_BUSCA} placeholder="Ex: Pneus, EPI, Ferramentas..."
@@ -538,14 +568,14 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px', gap: 8, marginBottom: 8 }}>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>Cidade *</label>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>Cidade *</label>
                   <AutocompleteInput value={bCidade} onChange={setBCidade}
                     onSelect={s => { setBCidade(s.label); if (s.uf) setBUf(s.uf) }}
                     sugestoes={cidades} placeholder="Ex: Campo Grande"
                     inputStyle={inp} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>UF</label>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>UF</label>
                   <select value={bUf} onChange={e => setBUf(e.target.value)}
                     style={{ ...inp, appearance: 'none', paddingRight: 4 }}>
                     <option value="">-</option>
@@ -557,12 +587,12 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
                 {SUGESTOES_BUSCA.slice(0, 8).map(s => (
                   <button key={s} onClick={() => { setBProduto(s); if (bCidade.trim()) buscarFornecedores(s) }}
-                    style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: bProduto === s ? '#0ea5e9' : 'rgba(14,165,233,0.08)', border: `1px solid ${bProduto === s ? '#0ea5e9' : 'rgba(14,165,233,0.2)'}`, cursor: 'pointer', color: bProduto === s ? '#fff' : '#0ea5e9' }}>{s}</button>
+                    style={{ padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: bProduto === s ? C.blue : '#EFF6FF', border: `1px solid ${bProduto === s ? C.blue : '#BFDBFE'}`, cursor: 'pointer', color: bProduto === s ? C.white : C.blue }}>{s}</button>
                 ))}
               </div>
               <button onClick={() => buscarFornecedores()} disabled={bLoading}
-                style={{ width: '100%', padding: '9px 0', borderRadius: 8, background: '#0ea5e9', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: bLoading ? 0.7 : 1 }}>
-                {bLoading ? <ArrowPathIcon style={{ width: 15, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 15 }} />}
+                style={{ width: '100%', padding: '8px 0', borderRadius: 6, background: C.navy, color: C.white, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: bLoading ? 0.7 : 1 }}>
+                {bLoading ? <ArrowPathIcon style={{ width: 14, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 14 }} />}
                 {bLoading ? 'Buscando...' : 'Buscar Fornecedores'}
               </button>
             </div>
@@ -577,7 +607,7 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
                   { label: 'Alibaba', url: `https://www.alibaba.com/trade/search?SearchText=${encodeURIComponent(bProduto)}`, color: '#ff6a00' },
                 ].map(l => (
                   <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
-                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: `${l.color}18`, border: `1px solid ${l.color}40`, color: l.color, textDecoration: 'none' }}>
+                  style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: `${l.color}18`, border: `1px solid ${l.color}40`, color: l.color, textDecoration: 'none' }}>
                     {l.label} ↗
                   </a>
                 ))}
@@ -586,15 +616,15 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
 
             {/* toolbar lote */}
             {bSelecionados.size > 0 && bResultado && (
-              <div style={{ background: 'rgba(14,165,233,0.07)', border: '1.5px solid rgba(14,165,233,0.3)', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: '#0ea5e9' }}>{bSelecionados.size} selecionado(s)</span>
-                <button onClick={adicionarLote} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#0ea5e9', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ background: '#EFF6FF', border: `1.5px solid ${C.border}`, borderLeft: `3px solid ${C.blue}`, borderRadius: 6, padding: '8px 12px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: C.blue }}>{bSelecionados.size} selecionado(s)</span>
+                <button onClick={adicionarLote} style={{ padding: '4px 10px', borderRadius: 5, fontSize: 11, fontWeight: 700, background: C.blue, border: 'none', cursor: 'pointer', color: C.white, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <PlusCircleIcon style={{ width: 12 }} />Cadastrar
                 </button>
-                <button onClick={waLote} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', cursor: 'pointer', color: '#25d366', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={waLote} style={{ padding: '4px 10px', borderRadius: 5, fontSize: 11, fontWeight: 700, background: '#F0FDF4', border: '1px solid #86EFAC', cursor: 'pointer', color: C.green, display: 'flex', alignItems: 'center', gap: 4 }}>
                   <ChatBubbleLeftEllipsisIcon style={{ width: 12 }} />WA Lote
                 </button>
-                <button onClick={() => setBSelecionados(new Set())} style={{ marginLeft: 'auto', padding: '4px 8px', borderRadius: 6, fontSize: 10, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Limpar</button>
+                <button onClick={() => setBSelecionados(new Set())} style={{ marginLeft: 'auto', padding: '3px 8px', borderRadius: 5, fontSize: 10, background: 'transparent', border: `1px solid ${C.border}`, cursor: 'pointer', color: C.textSec }}>Limpar</button>
               </div>
             )}
 
@@ -602,17 +632,17 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
             {bResultado && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                    <strong style={{ color: 'var(--text-primary)' }}>{bResultado.total || bResultado.fornecedores?.length}</strong> resultado(s) — <strong style={{ color: '#0ea5e9' }}>{bResultado.produto}</strong> em <strong style={{ color: '#0ea5e9' }}>{bResultado.cidade}</strong>
+                  <div style={{ fontSize: 11, color: C.textSec }}>
+                    <strong style={{ color: C.text }}>{bResultado.total || bResultado.fornecedores?.length}</strong> resultado(s) — <strong style={{ color: C.blue }}>{bResultado.produto}</strong> em <strong style={{ color: C.blue }}>{bResultado.cidade}</strong>
                   </div>
                   {bResultado.fornecedores?.length > 0 && (
-                    <button onClick={toggleTodos} style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                    <button onClick={toggleTodos} style={{ padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: 'transparent', border: `1px solid ${C.border}`, cursor: 'pointer', color: C.textSec }}>
                       {(bResultado.fornecedores || []).every(e => bSelecionados.has(e.id)) ? 'Desmarcar' : 'Sel. Todos'}
                     </button>
                   )}
                 </div>
                 {(bResultado.fornecedores || []).length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px dashed var(--border)', fontSize: 12 }}>Nenhum fornecedor encontrado</div>
+                  <div style={{ textAlign: 'center', padding: 20, color: C.textSec, background: '#F8FAFC', borderRadius: 6, border: `1px dashed ${C.border}`, fontSize: 12 }}>Nenhum fornecedor encontrado</div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {(bResultado.fornecedores || []).map(e => (
@@ -643,10 +673,10 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
             )}
 
             {!bResultado && !bLoading && (
-              <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px dashed var(--border)' }}>
-                <MagnifyingGlassIcon style={{ width: 32, margin: '0 auto 10px', opacity: 0.2 }} />
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 5 }}>Busque fornecedores por produto e cidade</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Resultados via Google Maps (Serper.dev)</div>
+              <div style={{ textAlign: 'center', padding: '28px 16px', background: C.bgCard, borderRadius: 8, border: `1px dashed ${C.border}`, boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                <MagnifyingGlassIcon style={{ width: 30, margin: '0 auto 10px', opacity: 0.2, color: C.navy }} />
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 4 }}>Busque fornecedores por produto e cidade</div>
+                <div style={{ fontSize: 11, color: C.textSec }}>Resultados via Google Maps (Serper.dev)</div>
               </div>
             )}
           </div>
@@ -655,14 +685,14 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
         {/* ── aba Preços ── */}
         {aba === 'precos' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
+            <div style={{ background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}`, padding: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
               <AutocompleteInput value={qPreco} onChange={setQPreco}
                 onSelect={s => setQPreco(typeof s === 'string' ? s : s.label)}
                 sugestoes={SUGESTOES_BUSCA} placeholder="Ex: Óleo 15W40 20L, Pneu 295/80..."
                 inputStyle={{ ...inp, marginBottom: 8 }} />
               <button onClick={buscarPrecos} disabled={pLoading}
-                style={{ width: '100%', padding: '9px 0', borderRadius: 8, background: '#e11d48', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: pLoading ? 0.7 : 1, marginTop: 8 }}>
-                {pLoading ? <ArrowPathIcon style={{ width: 14, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 14 }} />}
+                style={{ width: '100%', padding: '8px 0', borderRadius: 6, background: C.navy, color: C.white, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: pLoading ? 0.7 : 1, marginTop: 8 }}>
+                {pLoading ? <ArrowPathIcon style={{ width: 13, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 13 }} />}
                 {pLoading ? 'Pesquisando...' : 'Pesquisar Preços'}
               </button>
             </div>
@@ -685,9 +715,9 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-                    {[{ label: 'Menor', value: fmtBRL(menor), color: '#10b981' }, { label: 'Média', value: fmtBRL(media), color: '#3b82f6' }, { label: 'Maior', value: fmtBRL(maior), color: '#f59e0b' }].map(k => (
-                      <div key={k.label} style={{ background: `${k.color}10`, border: `1px solid ${k.color}25`, borderTop: `2px solid ${k.color}`, borderRadius: 8, padding: '8px 10px' }}>
-                        <div style={{ fontSize: 9, color: LC.txtMuted, fontWeight: 700, textTransform: 'uppercase' }}>{k.label}</div>
+                    {[{ label: 'Menor', value: fmtBRL(menor), color: C.green }, { label: 'Média', value: fmtBRL(media), color: C.blue }, { label: 'Maior', value: fmtBRL(maior), color: C.amber }].map(k => (
+                      <div key={k.label} style={{ background: `${k.color}10`, border: `1px solid ${k.color}25`, borderTop: `2px solid ${k.color}`, borderRadius: 6, padding: '7px 10px' }}>
+                        <div style={{ fontSize: 9, color: C.textSec, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5letterSpacing: 0.5 }}>{k.label}</div>
                         <div style={{ fontSize: 12, fontWeight: 800, color: k.color }}>{k.value}</div>
                       </div>
                     ))}
@@ -695,7 +725,7 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
                   <div style={{ display: 'flex', gap: 5 }}>
                     {['todos', 'ml', 'google'].map(f => (
                       <button key={f} onClick={() => setPFiltro(f)}
-                        style={{ padding: '3px 8px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', border: '1px solid', background: pFiltro === f ? 'var(--accent)' : 'var(--bg-card)', color: pFiltro === f ? '#fff' : 'var(--text-secondary)', borderColor: pFiltro === f ? 'var(--accent)' : 'var(--border)' }}>
+                        style={{ padding: '3px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600, cursor: 'pointer', border: '1px solid', background: pFiltro === f ? C.blue : C.bgCard, color: pFiltro === f ? C.white : C.textSec, borderColor: pFiltro === f ? C.blue : C.border }}>
                         {{ todos: 'Todos', ml: 'ML', google: 'Google' }[f]}
                       </button>
                     ))}
@@ -706,17 +736,17 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
                       const isMenor = item.preco === menor
                       const siteBg = SITE_COLORS[item.site] ?? '#6b7280'
                       return (
-                        <div key={i} style={{ display: 'flex', gap: 8, padding: '9px 10px', background: isMenor ? 'rgba(34,197,94,0.05)' : 'var(--bg-secondary)', borderRadius: 8, border: `1px solid ${isMenor ? 'rgba(34,197,94,0.2)' : 'var(--border)'}`, alignItems: 'center' }}>
+                        <div key={i} style={{ display: 'flex', gap: 8, padding: '8px 10px', background: isMenor ? '#F0FDF4' : C.bgCard, borderRadius: 6, border: `1px solid ${isMenor ? '#86EFAC' : C.border}`, alignItems: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.titulo}</div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.titulo}</div>
                             <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginTop: 3 }}>
-                              <span style={{ background: siteBg, color: siteBg === '#FFE600' ? '#111' : '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99 }}>{item.site}</span>
-                              {isMenor && <span style={{ fontSize: 9, fontWeight: 800, color: '#22c55e' }}>MENOR PREÇO</span>}
+                              <span style={{ background: siteBg, color: siteBg === '#FFE600' ? '#111' : '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 3 }}>{item.site}</span>
+                              {isMenor && <span style={{ fontSize: 9, fontWeight: 800, color: C.green, letterSpacing: 0.3 }}>MENOR PREÇO</span>}
                             </div>
                           </div>
                           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: isMenor ? '#22c55e' : 'var(--text-primary)' }}>{fmtBRL(item.preco)}</div>
-                            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: 'var(--text-secondary)', textDecoration: 'none' }}>ver ↗</a>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: isMenor ? C.green : C.text }}>{fmtBRL(item.preco)}</div>
+                            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: C.textSec, textDecoration: 'none' }}>ver ↗</a>
                           </div>
                         </div>
                       )
@@ -725,7 +755,7 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
               )
             })()}
             {!pResultado && !pLoading && (
-              <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px dashed var(--border)', color: 'var(--text-secondary)', fontSize: 12 }}>Digite o produto para pesquisar preços no Mercado Livre e Google Shopping</div>
+              <div style={{ textAlign: 'center', padding: '28px 16px', background: C.bgCard, borderRadius: 8, border: `1px dashed ${C.border}`, color: C.textSec, fontSize: 12 }}>Digite o produto para pesquisar preços no Mercado Livre e Google Shopping</div>
             )}
           </div>
         )}
@@ -734,9 +764,9 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
         {aba === 'cnpj' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {/* buscar por nome */}
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Buscar CNPJ pelo nome</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>Pesquisa automática via Serper + Receita Federal</div>
+            <div style={{ background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}`, padding: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Buscar CNPJ pelo nome</div>
+              <div style={{ fontSize: 11, color: C.textSec, marginBottom: 8, marginTop: 6 }}>Pesquisa automática via Serper + Receita Federal</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
                 <input value={cnpjNome} onChange={e => setCnpjNome(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && buscarCnpjPorNome()}
@@ -745,26 +775,26 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
                   placeholder="Cidade (opcional)" style={inp} />
               </div>
               <button onClick={buscarCnpjPorNome} disabled={cnpjNomeLoading}
-                style={{ width: '100%', padding: '8px 0', borderRadius: 7, background: '#0ea5e9', border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: cnpjNomeLoading ? 0.7 : 1 }}>
+                style={{ width: '100%', padding: '8px 0', borderRadius: 6, background: C.blue, border: 'none', color: C.white, fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: cnpjNomeLoading ? 0.7 : 1 }}>
                 {cnpjNomeLoading ? <ArrowPathIcon style={{ width: 13, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 13 }} />}
                 {cnpjNomeLoading ? 'Buscando...' : 'Buscar CNPJ'}
               </button>
             </div>
             {/* consulta direta */}
-            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>Consultar CNPJ diretamente</div>
+            <div style={{ background: C.bgCard, borderRadius: 8, border: `1px solid ${C.border}`, padding: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Consultar CNPJ diretamente</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input value={cnpjInput} onChange={e => setCnpjInput(fmtCNPJ(e.target.value))}
                   placeholder="00.000.000/0001-00" maxLength={18}
                   onKeyDown={e => e.key === 'Enter' && consultarCNPJDigits(cnpjInput.replace(/\D/g, ''))}
                   style={{ flex: 1, ...inp, fontFamily: 'monospace', letterSpacing: 1 }} />
                 <button onClick={() => consultarCNPJDigits(cnpjInput.replace(/\D/g, ''))} disabled={cnpjLoading}
-                  style={{ padding: '8px 12px', borderRadius: 7, background: '#0ea5e9', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, flexShrink: 0, opacity: cnpjLoading ? 0.7 : 1 }}>
+                  style={{ padding: '7px 12px', borderRadius: 6, background: C.blue, border: 'none', color: C.white, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, flexShrink: 0, opacity: cnpjLoading ? 0.7 : 1 }}>
                   {cnpjLoading ? <ArrowPathIcon style={{ width: 13, animation: 'spin 1s linear infinite' }} /> : <IdentificationIcon style={{ width: 13 }} />}
                   Consultar
                 </button>
               </div>
-              <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-secondary)' }}>Dados via BrasilAPI (Receita Federal) · gratuito</div>
+              <div style={{ marginTop: 6, fontSize: 10, color: C.textSec }}>Dados via BrasilAPI (Receita Federal) · gratuito</div>
             </div>
             {cnpjDados && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -772,7 +802,7 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
               </div>
             )}
             {!cnpjDados && !cnpjLoading && !cnpjNomeLoading && (
-              <div style={{ textAlign: 'center', padding: '24px 12px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px dashed var(--border)', color: 'var(--text-secondary)', fontSize: 12 }}>
+              <div style={{ textAlign: 'center', padding: '24px 12px', background: C.bgCard, borderRadius: 8, border: `1px dashed ${C.border}`, color: C.textSec, fontSize: 12 }}>
                 <IdentificationIcon style={{ width: 28, margin: '0 auto 8px', opacity: 0.2 }} />
                 Consulte o CNPJ de um fornecedor para ver situação fiscal, sócios, capital social e mais
               </div>
@@ -814,29 +844,34 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
   }
 
   const F = (field, value) => setForm(p => ({ ...p, [field]: value }))
-  const inputSt = { width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }
+  const inputSt = { width: '100%', padding: '8px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.bgCard, color: C.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
+  const labelSt = { fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 480, boxShadow: '0 24px 64px rgba(0,0,0,.2)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>Nova Requisição de Compra</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-            <XMarkIcon style={{ width: 20 }} />
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,31,58,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: C.bgCard, borderRadius: 12, width: '100%', maxWidth: 480, boxShadow: '0 16px 48px rgba(11,31,58,0.2)', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden' }}>
+        {/* header navy */}
+        <div style={{ background: C.navy, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 700, letterSpacing: .8, textTransform: 'uppercase' }}>Nova Requisição de Compra</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.white, marginTop: 2 }}>Criar Solicitação</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex' }}>
+            <XMarkIcon style={{ width: 16, height: 16 }} />
           </button>
         </div>
-        <div style={{ padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Título / Produto *</label>
+            <label style={labelSt}>Título / Produto *</label>
             <input value={form.titulo} onChange={e => F('titulo', e.target.value)} placeholder="Ex: Pneus 295/80 R22.5" style={inputSt} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Categoria</label>
+              <label style={labelSt}>Categoria</label>
               <input value={form.categoria} onChange={e => F('categoria', e.target.value)} placeholder="Ex: Pneus" style={inputSt} />
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Urgência</label>
+              <label style={labelSt}>Urgência</label>
               <select value={form.urgencia} onChange={e => F('urgencia', e.target.value)}
                 style={{ ...inputSt, appearance: 'none' }}>
                 <option value="baixa">Baixa</option>
@@ -847,26 +882,26 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Valor Orçado (R$)</label>
+              <label style={labelSt}>Valor Orçado (R$)</label>
               <input type="number" value={form.valor_orcado} onChange={e => F('valor_orcado', e.target.value)} placeholder="0,00" style={inputSt} />
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Necessidade até</label>
+              <label style={labelSt}>Necessidade até</label>
               <input type="date" value={form.data_necessidade} onChange={e => F('data_necessidade', e.target.value)} style={inputSt} />
             </div>
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Fornecedor Sugerido</label>
+            <label style={labelSt}>Fornecedor Sugerido</label>
             <input value={form.fornecedor_sugerido} onChange={e => F('fornecedor_sugerido', e.target.value)} placeholder="(opcional)" style={inputSt} />
           </div>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 5 }}>Observações</label>
+            <label style={labelSt}>Observações</label>
             <textarea value={form.observacoes} onChange={e => F('observacoes', e.target.value)} rows={2} placeholder="Especificações, marca, etc." style={{ ...inputSt, resize: 'vertical' }} />
           </div>
         </div>
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
-          <button onClick={salvar} disabled={saving} style={{ padding: '9px 24px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+          <button onClick={salvar} disabled={saving} style={{ padding: '9px 24px', borderRadius: 6, background: C.blue, color: C.white, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Salvando...' : 'Criar Requisição'}
           </button>
         </div>
@@ -897,68 +932,71 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
 
   if (!item) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: 'var(--text-secondary)' }}>
-        <ClipboardDocumentListIcon style={{ width: 36, opacity: 0.3 }} />
-        <div style={{ fontSize: 13 }}>Selecione uma requisição</div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: C.textSec }}>
+        <ClipboardDocumentListIcon style={{ width: 36, opacity: 0.2 }} />
+        <div style={{ fontSize: 12, fontWeight: 600 }}>Selecione uma requisição</div>
       </div>
     )
   }
 
-  const st = STATUS_LABELS[item.status] || { label: item.status, color: '#6b7280' }
+  const badge = STATUS_BADGE_MAP[item.status] || { label: item.status, bg: '#F8FAFC', color: C.textSec, border: C.border }
   const urgColor = URGENCIA_COLORS[item.urgencia] || '#6b7280'
 
   const acoes = []
   if (item.status === 'aguardando_aprovacao') {
-    acoes.push({ label: 'Aprovar', color: '#10b981', action: 'aprovar' })
-    acoes.push({ label: 'Abrir Leilão', color: '#0ea5e9', action: 'leilao' })
-    acoes.push({ label: 'Recusar', color: '#ef4444', action: 'recusar' })
+    acoes.push({ label: 'Aprovar', color: C.green, border: '#86EFAC', bg: '#F0FDF4', action: 'aprovar' })
+    acoes.push({ label: 'Abrir Leilão', color: C.sky, border: '#BAE6FD', bg: '#F0F9FF', action: 'leilao' })
+    acoes.push({ label: 'Recusar', color: C.red, border: '#FECACA', bg: '#FEF2F2', action: 'recusar' })
   }
   if (item.status === 'aprovado') {
-    acoes.push({ label: 'Emitir Pedido', color: '#6366f1', action: 'emitir_pedido' })
+    acoes.push({ label: 'Emitir Pedido', color: C.violet, border: '#C4B5FD', bg: '#F5F3FF', action: 'emitir_pedido' })
   }
   if (item.status === 'pedido_emitido') {
-    acoes.push({ label: 'Confirmar Recebimento', color: '#10b981', action: 'receber' })
+    acoes.push({ label: 'Confirmar Recebimento', color: C.green, border: '#86EFAC', bg: '#F0FDF4', action: 'receber' })
   }
   if (item.status === 'recebido') {
-    acoes.push({ label: 'Marcar Pago', color: '#14b8a6', action: 'pagar' })
+    acoes.push({ label: 'Marcar Pago', color: '#0F766E', border: '#99F6E4', bg: '#F0FDFA', action: 'pagar' })
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* header */}
-      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+      {/* header — navy ERP */}
+      <div style={{ padding: '14px 16px 12px', background: C.navy, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.3 }}>{item.titulo}</div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <StatusBadge status={item.status} />
-            <span style={{ fontSize: 10, fontWeight: 700, color: urgColor, background: `${urgColor}15`, padding: '2px 7px', borderRadius: 99 }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>
+            DETALHES DA REQUISIÇÃO
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: C.white, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.titulo}</div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>{badge.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: urgColor, background: `${urgColor}22`, padding: '2px 7px', borderRadius: 4, border: `1px solid ${urgColor}44` }}>
               {item.urgencia?.toUpperCase()}
             </span>
           </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', flexShrink: 0, padding: 4 }}>
-          <XMarkIcon style={{ width: 16 }} />
+        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex', flexShrink: 0 }}>
+          <XMarkIcon style={{ width: 15 }} />
         </button>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {/* infos */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
             { label: 'Requisitante', value: item.requisitante_nome || '—' },
             { label: 'Fornecedor sugerido', value: item.fornecedor_sugerido || '—' },
             { label: 'Valor Orçado', value: item.valor_orcado ? fmtBRL(item.valor_orcado) : '—' },
             { label: 'Valor Aprovado', value: item.valor_aprovado ? fmtBRL(item.valor_aprovado) : '—' },
-            { label: 'Necessidade', value: fmtDate(item.data_necessidade) },
+            { label: 'Necessidade até', value: fmtDate(item.data_necessidade) },
             { label: 'Categoria', value: item.categoria || '—' },
           ].map(r => (
             <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, gap: 8 }}>
-              <span style={{ color: 'var(--text-secondary)' }}>{r.label}</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right' }}>{r.value}</span>
+              <span style={{ color: C.textSec }}>{r.label}</span>
+              <span style={{ color: C.text, fontWeight: 600, textAlign: 'right' }}>{r.value}</span>
             </div>
           ))}
           {item.observacoes && (
-            <div style={{ marginTop: 4, padding: 8, background: 'var(--bg-secondary)', borderRadius: 7, fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+            <div style={{ marginTop: 4, padding: '8px 10px', background: '#F8FAFC', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12, color: C.textSec, fontStyle: 'italic', lineHeight: 1.5 }}>
               {item.observacoes}
             </div>
           )}
@@ -966,10 +1004,10 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
 
         {/* ações inline */}
         {acoes.length > 0 && (
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {acoes.map(a => (
               <button key={a.action} onClick={() => onAcao(item, a.action)}
-                style={{ flex: 1, minWidth: 80, padding: '7px 10px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', background: `${a.color}18`, color: a.color, cursor: 'pointer', border: `1px solid ${a.color}30` }}>
+                style={{ flex: 1, minWidth: 80, padding: '7px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: a.bg, color: a.color, cursor: 'pointer', border: `1px solid ${a.border}` }}>
                 {a.label}
               </button>
             ))}
@@ -978,21 +1016,21 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
 
         {/* cotações */}
         {cotacoes.length > 0 && (
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Cotações ({cotacoes.length})</div>
+          <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Cotações ({cotacoes.length})</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {cotacoes.map(c => {
                 const statusCot = c.proposta_valor ? 'Proposta Recebida' : c.visualizado_em ? 'Visualizou' : 'Convidado'
-                const colorCot = c.proposta_valor ? '#10b981' : c.visualizado_em ? '#3b82f6' : '#6b7280'
+                const colorCot = c.proposta_valor ? C.green : c.visualizado_em ? C.blue : C.textSec
                 return (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: '#F8FAFC', borderRadius: 6, border: `1px solid ${C.border}` }}>
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{c.fornecedor_nome}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{c.fornecedor_nome}</div>
                       <div style={{ fontSize: 10, color: colorCot, fontWeight: 600 }}>{statusCot}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      {c.proposta_valor && <div style={{ fontSize: 13, fontWeight: 800, color: '#10b981' }}>{fmtBRL(c.proposta_valor)}</div>}
-                      {c.vencedor && <div style={{ fontSize: 10, color: '#10b981', fontWeight: 700 }}>🏆 Vencedor</div>}
+                      {c.proposta_valor && <div style={{ fontSize: 13, fontWeight: 800, color: C.green }}>{fmtBRL(c.proposta_valor)}</div>}
+                      {c.vencedor && <div style={{ fontSize: 10, color: C.green, fontWeight: 700 }}>🏆 Vencedor</div>}
                     </div>
                   </div>
                 )
@@ -1002,25 +1040,25 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
         )}
 
         {/* radar rápido */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}` }}>
           <button onClick={() => setShowRadar(p => !p)}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px dashed #e11d48', background: 'rgba(225,29,72,0.06)', color: '#e11d48', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-            <MagnifyingGlassIcon style={{ width: 14 }} />
+            style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: `1px dashed ${C.red}`, background: '#FEF2F2', color: C.red, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+            <MagnifyingGlassIcon style={{ width: 13 }} />
             {showRadar ? 'Ocultar Radar' : 'Pesquisar Preços / Fornecedor'}
           </button>
         </div>
 
         {/* timeline */}
         {eventos.length > 0 && (
-          <div style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Timeline</div>
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Timeline</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {eventos.map(e => (
                 <div key={e.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6366f1', marginTop: 5, flexShrink: 0 }} />
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.violet, marginTop: 5, flexShrink: 0 }} />
                   <div>
-                    <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>{e.descricao || e.acao}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{fmtDate(e.created_at)} — {e.usuario_nome || 'Sistema'}</div>
+                    <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{e.descricao || e.acao}</div>
+                    <div style={{ fontSize: 10, color: C.textSec }}>{fmtDate(e.created_at)} — {e.usuario_nome || 'Sistema'}</div>
                   </div>
                 </div>
               ))}
@@ -1100,127 +1138,136 @@ export default function ComprasERP() {
     setSelecionado(p => p ? { ...p, ...upd } : null)
   }
 
-  // KPIs topo
-  const kpis = [
-    { label: 'Requisições', value: counts['pendente'] || 0, color: '#3b82f6' },
-    { label: 'Ag. Aprovação', value: counts['aguardando_aprovacao'] || 0, color: '#f59e0b' },
-    { label: 'Leilões Abertos', value: counts['em_cotacao'] || 0 + (counts['leilao_aberto'] || 0), color: '#0ea5e9' },
-    { label: 'A Receber', value: counts['pedido_emitido'] || 0, color: '#10b981' },
-    {
-      label: 'Gasto Mês',
-      value: fmtBRL(items.filter(i => i.status !== 'recusado' && i.status !== 'pendente' && i.valor_aprovado && new Date(i.updated_at || i.created_at).getMonth() === new Date().getMonth()).reduce((s, i) => s + (i.valor_aprovado || 0), 0)),
-      color: '#6366f1',
-    },
-    {
-      label: 'Economia',
-      value: fmtBRL(items.filter(i => i.valor_orcado && i.valor_aprovado && i.valor_aprovado < i.valor_orcado).reduce((s, i) => s + (i.valor_orcado - i.valor_aprovado), 0)),
-      color: '#059669',
-    },
-  ]
+  const gastoMes = items
+    .filter(i => i.status !== 'recusado' && i.status !== 'pendente' && i.valor_aprovado && new Date(i.updated_at || i.created_at).getMonth() === new Date().getMonth())
+    .reduce((s, i) => s + (i.valor_aprovado || 0), 0)
+  const economiaTotal = items
+    .filter(i => i.valor_orcado && i.valor_aprovado && i.valor_aprovado < i.valor_orcado)
+    .reduce((s, i) => s + (i.valor_orcado - i.valor_aprovado), 0)
 
   const painelDireitoIsRadar = stage === 'radar' || modoRadar
 
+  const kpiStrip = [
+    { label: 'Requisições',    value: counts['pendente'] || 0,                                      color: C.blue,   Icon: ClipboardDocumentListIcon, accent: '#EFF6FF', alert: false },
+    { label: 'Ag. Aprovação',  value: counts['aguardando_aprovacao'] || 0,                          color: C.amber,  Icon: ExclamationTriangleIcon,   accent: '#FFFBEB', alert: (counts['aguardando_aprovacao'] || 0) > 0 },
+    { label: 'Em Cotação',     value: (counts['em_cotacao'] || 0) + (counts['leilao_aberto'] || 0), color: C.sky,    Icon: SignalIcon,                 accent: '#F0F9FF', alert: false },
+    { label: 'A Receber',      value: counts['pedido_emitido'] || 0,                                color: C.green,  Icon: TruckIcon,                  accent: '#F0FDF4', alert: false },
+    { label: 'Gasto no Mês',   value: fmtBRL(gastoMes),                                             color: C.violet, Icon: BanknotesIcon,              accent: '#F5F3FF', alert: false },
+    { label: 'Economia Total', value: fmtBRL(economiaTotal),                                        color: C.green,  Icon: ChartBarIcon,               accent: '#F0FDF4', alert: false },
+  ]
+
   return (
-    <div style={{ flex: 1, overflowY: 'hidden', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ flex: 1, overflowY: 'hidden', background: C.bgPage, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Header title="Compras ERP" subtitle="Central de operações de compras" />
 
-      {/* KPIs topo */}
-      <div style={{ padding: '0 24px', maxWidth: 1600, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, paddingBottom: 16 }}>
-          {kpis.map(k => (
-            <div key={k.label} style={{ background: `linear-gradient(135deg, ${k.color}14 0%, var(--bg-card) 55%)`, border: `1px solid ${k.color}28`, borderTop: `3px solid ${k.color}`, borderRadius: 12, padding: '14px 16px', boxShadow: 'var(--shadow-card)' }}>
-              <div style={{ fontSize: 10, color: LC.txtMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>{k.label}</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: k.color }}>{k.value}</div>
+      {/* ── KPI STRIP ── */}
+      <div style={{ padding: '10px 24px 0', maxWidth: 1600, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+        <div style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderRadius: 8, display: 'flex', alignItems: 'stretch', marginBottom: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          {kpiStrip.map(({ label, value, color, Icon, accent, alert }, i) => (
+            <div key={label} style={{
+              flex: 1, padding: '10px 14px',
+              borderRight: i < kpiStrip.length - 1 ? `1px solid ${C.border}` : 'none',
+              borderLeft: `3px solid ${alert ? color : 'transparent'}`,
+              background: accent,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, background: `${color}1A`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon style={{ width: 15, height: 15, color }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: alert ? color : C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 }}>{label}</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color, lineHeight: 1.1 }}>{value}</div>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Layout 3 colunas */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: '200px 1fr 340px', gap: 0, borderTop: '1px solid var(--border)', maxWidth: 1600, width: '100%', margin: '0 auto', boxSizing: 'border-box', paddingLeft: 24, paddingRight: 24 }}>
+      <div style={{ flex: 1, overflow: 'hidden', display: 'grid', gridTemplateColumns: '200px 1fr 340px', gap: 0, borderTop: `1px solid ${C.border}`, maxWidth: 1600, width: '100%', margin: '0 auto', boxSizing: 'border-box', paddingLeft: 24, paddingRight: 24 }}>
 
         {/* ── Coluna 1: Pipeline ── */}
-        <div style={{ borderRight: '1px solid var(--border)', overflowY: 'auto', paddingTop: 12, paddingBottom: 12 }}>
-          <div style={{ padding: '0 12px 8px', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Pipeline</div>
+        <div style={{ borderRight: `1px solid ${C.border}`, overflowY: 'auto', paddingTop: 12, paddingBottom: 12, background: C.bgCard }}>
+          <div style={{ padding: '0 12px 8px', fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1 }}>Pipeline</div>
           {STAGES.map(s => {
             const isActive = stage === s.key
             const Icon = s.icon
             const count = s.key === 'radar' ? null : (counts[s.key] ?? 0)
             return (
               <button key={s.key} onClick={() => { setStage(s.key); if (s.key !== 'radar') setModoRadar(false) }}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', border: 'none', borderRadius: 8, cursor: 'pointer', background: isActive ? `${s.color}15` : 'transparent', color: isActive ? s.color : 'var(--text-secondary)', fontWeight: isActive ? 700 : 500, fontSize: 13, textAlign: 'left', marginBottom: 2, transition: 'background .15s' }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-secondary)' }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', border: 'none', borderRadius: 6, cursor: 'pointer', background: isActive ? `${s.color}15` : 'transparent', color: isActive ? s.color : C.textSec, fontWeight: isActive ? 700 : 500, fontSize: 12, textAlign: 'left', marginBottom: 2, transition: 'background .12s', borderLeft: `3px solid ${isActive ? s.color : 'transparent'}` }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#F1F5F9' }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}>
-                <Icon style={{ width: 15, flexShrink: 0 }} />
+                <Icon style={{ width: 14, flexShrink: 0 }} />
                 <span style={{ flex: 1 }}>{s.label}</span>
                 {count !== null && count > 0 && (
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', background: s.color, borderRadius: 99, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>{count}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: s.color, borderRadius: 99, padding: '1px 6px', minWidth: 16, textAlign: 'center' }}>{count}</span>
                 )}
               </button>
             )
           })}
 
-          <div style={{ borderTop: '1px solid var(--border)', margin: '12px 12px 8px', paddingTop: 12 }}>
+          <div style={{ borderTop: `1px solid ${C.border}`, margin: '12px 12px 8px', paddingTop: 12 }}>
             <button onClick={() => setShowNovaReq(true)}
-              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 6, background: C.blue, color: C.white, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', boxShadow: '0 1px 3px rgba(29,78,216,0.3)' }}>
               <PlusIcon style={{ width: 14 }} /> Nova Requisição
             </button>
           </div>
         </div>
 
         {/* ── Coluna 2: Lista Central ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: C.bgCard, borderRight: `1px solid ${C.border}` }}>
           {/* barra de busca */}
-          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 8, alignItems: 'center' }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <MagnifyingGlassIcon style={{ width: 15, position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <MagnifyingGlassIcon style={{ width: 14, position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: C.textSec }} />
               <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar requisições..."
-                style={{ width: '100%', padding: '7px 12px 7px 32px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                style={{ width: '100%', padding: '7px 10px 7px 28px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.bgPage, color: C.text, fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
             </div>
             <button onClick={() => setRefresh(p => p + 1)} title="Atualizar"
-              style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-              <ArrowPathIcon style={{ width: 15 }} />
+              style={{ padding: '7px 9px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer', color: C.textSec, display: 'flex', alignItems: 'center' }}>
+              <ArrowPathIcon style={{ width: 14 }} />
             </button>
           </div>
 
           {/* lista */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loading ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120, color: 'var(--text-secondary)', fontSize: 13 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 120, color: C.textSec, fontSize: 12 }}>
                 Carregando...
               </div>
             ) : filtered.length === 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 120, gap: 8, color: 'var(--text-secondary)' }}>
-                <ClipboardDocumentListIcon style={{ width: 28, opacity: 0.3 }} />
-                <div style={{ fontSize: 13 }}>Nenhuma requisição</div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 120, gap: 8, color: C.textSec }}>
+                <ClipboardDocumentListIcon style={{ width: 28, opacity: 0.25 }} />
+                <div style={{ fontSize: 12 }}>Nenhuma requisição</div>
               </div>
             ) : (
               filtered.map(item => {
-                const st = STATUS_LABELS[item.status] || { color: '#6b7280' }
+                const badge = STATUS_BADGE_MAP[item.status] || { color: C.textSec }
                 const urgColor = URGENCIA_COLORS[item.urgencia] || '#6b7280'
                 const isSelected = selecionado?.id === item.id
                 const isAtrasado = item.data_necessidade && new Date(item.data_necessidade) < new Date() && !['pago', 'recusado', 'recebido'].includes(item.status)
                 return (
                   <div key={item.id}
                     onClick={() => { setSelecionado(item); setModoRadar(false) }}
-                    style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', cursor: 'pointer', background: isSelected ? 'var(--bg-secondary)' : 'transparent', borderLeft: `3px solid ${isSelected ? st.color : 'transparent'}`, transition: 'background .1s' }}
-                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = LC.hoverBg }}
+                    style={{ padding: '11px 14px', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', background: isSelected ? '#EFF6FF' : 'transparent', borderLeft: `3px solid ${isSelected ? badge.color : 'transparent'}`, transition: 'background .1s' }}
+                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F8FAFC' }}
                     onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                           {isAtrasado && <span title="Atrasado" style={{ marginRight: 5 }}>🔴</span>}
                           {item.titulo}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>
+                        <div style={{ fontSize: 11, color: C.textSec, marginTop: 3 }}>
                           {item.categoria && <span style={{ marginRight: 8 }}>{item.categoria}</span>}
                           {item.data_necessidade && <span>{fmtDate(item.data_necessidade)}</span>}
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                         <StatusBadge status={item.status} />
-                        {item.valor_orcado && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{fmtBRL(item.valor_orcado)}</span>}
-                        <span style={{ fontSize: 9, fontWeight: 700, color: urgColor }}>{item.urgencia?.toUpperCase()}</span>
+                        {item.valor_orcado && <span style={{ fontSize: 11, fontWeight: 700, color: C.green }}>{fmtBRL(item.valor_orcado)}</span>}
+                        <span style={{ fontSize: 9, fontWeight: 700, color: urgColor, textTransform: 'uppercase', letterSpacing: 0.3 }}>{item.urgencia}</span>
                       </div>
                     </div>
                   </div>
@@ -1228,21 +1275,21 @@ export default function ComprasERP() {
               })
             )}
           </div>
-          <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)' }}>
+          <div style={{ padding: '7px 14px', borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textSec, background: '#F8FAFC' }}>
             {filtered.length} requisição(ões)
           </div>
         </div>
 
         {/* ── Coluna 3: Detalhe / Radar ── */}
-        <div style={{ borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-card)' }}>
+        <div style={{ borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: C.bgCard }}>
           {/* toggle detalhe/radar */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+          <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: '#F8FAFC' }}>
             <button onClick={() => setModoRadar(false)}
-              style={{ flex: 1, padding: '9px 0', fontSize: 11, fontWeight: 700, border: 'none', borderBottom: !painelDireitoIsRadar ? '2px solid var(--accent)' : '2px solid transparent', background: 'transparent', cursor: 'pointer', color: !painelDireitoIsRadar ? 'var(--accent)' : 'var(--text-secondary)' }}>
+              style={{ flex: 1, padding: '9px 0', fontSize: 11, fontWeight: 700, border: 'none', borderBottom: !painelDireitoIsRadar ? `2px solid ${C.blue}` : '2px solid transparent', background: 'transparent', cursor: 'pointer', color: !painelDireitoIsRadar ? C.blue : C.textSec }}>
               Detalhe
             </button>
             <button onClick={() => setModoRadar(true)}
-              style={{ flex: 1, padding: '9px 0', fontSize: 11, fontWeight: 700, border: 'none', borderBottom: painelDireitoIsRadar ? '2px solid #e11d48' : '2px solid transparent', background: 'transparent', cursor: 'pointer', color: painelDireitoIsRadar ? '#e11d48' : 'var(--text-secondary)' }}>
+              style={{ flex: 1, padding: '9px 0', fontSize: 11, fontWeight: 700, border: 'none', borderBottom: painelDireitoIsRadar ? `2px solid ${C.red}` : '2px solid transparent', background: 'transparent', cursor: 'pointer', color: painelDireitoIsRadar ? C.red : C.textSec }}>
               🔍 Radar
             </button>
           </div>
