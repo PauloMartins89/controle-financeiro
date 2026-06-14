@@ -574,10 +574,7 @@ function exportCSV(rows, lotesMap) {
     ['Status',                r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; const conf = (l?.status && ERP_LOTE_MAP[l.status]) || ERP_STATUS_MAP[r.status]; return conf?.label || r.status || '' }],
     ['Lote / Cliente',        r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; return l ? `${l.cliente || ''} (${(l.status||'').replace(/_/g,' ')})` : '' }],
     // ── Observações ──────────────────────────────────────────────────────────
-    ['Observações (Extras)',  r => fmtV((r.dados_extras||{}).observacao)],
     ['Observações',           r => fmtV(r.observacoes)],
-    // ── IDs ──────────────────────────────────────────────────────────────────
-    ['ID',                    r => r.id],
   ]
   const header = cols.map(([h]) => h).join(';')
   const lines  = rows.map(r => cols.map(([,fn]) => { const v = String(fn(r)??''); return /[;"\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v }).join(';'))
