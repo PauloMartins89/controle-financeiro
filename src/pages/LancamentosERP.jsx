@@ -531,7 +531,7 @@ function exportCSV(rows, lotesMap) {
     ['Cidade/UF',          r => getCidadeUF(r)],
     ['Solicitante',        r => getSolicitante(r)],
     ['Equipamento',        r => getEquipamento(r)],
-    ['Placa',               r => (r.dados_extras || {}).placa || ''],
+    ['Placa',               r => (r.dados_extras || {}).placa || (r.dados_extras || {}).veiculo_placa || ''],
     ['Início Jornada',     r => (r.dados_extras||{}).jornada_inicio || ''],
     ['Fim Jornada',        r => (r.dados_extras||{}).jornada_fim || ''],
     ['Total Horas',        r => { const t = calcTotalHorasJornada(r.dados_extras); return t != null ? String(t) : '' }],
@@ -571,7 +571,7 @@ function printTable(rows, lotesMap, competencia, wsName) {
     ['Cidade/UF',        r => getCidadeUF(r)],
     ['Solicitante',      r => getSolicitante(r)],
     ['Equipamento',      r => getEquipamento(r)],
-    ['Placa',             r => (r.dados_extras || {}).placa || ''],
+    ['Placa',             r => (r.dados_extras || {}).placa || (r.dados_extras || {}).veiculo_placa || ''],
     ['Total Horas',      r => fmtTotalHorasJornada(r.dados_extras)],
     ['H Diurnas',        r => (r.dados_extras||{}).horas_diurnas||'—'],
     ['H Noturnas',       r => (r.dados_extras||{}).horas_noturnas||'—'],
@@ -1624,7 +1624,7 @@ export default function LancamentosERP() {
                       <Td muted>{getCidadeUF(l)}</Td>
                       <Td>{getSolicitante(l)}</Td>
                       <Td muted>{getEquipamento(l)}</Td>
-                      <Td muted>{(l.dados_extras || {}).placa || '—'}</Td>
+                      <Td muted>{(l.dados_extras || {}).placa || (l.dados_extras || {}).veiculo_placa || '—'}</Td>
                       {/* JORNADA */}
                       <Td align="center" muted>{d.jornada_inicio || '—'}</Td>
                       <Td align="center" muted>{d.jornada_fim || '—'}</Td>

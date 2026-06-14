@@ -740,6 +740,11 @@ async function processarBoletim(boletimId, imageBase64 = null) {
         ? `RDO ${ocrResult.numero_rdo || ocrResult.numero_documento || '—'} | ${ocrResult.empresa || ''} | ${dataBoletimTmpl}`
         : `${tmpl.nome} — ${colaborador?.nome || 'Colaborador'} — ${dataBoletimTmpl}`
 
+      // Normaliza aliases do template antes de salvar em dados_extras
+      // ex: veiculo_placa (campo do RDO) → placa (chave padrão do sistema)
+      if (!ocrResult.placa && ocrResult.veiculo_placa) ocrResult.placa = ocrResult.veiculo_placa
+      if (!ocrResult.cidade_uf && ocrResult.cidade_estado) ocrResult.cidade_uf = ocrResult.cidade_estado
+
       const { data: lancamentoTmpl } = await supabase
         .from('lancamentos')
         .insert({
