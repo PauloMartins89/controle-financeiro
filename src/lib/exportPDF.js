@@ -450,30 +450,49 @@ export function buildReciboERP({
   // ── TABELA DE ITENS ────────────────────────────────────────────────────────
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  // ── Helpers de cálculo ────────────────────────────────────────────────────
+  const parseNum = v => { const n = parseFloat(String(v || '').replace(',', '.')); return isNaN(n) ? 0 : n }
+  const calcHoras = d => ['horas_diurnas','horas_noturnas','h_fds_diurnas','h_fds_noturnas','h_feriado_diurnas','h_feriado_noturnas'].reduce((s, k) => s + parseNum(d?.[k]), 0)
+  const fmtHoras = h => { if (!h) return '—'; const hh = Math.floor(h); const mm = Math.round((h - hh) * 60); return `${hh}:${String(mm).padStart(2, '0')}` }
+  const calcKmTotal = (d = {}) => {
+    const rows = (d.km_rows || []).filter(r => r.total && String(r.total).trim() !== '')
+    return rows.reduce((s, r) => s + parseNum(String(r.total).replace(',', '.')), 0)
+  }
+
   // Detecta colunas disponíveis (só exibe as que têm dados)
   const hasCampo = key => lancamentos.some(l => {
     const d = l.dados_extras || {}
     const v = d[key]
     return v !== undefined && v !== null && v !== ''
   })
+  const hasHoras  = lancamentos.some(l => calcHoras(l.dados_extras) > 0)
+  const hasKm     = lancamentos.some(l => calcKmTotal(l.dados_extras) > 0)
 
+  // Colunas do recibo — orientadas ao cliente (sem dados internos)
+  // Ordem: DATA | Nº | EQUIPAMENTO/PLACA | CLIENTE/SERVIÇO | HORAS | KM | VALOR
   const COLS = [
-    { label: 'DATA',       width: 20, align: 'center', get: l => fmtD(l.data) },
+    { label: 'DATA',             width: 20,   align: 'center', get: l => fmtD(l.data) },
     ...(hasCampo('numero_diario') || hasCampo('numero_rdo')
-      ? [{ label: 'Nº',   width: 18, align: 'center', get: l => (l.dados_extras?.numero_diario || l.dados_extras?.numero_rdo || '—') }]
+      ? [{ label: 'Nº',         width: 16,   align: 'center', get: l => l.dados_extras?.numero_diario || l.dados_extras?.numero_rdo || '—' }]
       : []),
-    { label: 'DESCRIÇÃO / CLIENTE',  width: null, align: 'left',  get: l => (l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao || '—') },
-    ...(hasCampo('placa')
-      ? [{ label: 'PLACA',    width: 20, align: 'center', get: l => l.dados_extras?.placa || '—' }]
+    ...(hasCampo('placa') || hasCampo('equipamento') || hasCampo('modelo_equipamento')
+      ? [{ label: 'EQUIPAMENTO', width: 28,   align: 'center', get: l => l.dados_extras?.placa || l.dados_extras?.equipamento || l.dados_extras?.modelo_equipamento || '—' }]
       : []),
-    ...(hasCampo('condutor')
-      ? [{ label: 'CONDUTOR', width: 34, align: 'left',   get: l => l.dados_extras?.condutor || '—' }]
+    { label: 'DESCRICAO / SERVICO', width: null, align: 'left', get: l => (l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao || '—') },
+    ...(hasCampo('local_origem') || hasCampo('frente') || hasCampo('local_servico')
+      ? [{ label: 'LOCAL',       width: 32,   align: 'left',   get: l => l.dados_extras?.local_origem || l.dados_extras?.frente || l.dados_extras?.local_servico || '—' }]
       : []),
-    { label: 'VALOR',     width: 28, align: 'right', get: l => fmtC(l.valor) },
+    ...(hasHoras
+      ? [{ label: 'HORAS',       width: 20,   align: 'center', get: l => fmtHoras(calcHoras(l.dados_extras)) }]
+      : []),
+    ...(hasKm
+      ? [{ label: 'KM',          width: 20,   align: 'right',  get: l => { const k = calcKmTotal(l.dados_extras); return k > 0 ? k.toLocaleString('pt-BR') : '—' } }]
+      : []),
+    { label: 'VALOR',            width: 26,   align: 'right',  get: l => fmtC(l.valor) },
   ]
   // Calcula largura da coluna flex
   const fixedW = COLS.reduce((s, c) => s + (c.width || 0), 0)
-  const flexW  = (PW - 28) - fixedW
+  const flexW  = Math.max((PW - 28) - fixedW, 30)
   COLS.forEach(c => { if (!c.width) c.width = flexW })
 
   const colStyles = {}
@@ -580,7 +599,7 @@ export function buildReciboERP({
   if (aprovadoEm) {
     doc.setTextColor(5, 100, 70)
     doc.setFont('helvetica', 'bold')
-    doc.text(`✔ Assinado digitalmente em ${fmtDT(aprovadoEm)}`, (PW / 2 + 4 + R) / 2, lineY + 16, { align: 'center' })
+    doc.text(`Assinado digitalmente em ${fmtDT(aprovadoEm)}`, (PW / 2 + 4 + R) / 2, lineY + 16, { align: 'center' })
   } else {
     doc.setTextColor(...GRAY)
     doc.text('Data: ___/___/______', (PW / 2 + 4 + R) / 2, lineY + 16, { align: 'center' })
