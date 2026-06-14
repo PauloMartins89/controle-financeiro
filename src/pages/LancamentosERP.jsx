@@ -1178,29 +1178,7 @@ export default function LancamentosERP() {
               Controle de jornadas, validação de boletins, assinaturas e valores apurados
             </div>
           </div>
-          {/* Busca rápida + ações */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ position: 'relative' }}>
-              <MagnifyingGlassIcon style={{ width: 14, height: 14, color: C.textSec, position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar nº, empresa, placa..."
-                style={{ ...inputSel, paddingLeft: 28, width: 200 }}
-              />
-            </div>
-            <button
-              onClick={() => navigate('/lancamentos')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px',
-                borderRadius: 6, background: 'transparent', border: `1px solid ${C.border}`,
-                color: C.textSec, fontSize: 11, fontWeight: 500, cursor: 'pointer',
-              }}
-            >
-              <ArrowTopRightOnSquareIcon style={{ width: 12, height: 12 }} />
-              Versão Clássica
-            </button>
-          </div>
+
         </div>
 
         {/* Barra de contexto */}
@@ -1314,6 +1292,13 @@ export default function LancamentosERP() {
           </div>
           {/* Linha única: todos os filtros + botões */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>BUSCAR</div>
+              <div style={{ position: 'relative' }}>
+                <MagnifyingGlassIcon style={{ width: 13, height: 13, color: C.textSec, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nº, empresa, placa..." style={{ ...inputSel, paddingLeft: 24, width: 160 }} />
+              </div>
+            </div>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>TIPO DE DOCUMENTO</div>
               <div style={{ ...inputSel, cursor: 'default', color: C.textSec, background: '#F8FAFC' }}>Relatório Diário de Obra</div>
