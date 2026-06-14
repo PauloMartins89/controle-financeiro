@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, ImageOverlay, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, ImageOverlay, Circle, CircleMarker, useMap } from 'react-leaflet'
 import { supabase } from '../lib/supabase'
 import 'leaflet/dist/leaflet.css'
 
@@ -13,7 +13,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-// Componente interno para ajustar o bounds do mapa quando o mapa carregar
+// Ajusta view ao bounds do PDF
 function FitBounds({ bounds }) {
   const map = useMap()
   useEffect(() => {
@@ -22,20 +22,61 @@ function FitBounds({ bounds }) {
   return null
 }
 
+// Centraliza no ponto GPS quando solicitado
+function CenterOnGps({ position, trigger }) {
+  const map = useMap()
+  useEffect(() => {
+    if (trigger && position) map.flyTo([position.lat, position.lng], Math.max(map.getZoom(), 16), { duration: 1 })
+  }, [trigger]) // eslint-disable-line react-hooks/exhaustive-deps
+  return null
+}
+
 const TILES = [
   { id: 'osm',       label: 'Mapa',      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',                                attribution: '© OpenStreetMap' },
   { id: 'satellite', label: 'Satélite',  url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '© Esri' },
-  { id: 'hybrid',    label: 'Híbrido',   url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: '© Esri' },
 ]
 
 const S = {
   page:    { width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', background: '#0f172a', fontFamily: 'system-ui, sans-serif' },
-  topbar:  { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: '#1e293b', borderBottom: '1px solid #334155', zIndex: 1000, flexShrink: 0 },
-  btn:     { padding: '6px 14px', borderRadius: 7, border: '1px solid #475569', background: 'transparent', color: '#94a3b8', fontSize: 13, cursor: 'pointer' },
-  btnAct:  { padding: '6px 14px', borderRadius: 7, border: 'none', background: '#3b82f6', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600 },
-  label:   { color: '#94a3b8', fontSize: 12 },
-  slider:  { accentColor: '#3b82f6', width: 100, cursor: 'pointer' },
-  badge:   { padding: '3px 8px', borderRadius: 5, background: '#0f172a', color: '#64748b', fontSize: 11, border: '1px solid #334155' },
+  topbar:  { display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: '#1e293b', borderBottom: '1px solid #334155', zIndex: 1000, flexShrink: 0, flexWrap: 'wrap' },
+  btn:     { padding: '6px 14px', borderRadius: 7, border: '1px solid #475569', background: 'transparent', color: '#94a3b8', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' },
+  btnAct:  { padding: '6px 14px', borderRadius: 7, border: 'none', background: '#3b82f6', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' },
+  btnGps:  { padding: '6px 14px', borderRadius: 7, border: 'none', background: '#22c55e', color: '#fff', fontSize: 13, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' },
+  label:   { color: '#94a3b8', fontSize: 12, whiteSpace: 'nowrap' },
+  slider:  { accentColor: '#3b82f6', width: 80, cursor: 'pointer' },
+  badge:   { padding: '3px 8px', borderRadius: 5, background: '#0f172a', color: '#64748b', fontSize: 11, border: '1px solid #334155', whiteSpace: 'nowrap' },
+  badgeGps:{ padding: '3px 10px', borderRadius: 5, background: '#052e16', color: '#4ade80', fontSize: 11, border: '1px solid #166534', fontWeight: 700, whiteSpace: 'nowrap' },
+  badgeErr:{ padding: '3px 10px', borderRadius: 5, background: '#2d1515', color: '#f87171', fontSize: 11, border: '1px solid #7f1d1d', whiteSpace: 'nowrap' },
+}
+
+// Ponto de posição GPS (dot azul pulsante + círculo de precisão)
+function GpsDot({ position }) {
+  if (!position) return null
+  const { lat, lng, accuracy } = position
+  return (
+    <>
+      {/* Círculo de precisão */}
+      {accuracy > 0 && (
+        <Circle
+          center={[lat, lng]}
+          radius={accuracy}
+          pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.08, weight: 1.5, dashArray: '4 4' }}
+        />
+      )}
+      {/* Dot principal */}
+      <CircleMarker
+        center={[lat, lng]}
+        radius={10}
+        pathOptions={{ color: '#fff', fillColor: '#3b82f6', fillOpacity: 1, weight: 3 }}
+      />
+      {/* Halo pulsante simulado */}
+      <CircleMarker
+        center={[lat, lng]}
+        radius={18}
+        pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.18, weight: 0 }}
+      />
+    </>
+  )
 }
 
 export default function LiderMapaViewer() {
@@ -46,6 +87,54 @@ export default function LiderMapaViewer() {
   const [opacity, setOpacity] = useState(0.85)
   const [tile, setTile] = useState('satellite')
   const [showStreets, setShowStreets] = useState(false)
+
+  // GPS
+  const [gpsPos, setGpsPos]       = useState(null)   // { lat, lng, accuracy }
+  const [gpsError, setGpsError]   = useState(null)
+  const [gpsActive, setGpsActive] = useState(false)
+  const [centerTrigger, setCenterTrigger] = useState(0)
+  const watchIdRef = useRef(null)
+  const firstFixRef = useRef(false)
+
+  // Liga/desliga GPS
+  const toggleGps = useCallback(() => {
+    if (gpsActive) {
+      // Desligar
+      if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current)
+      watchIdRef.current = null
+      setGpsActive(false)
+      setGpsPos(null)
+      setGpsError(null)
+      firstFixRef.current = false
+    } else {
+      // Ligar
+      if (!navigator.geolocation) { setGpsError('GPS não disponível neste dispositivo'); return }
+      setGpsActive(true)
+      setGpsError(null)
+      firstFixRef.current = false
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude: lat, longitude: lng, accuracy } = pos.coords
+          setGpsPos({ lat, lng, accuracy: Math.round(accuracy) })
+          setGpsError(null)
+          // Centraliza automaticamente no primeiro fix
+          if (!firstFixRef.current) {
+            firstFixRef.current = true
+            setCenterTrigger(t => t + 1)
+          }
+        },
+        (err) => {
+          setGpsError(err.code === 1 ? 'Permissão negada' : 'Sinal GPS fraco')
+        },
+        { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 }
+      )
+    }
+  }, [gpsActive])
+
+  // Limpa watch ao desmontar
+  useEffect(() => {
+    return () => { if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current) }
+  }, [])
 
   useEffect(() => {
     supabase
@@ -87,13 +176,13 @@ export default function LiderMapaViewer() {
       <div style={S.topbar}>
         <button style={S.btn} onClick={() => navigate(-1)}>← Voltar</button>
 
-        <div style={{ flex: 1, color: '#f1f5f9', fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div style={{ flex: 1, color: '#f1f5f9', fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 80 }}>
           {mapa.nome}
         </div>
 
-        {/* Estilo de tile */}
+        {/* Tiles */}
         <div style={{ display: 'flex', gap: 4 }}>
-          {TILES.filter(t => t.id !== 'hybrid').map(t => (
+          {TILES.map(t => (
             <button key={t.id} style={tile === t.id ? S.btnAct : S.btn} onClick={() => setTile(t.id)}>
               {t.label}
             </button>
@@ -107,8 +196,32 @@ export default function LiderMapaViewer() {
           </button>
         )}
 
-        {/* Opacidade do PDF */}
-        <span style={S.label}>Opacidade PDF</span>
+        {/* GPS */}
+        <button
+          style={gpsActive ? S.btnGps : S.btn}
+          onClick={toggleGps}
+          title={gpsActive ? 'Desligar GPS' : 'Ligar GPS'}
+        >
+          📍 {gpsActive ? 'GPS ON' : 'GPS'}
+        </button>
+
+        {/* Centralizar na posição */}
+        {gpsPos && (
+          <button style={S.btnAct} onClick={() => setCenterTrigger(t => t + 1)} title="Centralizar na minha posição">
+            ⊕ Ir para mim
+          </button>
+        )}
+
+        {/* Badge de precisão */}
+        {gpsPos && (
+          <span style={S.badgeGps}>±{gpsPos.accuracy}m</span>
+        )}
+        {gpsError && (
+          <span style={S.badgeErr}>{gpsError}</span>
+        )}
+
+        {/* Opacidade */}
+        <span style={S.label}>Opacidade</span>
         <input type="range" min={0} max={1} step={0.05} value={opacity}
           style={S.slider} onChange={e => setOpacity(Number(e.target.value))} />
         <span style={S.badge}>{Math.round(opacity * 100)}%</span>
@@ -129,7 +242,7 @@ export default function LiderMapaViewer() {
           zoomControl={true}
         >
           {/* Camada base */}
-          <TileLayer url={activeTile.url} attribution={activeTile.attribution} maxZoom={19} />
+          <TileLayer url={activeTile.url} attribution={activeTile.attribution} maxZoom={20} />
 
           {/* Ruas sobre satélite */}
           {tile === 'satellite' && showStreets && (
@@ -137,7 +250,7 @@ export default function LiderMapaViewer() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution="© OpenStreetMap"
               opacity={0.45}
-              maxZoom={19}
+              maxZoom={20}
             />
           )}
 
@@ -151,8 +264,14 @@ export default function LiderMapaViewer() {
             />
           )}
 
-          {/* Ajusta view ao bounds */}
+          {/* Ajusta view ao bounds do PDF */}
           {bounds && <FitBounds bounds={bounds} />}
+
+          {/* Ponto GPS ao vivo */}
+          <GpsDot position={gpsPos} />
+
+          {/* Centraliza no GPS quando solicitado */}
+          <CenterOnGps position={gpsPos} trigger={centerTrigger} />
         </MapContainer>
       </div>
     </div>
