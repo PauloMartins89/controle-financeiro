@@ -295,6 +295,313 @@ export function buildLotePDFDoc({ lancamentos = [], lote, link, assinaturaBase64
   return doc
 }
 
+// ─── Recibo ERP — PDF assinado pelo cliente ───────────────────────────────────
+// Formato retrato A4, paleta navy/branco (mesma identidade de LancamentosERP).
+// Exibe dados da empresa emissora (Birigui) + dados da empresa pagadora (cliente).
+// Parâmetros:
+//   lancamentos   — array de lançamentos do lote
+//   lote          — objeto lotes_cliente
+//   assinaturaBase64 — imagem da assinatura digital (base64 ou dataURL), pode ser null
+//   aprovadoEm    — ISO timestamp da aprovação
+//   aprovadorNome — nome de quem assinou pelo cliente
+//   emissora      — dados da empresa emissora (opcional, usa padrão Birigui)
+export function buildReciboERP({
+  lancamentos = [],
+  lote,
+  assinaturaBase64 = null,
+  aprovadoEm = null,
+  aprovadorNome = null,
+  emissora = {},
+}) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const PW  = doc.internal.pageSize.getWidth()   // 210 mm
+  const PH  = doc.internal.pageSize.getHeight()  // 297 mm
+  const L   = 14  // margem esquerda
+  const R   = PW - 14  // margem direita
+
+  // ── Paleta ERP ─────────────────────────────────────────────────────────────
+  const NAVY   = [11, 31, 58]
+  const BLUE   = [29, 78, 216]
+  const GREEN  = [5, 150, 105]
+  const WHITE  = [255, 255, 255]
+  const GRAY   = [100, 116, 139]
+  const LIGHT  = [244, 246, 250]
+  const BORDER = [216, 222, 233]
+
+  // ── Empresa emissora (padrão: Birigui) ─────────────────────────────────────
+  const emp = {
+    nome:     emissora.nome     || 'Birigui Locações e Serviços',
+    cnpj:     emissora.cnpj     || '—',
+    endereco: emissora.endereco || 'BR 262 – Km 14 – Chácara Imperial',
+    cidade:   emissora.cidade   || 'Três Lagoas – MS',
+    fone:     emissora.fone     || '(67) 9 9965-4128',
+    email:    emissora.email    || 'financeiro@grupocasagrande.net',
+  }
+
+  // ── Número do recibo (últimos 8 do UUID do lote) ───────────────────────────
+  const numRecibo = (lote.id || '').replace(/-/g, '').slice(-8).toUpperCase()
+  const geradoEm  = new Date().toLocaleString('pt-BR')
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const fmtC  = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+  const fmtD  = d => d ? d.split('-').reverse().join('/') : '—'
+  const fmtDT = ts => ts ? new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ── CABEÇALHO ──────────────────────────────────────────────────────────────
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // Faixa navy superior
+  doc.setFillColor(...NAVY)
+  doc.rect(0, 0, PW, 30, 'F')
+
+  // Nome da empresa emissora (esquerda)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.setTextColor(...WHITE)
+  doc.text(emp.nome.toUpperCase(), L, 13)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.setTextColor(180, 200, 220)
+  doc.text(`${emp.endereco}  ·  ${emp.cidade}  ·  ${emp.fone}`, L, 21)
+  if (emp.cnpj !== '—') doc.text(`CNPJ: ${emp.cnpj}`, L, 26)
+
+  // Box "RECIBO" (direita)
+  doc.setFillColor(...BLUE)
+  doc.roundedRect(R - 50, 4, 52, 22, 2, 2, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(16)
+  doc.setTextColor(...WHITE)
+  doc.text('RECIBO', R - 24, 14, { align: 'center' })
+  doc.setFontSize(8)
+  doc.text(`Nº ${numRecibo}`, R - 24, 22, { align: 'center' })
+
+  // Linha azul fina separadora
+  doc.setDrawColor(...BLUE)
+  doc.setLineWidth(0.6)
+  doc.line(0, 30, PW, 30)
+
+  // ── Sub-header: dois blocos (emissora × cliente) ───────────────────────────
+  let y = 38
+
+  // Bloco esquerdo — Emitido por
+  doc.setFillColor(...LIGHT)
+  doc.rect(L, y, 86, 28, 'F')
+  doc.setDrawColor(...BORDER)
+  doc.setLineWidth(0.3)
+  doc.rect(L, y, 86, 28, 'S')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7)
+  doc.setTextColor(...BLUE)
+  doc.text('EMITIDO POR', L + 3, y + 6)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(...NAVY)
+  doc.text(emp.nome, L + 3, y + 13)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.setTextColor(...GRAY)
+  doc.text(emp.endereco, L + 3, y + 19)
+  doc.text(`${emp.cidade}  ·  ${emp.fone}`, L + 3, y + 24)
+
+  // Bloco direito — Empresa pagadora
+  doc.setFillColor(...LIGHT)
+  doc.rect(PW / 2 + 4, y, 86, 28, 'F')
+  doc.setDrawColor(...BORDER)
+  doc.rect(PW / 2 + 4, y, 86, 28, 'S')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7)
+  doc.setTextColor(...BLUE)
+  doc.text('EMPRESA PAGADORA', PW / 2 + 7, y + 6)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(...NAVY)
+  doc.text((lote.cliente || '').toUpperCase(), PW / 2 + 7, y + 13, { maxWidth: 80 })
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.setTextColor(...GRAY)
+  if (aprovadorNome) doc.text(`Representante: ${aprovadorNome}`, PW / 2 + 7, y + 19)
+  doc.text(`Aprovado em: ${fmtDT(aprovadoEm)}`, PW / 2 + 7, y + 24)
+
+  y += 34  // abaixo dos blocos
+
+  // Informações do lote (linha de dados rápidos)
+  const totalValor = lancamentos.reduce((s, l) => s + (parseFloat(l.valor) || 0), 0)
+  const dataMin    = lancamentos.reduce((mn, l) => (!mn || (l.data && l.data < mn)) ? l.data : mn, null)
+  const dataMax    = lancamentos.reduce((mx, l) => (!mx || (l.data && l.data > mx)) ? l.data : mx, null)
+  const periodo    = dataMin && dataMax ? (dataMin === dataMax ? fmtD(dataMin) : `${fmtD(dataMin)} a ${fmtD(dataMax)}`) : '—'
+
+  doc.setFillColor(...NAVY)
+  doc.rect(L, y, PW - 28, 10, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7)
+  doc.setTextColor(...WHITE)
+  doc.text(`Período: ${periodo}`, L + 4, y + 6.5)
+  doc.text(`Qtd. lançamentos: ${lancamentos.length}`, L + 60, y + 6.5)
+  doc.text(`Data emissão: ${new Date().toLocaleDateString('pt-BR')}`, L + 110, y + 6.5)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor([134, 255, 180])
+  doc.text(`TOTAL: ${fmtC(totalValor)}`, R - 4, y + 6.5, { align: 'right' })
+
+  y += 16
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ── TABELA DE ITENS ────────────────────────────────────────────────────────
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  // Detecta colunas disponíveis (só exibe as que têm dados)
+  const hasCampo = key => lancamentos.some(l => {
+    const d = l.dados_extras || {}
+    const v = d[key]
+    return v !== undefined && v !== null && v !== ''
+  })
+
+  const COLS = [
+    { label: 'DATA',       width: 20, align: 'center', get: l => fmtD(l.data) },
+    ...(hasCampo('numero_diario') || hasCampo('numero_rdo')
+      ? [{ label: 'Nº',   width: 18, align: 'center', get: l => (l.dados_extras?.numero_diario || l.dados_extras?.numero_rdo || '—') }]
+      : []),
+    { label: 'DESCRIÇÃO / CLIENTE',  width: null, align: 'left',  get: l => (l.dados_extras?.cliente || l.dados_extras?.empresa || l.descricao || '—') },
+    ...(hasCampo('placa')
+      ? [{ label: 'PLACA',    width: 20, align: 'center', get: l => l.dados_extras?.placa || '—' }]
+      : []),
+    ...(hasCampo('condutor')
+      ? [{ label: 'CONDUTOR', width: 34, align: 'left',   get: l => l.dados_extras?.condutor || '—' }]
+      : []),
+    { label: 'VALOR',     width: 28, align: 'right', get: l => fmtC(l.valor) },
+  ]
+  // Calcula largura da coluna flex
+  const fixedW = COLS.reduce((s, c) => s + (c.width || 0), 0)
+  const flexW  = (PW - 28) - fixedW
+  COLS.forEach(c => { if (!c.width) c.width = flexW })
+
+  const colStyles = {}
+  COLS.forEach((c, i) => { colStyles[i] = { cellWidth: c.width, halign: c.align } })
+
+  const rows = lancamentos
+    .sort((a, b) => (a.data || '') < (b.data || '') ? -1 : 1)
+    .map(l => COLS.map(c => c.get(l)))
+
+  // Linha de total
+  const totalRow = COLS.map((_, i) => {
+    if (i === 0) return { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'left', fillColor: NAVY, textColor: WHITE } }
+    if (i === COLS.length - 1) return { content: fmtC(totalValor), styles: { fontStyle: 'bold', halign: 'right', fillColor: NAVY, textColor: [134, 255, 180] } }
+    return { content: '', styles: { fillColor: NAVY, textColor: WHITE } }
+  })
+
+  autoTable(doc, {
+    head: [COLS.map(c => c.label)],
+    body: [...rows, totalRow],
+    startY: y,
+    margin: { left: L, right: 14 },
+    styles: { fontSize: 7.5, cellPadding: { top: 3.5, right: 3, bottom: 3.5, left: 3 }, textColor: [23, 32, 51], lineColor: BORDER, lineWidth: 0.2 },
+    headStyles: { fillColor: NAVY, textColor: WHITE, fontStyle: 'bold', fontSize: 7.5, halign: 'center', minCellHeight: 10 },
+    alternateRowStyles: { fillColor: LIGHT },
+    columnStyles: colStyles,
+    didDrawPage: (data) => {
+      // Rodapé em cada página
+      doc.setFillColor(...NAVY)
+      doc.rect(0, PH - 14, PW, 14, 'F')
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(6.5)
+      doc.setTextColor(...WHITE)
+      doc.text(`${emp.nome}  ·  SmartPro Sistema de Gestão  ·  Gerado em ${geradoEm}`, PW / 2, PH - 5, { align: 'center' })
+      doc.text(`Pág. ${data.pageNumber}`, R, PH - 5, { align: 'right' })
+    },
+  })
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ── BLOCO DE DECLARAÇÃO E ASSINATURA ──────────────────────────────────────
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  const sigY = doc.lastAutoTable?.finalY || 160
+  const needsNewPage = sigY + 70 > PH - 20
+
+  if (needsNewPage) doc.addPage()
+  const blockY = needsNewPage ? 20 : sigY + 10
+
+  // Faixa título declaração
+  doc.setFillColor(...LIGHT)
+  doc.setDrawColor(...BORDER)
+  doc.setLineWidth(0.3)
+  doc.rect(L, blockY, PW - 28, 10, 'FD')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(...NAVY)
+  doc.text('DECLARAÇÃO DE RECEBIMENTO E CONCORDÂNCIA', PW / 2, blockY + 6.5, { align: 'center' })
+
+  // Texto declaração
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
+  doc.setTextColor(...GRAY)
+  const decl = `Declaro que os serviços relacionados acima foram prestados conforme acordado e que o valor total de ${fmtC(totalValor)} está correto e aprovado para pagamento.`
+  const lines = doc.splitTextToSize(decl, PW - 32)
+  doc.text(lines, L + 2, blockY + 17)
+
+  const assY = blockY + 17 + (lines.length * 5) + 8
+
+  // ── Assinatura digital (se houver) ─────────────────────────────────────────
+  if (assinaturaBase64) {
+    try {
+      const imgSrc = assinaturaBase64.startsWith('data:') ? assinaturaBase64 : `data:image/png;base64,${assinaturaBase64}`
+      // Imagem no lado direito acima da linha
+      doc.addImage(imgSrc, 'PNG', PW / 2 + 4, assY - 2, 80, 24)
+    } catch (_) {}
+  }
+
+  // Linhas de assinatura
+  const lineY = assY + (assinaturaBase64 ? 24 : 18)
+  doc.setDrawColor(...NAVY)
+  doc.setLineWidth(0.4)
+
+  // Emissora (esquerda)
+  doc.line(L, lineY, L + 86, lineY)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7.5)
+  doc.setTextColor(...NAVY)
+  doc.text(emp.nome, L + 43, lineY + 6, { align: 'center' })
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(...GRAY)
+  doc.text('Responsável pela emissão', L + 43, lineY + 11, { align: 'center' })
+  doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, L + 43, lineY + 16, { align: 'center' })
+
+  // Cliente / pagador (direita)
+  doc.line(PW / 2 + 4, lineY, R, lineY)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(7.5)
+  doc.setTextColor(...NAVY)
+  doc.text((aprovadorNome || lote.cliente || 'De acordo — Cliente').toUpperCase(), (PW / 2 + 4 + R) / 2, lineY + 6, { align: 'center' })
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(...GRAY)
+  doc.text(lote.cliente, (PW / 2 + 4 + R) / 2, lineY + 11, { align: 'center' })
+  if (aprovadoEm) {
+    doc.setTextColor(5, 100, 70)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`✔ Assinado digitalmente em ${fmtDT(aprovadoEm)}`, (PW / 2 + 4 + R) / 2, lineY + 16, { align: 'center' })
+  } else {
+    doc.setTextColor(...GRAY)
+    doc.text('Data: ___/___/______', (PW / 2 + 4 + R) / 2, lineY + 16, { align: 'center' })
+  }
+
+  // Rodapé da última página (forçado)
+  const totalPages = doc.internal.getNumberOfPages()
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i)
+    doc.setFillColor(...NAVY)
+    doc.rect(0, PH - 14, PW, 14, 'F')
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(6.5)
+    doc.setTextColor(...WHITE)
+    doc.text(`${emp.nome}  ·  SmartPro Sistema de Gestão  ·  Gerado em ${geradoEm}`, PW / 2, PH - 5, { align: 'center' })
+    doc.text(`Pág. ${i}/${totalPages}`, R, PH - 5, { align: 'right' })
+  }
+
+  return doc
+}
+
 // ─── Exportar Requisição de Compra (estilo documento oficial) ─────────────────
 export async function exportarRequisicaoPDF({ solicitacao, itens = [] }) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })

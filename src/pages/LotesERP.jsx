@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
-import { buildLotePDFDoc } from '../lib/exportPDF'
+import { buildLotePDFDoc, buildReciboERP } from '../lib/exportPDF'
 import { formatCurrency, formatDate } from '../lib/utils'
 import {
   CheckCircleIcon, XCircleIcon, ClockIcon, PaperAirplaneIcon,
@@ -479,6 +479,9 @@ function LoteDrawer({ lote, onClose, onRefresh }) {
     try {
       const lancs = lancamentos || []
       const link = lote.token_acesso ? `${window.location.origin}/lote/${lote.token_acesso}` : null
+      const aprovadoEm   = lote.aprovado_em || null
+      const aprovadorNome = lote.confirmado_por || lote.aprovador_nome || null
+
       let assinaturaBase64 = null
       if (lote.assinatura_url) {
         try {
@@ -487,9 +490,21 @@ function LoteDrawer({ lote, onClose, onRefresh }) {
           assinaturaBase64 = await new Promise(resolve => { const fr = new FileReader(); fr.onloadend = () => resolve(fr.result); fr.readAsDataURL(blob) })
         } catch (_) {}
       }
-      const doc = buildLotePDFDoc({ lancamentos: lancs, lote, link, assinaturaBase64, aprovadoEm: lote.aprovado_em || null, aprovadorNome: lote.confirmado_por || lote.aprovador_nome || null })
+
+      // Se o lote tiver assinatura digital → gera Recibo ERP
+      // Caso contrário → gera o PDF de aprovação padrão (landscape verde)
+      let doc
+      if (assinaturaBase64) {
+        doc = buildReciboERP({ lancamentos: lancs, lote, assinaturaBase64, aprovadoEm, aprovadorNome })
+      } else {
+        doc = buildLotePDFDoc({ lancamentos: lancs, lote, link, assinaturaBase64: null, aprovadoEm, aprovadorNome })
+      }
+
       const url = URL.createObjectURL(doc.output('blob'))
-      const a = document.createElement('a'); a.href = url; a.download = `lote-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}.pdf`; document.body.appendChild(a); a.click(); document.body.removeChild(a)
+      const nomeArq = assinaturaBase64
+        ? `recibo-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}.pdf`
+        : `lote-${lote.cliente.replace(/[^a-z0-9]/gi, '_')}.pdf`
+      const a = document.createElement('a'); a.href = url; a.download = nomeArq; document.body.appendChild(a); a.click(); document.body.removeChild(a)
       setTimeout(() => URL.revokeObjectURL(url), 10000)
     } catch (e) { toast.error('Erro ao gerar PDF: ' + e.message) }
     finally { setDownloadingPDF(false) }
@@ -566,7 +581,7 @@ function LoteDrawer({ lote, onClose, onRefresh }) {
             )}
             {(lote.status === 'aprovado_cliente' || lote.status === 'faturado' || lote.status === 'pago') && (
               <button onClick={handleDownloadPDF} disabled={downloadingPDF} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 7, background: '#EFF6FF', border: `1px solid #BFDBFE`, color: C.blue, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: downloadingPDF ? 0.6 : 1 }}>
-                <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> {downloadingPDF ? 'Gerando PDF...' : lote.assinatura_url ? 'Baixar PDF Assinado' : 'Baixar PDF'}
+                  <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> {downloadingPDF ? 'Gerando PDF...' : lote.assinatura_url ? 'Baixar Recibo Assinado (ERP)' : 'Baixar PDF'}
               </button>
             )}
             {lote.comprovante_url && (
