@@ -17,6 +17,8 @@ import {
   PlusCircleIcon, ShoppingCartIcon, ArrowTopRightOnSquareIcon,
   ExclamationTriangleIcon, ChartBarIcon, MapPinIcon,
   Squares2X2Icon, ListBulletIcon, SignalIcon, StarIcon,
+  EnvelopeIcon, ExclamationCircleIcon, ShieldCheckIcon,
+  ChatBubbleLeftEllipsisIcon, DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 import { LC } from '../lib/theme'
 
@@ -92,421 +94,642 @@ function StatusBadge({ status }) {
   )
 }
 
-// ─── sub-component: Score Fiscal ─────────────────────────────────────────────
-function ScoreFiscal({ score }) {
-  const color = score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444'
-  const label = score >= 70 ? 'Bom' : score >= 40 ? 'Regular' : 'Risco'
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ flex: 1, height: 6, background: 'var(--bg-secondary)', borderRadius: 99, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${score}%`, background: color, borderRadius: 99, transition: 'width .4s' }} />
-      </div>
-      <span style={{ fontSize: 12, fontWeight: 800, color, minWidth: 28 }}>{score}</span>
-      <span style={{ fontSize: 10, color, fontWeight: 600 }}>{label}</span>
-    </div>
-  )
+// ─── IBGE cities cache ───────────────────────────────────────────────────────
+let _cidadesCache = null
+function loadCidadesIBGE() {
+  if (!_cidadesCache) {
+    _cidadesCache = fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome')
+      .then(r => r.json())
+      .then(data => data.map(m => ({ label: m.nome, sub: m?.microrregiao?.mesorregiao?.UF?.sigla || '', uf: m?.microrregiao?.mesorregiao?.UF?.sigla || '' })))
+      .catch(() => [])
+  }
+  return _cidadesCache
 }
 
-// ─── sub-component: Autocomplete ─────────────────────────────────────────────
-function Autocomplete({ value, onChange, suggestions, placeholder, style }) {
+// ─── AutocompleteInput (city/product suggestions) ────────────────────────────
+function AutocompleteInput({ value, onChange, onSelect, sugestoes, placeholder, inputStyle }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-  const filtered = value.trim()
-    ? suggestions.filter(s => norm(s).includes(norm(value))).slice(0, 8)
-    : suggestions.slice(0, 8)
-
+  const [cursor, setCursor] = useState(-1)
+  const wRef = useRef(null)
+  const normStr = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
   useEffect(() => {
-    const fn = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const fn = e => { if (wRef.current && !wRef.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [])
-
+  const filtered = value.trim()
+    ? sugestoes.filter(s => normStr(typeof s === 'string' ? s : s.label).includes(normStr(value))).slice(0, 10)
+    : []
+  function handleKey(e) {
+    if (e.key === 'Enter') { if (open && cursor >= 0 && filtered.length > 0) { e.preventDefault(); onSelect(filtered[cursor]); setOpen(false); setCursor(-1) } else setOpen(false); return }
+    if (!open || !filtered.length) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c + 1, filtered.length - 1)) }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setCursor(c => Math.max(c - 1, -1)) }
+    if (e.key === 'Escape') { setOpen(false); setCursor(-1) }
+  }
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <input value={value} onChange={e => { onChange(e.target.value); setOpen(true) }}
-        onFocus={() => setOpen(true)} placeholder={placeholder}
-        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box', ...style }} />
+    <div ref={wRef} style={{ position: 'relative' }}>
+      <input value={value} onChange={e => { onChange(e.target.value); setOpen(true); setCursor(-1) }}
+        onFocus={() => value.trim() && setOpen(true)} onKeyDown={handleKey}
+        placeholder={placeholder} style={inputStyle} autoComplete="off" />
       {open && filtered.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.12)', marginTop: 2, maxHeight: 200, overflowY: 'auto' }}>
-          {filtered.map((s, i) => (
-            <div key={i} onMouseDown={() => { onChange(s); setOpen(false) }}
-              style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', color: 'var(--text-primary)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >{s}</div>
-          ))}
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 300, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,.18)', marginTop: 2, maxHeight: 200, overflowY: 'auto' }}>
+          {filtered.map((s, i) => {
+            const label = typeof s === 'string' ? s : s.label
+            const sub = typeof s === 'string' ? null : s.sub
+            return (
+              <div key={i} onMouseDown={() => { onSelect(s); setOpen(false); setCursor(-1) }}
+                style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12, background: cursor === i ? 'rgba(14,165,233,0.10)' : 'transparent', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <span>{label}</span>
+                {sub && <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, background: 'var(--bg-secondary)', padding: '1px 5px', borderRadius: 4, border: '1px solid var(--border)', flexShrink: 0 }}>{sub}</span>}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
 
+// ─── Score Fiscal completo ───────────────────────────────────────────────────
+function calcFiscalScore(d) {
+  let score = 0
+  const breakdown = []
+  const status = (d.descricao_situacao_cadastral || String(d.situacao_cadastral || '')).toUpperCase()
+  const sitPts = status.includes('ATIVA') ? 40 : status.includes('SUSPENS') ? 10 : status.includes('INAPT') ? 5 : 0
+  score += sitPts
+  breakdown.push({ label: 'Sit. Cadastral', pts: sitPts, max: 40, detail: d.descricao_situacao_cadastral || '?' })
+  let tempoPts = 0, tempoDetail = 'N/A'
+  if (d.data_inicio_atividade) {
+    const anos = (Date.now() - new Date(d.data_inicio_atividade).getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+    tempoPts = anos >= 10 ? 20 : anos >= 5 ? 15 : anos >= 2 ? 10 : anos >= 1 ? 5 : 2
+    tempoDetail = anos >= 1 ? `${Math.floor(anos)} anos` : `${Math.floor(anos * 12)} meses`
+  }
+  score += tempoPts
+  breakdown.push({ label: 'Tempo Atividade', pts: tempoPts, max: 20, detail: tempoDetail })
+  let regimePts = 0
+  if ((Array.isArray(d.regime_tributario) ? d.regime_tributario : []).length > 0) regimePts += 7
+  if (d.opcao_pelo_simples === true) regimePts += 5
+  if (d.opcao_pelo_mei === true) regimePts += 3
+  if ((d.capital_social || 0) > 0) regimePts += 2
+  regimePts = Math.min(regimePts, 15)
+  score += regimePts
+  breakdown.push({ label: 'Regime Fiscal', pts: regimePts, max: 15, detail: d.opcao_pelo_simples ? 'Simples Nacional' : d.opcao_pelo_mei ? 'MEI' : 'Lucro Presumido/Real' })
+  let complPts = 0
+  if (d.email) complPts += 3
+  if ((d.ddd_telefone_2 || '').replace(/\D/g, '').length > 5) complPts += 2
+  if ((d.qsa || []).length > 0) complPts += 3
+  if ((d.cnaes_secundarios || []).length > 0) complPts += 2
+  score += complPts
+  breakdown.push({ label: 'Completude', pts: complPts, max: 10, detail: `${[d.email ? 'Email' : '', (d.qsa || []).length ? 'QSA' : ''].filter(Boolean).join(', ') || 'Mínimo'}` })
+  const penalties = []
+  if (String(d.situacao_especial || '').trim()) { score -= 15; penalties.push('Situação Especial') }
+  const motivo = String(d.descricao_motivo_situacao_cadastral || '').trim().toUpperCase()
+  if (motivo && motivo !== 'SEM MOTIVO' && motivo !== '0') { score -= 10; penalties.push(d.descricao_motivo_situacao_cadastral) }
+  score = Math.max(0, Math.min(100, score))
+  const tier = score >= 80 ? { label: 'Excelente', color: '#10b981', bg: 'rgba(16,185,129,0.07)', border: 'rgba(16,185,129,0.2)' } :
+               score >= 65 ? { label: 'Bom',       color: '#34d399', bg: 'rgba(52,211,153,0.07)', border: 'rgba(52,211,153,0.2)' } :
+               score >= 50 ? { label: 'Regular',   color: '#f59e0b', bg: 'rgba(245,158,11,0.07)', border: 'rgba(245,158,11,0.2)' } :
+               score >= 30 ? { label: 'Atenção',   color: '#f97316', bg: 'rgba(249,115,22,0.07)', border: 'rgba(249,115,22,0.2)' } :
+                             { label: 'Crítico',   color: '#ef4444', bg: 'rgba(239,68,68,0.07)',  border: 'rgba(239,68,68,0.2)'  }
+  return { score, ...tier, breakdown, penalties }
+}
+
+// ─── FornecedorCard inline ────────────────────────────────────────────────────
+function FornecedorCardInline({ e, onAdd, added, selecionado, onToggle, onCnpj }) {
+  const waHref = waLink(e.telefone)
+  return (
+    <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: selecionado ? '1.5px solid #0ea5e9' : '1px solid var(--border)', padding: 12 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        <input type="checkbox" checked={selecionado} onChange={onToggle}
+          style={{ marginTop: 4, accentColor: '#0ea5e9', cursor: 'pointer', width: 14, height: 14, flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nome}</div>
+          {e.rating && (
+            <div style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700, letterSpacing: 0.3 }}>
+              {'★'.repeat(Math.round(e.rating))}{'☆'.repeat(5 - Math.round(e.rating))} {e.rating.toFixed(1)}
+              {e.avaliacoes > 0 && <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}> ({e.avaliacoes})</span>}
+            </div>
+          )}
+          {e.endereco && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.endereco}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+            {waHref && <a href={waHref} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#10b981', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}><PhoneIcon style={{ width: 11 }} />{e.telefone}</a>}
+            {e.website && <a href={e.website.startsWith('http') ? e.website : `https://${e.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#8b5cf6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}><GlobeAltIcon style={{ width: 11 }} />Site</a>}
+            {e.horario && <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{e.horario}</span>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
+          <button onClick={() => onCnpj(e)} title="Consultar CNPJ"
+            style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', cursor: 'pointer', color: '#6366f1', display: 'flex', alignItems: 'center', gap: 3 }}>
+            <IdentificationIcon style={{ width: 11 }} />CNPJ
+          </button>
+          <button onClick={() => onAdd(e)} disabled={added}
+            style={{ padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: added ? 'rgba(16,185,129,0.1)' : 'rgba(14,165,233,0.1)', border: added ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(14,165,233,0.3)', cursor: added ? 'default' : 'pointer', color: added ? '#10b981' : '#0ea5e9', display: 'flex', alignItems: 'center', gap: 3 }}>
+            {added ? <CheckCircleIcon style={{ width: 11 }} /> : <PlusCircleIcon style={{ width: 11 }} />}
+            {added ? 'OK' : 'Add'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── CnpjCardInline ──────────────────────────────────────────────────────────
+function CnpjCardInline({ d, onAdd, added }) {
+  const fiscal = calcFiscalScore(d)
+  const ativa = (d.descricao_situacao_cadastral || '').toUpperCase().includes('ATIVA')
+  const tel1 = (d.ddd_telefone_1 || '').replace(/\D/g, '').length > 5
+    ? `(${d.ddd_telefone_1}) ${d.ddd_telefone_1}` : null
+  const end = [d.logradouro, d.numero, d.bairro, d.municipio, d.uf].filter(Boolean).join(', ')
+  const empresa = { id: d.cnpj, nome: d.nome_fantasia || d.razao_social, cnpj: d.cnpj, telefone: d.ddd_telefone_1 ? `${d.ddd_telefone_1}` : null, email: d.email || null, logradouro: end }
+  return (
+    <div style={{ background: fiscal.bg, borderRadius: 12, border: `1px solid ${fiscal.border}`, overflow: 'hidden' }}>
+      {/* header */}
+      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--text-primary)' }}>{d.nome_fantasia || d.razao_social}</div>
+          {d.nome_fantasia && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{d.razao_social}</div>}
+          <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: ativa ? '#10b981' : '#ef4444', background: ativa ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', padding: '2px 7px', borderRadius: 99 }}>
+              {ativa ? '✓ Ativa' : '✗ ' + (d.descricao_situacao_cadastral || 'Inativa')}
+            </span>
+            {d.porte && <span style={{ fontSize: 10, color: '#6366f1', background: 'rgba(99,102,241,0.1)', padding: '2px 7px', borderRadius: 99 }}>{d.porte}</span>}
+            {d.opcao_pelo_simples && <span style={{ fontSize: 10, color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '2px 7px', borderRadius: 99 }}>Simples</span>}
+            {d.opcao_pelo_mei && <span style={{ fontSize: 10, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 7px', borderRadius: 99 }}>MEI</span>}
+          </div>
+        </div>
+        <button onClick={() => onAdd(empresa)} disabled={added}
+          style={{ padding: '7px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, background: added ? 'rgba(16,185,129,0.12)' : '#0ea5e9', border: added ? '1px solid rgba(16,185,129,0.3)' : 'none', cursor: added ? 'default' : 'pointer', color: added ? '#10b981' : '#fff', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          {added ? <><CheckCircleIcon style={{ width: 13 }} />Adicionado</> : <><PlusCircleIcon style={{ width: 13 }} />Adicionar</>}
+        </button>
+      </div>
+      {/* score */}
+      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', border: `2.5px solid ${fiscal.color}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 900, color: fiscal.color, lineHeight: 1 }}>{fiscal.score}</div>
+            <div style={{ fontSize: 8, fontWeight: 700, color: fiscal.color }}>pts</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: fiscal.color, marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <ShieldCheckIcon style={{ width: 12 }} /> Score Fiscal: {fiscal.label}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {fiscal.breakdown.map((b, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', width: 90, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.label}</div>
+                  <div style={{ width: 48, height: 4, borderRadius: 2, background: 'var(--border)', flexShrink: 0, overflow: 'hidden' }}>
+                    <div style={{ width: `${(b.pts / b.max) * 100}%`, height: '100%', background: b.pts >= b.max * 0.75 ? '#10b981' : b.pts >= b.max * 0.4 ? '#f59e0b' : '#ef4444', borderRadius: 2 }} />
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', minWidth: 28 }}>{b.pts}/{b.max}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{b.detail}</div>
+                </div>
+              ))}
+              {fiscal.penalties.map((p, i) => (
+                <div key={i} style={{ fontSize: 10, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <ExclamationCircleIcon style={{ width: 10, flexShrink: 0 }} /> {p}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* dados */}
+      <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {[fmtCNPJ(d.cnpj || ''), end, d.email, d.data_inicio_atividade ? `Abertura: ${fmtDate(d.data_inicio_atividade)}` : null, d.capital_social ? `Capital: ${fmtBRL(d.capital_social)}` : null, d.cnae_fiscal_descricao ? `CNAE: ${d.cnae_fiscal_descricao}` : null].filter(Boolean).map((v, i) => (
+          <div key={i} style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</div>
+        ))}
+        {(d.qsa || []).length > 0 && (
+          <div style={{ marginTop: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 }}>Quadro Societário</div>
+            {d.qsa.slice(0, 3).map((s, i) => (
+              <div key={i} style={{ fontSize: 11, color: 'var(--text-primary)' }}>{s.nome_socio} — <span style={{ color: 'var(--text-secondary)' }}>{s.qualificacao_socio}</span></div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── sub-component: Painel Radar de Compras ──────────────────────────────────
+const SUGESTOES_BUSCA = [
+  'Pneus', 'Lubrificantes', 'Pecas auto', 'Baterias', 'EPI', 'Ferramentas',
+  'Eletrica', 'Hidraulica', 'Informatica', 'Escritorio', 'Limpeza', 'Alimentos',
+  'Manutencao', 'Seguranca', 'Construcao', 'Tintas', 'Uniformes', 'Combustivel',
+]
 function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
   const [aba, setAba] = useState('fornecedor') // 'fornecedor' | 'precos' | 'cnpj'
-  // --- busca fornecedor ---
-  const [produto, setProduto] = useState('')
-  const [cidade, setCidade] = useState('')
-  const [estado, setEstado] = useState('')
-  const [loadingForn, setLoadingForn] = useState(false)
-  const [resultForn, setResultForn] = useState([])
+  // ── estado busca fornecedor ──
+  const [bProduto, setBProduto] = useState('')
+  const [bCidade, setBCidade] = useState('')
+  const [bUf, setBUf] = useState('')
+  const [bLoading, setBLoading] = useState(false)
+  const [bResultado, setBResultado] = useState(null)
+  const [bSelecionados, setBSelecionados] = useState(new Set())
+  const [bAdicionados, setBAdicionados] = useState(new Set())
   const [cidades, setCidades] = useState([])
-  // --- pesquisa preços ---
-  const [queryPreco, setQueryPreco] = useState('')
-  const [loadingPreco, setLoadingPreco] = useState(false)
-  const [resultPreco, setResultPreco] = useState(null)
-  const [filtroPl, setFiltroPl] = useState('todos')
-  // --- consulta CNPJ ---
+  // ── estado pesquisa preços ──
+  const [qPreco, setQPreco] = useState('')
+  const [pLoading, setPLoading] = useState(false)
+  const [pResultado, setPResultado] = useState(null)
+  const [pFiltro, setPFiltro] = useState('todos')
+  // ── estado CNPJ ──
   const [cnpjInput, setCnpjInput] = useState('')
-  const [loadingCnpj, setLoadingCnpj] = useState(false)
-  const [dadosCnpj, setDadosCnpj] = useState(null)
-  const [scoreCnpj, setScoreCnpj] = useState(null)
-  const [addedCnpjs, setAddedCnpjs] = useState([])
+  const [cnpjNome, setCnpjNome] = useState('')
+  const [cnpjCidade, setCnpjCidade] = useState('')
+  const [cnpjLoading, setCnpjLoading] = useState(false)
+  const [cnpjNomeLoading, setCnpjNomeLoading] = useState(false)
+  const [cnpjDados, setCnpjDados] = useState(null)
+  const [cnpjAdicionados, setCnpjAdicionados] = useState(new Set())
 
-  // Carrega cidades IBGE (uma vez)
-  useEffect(() => {
-    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome')
-      .then(r => r.json())
-      .then(data => setCidades(data.map(m => m.nome)))
-      .catch(() => {})
-  }, [])
+  useEffect(() => { loadCidadesIBGE().then(setCidades) }, [])
 
-  // --- busca fornecedor ---
-  async function buscarFornecedores() {
-    if (!produto.trim()) { toast.error('Informe o produto'); return }
-    setLoadingForn(true)
-    setResultForn([])
+  const inp = { width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 12, outline: 'none', boxSizing: 'border-box' }
+
+  // ── buscar fornecedores (Google Maps via Serper) ──
+  async function buscarFornecedores(produtoOverride) {
+    const p = String(produtoOverride || bProduto || '').trim()
+    if (!p) { toast.error('Informe o produto'); return }
+    if (!bCidade.trim()) { toast.error('Informe a cidade'); return }
+    setBLoading(true); setBResultado(null); setBSelecionados(new Set())
     try {
       const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
-        body: { produto: produto.trim(), cidade: cidade.trim() || undefined, estado: estado || undefined },
+        body: { query: p, cidade: bCidade.trim(), uf: bUf || undefined },
       })
-      if (error) throw error
-      setResultForn(data?.fornecedores || [])
-      if (!data?.fornecedores?.length) toast('Nenhum fornecedor encontrado.', { icon: 'ℹ️' })
-    } catch {
-      // fallback: links externos úteis
-      setResultForn([])
-      toast('Busca online indisponível — use os links abaixo para pesquisa manual.', { icon: 'ℹ️' })
-    } finally {
-      setLoadingForn(false)
-    }
+      if (error) throw new Error(error.message || 'Erro na busca')
+      if (data?.error) throw new Error(data.error)
+      setBResultado({ ...data, produto: p, cidade: bCidade.trim(), uf: bUf })
+      if (!(data?.fornecedores || []).length) toast('Nenhum fornecedor encontrado.', { icon: '🔍', duration: 4000 })
+    } catch (err) {
+      toast.error(err.message || 'Falha na busca — verifique os critérios')
+    } finally { setBLoading(false) }
   }
 
-  // --- pesquisa preços ---
-  async function buscarPrecos() {
-    if (!queryPreco.trim()) { toast.error('Informe o produto'); return }
-    setLoadingPreco(true)
-    setResultPreco(null)
-    try {
-      const { data, error } = await supabase.functions.invoke('busca-precos', {
-        body: { query: queryPreco.trim() },
-      })
-      if (error) throw error
-      setResultPreco(data)
-    } catch {
-      toast.error('Busca de preços indisponível.')
-    } finally {
-      setLoadingPreco(false)
-    }
-  }
-
-  // --- consulta CNPJ ---
-  function calcScore(d) {
-    let s = 0
-    const status = (d.descricao_situacao_cadastral || String(d.situacao_cadastral || '')).toUpperCase()
-    s += status.includes('ATIVA') ? 40 : status.includes('SUSPENS') ? 10 : 0
-    if (d.data_inicio_atividade) {
-      const anos = (Date.now() - new Date(d.data_inicio_atividade).getTime()) / (1000 * 60 * 60 * 24 * 365.25)
-      s += anos >= 10 ? 20 : anos >= 5 ? 15 : anos >= 2 ? 10 : anos >= 1 ? 5 : 2
-    }
-    if (d.email) s += 8
-    if ((d.ddd_telefone_1 || '').replace(/\D/g, '').length > 5) s += 5
-    if ((d.capital_social || 0) > 0) s += 5
-    return Math.min(s, 100)
-  }
-
-  async function consultarCNPJ() {
-    const raw = cnpjInput.replace(/\D/g, '')
-    if (raw.length !== 14) { toast.error('CNPJ inválido'); return }
-    setLoadingCnpj(true)
-    setDadosCnpj(null)
-    setScoreCnpj(null)
-    try {
-      const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${raw}`)
-      if (!r.ok) throw new Error('CNPJ não encontrado')
-      const d = await r.json()
-      setDadosCnpj(d)
-      setScoreCnpj(calcScore(d))
-    } catch {
-      toast.error('CNPJ não encontrado ou inválido.')
-    } finally {
-      setLoadingCnpj(false)
-    }
-  }
-
-  async function adicionarDoCNPJ() {
-    if (!dadosCnpj) return
-    const cnpj = dadosCnpj.cnpj || cnpjInput.replace(/\D/g, '')
+  async function adicionarFornecedor(empresa) {
+    const chave = empresa.id || empresa.cnpj || empresa.nome
+    if (bAdicionados.has(chave)) return
     const { error } = await supabase.from('fornecedores_compra').insert({
       workspace_id: workspaceId,
-      nome: dadosCnpj.razao_social || dadosCnpj.nome_fantasia,
-      cnpj,
-      telefone: (dadosCnpj.ddd_telefone_1 || '') + (dadosCnpj.telefone_1 || ''),
-      email: dadosCnpj.email || null,
+      nome: empresa.nome,
+      cnpj: empresa.cnpj || null,
+      telefone: empresa.telefone || null,
+      email: empresa.email || null,
+      observacoes: empresa.logradouro ? `Endereço: ${empresa.logradouro}` : null,
       ativo: true,
     })
-    if (error) { toast.error('Erro ao adicionar'); return }
-    setAddedCnpjs(p => [...p, cnpj])
+    if (error && !error.message?.includes('duplicate')) { toast.error('Erro: ' + error.message); return }
+    setBAdicionados(s => new Set([...s, chave]))
+    toast.success(`${empresa.nome} adicionado!`)
+    onAdicionarFornecedor?.()
+  }
+
+  function toggleSel(id) { setBSelecionados(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n }) }
+  function toggleTodos() {
+    const ids = (bResultado?.fornecedores || []).map(e => e.id)
+    const all = ids.length > 0 && ids.every(id => bSelecionados.has(id))
+    setBSelecionados(all ? new Set() : new Set(ids))
+  }
+  async function adicionarLote() {
+    const items = (bResultado?.fornecedores || []).filter(e => bSelecionados.has(e.id) && !bAdicionados.has(e.id || e.cnpj || e.nome))
+    if (!items.length) { toast('Todos já adicionados'); return }
+    for (const emp of items) await adicionarFornecedor(emp)
+    setBSelecionados(new Set())
+  }
+  function waLote() {
+    const com = (bResultado?.fornecedores || []).filter(e => bSelecionados.has(e.id) && waLink(e.telefone))
+    if (!com.length) { toast.error('Nenhum selecionado tem celular WA'); return }
+    toast(`Abrindo ${com.length} conversa(s) no WhatsApp...`, { icon: '📱', duration: 3000 })
+    com.forEach((e, i) => setTimeout(() => window.open(waLink(e.telefone, 'Olá! Gostaria de solicitar uma cotação de preços.'), '_blank'), i * 700))
+  }
+  function irParaCnpj(empresa) {
+    setCnpjNome(empresa.nome || '')
+    setCnpjCidade(bCidade || '')
+    setAba('cnpj')
+  }
+
+  // ── pesquisa preços ──
+  async function buscarPrecos() {
+    if (!qPreco.trim()) { toast.error('Informe o produto'); return }
+    setPLoading(true); setPResultado(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('busca-precos', { body: { query: qPreco.trim() } })
+      if (error) throw error
+      setPResultado(data)
+      if (!data?.resultados?.length) toast('Nenhum resultado.', { icon: 'ℹ️' })
+    } catch { toast.error('Busca de preços indisponível.') }
+    finally { setPLoading(false) }
+  }
+
+  // ── CNPJ ──
+  async function consultarCNPJDigits(digits) {
+    if (digits.length !== 14) { toast.error('CNPJ deve ter 14 dígitos'); return }
+    setCnpjLoading(true); setCnpjDados(null)
+    try {
+      const r = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.message || 'CNPJ não encontrado')
+      setCnpjDados(d)
+    } catch (err) { toast.error(err.message || 'Erro ao consultar CNPJ') }
+    finally { setCnpjLoading(false) }
+  }
+  async function buscarCnpjPorNome() {
+    if (!cnpjNome.trim()) { toast.error('Informe o nome da empresa'); return }
+    setCnpjNomeLoading(true); setCnpjDados(null); setCnpjInput('')
+    try {
+      const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
+        body: { mode: 'cnpj_search', nome: cnpjNome.trim(), cidade: cnpjCidade.trim() },
+      })
+      if (error || !data?.cnpjs?.length) { toast.error('CNPJ não encontrado. Tente o nome completo.'); return }
+      const digits = data.cnpjs[0].replace(/\D/g, '')
+      setCnpjInput(fmtCNPJ(digits))
+      await consultarCNPJDigits(digits)
+    } catch { toast.error('Erro ao buscar CNPJ') }
+    finally { setCnpjNomeLoading(false) }
+  }
+  async function adicionarDoCNPJ() {
+    if (!cnpjDados) return
+    const chave = cnpjDados.cnpj
+    const tel = cnpjDados.ddd_telefone_1 ? `${cnpjDados.ddd_telefone_1}` : null
+    const end = [cnpjDados.logradouro, cnpjDados.numero, cnpjDados.bairro, cnpjDados.municipio, cnpjDados.uf].filter(Boolean).join(', ')
+    const { error } = await supabase.from('fornecedores_compra').insert({
+      workspace_id: workspaceId,
+      nome: cnpjDados.nome_fantasia || cnpjDados.razao_social,
+      cnpj: chave,
+      telefone: tel,
+      email: cnpjDados.email || null,
+      observacoes: end ? `Endereço: ${end}` : null,
+      ativo: true,
+    })
+    if (error && !error.message?.includes('duplicate')) { toast.error('Erro: ' + error.message); return }
+    setCnpjAdicionados(s => new Set([...s, chave]))
     toast.success('Fornecedor adicionado ao cadastro!')
     onAdicionarFornecedor?.()
   }
 
-  // links de pesquisa externos
-  function linksExternos(q) {
-    return [
-      { label: 'Google', url: `https://www.google.com/search?q=${encodeURIComponent(q + ' fornecedor')}`, color: '#4285f4' },
-      { label: 'Mercado Livre', url: `https://lista.mercadolivre.com.br/${encodeURIComponent(q)}`, color: '#ffe600', dark: true },
-      { label: 'Alibaba', url: `https://www.alibaba.com/trade/search?SearchText=${encodeURIComponent(q)}`, color: '#ff6a00' },
-      { label: 'Google Maps', url: `https://www.google.com/maps/search/${encodeURIComponent(q + ' ' + cidade + ' ' + estado)}`, color: '#34a853' },
-    ]
-  }
-
   const abas = [
-    { key: 'fornecedor', label: 'Buscar Fornecedor' },
-    { key: 'precos',     label: 'Pesquisa de Preços' },
-    { key: 'cnpj',       label: 'Consulta CNPJ' },
+    { key: 'fornecedor', label: 'Fornecedor' },
+    { key: 'precos',     label: 'Preços' },
+    { key: 'cnpj',       label: 'CNPJ' },
   ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* cabeçalho radar */}
-      <div style={{ padding: '14px 16px 0', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(225,29,72,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <MagnifyingGlassIcon style={{ width: 15, color: '#e11d48' }} />
+      {/* header */}
+      <div style={{ padding: '12px 14px 0', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <div style={{ width: 26, height: 26, borderRadius: 7, background: 'rgba(225,29,72,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <MagnifyingGlassIcon style={{ width: 14, color: '#e11d48' }} />
           </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>Radar de Compras</div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Busca de fornecedores, preços e CNPJ</div>
-          </div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>Radar de Compras</div>
         </div>
-        <div style={{ display: 'flex', gap: 0 }}>
+        <div style={{ display: 'flex' }}>
           {abas.map(a => (
-            <button key={a.key} onClick={() => setAba(a.key)} style={{
-              flex: 1, padding: '7px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-              border: 'none', borderBottom: aba === a.key ? '2px solid #e11d48' : '2px solid transparent',
-              background: 'transparent', color: aba === a.key ? '#e11d48' : 'var(--text-secondary)',
-            }}>{a.label}</button>
+            <button key={a.key} onClick={() => setAba(a.key)} style={{ flex: 1, padding: '7px 4px', fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 'none', borderBottom: aba === a.key ? '2px solid #e11d48' : '2px solid transparent', background: 'transparent', color: aba === a.key ? '#e11d48' : 'var(--text-secondary)' }}>{a.label}</button>
           ))}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px' }}>
 
-        {/* ── aba: Buscar Fornecedor ── */}
+        {/* ── aba Fornecedor ── */}
         {aba === 'fornecedor' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Autocomplete value={produto} onChange={setProduto} suggestions={SUGESTOES_PRODUTO}
-              placeholder="Produto ou serviço (ex: Pneus 295/80)" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px', gap: 8 }}>
-              <Autocomplete value={cidade} onChange={setCidade} suggestions={cidades}
-                placeholder="Cidade (opcional)" />
-              <select value={estado} onChange={e => setEstado(e.target.value)}
-                style={{ padding: '8px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 12 }}>
-                <option value="">UF</option>
-                {ESTADOS_BR.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-              </select>
-            </div>
-            <button onClick={buscarFornecedores} disabled={loadingForn}
-              style={{ padding: '9px 0', borderRadius: 8, background: '#e11d48', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              {loadingForn ? <ArrowPathIcon style={{ width: 15, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 15 }} />}
-              Buscar Fornecedores
-            </button>
-
-            {/* links externos sempre visíveis */}
-            {produto.trim() && (
-              <div style={{ marginTop: 4 }}>
-                <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Pesquisa manual</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {linksExternos(produto).map(l => (
-                    <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
-                      style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: l.color, color: l.dark ? '#111' : '#fff', textDecoration: 'none', flexShrink: 0 }}>
-                      {l.label}
-                    </a>
-                  ))}
+            {/* formulário */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 10 }}>O que você precisa cotar?</div>
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>Produto *</label>
+                <AutocompleteInput value={bProduto} onChange={setBProduto}
+                  onSelect={s => setBProduto(typeof s === 'string' ? s : s.label)}
+                  sugestoes={SUGESTOES_BUSCA} placeholder="Ex: Pneus, EPI, Ferramentas..."
+                  inputStyle={inp} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px', gap: 8, marginBottom: 8 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>Cidade *</label>
+                  <AutocompleteInput value={bCidade} onChange={setBCidade}
+                    onSelect={s => { setBCidade(s.label); if (s.uf) setBUf(s.uf) }}
+                    sugestoes={cidades} placeholder="Ex: Campo Grande"
+                    inputStyle={inp} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4, display: 'block', marginBottom: 4 }}>UF</label>
+                  <select value={bUf} onChange={e => setBUf(e.target.value)}
+                    style={{ ...inp, appearance: 'none', paddingRight: 4 }}>
+                    <option value="">-</option>
+                    {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => <option key={uf}>{uf}</option>)}
+                  </select>
                 </div>
               </div>
-            )}
-
-            {/* resultados */}
-            {resultForn.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700 }}>{resultForn.length} fornecedor(es) encontrado(s)</div>
-                {resultForn.map((f, i) => (
-                  <div key={i} style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{f.nome}</div>
-                        {f.endereco && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{f.endereco}</div>}
-                        {f.telefone && <a href={waLink(f.telefone) || '#'} target="_blank" rel="noreferrer"
-                          style={{ fontSize: 11, color: '#10b981', textDecoration: 'none', fontWeight: 700 }}>{f.telefone}</a>}
-                      </div>
-                      <button onClick={() => onAdicionarFornecedor?.(f)}
-                        style={{ padding: '5px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: 'rgba(14,165,233,0.12)', border: '1px solid rgba(14,165,233,0.3)', color: '#0ea5e9', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        + Adicionar
-                      </button>
-                    </div>
-                  </div>
+              {/* chips sugestão */}
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                {SUGESTOES_BUSCA.slice(0, 8).map(s => (
+                  <button key={s} onClick={() => { setBProduto(s); if (bCidade.trim()) buscarFornecedores(s) }}
+                    style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: bProduto === s ? '#0ea5e9' : 'rgba(14,165,233,0.08)', border: `1px solid ${bProduto === s ? '#0ea5e9' : 'rgba(14,165,233,0.2)'}`, cursor: 'pointer', color: bProduto === s ? '#fff' : '#0ea5e9' }}>{s}</button>
                 ))}
               </div>
-            )}
-          </div>
-        )}
+              <button onClick={() => buscarFornecedores()} disabled={bLoading}
+                style={{ width: '100%', padding: '9px 0', borderRadius: 8, background: '#0ea5e9', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: bLoading ? 0.7 : 1 }}>
+                {bLoading ? <ArrowPathIcon style={{ width: 15, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 15 }} />}
+                {bLoading ? 'Buscando...' : 'Buscar Fornecedores'}
+              </button>
+            </div>
 
-        {/* ── aba: Pesquisa de Preços ── */}
-        {aba === 'precos' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Autocomplete value={queryPreco} onChange={setQueryPreco} suggestions={SUGESTOES_PRODUTO}
-              placeholder="Ex: Óleo 15W40 20L" />
-            <button onClick={buscarPrecos} disabled={loadingPreco}
-              style={{ padding: '9px 0', borderRadius: 8, background: '#e11d48', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              {loadingPreco ? <ArrowPathIcon style={{ width: 15, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 15 }} />}
-              Pesquisar Preços
-            </button>
-
-            {/* link rápido Mercado Livre */}
-            {queryPreco.trim() && (
+            {/* links externos */}
+            {bProduto.trim() && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {[
-                  { label: 'Mercado Livre', url: `https://lista.mercadolivre.com.br/${encodeURIComponent(queryPreco)}`, color: '#ffe600', dark: true },
-                  { label: 'Google Shopping', url: `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(queryPreco)}`, color: '#4285f4' },
-                  { label: 'Amazon BR', url: `https://www.amazon.com.br/s?k=${encodeURIComponent(queryPreco)}`, color: '#ff9900', dark: true },
+                  { label: 'Google Maps', url: `https://www.google.com/maps/search/${encodeURIComponent(`${bProduto} ${bCidade}`.trim())}`, color: '#ea4335' },
+                  { label: 'Google', url: `https://www.google.com/search?q=${encodeURIComponent(`fornecedor ${bProduto} ${bCidade}`.trim())}`, color: '#4285f4' },
+                  { label: 'Mercado Livre', url: `https://lista.mercadolivre.com.br/${encodeURIComponent(bProduto)}`, color: '#f5a623' },
+                  { label: 'Alibaba', url: `https://www.alibaba.com/trade/search?SearchText=${encodeURIComponent(bProduto)}`, color: '#ff6a00' },
                 ].map(l => (
                   <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
-                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: l.color, color: l.dark ? '#111' : '#fff', textDecoration: 'none' }}>
+                    style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: `${l.color}18`, border: `1px solid ${l.color}40`, color: l.color, textDecoration: 'none' }}>
                     {l.label} ↗
                   </a>
                 ))}
               </div>
             )}
 
-            {resultPreco && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-                {/* KPIs */}
-                {resultPreco.resultados?.length > 0 && (() => {
-                  const precos = resultPreco.resultados.map(r => r.preco).filter(Boolean)
-                  const menor = Math.min(...precos)
-                  const maior = Math.max(...precos)
-                  const media = precos.reduce((a, b) => a + b, 0) / precos.length
-                  return (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 8 }}>
-                      {[
-                        { label: 'Menor', value: fmtBRL(menor), color: '#10b981' },
-                        { label: 'Média', value: fmtBRL(media), color: '#3b82f6' },
-                        { label: 'Maior', value: fmtBRL(maior), color: '#f59e0b' },
-                      ].map(k => (
-                        <div key={k.label} style={{ background: `${k.color}10`, border: `1px solid ${k.color}25`, borderTop: `2px solid ${k.color}`, borderRadius: 8, padding: '8px 10px' }}>
-                          <div style={{ fontSize: 9, color: LC.txtMuted, fontWeight: 700, textTransform: 'uppercase' }}>{k.label}</div>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: k.color }}>{k.value}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-                {/* filtro fonte */}
-                <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
-                  {['todos', 'ml', 'google'].map(f => (
-                    <button key={f} onClick={() => setFiltroPl(f)}
-                      style={{ padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid', background: filtroPl === f ? 'var(--accent)' : 'var(--bg-card)', color: filtroPl === f ? '#fff' : 'var(--text-secondary)', borderColor: filtroPl === f ? 'var(--accent)' : 'var(--border)' }}>
-                      {{ todos: 'Todos', ml: 'ML', google: 'Google' }[f]}
+            {/* toolbar lote */}
+            {bSelecionados.size > 0 && bResultado && (
+              <div style={{ background: 'rgba(14,165,233,0.07)', border: '1.5px solid rgba(14,165,233,0.3)', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: '#0ea5e9' }}>{bSelecionados.size} selecionado(s)</span>
+                <button onClick={adicionarLote} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: '#0ea5e9', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <PlusCircleIcon style={{ width: 12 }} />Cadastrar
+                </button>
+                <button onClick={waLote} style={{ padding: '5px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', cursor: 'pointer', color: '#25d366', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <ChatBubbleLeftEllipsisIcon style={{ width: 12 }} />WA Lote
+                </button>
+                <button onClick={() => setBSelecionados(new Set())} style={{ marginLeft: 'auto', padding: '4px 8px', borderRadius: 6, fontSize: 10, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>Limpar</button>
+              </div>
+            )}
+
+            {/* resultados */}
+            {bResultado && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: 'var(--text-primary)' }}>{bResultado.total || bResultado.fornecedores?.length}</strong> resultado(s) — <strong style={{ color: '#0ea5e9' }}>{bResultado.produto}</strong> em <strong style={{ color: '#0ea5e9' }}>{bResultado.cidade}</strong>
+                  </div>
+                  {bResultado.fornecedores?.length > 0 && (
+                    <button onClick={toggleTodos} style={{ padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                      {(bResultado.fornecedores || []).every(e => bSelecionados.has(e.id)) ? 'Desmarcar' : 'Sel. Todos'}
                     </button>
-                  ))}
+                  )}
                 </div>
-                {(resultPreco.resultados || [])
-                  .filter(r => filtroPl === 'todos' || (filtroPl === 'ml' && r.site === 'Mercado Livre') || (filtroPl === 'google' && r.site !== 'Mercado Livre'))
-                  .map((item, i) => {
-                    const menorPreco = Math.min(...(resultPreco.resultados || []).map(r => r.preco).filter(Boolean))
-                    const isMenor = item.preco === menorPreco
-                    const siteBg = SITE_COLORS[item.site] ?? '#6b7280'
-                    return (
-                      <div key={i} style={{ display: 'flex', gap: 10, padding: '10px 12px', background: isMenor ? 'rgba(34,197,94,0.05)' : 'var(--bg-secondary)', borderRadius: 8, border: `1px solid ${isMenor ? 'rgba(34,197,94,0.2)' : 'var(--border)'}`, alignItems: 'center' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.titulo}</div>
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 3 }}>
-                            <span style={{ background: siteBg, color: ['#FFE600'].includes(siteBg) ? '#111' : '#fff', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 99 }}>{item.site}</span>
-                            {isMenor && <span style={{ fontSize: 9, fontWeight: 800, color: '#22c55e' }}>MENOR PREÇO</span>}
-                          </div>
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: isMenor ? '#22c55e' : 'var(--text-primary)' }}>{fmtBRL(item.preco)}</div>
-                          <a href={item.url} target="_blank" rel="noopener noreferrer"
-                            style={{ fontSize: 10, color: 'var(--text-secondary)', textDecoration: 'none' }}>ver ↗</a>
-                        </div>
-                      </div>
-                    )
-                  })}
+                {(bResultado.fornecedores || []).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px dashed var(--border)', fontSize: 12 }}>Nenhum fornecedor encontrado</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {(bResultado.fornecedores || []).map(e => (
+                      <FornecedorCardInline key={e.id} e={e}
+                        onAdd={adicionarFornecedor}
+                        added={bAdicionados.has(e.id || e.cnpj || e.nome)}
+                        selecionado={bSelecionados.has(e.id)}
+                        onToggle={() => toggleSel(e.id)}
+                        onCnpj={irParaCnpj} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!bResultado && !bLoading && (
+              <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px dashed var(--border)' }}>
+                <MagnifyingGlassIcon style={{ width: 32, margin: '0 auto 10px', opacity: 0.2 }} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 5 }}>Busque fornecedores por produto e cidade</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Resultados via Google Maps (Serper.dev)</div>
               </div>
             )}
           </div>
         )}
 
-        {/* ── aba: Consulta CNPJ ── */}
-        {aba === 'cnpj' && (
+        {/* ── aba Preços ── */}
+        {aba === 'precos' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={cnpjInput} onChange={e => setCnpjInput(fmtCNPJ(e.target.value))}
-                placeholder="00.000.000/0001-00" maxLength={18}
-                onKeyDown={e => e.key === 'Enter' && consultarCNPJ()}
-                style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }} />
-              <button onClick={consultarCNPJ} disabled={loadingCnpj}
-                style={{ padding: '8px 14px', borderRadius: 8, background: '#e11d48', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
-                {loadingCnpj ? <ArrowPathIcon style={{ width: 14, animation: 'spin 1s linear infinite' }} /> : <IdentificationIcon style={{ width: 14 }} />}
-                Consultar
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
+              <AutocompleteInput value={qPreco} onChange={setQPreco}
+                onSelect={s => setQPreco(typeof s === 'string' ? s : s.label)}
+                sugestoes={SUGESTOES_BUSCA} placeholder="Ex: Óleo 15W40 20L, Pneu 295/80..."
+                inputStyle={{ ...inp, marginBottom: 8 }} />
+              <button onClick={buscarPrecos} disabled={pLoading}
+                style={{ width: '100%', padding: '9px 0', borderRadius: 8, background: '#e11d48', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: pLoading ? 0.7 : 1, marginTop: 8 }}>
+                {pLoading ? <ArrowPathIcon style={{ width: 14, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 14 }} />}
+                {pLoading ? 'Pesquisando...' : 'Pesquisar Preços'}
               </button>
             </div>
+            {qPreco.trim() && (
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Mercado Livre', url: `https://lista.mercadolivre.com.br/${encodeURIComponent(qPreco)}`, color: '#f5a623' },
+                  { label: 'Google Shopping', url: `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(qPreco)}`, color: '#4285f4' },
+                  { label: 'Amazon', url: `https://www.amazon.com.br/s?k=${encodeURIComponent(qPreco)}`, color: '#ff9900' },
+                ].map(l => (
+                  <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
+                    style={{ padding: '4px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: `${l.color}18`, border: `1px solid ${l.color}40`, color: l.color, textDecoration: 'none' }}>{l.label} ↗</a>
+                ))}
+              </div>
+            )}
+            {pResultado?.resultados?.length > 0 && (() => {
+              const precos = pResultado.resultados.map(r => r.preco).filter(Boolean)
+              const menor = Math.min(...precos), maior = Math.max(...precos)
+              const media = precos.reduce((a, b) => a + b, 0) / precos.length
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+                    {[{ label: 'Menor', value: fmtBRL(menor), color: '#10b981' }, { label: 'Média', value: fmtBRL(media), color: '#3b82f6' }, { label: 'Maior', value: fmtBRL(maior), color: '#f59e0b' }].map(k => (
+                      <div key={k.label} style={{ background: `${k.color}10`, border: `1px solid ${k.color}25`, borderTop: `2px solid ${k.color}`, borderRadius: 8, padding: '8px 10px' }}>
+                        <div style={{ fontSize: 9, color: LC.txtMuted, fontWeight: 700, textTransform: 'uppercase' }}>{k.label}</div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: k.color }}>{k.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {['todos', 'ml', 'google'].map(f => (
+                      <button key={f} onClick={() => setPFiltro(f)}
+                        style={{ padding: '3px 8px', borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: 'pointer', border: '1px solid', background: pFiltro === f ? 'var(--accent)' : 'var(--bg-card)', color: pFiltro === f ? '#fff' : 'var(--text-secondary)', borderColor: pFiltro === f ? 'var(--accent)' : 'var(--border)' }}>
+                        {{ todos: 'Todos', ml: 'ML', google: 'Google' }[f]}
+                      </button>
+                    ))}
+                  </div>
+                  {pResultado.resultados
+                    .filter(r => pFiltro === 'todos' || (pFiltro === 'ml' && r.site === 'Mercado Livre') || (pFiltro === 'google' && r.site !== 'Mercado Livre'))
+                    .map((item, i) => {
+                      const isMenor = item.preco === menor
+                      const siteBg = SITE_COLORS[item.site] ?? '#6b7280'
+                      return (
+                        <div key={i} style={{ display: 'flex', gap: 8, padding: '9px 10px', background: isMenor ? 'rgba(34,197,94,0.05)' : 'var(--bg-secondary)', borderRadius: 8, border: `1px solid ${isMenor ? 'rgba(34,197,94,0.2)' : 'var(--border)'}`, alignItems: 'center' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.titulo}</div>
+                            <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginTop: 3 }}>
+                              <span style={{ background: siteBg, color: siteBg === '#FFE600' ? '#111' : '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 99 }}>{item.site}</span>
+                              {isMenor && <span style={{ fontSize: 9, fontWeight: 800, color: '#22c55e' }}>MENOR PREÇO</span>}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: isMenor ? '#22c55e' : 'var(--text-primary)' }}>{fmtBRL(item.preco)}</div>
+                            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: 'var(--text-secondary)', textDecoration: 'none' }}>ver ↗</a>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              )
+            })()}
+            {!pResultado && !pLoading && (
+              <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px dashed var(--border)', color: 'var(--text-secondary)', fontSize: 12 }}>Digite o produto para pesquisar preços no Mercado Livre e Google Shopping</div>
+            )}
+          </div>
+        )}
 
-            {dadosCnpj && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* score */}
-                <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 12, border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Score Fiscal</div>
-                  <ScoreFiscal score={scoreCnpj || 0} />
-                </div>
-                {/* dados */}
-                <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: 12, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>{dadosCnpj.razao_social}</div>
-                  {dadosCnpj.nome_fantasia && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{dadosCnpj.nome_fantasia}</div>}
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: dadosCnpj.descricao_situacao_cadastral?.toUpperCase().includes('ATIVA') ? '#10b981' : '#ef4444', background: dadosCnpj.descricao_situacao_cadastral?.toUpperCase().includes('ATIVA') ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', padding: '2px 8px', borderRadius: 99 }}>
-                      {dadosCnpj.descricao_situacao_cadastral || 'Situação desconhecida'}
-                    </span>
-                  </div>
-                  {[
-                    { label: 'CNPJ', value: fmtCNPJ(dadosCnpj.cnpj || '') },
-                    { label: 'Abertura', value: dadosCnpj.data_inicio_atividade ? fmtDate(dadosCnpj.data_inicio_atividade) : '—' },
-                    { label: 'Capital', value: dadosCnpj.capital_social ? fmtBRL(dadosCnpj.capital_social) : '—' },
-                    { label: 'Telefone', value: dadosCnpj.ddd_telefone_1 ? `(${dadosCnpj.ddd_telefone_1}) ${dadosCnpj.telefone_1}` : '—' },
-                    { label: 'E-mail', value: dadosCnpj.email || '—' },
-                    { label: 'Município', value: dadosCnpj.municipio || '—' },
-                  ].map(r => (
-                    <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, gap: 8 }}>
-                      <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>{r.label}</span>
-                      <span style={{ color: 'var(--text-primary)', fontWeight: 600, textAlign: 'right', wordBreak: 'break-all' }}>{r.value}</span>
-                    </div>
-                  ))}
-                </div>
-                {/* CNAEs */}
-                {dadosCnpj.cnae_fiscal_descricao && (
-                  <div style={{ background: 'rgba(99,102,241,0.06)', borderRadius: 8, padding: '8px 12px', border: '1px solid rgba(99,102,241,0.15)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>CNAE Principal</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{dadosCnpj.cnae_fiscal_descricao}</div>
-                  </div>
-                )}
-                {/* ação */}
-                <button onClick={adicionarDoCNPJ} disabled={addedCnpjs.includes(dadosCnpj.cnpj)}
-                  style={{ padding: '9px 0', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer', border: 'none', background: addedCnpjs.includes(dadosCnpj.cnpj) ? 'rgba(16,185,129,0.15)' : '#0ea5e9', color: addedCnpjs.includes(dadosCnpj.cnpj) ? '#10b981' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  {addedCnpjs.includes(dadosCnpj.cnpj) ? <><CheckCircleIcon style={{ width: 15 }} />Adicionado ao Cadastro</> : <><PlusCircleIcon style={{ width: 15 }} />Adicionar ao Cadastro</>}
+        {/* ── aba CNPJ ── */}
+        {aba === 'cnpj' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* buscar por nome */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 4 }}>Buscar CNPJ pelo nome</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>Pesquisa automática via Serper + Receita Federal</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
+                <input value={cnpjNome} onChange={e => setCnpjNome(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && buscarCnpjPorNome()}
+                  placeholder="Nome da empresa" style={inp} />
+                <input value={cnpjCidade} onChange={e => setCnpjCidade(e.target.value)}
+                  placeholder="Cidade (opcional)" style={inp} />
+              </div>
+              <button onClick={buscarCnpjPorNome} disabled={cnpjNomeLoading}
+                style={{ width: '100%', padding: '8px 0', borderRadius: 7, background: '#0ea5e9', border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, opacity: cnpjNomeLoading ? 0.7 : 1 }}>
+                {cnpjNomeLoading ? <ArrowPathIcon style={{ width: 13, animation: 'spin 1s linear infinite' }} /> : <MagnifyingGlassIcon style={{ width: 13 }} />}
+                {cnpjNomeLoading ? 'Buscando...' : 'Buscar CNPJ'}
+              </button>
+            </div>
+            {/* consulta direta */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, border: '1px solid var(--border)', padding: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>Consultar CNPJ diretamente</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input value={cnpjInput} onChange={e => setCnpjInput(fmtCNPJ(e.target.value))}
+                  placeholder="00.000.000/0001-00" maxLength={18}
+                  onKeyDown={e => e.key === 'Enter' && consultarCNPJDigits(cnpjInput.replace(/\D/g, ''))}
+                  style={{ flex: 1, ...inp, fontFamily: 'monospace', letterSpacing: 1 }} />
+                <button onClick={() => consultarCNPJDigits(cnpjInput.replace(/\D/g, ''))} disabled={cnpjLoading}
+                  style={{ padding: '8px 12px', borderRadius: 7, background: '#0ea5e9', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, flexShrink: 0, opacity: cnpjLoading ? 0.7 : 1 }}>
+                  {cnpjLoading ? <ArrowPathIcon style={{ width: 13, animation: 'spin 1s linear infinite' }} /> : <IdentificationIcon style={{ width: 13 }} />}
+                  Consultar
                 </button>
+              </div>
+              <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-secondary)' }}>Dados via BrasilAPI (Receita Federal) · gratuito</div>
+            </div>
+            {cnpjDados && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <CnpjCardInline d={cnpjDados} onAdd={adicionarDoCNPJ} added={cnpjAdicionados.has(cnpjDados.cnpj)} />
+              </div>
+            )}
+            {!cnpjDados && !cnpjLoading && !cnpjNomeLoading && (
+              <div style={{ textAlign: 'center', padding: '24px 12px', background: 'var(--bg-secondary)', borderRadius: 10, border: '1px dashed var(--border)', color: 'var(--text-secondary)', fontSize: 12 }}>
+                <IdentificationIcon style={{ width: 28, margin: '0 auto 8px', opacity: 0.2 }} />
+                Consulte o CNPJ de um fornecedor para ver situação fiscal, sócios, capital social e mais
               </div>
             )}
           </div>
