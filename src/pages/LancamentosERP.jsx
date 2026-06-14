@@ -1387,6 +1387,7 @@ export default function LancamentosERP() {
               </div>
             </div>
           </div>
+        </div>
 
         {/* ── TABELA ───────────────────────────────────────────────────── */}
         <div style={{
