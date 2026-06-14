@@ -88,6 +88,7 @@ import Faturamento from './pages/Faturamento'
 import Pagamentos from './pages/Pagamentos'
 import ContasPagar from './pages/ContasPagar'
 import LotesCliente from './pages/LotesCliente'
+import LotesERP from './pages/LotesERP'
 import CentralGerencial from './pages/CentralGerencial'
 import FlowCenter from './pages/FlowCenter'
 import FlowLab from './pages/FlowLab'
@@ -595,6 +596,7 @@ export default function App() {
                   <Route path="/lancamentos-erp" element={<LancamentosERP />} />
                   <Route path="/cadastros" element={<Cadastros />} />
                   <Route path="/lotes-cliente" element={<LotesCliente />} />
+                  <Route path="/lotes-erp" element={<LotesERP />} />
                   <Route path="/form-templates" element={<FormTemplates />} />
                   <Route path="/faturamento" element={<Faturamento />} />
                   <Route path="/pagamentos" element={<Pagamentos />} />
