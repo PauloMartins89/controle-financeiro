@@ -518,8 +518,6 @@ const Th = ({ children, align = 'left', width, group, sortKey, sortCol, sortDir,
       )}
     </span>
   </th>
-    {children}
-  </th>
 )
 
 const Td = ({ children, align = 'left', muted, bold, green }) => (
@@ -1271,10 +1269,12 @@ export default function LancamentosERP() {
   useEffect(() => { setPage(1) }, [filterForm, filterStatus, filterCliente, search, competencia, dateFrom, dateTo])
 
   function handleSort(col) {
-    setSortCol(prev => {
-      if (prev === col) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); return col }
-      setSortDir('asc'); return col
-    })
+    if (sortCol === col) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortCol(col)
+      setSortDir('asc')
+    }
     setPage(1)
   }
   // Limpa seleção ao mudar filtro
