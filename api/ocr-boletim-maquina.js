@@ -658,7 +658,7 @@ async function checkDuplicata(supabase, workspaceId, newLancId, extras) {
   console.log(`[ocr-boletim] Nº doc ${numDoc} repetido mas dados diferentes — registrado normalmente`)
 }
 
-async function processarBoletim(boletimId) {
+async function processarBoletim(boletimId, imageBase64 = null) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('supabase n├úo configurado')
   if (!groqApiKey) throw new Error('GROQ_API_KEY não configurada no servidor')
@@ -706,8 +706,10 @@ async function processarBoletim(boletimId) {
       .eq('id', boletimTipo.form_template_id)
       .maybeSingle()
     if (tmpl) {
-      // Passa a URL pública diretamente ao runOCR — evita download + base64 (~2s economizados)
-      const ocrResult      = await runOCR(bol.imagem_url || '', { template: tmpl })
+      // imageBase64 fornecido via POST body → usa direto (sem download da URL, economiza ~2s)
+      // Caso contrário, passa URL pública (Groq faz o download)
+      const ocrInput = imageBase64 || bol.imagem_url || ''
+      const ocrResult      = await runOCR(ocrInput, { template: tmpl })
       const tipoForm       = ocrResult.tipo_formulario || tmpl.tipo_base || 'formulario'
       const dataBoletimTmpl = ocrResult.data || new Date().toISOString().slice(0, 10)
 
@@ -896,7 +898,11 @@ Retorne APENAS o JSON, sem comentários.`
         content: [
           { type: 'text', text: userPrompt },
           ...(boletimTipo?.imagem_url ? [{ type: 'image_url', image_url: { url: boletimTipo.imagem_url } }] : []),
-          ...(bol.imagem_url ? [{ type: 'image_url', image_url: { url: bol.imagem_url } }] : []),
+          // imageBase64 inline (fornecido pelo webhook) é mais rápido — Groq não precisa baixar
+          ...(imageBase64
+            ? [{ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${imageBase64}` } }]
+            : (bol.imagem_url ? [{ type: 'image_url', image_url: { url: bol.imagem_url } }] : [])
+          ),
         ],
       },
     ]
@@ -1162,12 +1168,12 @@ Retorne APENAS o JSON, sem comentários.`
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { boletimId } = req.body || {}
-  if (!boletimId) return res.status(400).json({ error: 'boletimId obrigat├│rio' })
+  const { boletimId, imageBase64 } = req.body || {}
+  if (!boletimId) return res.status(400).json({ error: 'boletimId obrigatório' })
 
   // Processa antes de responder — Vercel encerra a função logo após res.json(),
   // portanto NÃO é seguro deixar processarBoletim em background pós-resposta.
-  await processarBoletim(boletimId).catch(e =>
+  await processarBoletim(boletimId, imageBase64 || null).catch(e =>
     console.error('[ocr-boletim-maquina] processarBoletim error:', e.message)
   )
   res.status(200).json({ ok: true, boletimId })

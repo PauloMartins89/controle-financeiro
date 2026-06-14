@@ -371,28 +371,33 @@ export default async function handler(req, res) {
               console.log('[whatsapp/boletim] boletim_tipo_id via query direta:', boletimTipoId, '| modulo_destino:', tipos?.[0]?.modulo_destino)
             }
 
-            await sendWA(from, '📋 Boletim recebido! Estamos processando. Você será avisado em instantes.')
-
-            let imagemUrl = ''
-            try {
-              const imgBuf = Buffer.from(base64, 'base64')
-              const now = new Date()
-              const storagePath = `maquinas/boletins/${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${Date.now()}_${from}.jpg`
-              const { error: upErr } = await dbBol.storage
-                .from('maquinas')
-                .upload(storagePath, imgBuf, { contentType: 'image/jpeg', upsert: false })
-              if (!upErr) {
-                const { data: pub } = dbBol.storage.from('maquinas').getPublicUrl(storagePath)
-                imagemUrl = pub?.publicUrl || ''
-              } else {
-                console.error('[whatsapp/boletim] storage error:', upErr.message)
-              }
-            } catch (e) {
-              console.error('[whatsapp/boletim] storage exception:', e.message)
-            }
+            // ACK imediato — não bloqueia o fluxo de upload+OCR
+            sendWA(from, '📋 Boletim recebido! Estamos processando. Você será avisado em instantes.')
 
             const numero = `BOL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
 
+            // Inicia upload para storage (não-bloqueante — corre em paralelo com OCR)
+            let imagemUrl = 'pending'
+            const uploadPromise = (async () => {
+              try {
+                const imgBuf = Buffer.from(base64, 'base64')
+                const now = new Date()
+                const storagePath = `maquinas/boletins/${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${Date.now()}_${from}.jpg`
+                const { error: upErr } = await dbBol.storage
+                  .from('maquinas')
+                  .upload(storagePath, imgBuf, { contentType: 'image/jpeg', upsert: false })
+                if (!upErr) {
+                  const { data: pub } = dbBol.storage.from('maquinas').getPublicUrl(storagePath)
+                  return pub?.publicUrl || 'pending'
+                }
+                console.error('[whatsapp/boletim] storage error:', upErr.message)
+              } catch (e) {
+                console.error('[whatsapp/boletim] storage exception:', e.message)
+              }
+              return 'pending'
+            })()
+
+            // Insere boletim com imagem_url temporária (será atualizada após upload)
             const { data: bolRecord, error: bolErr } = await dbBol
               .from('maquinas_boletins')
               .insert({
@@ -400,7 +405,7 @@ export default async function handler(req, res) {
                 colaborador_id:  colaboradorBol.id,
                 boletim_tipo_id: boletimTipoId,
                 wa_from:         from,
-                imagem_url:      imagemUrl || 'pending',  // sem fallback comprovantes — bucket maquinas é exclusivo para boletins
+                imagem_url:      'pending',
                 numero,
                 status:          'recebido',
               })
@@ -408,23 +413,32 @@ export default async function handler(req, res) {
               .single()
 
             if (!bolErr && bolRecord?.id) {
-              // Aguarda OCR diretamente — Z-API aceita até 60s, whatsapp.js tem maxDuration:60
-              // Isso garante que o resumo WA é enviado em ~30s sem depender do cron
-              try {
-                const selfBase = `https://${req.headers.host}`
-                const ocrResp = await fetch(`${selfBase}/api/ocr-boletim-maquina`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ boletimId: bolRecord.id }),
-                })
-                if (ocrResp.ok) {
-                  console.log(`[whatsapp/boletim] boletim ${numero} (${bolRecord.id}) processado com sucesso`)
-                } else {
-                  console.warn(`[whatsapp/boletim] OCR retornou HTTP ${ocrResp.status} — cron fará retry`)
+              const selfBase = `https://${req.headers.host}`
+              // Dispara OCR com base64 inline (Groq não precisa baixar a imagem da URL)
+              // e aguarda upload em paralelo — ambos correm ao mesmo tempo
+              const ocrPromise = fetch(`${selfBase}/api/ocr-boletim-maquina`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // imageBase64 evita que o OCR faça download da URL — economiza ~2s
+                body: JSON.stringify({ boletimId: bolRecord.id, imageBase64: base64 }),
+              }).then(r => {
+                if (r.ok) console.log(`[whatsapp/boletim] boletim ${numero} (${bolRecord.id}) processado`)
+                else      console.warn(`[whatsapp/boletim] OCR HTTP ${r.status} — cron fará retry`)
+                return r
+              }).catch(e => {
+                console.warn(`[whatsapp/boletim] OCR falhou (cron fará retry): ${e.message}`)
+              })
+
+              // Aguarda upload e atualiza URL no boletim
+              uploadPromise.then(async url => {
+                imagemUrl = url
+                if (url && url !== 'pending') {
+                  await dbBol.from('maquinas_boletins').update({ imagem_url: url }).eq('id', bolRecord.id)
                 }
-              } catch (ocrErr) {
-                console.warn(`[whatsapp/boletim] OCR falhou (cron fará retry): ${ocrErr.message}`)
-              }
+              })
+
+              // Aguarda OCR completar (para que whatsapp.js não feche antes do resumo ser enviado)
+              await ocrPromise
             } else if (bolErr) {
               console.error('[whatsapp/boletim] insert error:', bolErr.message)
             }
