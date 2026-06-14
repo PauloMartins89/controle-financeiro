@@ -512,7 +512,9 @@ function mapOcrToExtras(ocr, data) {
     responsavel_cliente_nome:       r.responsavel_cliente_nome || '',
     responsavel_cliente_matricula:  r.responsavel_cliente_matricula || '',
     // Unidade da empresa
-    unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || r.cidade_estado || '',
+    unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || '',
+    // Cidade e estado (ex: "Três Lagoas/MS")
+    cidade_uf:             r.cidade_estado || r.cidade_uf || r.cidade || r.municipio || '',,
     // Jornada (aceita aliases: entrada/saida usados em boletins HJ e similares)
     jornada_inicio: (() => {
       const linhas = Array.isArray(r.linhas_jornada) ? r.linhas_jornada : []

@@ -118,7 +118,7 @@ function getEmpresa(l) {
 }
 function getCidadeUF(l) {
   const d = l.dados_extras || {}
-  return d.cidade_uf || d.cidade || d.municipio || '—'
+  return d.cidade_uf || d.cidade_estado || d.cidade || d.municipio || '—'
 }
 function getSolicitante(l) {
   const d = l.dados_extras || {}
