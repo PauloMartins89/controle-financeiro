@@ -550,11 +550,7 @@ function exportCSV(rows, lotesMap) {
     ['Equipamento',           r => getEquipamento(r)],
     ['Placa',                 r => fmtV((r.dados_extras||{}).placa || (r.dados_extras||{}).veiculo_placa)],
     ['Frente / Local',        r => fmtV((r.dados_extras||{}).frente || (r.dados_extras||{}).local_servico || (r.dados_extras||{}).locais_servico)],
-    ['Local Origem',          r => fmtV((r.dados_extras||{}).local_origem)],
-    ['Local Destino',         r => fmtV((r.dados_extras||{}).local_destino)],
-    ['Status Equipamento',    r => fmtV((r.dados_extras||{}).status_equipamento)],
     // ── Jornada ──────────────────────────────────────────────────────────────
-    ['Turno',                 r => fmtV((r.dados_extras||{}).turno)],
     ['Início Jornada',        r => fmtV((r.dados_extras||{}).jornada_inicio)],
     ['Fim Jornada',           r => fmtV((r.dados_extras||{}).jornada_fim)],
     ['Total Horas',           r => { const t = calcTotalHorasJornada(r.dados_extras); return t != null ? String(t) : '' }],
