@@ -252,17 +252,47 @@ function Sparkline({ values = [], width = 200, height = 36, color = '#1D4ED8' })
 }
 
 // ─── BAR CHART HORIZONTAL ────────────────────────────────────────────────────
- function HBarChart({ data }) {
+function HBarChart({ data, valueFormat = v => v, labelWidth = 130, valueWidth = 40 }) {
   const max = Math.max(...data.map(d => d.value), 1)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
       {data.map(({ label, value, color }) => (
         <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ width: 130, fontSize: 11, color: C.textSec, textAlign: 'right', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+          <div style={{ width: labelWidth, fontSize: 11, color: C.textSec, textAlign: 'right', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
           <div style={{ flex: 1, height: 10, background: '#F1F5F9', borderRadius: 6, overflow: 'hidden' }}>
             <div style={{ width: `${(value / max) * 100}%`, height: '100%', background: color, borderRadius: 6, transition: 'width 0.4s ease', minWidth: value > 0 ? 4 : 0 }} />
           </div>
-          <div style={{ width: 22, fontSize: 11, fontWeight: 700, color: C.text, flexShrink: 0, textAlign: 'right' }}>{value}</div>
+          <div style={{ width: valueWidth, fontSize: 11, fontWeight: 700, color: C.text, flexShrink: 0, textAlign: 'right', whiteSpace: 'nowrap' }}>{valueFormat(value)}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── BAR CHART VERTICAL (colunas) ────────────────────────────────────────────
+function VBarChart({ data, height = 80, valueFormat = v => v }) {
+  const max = Math.max(...data.map(d => d.value), 1)
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: height + 18, paddingBottom: 18, position: 'relative' }}>
+      {data.map(({ label, value, color, showLabel }) => (
+        <div
+          key={label}
+          title={value > 0 ? `${label}: ${valueFormat(value)}` : label}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', position: 'relative' }}
+        >
+          <div style={{
+            width: '100%',
+            height: value > 0 ? Math.max((value / max) * height, 3) : 0,
+            background: value > 0 ? color : 'transparent',
+            borderRadius: '3px 3px 0 0',
+            transition: 'height 0.5s ease',
+          }} />
+          {showLabel && (
+            <div style={{
+              position: 'absolute', bottom: -16, fontSize: 7, color: C.textSec,
+              textAlign: 'center', width: '100%', overflow: 'hidden',
+            }}>{label}</div>
+          )}
         </div>
       ))}
     </div>
@@ -1716,10 +1746,13 @@ export default function LancamentosERP() {
         <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.6, marginRight: 2 }}>Painéis:</span>
           {[
-            { key: 'resumo',    label: 'Resumo do Período' },
-            { key: 'fila',      label: 'Fila de Revisão' },
-            { key: 'auditoria', label: 'Auditoria Recente' },
-            { key: 'acoes',     label: 'Ações do Módulo' },
+            { key: 'resumo',      label: 'Resumo do Período' },
+            { key: 'fila',        label: 'Fila de Revisão' },
+            { key: 'auditoria',   label: 'Auditoria Recente' },
+            { key: 'acoes',       label: 'Ações do Módulo' },
+            { key: 'valorpordia', label: 'Valor por Dia' },
+            { key: 'topempresas', label: 'Top Empresas' },
+            { key: 'horasdist',   label: 'Distribuição de Horas' },
           ].map(({ key, label }) => {
             const on = visiblePanels.has(key)
             return (
@@ -1729,12 +1762,12 @@ export default function LancamentosERP() {
               >{on ? '✓ ' : ''}{label}</button>
             )
           })}
-          <span style={{ marginLeft: 'auto', fontSize: 10, color: C.textSec }}>{visiblePanels.size} de 4 visível{visiblePanels.size !== 1 ? 'is' : ''}</span>
+          <span style={{ marginLeft: 'auto', fontSize: 10, color: C.textSec }}>{visiblePanels.size} de 7 visível{visiblePanels.size !== 1 ? 'is' : ''}</span>
         </div>
 
         {/* ── PAINÉIS INFERIORES ──────────────────────────────────────────── */}
         {visiblePanels.size > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${visiblePanels.size}, 1fr)`, gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10, marginBottom: 16 }}>
 
           {/* RESUMO */}
           {visiblePanels.has('resumo') && (() => {
@@ -1853,6 +1886,144 @@ export default function LancamentosERP() {
               </div>
             </div>
           )}
+
+          {/* VALOR POR DIA */}
+          {visiblePanels.has('valorpordia') && (() => {
+            const daysInMonth = new Date(competencia.year, competencia.month, 0).getDate()
+            const byDay = Array.from({ length: daysInMonth }, (_, i) => ({
+              label: String(i + 1),
+              value: 0,
+              color: C.blue,
+              showLabel: (i + 1) % 5 === 1 || i + 1 === daysInMonth,
+            }))
+            filtered.forEach(l => {
+              if (!l.data) return
+              const d = new Date(l.data + 'T12:00:00')
+              if (d.getMonth() + 1 === competencia.month && d.getFullYear() === competencia.year) {
+                byDay[d.getDate() - 1].value += l.valor || 0
+              }
+            })
+            const totalValor = byDay.reduce((s, d) => s + d.value, 0)
+            const diasComMovimento = byDay.filter(d => d.value > 0).length
+            const pico = byDay.reduce((best, d) => d.value > best.value ? d : best, byDay[0])
+            return (
+              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ background: C.blue, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Valor por Dia</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>{MONTHS[competencia.month - 1]}/{competencia.year}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: C.white }}>{fmtCurrency(totalValor)}</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>{diasComMovimento}d com movimento</div>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px 6px' }}>
+                  <VBarChart data={byDay} height={80} valueFormat={fmtCurrency} />
+                </div>
+                <div style={{ padding: '0 16px 12px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 10, color: C.textSec }}>Pico: dia {pico.label}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: C.blue }}>{fmtCurrency(pico.value)}</span>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* TOP EMPRESAS */}
+          {visiblePanels.has('topempresas') && (() => {
+            const empresaMap = {}
+            filtered.forEach(l => {
+              const emp = getEmpresa(l)
+              if (!emp || emp === '—') return
+              if (!empresaMap[emp]) empresaMap[emp] = { valor: 0, count: 0 }
+              empresaMap[emp].valor += l.valor || 0
+              empresaMap[emp].count += 1
+            })
+            const COLORS = [C.blue, C.green, C.purple, C.amber, '#0EA5E9', '#F97316', '#6366F1', '#EC4899']
+            const top = Object.entries(empresaMap)
+              .sort((a, b) => b[1].valor - a[1].valor)
+              .slice(0, 8)
+              .map(([label, { valor, count }], i) => ({ label, value: valor, count, color: COLORS[i % COLORS.length] }))
+            const totalTop = top.reduce((s, d) => s + d.value, 0)
+            return (
+              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ background: C.green, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Top Empresas</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>por valor faturado</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: C.white }}>{top.length} empresas</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>{fmtCurrency(totalTop)}</div>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px' }}>
+                  {top.length === 0
+                    ? <div style={{ textAlign: 'center', padding: '20px 0', color: C.textSec, fontSize: 12 }}>Nenhum dado no período</div>
+                    : <HBarChart data={top} valueFormat={fmtCurrency} labelWidth={100} valueWidth={80} />
+                  }
+                </div>
+                {top.length > 0 && (
+                  <div style={{ padding: '0 16px 10px', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 10, color: C.textSec }}>Maior participação</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: C.green }}>
+                      {totalTop > 0 ? `${((top[0]?.value / totalTop) * 100).toFixed(0)}%` : '—'} {top[0]?.label?.split(' ')[0]}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* DISTRIBUIÇÃO DE HORAS */}
+          {visiblePanels.has('horasdist') && (() => {
+            const tipos = [
+              { label: 'Diurnas',      key: 'horas_diurnas',        color: C.amber   },
+              { label: 'Noturnas',     key: 'horas_noturnas',        color: C.navy    },
+              { label: 'FDS Diurno',   key: 'h_fds_diurnas',         color: '#F97316' },
+              { label: 'FDS Noturno',  key: 'h_fds_noturnas',        color: '#6366F1' },
+              { label: 'Fer. Diurno',  key: 'h_feriado_diurnas',     color: C.red     },
+              { label: 'Fer. Noturno', key: 'h_feriado_noturnas',    color: '#EC4899' },
+            ]
+            const data = tipos.map(t => ({
+              label: t.label,
+              value: filtered.reduce((s, l) => {
+                const v = parseFloat(String(l.dados_extras?.[t.key] || '0').replace(',', '.')) || 0
+                return s + v
+              }, 0),
+              color: t.color,
+            })).filter(d => d.value > 0)
+            const totalH = data.reduce((s, d) => s + d.value, 0)
+            const dominant = data.reduce((best, d) => d.value > (best?.value ?? 0) ? d : best, null)
+            return (
+              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                <div style={{ background: C.navy, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.white, letterSpacing: 0.8, textTransform: 'uppercase' }}>Distribuição de Horas</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>por tipo de jornada</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: C.white }}>{fmtHorasDecimal(totalH)}</div>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>total de horas</div>
+                  </div>
+                </div>
+                <div style={{ padding: '12px 16px' }}>
+                  {data.length === 0
+                    ? <div style={{ textAlign: 'center', padding: '20px 0', color: C.textSec, fontSize: 12 }}>Nenhuma hora registrada</div>
+                    : <HBarChart data={data} valueFormat={fmtHorasDecimal} labelWidth={90} valueWidth={50} />
+                  }
+                </div>
+                {data.length > 0 && dominant && (
+                  <div style={{ padding: '0 16px 10px', display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: 8, marginTop: 0 }}>
+                    <span style={{ fontSize: 10, color: C.textSec }}>Predominante</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: dominant.color }}>
+                      {dominant.label} · {totalH > 0 ? `${((dominant.value / totalH) * 100).toFixed(0)}%` : '—'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
         )}
 
