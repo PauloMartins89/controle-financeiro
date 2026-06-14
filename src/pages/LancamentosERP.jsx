@@ -524,28 +524,71 @@ const Td = ({ children, align = 'left', muted, bold, green }) => (
 
 // ─── EXPORT / PRINT HELPERS ─────────────────────────────────────────────────
 function exportCSV(rows, lotesMap) {
+  // ── helpers locais ────────────────────────────────────────────────────────
+  const fmtV = v => v != null && v !== '' ? String(v) : ''
+  const parseNum = v => { const n = parseFloat(String(v||'').replace(',','.')); return isNaN(n) ? 0 : n }
+  const calcKmTipo = (d, tipo) => {
+    const rows2 = (d.km_rows || []).filter(r => r.tipo === tipo && r.total && String(r.total).trim() !== '')
+    return rows2.reduce((s, r) => s + parseNum(r.total), 0) || ''
+  }
+  const calcKmTotal = d => {
+    const rows2 = (d.km_rows || []).filter(r => r.total && String(r.total).trim() !== '')
+    const t = rows2.reduce((s, r) => s + parseNum(r.total), 0)
+    return t > 0 ? t : ''
+  }
+
   const cols = [
-    ['Nº',                 r => getLanNum(r)],
-    ['Data',               r => fmtDate(r.data)],
-    ['Processado Em',      r => fmtDateHora((r.dados_extras||{}).processado_em)],
-    ['Empresa',            r => getEmpresa(r)],
-    ['Cidade/UF',          r => getCidadeUF(r)],
-    ['Solicitante',        r => getSolicitante(r)],
-    ['Equipamento',        r => getEquipamento(r)],
-    ['Placa',               r => (r.dados_extras || {}).placa || (r.dados_extras || {}).veiculo_placa || ''],
-    ['Início Jornada',     r => (r.dados_extras||{}).jornada_inicio || ''],
-    ['Fim Jornada',        r => (r.dados_extras||{}).jornada_fim || ''],
-    ['Total Horas',        r => { const t = calcTotalHorasJornada(r.dados_extras); return t != null ? String(t) : '' }],
-    ['H Diurnas',          r => (r.dados_extras||{}).horas_diurnas || ''],
-    ['H Noturnas',         r => (r.dados_extras||{}).horas_noturnas || ''],
-    ['H FDS Diurnas',      r => (r.dados_extras||{}).h_fds_diurnas || ''],
-    ['H FDS Noturnas',     r => (r.dados_extras||{}).h_fds_noturnas || ''],
-    ['H Feriado Diurnas',  r => (r.dados_extras||{}).h_feriado_diurnas || ''],
-    ['H Feriado Noturnas', r => (r.dados_extras||{}).h_feriado_noturnas || ''],
-    ['Cliente Assinado',   r => getClienteAss(r) ? 'Sim' : 'Não'],
-    ['Birigui Assinado',   r => getEmpresaAss(r) ? 'Sim' : 'Não'],
-    ['Valor (R$)',          r => (r.valor||0).toFixed(2).replace('.',',')],
-    ['Status',             r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; const conf = (l?.status && ERP_LOTE_MAP[l.status]) || ERP_STATUS_MAP[r.status]; return conf?.label || r.status || '' }],
+    // ── Identificação ────────────────────────────────────────────────────────
+    ['Nº',                    r => getLanNum(r)],
+    ['Data',                  r => fmtDate(r.data)],
+    ['Processado Em',         r => fmtDateHora((r.dados_extras||{}).processado_em)],
+    ['Empresa / Cliente',     r => getEmpresa(r)],
+    ['Cidade/UF',             r => getCidadeUF(r)],
+    ['Unidade',               r => fmtV((r.dados_extras||{}).unidade_empresa || (r.dados_extras||{}).unidade)],
+    ['Solicitante',           r => getSolicitante(r)],
+    ['Condutor',              r => fmtV((r.dados_extras||{}).condutor)],
+    ['Operador',              r => fmtV((r.dados_extras||{}).operador || (r.dados_extras||{}).motorista)],
+    ['Equipamento',           r => getEquipamento(r)],
+    ['Placa',                 r => fmtV((r.dados_extras||{}).placa || (r.dados_extras||{}).veiculo_placa)],
+    ['Frente / Local',        r => fmtV((r.dados_extras||{}).frente || (r.dados_extras||{}).local_servico || (r.dados_extras||{}).locais_servico)],
+    ['Local Origem',          r => fmtV((r.dados_extras||{}).local_origem)],
+    ['Local Destino',         r => fmtV((r.dados_extras||{}).local_destino)],
+    ['Status Equipamento',    r => fmtV((r.dados_extras||{}).status_equipamento)],
+    // ── Jornada ──────────────────────────────────────────────────────────────
+    ['Turno',                 r => fmtV((r.dados_extras||{}).turno)],
+    ['Início Jornada',        r => fmtV((r.dados_extras||{}).jornada_inicio)],
+    ['Fim Jornada',           r => fmtV((r.dados_extras||{}).jornada_fim)],
+    ['Total Horas',           r => { const t = calcTotalHorasJornada(r.dados_extras); return t != null ? String(t) : '' }],
+    ['H Diurnas',             r => fmtV((r.dados_extras||{}).horas_diurnas)],
+    ['H Noturnas',            r => fmtV((r.dados_extras||{}).horas_noturnas)],
+    ['H FDS Diurnas',         r => fmtV((r.dados_extras||{}).h_fds_diurnas)],
+    ['H FDS Noturnas',        r => fmtV((r.dados_extras||{}).h_fds_noturnas)],
+    ['H Feriado Diurnas',     r => fmtV((r.dados_extras||{}).h_feriado_diurnas)],
+    ['H Feriado Noturnas',    r => fmtV((r.dados_extras||{}).h_feriado_noturnas)],
+    // ── KM ───────────────────────────────────────────────────────────────────
+    ['KM Asfalto',            r => fmtV(calcKmTipo(r.dados_extras||{}, 'ASFALTO'))],
+    ['KM Terra',              r => fmtV(calcKmTipo(r.dados_extras||{}, 'TERRA'))],
+    ['KM Total',              r => fmtV(calcKmTotal(r.dados_extras||{}))],
+    // ── Adicionais financeiros ────────────────────────────────────────────────
+    ['Pedágio (R$)',           r => fmtV((r.dados_extras||{}).pedagio)],
+    ['Pernoite (R$)',          r => fmtV((r.dados_extras||{}).pernoite)],
+    ['Refeição (R$)',          r => fmtV((r.dados_extras||{}).refeicao)],
+    ['Outros Adicionais (R$)', r => fmtV((r.dados_extras||{}).outros_adicionais)],
+    ['Desconto (R$)',          r => fmtV((r.dados_extras||{}).desconto)],
+    // ── Validação ────────────────────────────────────────────────────────────
+    ['Cliente Assinado',      r => getClienteAss(r) ? 'Sim' : 'Não'],
+    ['Nome Assinante Cliente', r => fmtV((r.dados_extras||{}).assinatura_cliente_nome)],
+    ['Birigui Assinado',      r => getEmpresaAss(r) ? 'Sim' : 'Não'],
+    ['Nome Assinante Birigui', r => fmtV((r.dados_extras||{}).assinatura_birigui_nome)],
+    // ── Financeiro ───────────────────────────────────────────────────────────
+    ['Valor (R$)',             r => (r.valor||0).toFixed(2).replace('.',',')],
+    ['Status',                r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; const conf = (l?.status && ERP_LOTE_MAP[l.status]) || ERP_STATUS_MAP[r.status]; return conf?.label || r.status || '' }],
+    ['Lote / Cliente',        r => { const l = r.lote_cliente_id ? lotesMap[r.lote_cliente_id] : null; return l ? `${l.cliente || ''} (${(l.status||'').replace(/_/g,' ')})` : '' }],
+    // ── Observações ──────────────────────────────────────────────────────────
+    ['Observações (Extras)',  r => fmtV((r.dados_extras||{}).observacao)],
+    ['Observações',           r => fmtV(r.observacoes)],
+    // ── IDs ──────────────────────────────────────────────────────────────────
+    ['ID',                    r => r.id],
   ]
   const header = cols.map(([h]) => h).join(';')
   const lines  = rows.map(r => cols.map(([,fn]) => { const v = String(fn(r)??''); return /[;"\n]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v }).join(';'))
