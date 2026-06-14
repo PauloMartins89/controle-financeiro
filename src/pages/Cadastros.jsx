@@ -1175,7 +1175,7 @@ function MaquinasTab({ workspaceId }) {
   const load = async () => {
     if (!workspaceId) return
     setLoading(true)
-    const [cl, mo, eq, fr, co, bt] = await Promise.all([
+    const [cl, mo, eq, fr, co, bt, formTmpls] = await Promise.all([
       supabase.from('maquinas_classes').select('*').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('maquinas_modelos').select('*').eq('workspace_id', workspaceId).order('nome'),
       supabase.from('maquinas_equipamentos').select('*').eq('workspace_id', workspaceId).order('codigo'),
