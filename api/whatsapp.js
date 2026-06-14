@@ -408,15 +408,23 @@ export default async function handler(req, res) {
               .single()
 
             if (!bolErr && bolRecord?.id) {
-              // Dispara OCR imediatamente como fire-and-forget — resposta WA em ~30-60s
-              // Se falhar (rate limit, timeout), o cron boletins-fila pega como retry
-              const selfBase = `https://${req.headers.host}`
-              fetch(`${selfBase}/api/ocr-boletim-maquina`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ boletimId: bolRecord.id }),
-              }).catch(e => console.warn(`[whatsapp/boletim] ocr fire-and-forget falhou (cron vai retry): ${e.message}`))
-              console.log(`[whatsapp/boletim] boletim ${numero} (${bolRecord.id}) salvo — OCR disparado imediatamente`)
+              // Aguarda OCR diretamente — Z-API aceita até 60s, whatsapp.js tem maxDuration:60
+              // Isso garante que o resumo WA é enviado em ~30s sem depender do cron
+              try {
+                const selfBase = `https://${req.headers.host}`
+                const ocrResp = await fetch(`${selfBase}/api/ocr-boletim-maquina`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ boletimId: bolRecord.id }),
+                })
+                if (ocrResp.ok) {
+                  console.log(`[whatsapp/boletim] boletim ${numero} (${bolRecord.id}) processado com sucesso`)
+                } else {
+                  console.warn(`[whatsapp/boletim] OCR retornou HTTP ${ocrResp.status} — cron fará retry`)
+                }
+              } catch (ocrErr) {
+                console.warn(`[whatsapp/boletim] OCR falhou (cron fará retry): ${ocrErr.message}`)
+              }
             } else if (bolErr) {
               console.error('[whatsapp/boletim] insert error:', bolErr.message)
             }
