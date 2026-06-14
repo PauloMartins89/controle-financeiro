@@ -457,14 +457,15 @@ function DetailsDrawer({ record, lotesMap, navigate, onClose, onEdit }) {
 // ─── TABLE CELL HELPERS ───────────────────────────────────────────────────────
 const Th = ({ children, align = 'left', width, group }) => (
   <th style={{
-    padding: group ? '5px 8px' : '6px 8px',
+    padding: group ? '6px 8px' : '7px 8px',
     fontSize: group ? 9 : 10, fontWeight: 700,
     letterSpacing: group ? 0.8 : 0.4,
     color: C.white,
     textAlign: align,
     whiteSpace: 'nowrap',
     minWidth: width || 'auto',
-    borderRight: `1px solid rgba(255,255,255,0.12)`,
+    borderRight: `1px solid rgba(255,255,255,0.15)`,
+    background: 'rgba(0,0,0,0.18)',
   }}>
     {children}
   </th>
@@ -472,7 +473,7 @@ const Th = ({ children, align = 'left', width, group }) => (
 
 const Td = ({ children, align = 'left', muted, bold, green }) => (
   <td style={{
-    padding: '5px 8px',
+    padding: '8px 8px',
     fontSize: 11,
     color: green ? C.green : bold ? C.text : muted ? C.textSec : C.text,
     fontWeight: bold || green ? 700 : 400,
@@ -1124,12 +1125,12 @@ export default function LancamentosERP() {
             <button
               onClick={() => navigate('/lancamentos')}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px',
-                borderRadius: 6, background: C.navy, border: 'none',
-                color: C.white, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px',
+                borderRadius: 6, background: 'transparent', border: `1px solid ${C.border}`,
+                color: C.textSec, fontSize: 11, fontWeight: 500, cursor: 'pointer',
               }}
             >
-              <ArrowTopRightOnSquareIcon style={{ width: 14, height: 14 }} />
+              <ArrowTopRightOnSquareIcon style={{ width: 12, height: 12 }} />
               Versão Clássica
             </button>
           </div>
@@ -1155,31 +1156,46 @@ export default function LancamentosERP() {
               <span style={{ color: C.navy, fontWeight: 700 }}>{value}</span>
             </div>
           ))}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ color: C.textSec, fontSize: 11 }}>
-              Última atualização: {lastUpdate ? `${lastUpdate.toLocaleDateString('pt-BR')} ${lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : '—'}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {/* Atualização */}
+            <span style={{ color: C.textSec, fontSize: 10, opacity: 0.7 }}>
+              {lastUpdate ? `${lastUpdate.toLocaleDateString('pt-BR')} ${lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : '—'}
             </span>
-            <button onClick={loadData} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.blue, padding: 2, display: 'flex' }}>
-              <ArrowPathIcon style={{ width: 14, height: 14 }} />
+            <button onClick={loadData} title="Atualizar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.blue, padding: 2, display: 'flex' }}>
+              <ArrowPathIcon style={{ width: 13, height: 13 }} />
             </button>
-            <div style={{ width: 1, height: 18, background: C.border, margin: '0 4px' }} />
-            <button onClick={() => navigate('/boletins-diarios')} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-              <SparklesIcon style={{ width: 11, height: 11, color: '#6366F1' }} /> Digitalizar OCR
+
+            {/* Separador */}
+            <div style={{ width: 1, height: 18, background: C.border, margin: '0 6px' }} />
+
+            {/* Grupo 1 — Ação primária */}
+            <button onClick={() => setEditModal('novo')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 12, cursor: 'pointer', fontWeight: 700, boxShadow: '0 1px 3px rgba(29,78,216,0.3)' }}>
+              <PlusIcon style={{ width: 13, height: 13 }} /> Novo Lançamento
             </button>
-            <button onClick={() => setEditModal('novo')} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: 'none', background: C.blue, color: C.white, fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
-              <PlusIcon style={{ width: 11, height: 11 }} /> Novo Lançamento
+            <button onClick={() => navigate('/boletins-diarios')} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, border: `1px solid #A5B4FC`, background: '#EEF2FF', color: '#4338CA', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+              <SparklesIcon style={{ width: 12, height: 12 }} /> Digitalizar OCR
             </button>
-            <button onClick={() => exportCSV(filtered, lotesMap)} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-              <TableCellsIcon style={{ width: 11, height: 11 }} /> Exportar Excel
+
+            {/* Separador */}
+            <div style={{ width: 1, height: 18, background: C.border, margin: '0 6px' }} />
+
+            {/* Grupo 2 — Ações operacionais */}
+            <button onClick={validarSelecionados} title="Validar selecionados internamente" style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.green}`, background: selecionados.size > 0 ? '#F0FDF4' : 'transparent', color: C.green, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+              <CheckCircleIcon style={{ width: 12, height: 12 }} /> Validar{selecionados.size > 0 && ` (${selecionados.size})`}
             </button>
-            <button onClick={() => printTable(filtered, lotesMap, competencia, wsName)} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.red, fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-              <DocumentArrowDownIcon style={{ width: 11, height: 11 }} /> Gerar PDF
+            <button onClick={() => { const itens = filtered.filter(l => selecionados.has(l.id)); if (itens.length === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }; setLoteModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid #A5B4FC`, background: 'transparent', color: '#6366F1', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+              <UserGroupIcon style={{ width: 12, height: 12 }} /> Gerar Lote{selecionados.size > 0 && ` (${selecionados.size})`}
             </button>
-            <button onClick={validarSelecionados} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.green}`, background: selecionados.size > 0 ? '#F0FDF4' : 'transparent', color: C.green, fontSize: 11, cursor: 'pointer', fontWeight: 700 }} title="Validar selecionados internamente">
-              <CheckCircleIcon style={{ width: 11, height: 11 }} /> Validar {selecionados.size > 0 && `(${selecionados.size})`}
+
+            {/* Separador */}
+            <div style={{ width: 1, height: 18, background: C.border, margin: '0 6px' }} />
+
+            {/* Grupo 3 — Exportação */}
+            <button onClick={() => exportCSV(filtered, lotesMap)} title="Exportar Excel" style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+              <TableCellsIcon style={{ width: 12, height: 12, color: C.green }} /> Excel
             </button>
-            <button onClick={() => { const itens = filtered.filter(l => selecionados.has(l.id)); if (itens.length === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }; setLoteModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 9px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: '#6366F1', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-              <UserGroupIcon style={{ width: 11, height: 11, color: '#6366F1' }} /> Gerar Lote {selecionados.size > 0 && `(${selecionados.size})`}
+            <button onClick={() => printTable(filtered, lotesMap, competencia, wsName)} title="Gerar PDF" style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+              <DocumentArrowDownIcon style={{ width: 12, height: 12, color: C.red }} /> PDF
             </button>
           </div>
         </div>
@@ -1191,17 +1207,29 @@ export default function LancamentosERP() {
         {/* ── KPI STRIP ──────────────────────────────────────────────────── */}
         <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, display: 'flex', alignItems: 'stretch', marginBottom: 10, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
           {[
-            { label: 'Receitas Apuradas',  value: fmtCurrency(totalReceitas), color: C.green,   accent: '#F0FDF4' },
-            { label: 'Boletins Recebidos', value: boletinsRecebidos,          color: C.blue,    accent: '#EFF6FF' },
-            { label: 'Revisão Pendente',   value: pendenteRevisao,            color: C.amber,   accent: '#FFFBEB' },
-            { label: 'Com Divergência',    value: comDivergencia,             color: C.red,     accent: '#FEF2F2' },
-            { label: 'Aguardando Lote',    value: aguardandoLote,             color: C.green,   accent: '#F0FDF4' },
-            { label: 'Prontos para Lote',  value: prontosLote,                color: '#0EA5E9', accent: '#E0F2FE' },
-            ...(totalDuplicatas > 0 ? [{ label: 'Duplicatas', value: totalDuplicatas, color: '#F59E0B', accent: '#FFFBEB' }] : []),
-          ].map(({ label, value, color, accent }, i, arr) => (
-            <div key={label} style={{ flex: 1, padding: '10px 14px', borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : 'none', borderLeft: `3px solid ${color}`, background: accent, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color, lineHeight: 1.1 }}>{value}</div>
+            { label: 'Receitas Apuradas',  value: fmtCurrency(totalReceitas), color: C.green,   accent: '#F0FDF4', Icon: BanknotesIcon,             alert: false },
+            { label: 'Boletins Recebidos', value: boletinsRecebidos,          color: C.blue,    accent: '#EFF6FF', Icon: ClipboardDocumentListIcon,  alert: false },
+            { label: 'Revisão Pendente',   value: pendenteRevisao,            color: C.amber,   accent: pendenteRevisao > 0 ? '#FFFBEB' : '#F8FAFC', Icon: ClockIcon,      alert: pendenteRevisao > 0 },
+            { label: 'Com Divergência',    value: comDivergencia,             color: C.red,     accent: comDivergencia > 0 ? '#FEF2F2' : '#F8FAFC',  Icon: ExclamationTriangleIcon, alert: comDivergencia > 0 },
+            { label: 'Aguardando Lote',    value: aguardandoLote,             color: '#0EA5E9', accent: '#F0F9FF', Icon: DocumentTextIcon,            alert: false },
+            { label: 'Prontos para Lote',  value: prontosLote,                color: '#7C3AED', accent: '#F5F3FF', Icon: CheckCircleIcon,             alert: false },
+            ...(totalDuplicatas > 0 ? [{ label: 'Duplicatas', value: totalDuplicatas, color: C.amber, accent: '#FFFBEB', Icon: BellAlertIcon, alert: true }] : []),
+          ].map(({ label, value, color, accent, Icon, alert }, i, arr) => (
+            <div key={label} style={{
+              flex: 1, padding: '10px 14px',
+              borderRight: i < arr.length - 1 ? `1px solid ${C.border}` : 'none',
+              borderLeft: `3px solid ${alert ? color : 'transparent'}`,
+              borderTop: alert ? `1px solid ${color}22` : undefined,
+              background: accent,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, background: alert ? `${color}22` : `${color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon style={{ width: 15, height: 15, color }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: alert ? color : C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 }}>{label}</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color, lineHeight: 1.1 }}>{value}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -1212,6 +1240,11 @@ export default function LancamentosERP() {
           padding: '10px 12px', marginBottom: 10,
           boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}>
+          {/* Título do bloco */}
+          <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FunnelIcon style={{ width: 11, height: 11 }} />
+            Filtros de Consulta
+          </div>
           {/* Linha 1: filtros principais + botões */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 8 }}>
             <div>
@@ -1241,8 +1274,14 @@ export default function LancamentosERP() {
                 {clientesUnicos.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            {/* Botões filtro */}
+            {/* Botões filtro — ordem: Filtrar, Limpar, Exportar */}
             <div style={{ display: 'flex', gap: 6, marginLeft: 4, alignSelf: 'flex-end' }}>
+              <button
+                onClick={loadData}
+                style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 12, cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}
+              >
+                <FunnelIcon style={{ width: 13, height: 13 }} /> Filtrar
+              </button>
               <button
                 onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('rdo'); setDateFrom(''); setDateTo('') }}
                 style={{ padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
@@ -1287,12 +1326,6 @@ export default function LancamentosERP() {
                   </div>
                 )}
               </div>
-              <button
-                onClick={loadData}
-                style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 12, cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}
-              >
-                <FunnelIcon style={{ width: 13, height: 13 }} /> Filtrar
-              </button>
             </div>
           </div>
 
@@ -1415,7 +1448,7 @@ export default function LancamentosERP() {
                   </th>
                 </tr>
                 {/* Linha 2: colunas individuais */}
-                <tr style={{ background: '#1A2E4A' }}>
+                <tr style={{ background: '#1A2E4A', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                   <th style={{ width: 36, background: '#1A2E4A', padding: '6px 8px' }} />
                   <Th width={70}>Nº</Th>
                   <Th width={90}>Data</Th>
