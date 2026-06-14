@@ -34,7 +34,7 @@ const ALL_ITEMS = [
   { to: '/central',       icon: TableCellsIcon,   label: 'Central Gerencial', group: 'Gerencial' },
   { to: '/lancamentos',   icon: DocumentTextIcon, label: 'Lançamentos',       group: 'Gerencial' },
   { to: '/cadastros',     icon: UsersIcon,        label: 'Cadastros',         group: 'Gerencial' },
-  { to: '/lotes-cliente', icon: UserGroupIcon,    label: 'Lotes Cliente',     group: 'Gerencial' },
+  // { to: '/lotes-cliente', icon: UserGroupIcon,    label: 'Lotes Cliente',     group: 'Gerencial' }, // SUSPENSO
   // Financeiro
   { to: '/faturamento',  icon: BanknotesIcon, label: 'Faturamento',      group: 'Financeiro' },
   { to: '/pagamentos',   icon: BanknotesIcon, label: 'Contas a Receber', group: 'Financeiro' },

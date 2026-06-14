@@ -1682,7 +1682,7 @@ export default function LancamentosERP() {
                                   { label: 'Visualizar documento', icon: DocumentTextIcon, disabled: !l.comprovante_url, action: () => window.open(l.comprovante_url, '_blank') },
                                   { label: 'Editar lançamento',    icon: PencilSquareIcon,      disabled: false, action: () => { setEditModal(l); setActionMenuId(null) } },
                                   { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: false, action: () => printTable([l], lotesMap, competencia, wsName) },
-                                  { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: !!l.lote_cliente_id, disabledLabel: 'JÁ EM LOTE', action: () => setAddLoteModal(l) },
+                                  // { label: 'Adicionar ao lote', suspenso temporariamente },
                                   { label: 'Ver auditoria',        icon: ClipboardDocumentListIcon, disabled: false, action: () => setAuditModal(l) },
                                   { label: 'Excluir lançamento',    icon: XMarkIcon,              disabled: false, danger: true, action: () => excluirLancamento(l) },
                                 ].map(item => (

@@ -51,7 +51,7 @@ const navGroups = [
       { to: '/lancamentos-erp', icon: BoltIcon,                label: 'Boletins ERP',        moduleKey: 'gerencial' },
       { to: '/gerencial/boletins-diarios', icon: ClipboardDocumentListIcon, label: 'Boletins Diários', moduleKey: 'gerencial' },
       { to: '/cadastros',     icon: UsersIcon,        label: 'Cadastros',         moduleKey: 'gerencial' },
-      { to: '/lotes-cliente',   icon: UserGroupIcon,    label: 'Lotes Cliente',     moduleKey: 'gerencial' },
+      // { to: '/lotes-cliente',   icon: UserGroupIcon,    label: 'Lotes Cliente',     moduleKey: 'gerencial' }, // SUSPENSO
       { to: '/form-templates', icon: Squares2X2Icon,   label: 'Modelos de Formulário', moduleKey: 'gerencial' },
     ],
   },
