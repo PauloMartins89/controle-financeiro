@@ -16,6 +16,7 @@ import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
 import { loadWorkspaceConfig, getConfig } from '../lib/workspaceConfig'
 import { LancamentoModal, calcRdoPricingTotal, registrarEvento } from './Lancamentos'
+import { buildReciboERP } from '../lib/exportPDF'
 import {
   ClockIcon, CheckCircleIcon, ExclamationTriangleIcon,
   PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronDownIcon,
@@ -25,7 +26,7 @@ import {
   ChevronLeftIcon, ChevronRightIcon, FunnelIcon,
   DocumentArrowDownIcon, ArrowDownTrayIcon, TableCellsIcon,
   UserGroupIcon, BellAlertIcon,
-  PencilSquareIcon,
+  PencilSquareIcon, PaperAirplaneIcon,
 } from '@heroicons/react/24/outline'
 
 // ─── PALETA ERP ───────────────────────────────────────────────────────────────
@@ -800,6 +801,105 @@ function AdicionarLoteModal({ record, workspaceId, onClose, onSaved }) {
   )
 }
 
+// ─── ENVIAR WA MODAL ─────────────────────────────────────────────────────────
+function EnviarWAModal({ itens, wsName, onClose }) {
+  const [telefone, setTelefone] = useState('')
+  const [mensagem, setMensagem] = useState('')
+  const [sending, setSending]   = useState(false)
+
+  const total = itens.reduce((s, l) => s + (parseFloat(l.valor) || 0), 0)
+
+  async function handleEnviar() {
+    const digits = telefone.replace(/\D/g, '')
+    if (digits.length < 10) { toast.error('Informe DDD + número'); return }
+    setSending(true)
+    try {
+      const loteMock = { id: `WA${Date.now()}`, cliente: wsName || 'Relatório' }
+      const doc = buildReciboERP({ lancamentos: itens, lote: loteMock })
+      const pdfBase64 = doc.output('datauristring').split(',')[1]
+      const dataStr   = new Date().toISOString().slice(0, 10)
+      const res = await fetch('/api/wa-boletins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telefone,
+          pdfBase64,
+          pdfNome: `boletins-${dataStr}.pdf`,
+          mensagem: mensagem.trim() || `Relatório com ${itens.length} lançamento(s) — Total: ${fmtCurrency(total)}`,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Erro ao enviar')
+      toast.success('PDF enviado via WhatsApp!')
+      onClose()
+    } catch (e) { toast.error(e.message) }
+    finally { setSending(false) }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(11,31,58,0.55)' }} />
+      <div style={{ position: 'relative', width: 460, background: C.white, borderRadius: 12, boxShadow: '0 16px 48px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ background: '#128C7E', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 700, letterSpacing: .8, textTransform: 'uppercase' }}>Enviar via WhatsApp</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginTop: 2 }}>{itens.length} registro{itens.length !== 1 ? 's' : ''} · {fmtCurrency(total)}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', padding: 6, display: 'flex' }}>
+            <XMarkIcon style={{ width: 16, height: 16 }} />
+          </button>
+        </div>
+        {/* Body */}
+        <div style={{ padding: 20 }}>
+          <div style={{ background: '#F0FDF4', border: '1px solid #86EFAC', borderRadius: 8, padding: '10px 14px', marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <DocumentArrowDownIcon style={{ width: 22, height: 22, color: '#059669', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#065F46' }}>PDF — Lançamentos Operacionais</div>
+              <div style={{ fontSize: 11, color: '#047857', marginTop: 2 }}>{itens.length} registro{itens.length !== 1 ? 's' : ''} · Total {fmtCurrency(total)}</div>
+            </div>
+          </div>
+          <label style={{ display: 'block', marginBottom: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: .5 }}>Telefone com DDD *</span>
+            <input
+              value={telefone}
+              onChange={e => setTelefone(e.target.value)}
+              placeholder="(67) 9 9999-9999"
+              style={{ display: 'block', width: '100%', marginTop: 6, padding: '9px 12px', borderRadius: 8, border: `1.5px solid ${C.border}`, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+              onFocus={e => { e.target.style.borderColor = '#128C7E' }}
+              onBlur={e => { e.target.style.borderColor = C.border }}
+            />
+          </label>
+          <label style={{ display: 'block' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: .5 }}>Mensagem (opcional)</span>
+            <textarea
+              value={mensagem}
+              onChange={e => setMensagem(e.target.value)}
+              rows={3}
+              placeholder={`Relatório com ${itens.length} lançamento(s) — Total: ${fmtCurrency(total)}`}
+              style={{ display: 'block', width: '100%', marginTop: 6, padding: '9px 12px', borderRadius: 8, border: `1.5px solid ${C.border}`, fontSize: 13, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+              onFocus={e => { e.target.style.borderColor = '#128C7E' }}
+              onBlur={e => { e.target.style.borderColor = C.border }}
+            />
+          </label>
+        </div>
+        {/* Footer */}
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+          <button
+            onClick={handleEnviar}
+            disabled={sending || !telefone.replace(/\D/g, '').length}
+            style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: sending ? '#6B7280' : '#128C7E', color: '#fff', cursor: (sending || !telefone.replace(/\D/g, '').length) ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, opacity: (sending || !telefone.replace(/\D/g, '').length) ? 0.7 : 1 }}
+          >
+            <PaperAirplaneIcon style={{ width: 14, height: 14 }} />
+            {sending ? 'Enviando...' : 'Enviar PDF'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function LancamentosERP() {
   const { workspaceId, isPlatformAdmin, enabledModules } = useStore()
@@ -840,6 +940,7 @@ export default function LancamentosERP() {
   const [editModal, setEditModal]       = useState(null)   // record a editar
   const [formTemplates, setFormTemplates] = useState({})
   const [loteModal, setLoteModal]       = useState(false)   // criar lote com selecionados
+  const [waModal, setWaModal]           = useState(false)   // enviar selecionados via WA
   const [exportMenu, setExportMenu]     = useState(false)
   const exportMenuRef                   = useRef(null)
 
@@ -1263,6 +1364,9 @@ export default function LancamentosERP() {
             </button>
             <button onClick={() => { const itens = filtered.filter(l => selecionados.has(l.id)); if (itens.length === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }; setLoteModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid #A5B4FC`, background: 'transparent', color: '#6366F1', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
               <UserGroupIcon style={{ width: 12, height: 12 }} /> Gerar Lote{selecionados.size > 0 && ` (${selecionados.size})`}
+            </button>
+            <button onClick={() => { if (selecionados.size === 0) { toast.error('Selecione ao menos 1 lançamento.'); return }; setWaModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: `1px solid #86EFAC`, background: selecionados.size > 0 ? '#F0FDF4' : 'transparent', color: '#128C7E', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+              <PaperAirplaneIcon style={{ width: 12, height: 12 }} /> WA{selecionados.size > 0 && ` (${selecionados.size})`}
             </button>
 
             {/* Separador */}
@@ -1872,7 +1976,7 @@ export default function LancamentosERP() {
                   { label: 'Digitalizar OCR',   icon: SparklesIcon,            color: '#7C3AED', bg: '#F5F3FF', path: '/boletins-diarios' },
                   { label: 'Revisar Pendências', icon: ClockIcon,              color: C.amber,   bg: '#FFFBEB', action: () => setFilterStatus('aguardando_aprovacao') },
                   { label: 'Ver Divergências',  icon: ExclamationTriangleIcon, color: C.red,     bg: '#FEF2F2', action: () => setFilterStatus('revisar') },
-                  { label: 'Gerar Lote',        icon: TableCellsIcon,          color: '#0EA5E9', bg: '#E0F2FE', action: () => selecionados.size > 0 ? setLoteModal(true) : toast('Selecione os boletins primeiro', { icon: '⚠️' }) },
+                  { label: 'Enviar WA',         icon: PaperAirplaneIcon,       color: '#128C7E', bg: '#F0FDF4', action: () => selecionados.size > 0 ? setWaModal(true) : toast('Selecione os boletins primeiro', { icon: '⚠️' }) },
                   { label: 'Relatórios',        icon: DocumentChartBarIcon,    color: C.green,   bg: '#F0FDF4', path: '/central' },
                 ].map(item => (
                   <button key={item.label}
@@ -2101,6 +2205,13 @@ export default function LancamentosERP() {
           workspaceId={workspaceId}
           onClose={() => setAddLoteModal(null)}
           onSaved={() => { setAddLoteModal(null); loadData() }}
+        />
+      )}
+      {waModal && (
+        <EnviarWAModal
+          itens={filtered.filter(l => selecionados.has(l.id))}
+          wsName={wsName}
+          onClose={() => setWaModal(false)}
         />
       )}
     </div>
