@@ -66,6 +66,7 @@ const navGroups = [
   {
     title: 'Compras',
     items: [
+      { to: '/compras/erp',                    icon: BoltIcon,                   label: '⚡ Compras ERP',      moduleKey: 'compras' },
       { to: '/compras',                        icon: ShoppingCartIcon,           label: 'Workspace',          moduleKey: 'compras' },
       { to: '/compras/dashboard',              icon: ChartBarIcon,               label: 'Dashboard',          moduleKey: 'compras' },
       { to: '/compras/operacoes/requisicoes',  icon: ClipboardDocumentListIcon,  label: 'Requisições',        moduleKey: 'compras' },

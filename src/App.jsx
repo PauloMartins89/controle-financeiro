@@ -23,6 +23,7 @@ import ProspectarRelatorios from './pages/ProspectarRelatorios'
 import Proventos from './pages/Proventos'
 import Importar from './pages/Importar'
 import Compras from './pages/Compras'
+import ComprasERP from './pages/ComprasERP'
 import ComprasAprovar from './pages/ComprasAprovar'
 import ComprasBuscaFornecedor from './pages/ComprasBuscaFornecedor'
 import ComprasWorkspace from './pages/ComprasWorkspace'
@@ -612,6 +613,7 @@ export default function App() {
                   <Route path="/plataforma/modulos" element={<RequireAdmin><PlataformaModulos /></RequireAdmin>} />
                   <Route path="/plataforma/auditoria" element={<RequireAdmin><PlataformaAuditoria /></RequireAdmin>} />
                   <Route path="/compras" element={<ComprasWorkspace />} />
+                  <Route path="/compras/erp" element={<ComprasERP />} />
                   <Route path="/compras/dashboard" element={<ComprasDashboard />} />
                   <Route path="/compras/operacoes/requisicoes" element={<Compras />} />
                   <Route path="/compras/operacoes/cotacoes" element={<RequirePermissao modulo="compras" acao="cotar"><ComprasCotacoes /></RequirePermissao>} />
