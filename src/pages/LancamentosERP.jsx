@@ -9,7 +9,7 @@
  * ► Ações de escrita: redirecionam para /lancamentos (tela original)
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import useStore from '../store/useStore'
@@ -776,15 +776,21 @@ export default function LancamentosERP() {
   const [lastUpdate, setLastUpdate]     = useState(null)
   const competenciaAjustada             = useRef(false)
 
-  // Filtros
+  // Filtros (persistidos em localStorage)
   const now = new Date()
-  const [competencia, setCompetencia]   = useState({ month: now.getMonth() + 1, year: now.getFullYear() })
-  const [filterStatus, setFilterStatus] = useState('todos')
+  const _savedFilters = (() => { try { return JSON.parse(localStorage.getItem('erp_filters') || '{}') } catch { return {} } })()
+  const [competencia, setCompetencia]   = useState(_savedFilters.competencia || { month: now.getMonth() + 1, year: now.getFullYear() })
+  const [filterStatus, setFilterStatus] = useState(_savedFilters.filterStatus || 'todos')
   const [filterForm, setFilterForm]     = useState('rdo')
-  const [filterCliente, setFilterCliente] = useState('')
-  const [dateFrom, setDateFrom]         = useState('')
-  const [dateTo, setDateTo]             = useState('')
+  const [filterCliente, setFilterCliente] = useState(_savedFilters.filterCliente || '')
+  const [dateFrom, setDateFrom]         = useState(_savedFilters.dateFrom || '')
+  const [dateTo, setDateTo]             = useState(_savedFilters.dateTo || '')
   const [search, setSearch]             = useState('')
+
+  // Persiste filtros ao alterar
+  useEffect(() => {
+    localStorage.setItem('erp_filters', JSON.stringify({ competencia, filterStatus, filterCliente, dateFrom, dateTo }))
+  }, [competencia, filterStatus, filterCliente, dateFrom, dateTo])
 
   // UI
   const [page, setPage]                 = useState(1)
@@ -1040,31 +1046,48 @@ export default function LancamentosERP() {
   // Limpa seleção ao mudar filtro
   useEffect(() => { setSelecionados(new Set()) }, [filterForm, filterStatus, filterCliente, search, competencia])
 
-  // ── KPIs ──────────────────────────────────────────────────────────────────
-  const totalReceitas     = filtered.filter(l => l.tipo === 'receita' && !l.duplicata).reduce((s, l) => s + (l.valor || 0), 0)
-  const totalDespesas     = filtered.filter(l => l.tipo === 'despesa' && !l.duplicata).reduce((s, l) => s + (l.valor || 0), 0)
-  const saldoOp           = totalReceitas - totalDespesas
-  const boletinsRecebidos = filtered.filter(l => !l.duplicata).length
-  const totalDuplicatas   = filtered.filter(l => l.duplicata).length
-  const pendenteRevisao   = filtered.filter(l => l.status === 'rascunho' || l.status === 'aguardando_aprovacao' || l.status === 'pendente').length
-  const comDivergencia    = filtered.filter(l => getDivergencias(l, tarifasMap).length > 0).length
-  const aguardandoLote    = filtered.filter(l => {
-    const lote = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null
-    return (l.status === 'aprovado' || l.status === 'corrigido') && !lote
-  }).length
-  const prontosLote       = filtered.filter(l => {
-    const lote = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null
-    return lote && lote.status === 'aprovado_cliente'
-  }).length
+  // ── Divergências memoizadas (evita recalcular por linha no render) ─────────
+  const divergenciasMap = useMemo(
+    () => Object.fromEntries(filtered.map(l => [l.id, getDivergencias(l, tarifasMap)])),
+    [filtered, tarifasMap] // eslint-disable-line
+  )
+
+  // ── KPIs (passagem única) ─────────────────────────────────────────────────
+  const kpis = useMemo(() => {
+    let totalReceitas = 0, totalDespesas = 0, boletinsRecebidos = 0, totalDuplicatas = 0
+    let pendenteRevisao = 0, comDivergencia = 0, aguardandoLote = 0, prontosLote = 0
+    let boletinsRecebidosDist = 0, emRevisaoDist = 0
+    for (const l of filtered) {
+      const lote = l.lote_cliente_id ? lotesMap[l.lote_cliente_id] : null
+      const divs = divergenciasMap[l.id] || []
+      if (!l.duplicata) {
+        boletinsRecebidos++
+        if (l.tipo === 'receita') totalReceitas += l.valor || 0
+        if (l.tipo === 'despesa') totalDespesas += l.valor || 0
+      } else {
+        totalDuplicatas++
+      }
+      if (l.status === 'rascunho' || l.status === 'aguardando_aprovacao' || l.status === 'pendente') pendenteRevisao++
+      if (divs.length > 0) comDivergencia++
+      if ((l.status === 'aprovado' || l.status === 'corrigido') && !lote) aguardandoLote++
+      if (lote && lote.status === 'aprovado_cliente') prontosLote++
+      if (l.status === 'rascunho' || l.status === 'pendente') boletinsRecebidosDist++
+      if (l.status === 'devolvido') emRevisaoDist++
+    }
+    return { totalReceitas, totalDespesas, boletinsRecebidos, totalDuplicatas, pendenteRevisao, comDivergencia, aguardandoLote, prontosLote, boletinsRecebidosDist, emRevisaoDist }
+  }, [filtered, lotesMap, divergenciasMap]) // eslint-disable-line
+
+  const { totalReceitas, totalDespesas, boletinsRecebidos, totalDuplicatas, pendenteRevisao, comDivergencia, aguardandoLote, prontosLote } = kpis
+  const saldoOp = totalReceitas - totalDespesas
 
   // ── Donut: distribuição de status ─────────────────────────────────────────
   const statusDist = [
-    { label: 'Aguardando Lote',   value: aguardandoLote,                                                        color: C.green  },
-    { label: 'Revisão Pendente',  value: pendenteRevisao,                                                       color: C.amber  },
-    { label: 'Com Divergência',   value: comDivergencia,                                                        color: C.red    },
-    { label: 'Boletins Recebidos',value: filtered.filter(l => l.status === 'rascunho' || l.status === 'pendente').length, color: '#6366F1' },
-    { label: 'Em Revisão',        value: filtered.filter(l => l.status === 'devolvido').length,                 color: '#F97316' },
-    { label: 'Prontos para Lote', value: prontosLote,                                                           color: '#0EA5E9' },
+    { label: 'Aguardando Lote',   value: aguardandoLote,              color: C.green  },
+    { label: 'Revisão Pendente',  value: pendenteRevisao,             color: C.amber  },
+    { label: 'Com Divergência',   value: comDivergencia,              color: C.red    },
+    { label: 'Boletins Recebidos',value: kpis.boletinsRecebidosDist,  color: '#6366F1' },
+    { label: 'Em Revisão',        value: kpis.emRevisaoDist,          color: '#F97316' },
+    { label: 'Prontos para Lote', value: prontosLote,                 color: '#0EA5E9' },
   ]
 
   // ── Competência helpers ────────────────────────────────────────────────────
@@ -1082,8 +1105,11 @@ export default function LancamentosERP() {
     })
   }
 
-  // ── Clientes únicos para filtro ───────────────────────────────────────────
-  const clientesUnicos = [...new Set(filtered.map(l => getEmpresa(l)).filter(e => e && e !== '—'))].sort()
+  // ── Clientes únicos para filtro (memoizado) ──────────────────────────────
+  const clientesUnicos = useMemo(
+    () => [...new Set(filtered.map(l => getEmpresa(l)).filter(e => e && e !== '—'))].sort(),
+    [filtered] // eslint-disable-line
+  )
 
   // ── Render ─────────────────────────────────────────────────────────────────
   const inputSel = {
@@ -1094,6 +1120,35 @@ export default function LancamentosERP() {
 
   return (
     <div style={{ background: C.bgPage, minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+
+      {/* ══ PAINEL FLUTUANTE DE SELEÇÃO ═══════════════════════════════════ */}
+      {selecionados.size > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 1000, background: C.navy, borderRadius: 10,
+          boxShadow: '0 8px 32px rgba(11,31,58,0.35)',
+          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px',
+          border: '1px solid rgba(255,255,255,0.15)',
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: C.white, marginRight: 4 }}>
+            {selecionados.size} selecionado{selecionados.size !== 1 ? 's' : ''}
+          </span>
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.2)' }} />
+          <button onClick={validarSelecionados} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6, border: 'none', background: C.green, color: C.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            <CheckCircleIcon style={{ width: 14, height: 14 }} /> Validar ({selecionados.size})
+          </button>
+          <button onClick={() => { const itens = filtered.filter(l => selecionados.has(l.id)); if (itens.length === 0) return; setLoteModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6, border: 'none', background: '#6366F1', color: C.white, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            <UserGroupIcon style={{ width: 14, height: 14 }} /> Gerar Lote
+          </button>
+          <button onClick={() => exportCSV(filtered.filter(l => selecionados.has(l.id)), lotesMap)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: C.white, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            <TableCellsIcon style={{ width: 14, height: 14 }} /> Excel
+          </button>
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.2)' }} />
+          <button onClick={() => setSelecionados(new Set())} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', padding: 4, display: 'flex' }} title="Limpar seleção">
+            <XMarkIcon style={{ width: 16, height: 16 }} />
+          </button>
+        </div>
+      )}
 
       {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
       <div style={{
@@ -1249,9 +1304,7 @@ export default function LancamentosERP() {
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>TIPO DE DOCUMENTO</div>
-              <select value={filterForm} onChange={e => setFilterForm(e.target.value)} style={inputSel}>
-                <option value="rdo">Relatório Diário de Obra</option>
-              </select>
+              <div style={{ ...inputSel, cursor: 'default', color: C.textSec, background: '#F8FAFC' }}>Relatório Diário de Obra</div>
             </div>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>STATUS</div>
@@ -1496,7 +1549,7 @@ export default function LancamentosERP() {
                   const loteStatus = lote?.status || null
                   const clienteOk = getClienteAss(l)
                   const empresaOk = getEmpresaAss(l)
-                  const divergencias = getDivergencias(l, tarifasMap)
+                  const divergencias = divergenciasMap[l.id] || []
                   const temDivergencia = divergencias.length > 0
                   const rowBg = l.duplicata ? '#FFFBEB' : (temDivergencia ? '#FFF5F5' : (idx % 2 === 0 ? C.white : '#F8FAFC'))
                   const isOpen = actionMenuId === l.id
@@ -1573,12 +1626,6 @@ export default function LancamentosERP() {
                       {/* AÇÕES */}
                       <td onClick={e => e.stopPropagation()} style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}`, textAlign: 'center', position: 'relative' }}>
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                          <button
-                            onClick={() => setDrawerRecord(l)}
-                            style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '4px 8px', borderRadius: 5, border: `1px solid ${C.border}`, background: C.white, color: C.navy, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                          >
-                            <EyeIcon style={{ width: 12, height: 12, flexShrink: 0 }} /> Detalhes
-                          </button>
                           <div style={{ position: 'relative' }}>
                             <button
                               onClick={(e) => {
@@ -1598,11 +1645,11 @@ export default function LancamentosERP() {
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.12)', width: 200, overflow: 'hidden',
                               }}>
                                 {[
-                                  { label: 'Visualizar documento', icon: DocumentTextIcon, disabled: false, action: () => l.comprovante_url && window.open(l.comprovante_url, '_blank') },
+                                  { label: 'Visualizar documento', icon: DocumentTextIcon, disabled: !l.comprovante_url, action: () => window.open(l.comprovante_url, '_blank') },
                                   { label: 'Editar lançamento',    icon: DocumentTextIcon,      disabled: false, action: () => { setEditModal(l); setActionMenuId(null) } },
                                   { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: false, action: () => printTable([l], lotesMap, competencia, wsName) },
-                                  { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: false, action: () => setAddLoteModal(l) },
-                                  { label: 'Ver auditoria',        icon: MapPinIcon,             disabled: false, action: () => setAuditModal(l) },
+                                  { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: !!l.lote_cliente_id, action: () => setAddLoteModal(l) },
+                                  { label: 'Ver auditoria',        icon: ClipboardDocumentListIcon, disabled: false, action: () => setAuditModal(l) },
                                   { label: 'Excluir lançamento',    icon: XMarkIcon,              disabled: false, danger: true, action: () => excluirLancamento(l) },
                                 ].map(item => (
                                   <button key={item.label} disabled={item.disabled} onClick={() => { item.action(); setActionMenuId(null) }} style={{
