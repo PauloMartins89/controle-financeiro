@@ -17,7 +17,7 @@ import { supabase } from '../lib/supabase'
 import { loadWorkspaceConfig, getConfig } from '../lib/workspaceConfig'
 import { LancamentoModal, calcRdoPricingTotal, registrarEvento } from './Lancamentos'
 import {
-  CurrencyDollarIcon, ClockIcon, CheckCircleIcon, ExclamationTriangleIcon,
+  ClockIcon, CheckCircleIcon, ExclamationTriangleIcon,
   PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronDownIcon,
   ArrowTopRightOnSquareIcon, ArrowPathIcon, DocumentTextIcon,
   SparklesIcon, Cog6ToothIcon, DocumentChartBarIcon,
