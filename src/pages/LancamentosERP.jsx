@@ -116,6 +116,10 @@ function getEmpresa(l) {
   const d = l.dados_extras || {}
   return d.empresa || d.cliente || l.descricao || '—'
 }
+function getCidadeUF(l) {
+  const d = l.dados_extras || {}
+  return d.cidade_uf || d.cidade || d.municipio || '—'
+}
 function getSolicitante(l) {
   const d = l.dados_extras || {}
   return d.solicitante || d.condutor || '—'
@@ -524,6 +528,7 @@ function exportCSV(rows, lotesMap) {
     ['Data',               r => fmtDate(r.data)],
     ['Processado Em',      r => fmtDateHora((r.dados_extras||{}).processado_em)],
     ['Empresa',            r => getEmpresa(r)],
+    ['Cidade/UF',          r => getCidadeUF(r)],
     ['Solicitante',        r => getSolicitante(r)],
     ['Equipamento',        r => getEquipamento(r)],
     ['Início Jornada',     r => (r.dados_extras||{}).jornada_inicio || ''],
@@ -562,6 +567,7 @@ function printTable(rows, lotesMap, competencia, wsName) {
     ['Nº',               r => getLanNum(r)],
     ['Data',             r => fmtDate(r.data)],
     ['Empresa',          r => getEmpresa(r)],
+    ['Cidade/UF',        r => getCidadeUF(r)],
     ['Solicitante',      r => getSolicitante(r)],
     ['Equipamento',      r => getEquipamento(r)],
     ['Total Horas',      r => fmtTotalHorasJornada(r.dados_extras)],
@@ -1537,6 +1543,7 @@ export default function LancamentosERP() {
                   <Th width={90}>Data</Th>
                   <Th width={140}>Processado Em</Th>
                   <Th width={200}>Empresa</Th>
+                  <Th width={110}>Cidade/UF</Th>
                   <Th width={140}>Solicitante</Th>
                   <Th width={120}>Equipamento</Th>
                   <Th width={70} align="center">Início da Jornada</Th>
@@ -1558,14 +1565,14 @@ export default function LancamentosERP() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={21} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={22} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Carregando lançamentos...
                     </td>
                   </tr>
                 )}
                 {!loading && paginated.length === 0 && (
                   <tr>
-                    <td colSpan={21} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={22} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Nenhum lançamento encontrado para os filtros selecionados.
                     </td>
                   </tr>
@@ -1611,6 +1618,7 @@ export default function LancamentosERP() {
                       <Td muted>{fmtDate(l.data)}</Td>
                       <Td muted>{d.processado_em ? fmtDateHora(d.processado_em) : '—'}</Td>
                       <Td bold>{getEmpresa(l)}</Td>
+                      <Td muted>{getCidadeUF(l)}</Td>
                       <Td>{getSolicitante(l)}</Td>
                       <Td muted>{getEquipamento(l)}</Td>
                       {/* JORNADA */}
