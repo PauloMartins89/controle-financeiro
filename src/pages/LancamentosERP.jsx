@@ -843,6 +843,16 @@ export default function LancamentosERP() {
     } catch (e) { toast.error('Erro: ' + e.message) }
   }
 
+  async function excluirLancamento(l) {
+    if (!confirm(`Excluir lançamento ${l.dados_extras?.numero_rdo || l.id.slice(0, 8)}? Esta ação não pode ser desfeita.`)) return
+    try {
+      const { error } = await supabase.from('lancamentos').delete().eq('id', l.id)
+      if (error) throw error
+      toast.success('Lançamento excluído')
+      loadData()
+    } catch (e) { toast.error('Erro ao excluir: ' + e.message) }
+  }
+
   // ── Form templates (para modal de edição) ─────────────────────────────────
   useEffect(() => {
     if (!workspaceId) return
@@ -1557,11 +1567,12 @@ export default function LancamentosERP() {
                                   { label: 'Gerar PDF',            icon: DocumentArrowDownIcon, disabled: false, action: () => printTable([l], lotesMap, competencia, wsName) },
                                   { label: 'Adicionar ao lote',    icon: UserGroupIcon,          disabled: false, action: () => setAddLoteModal(l) },
                                   { label: 'Ver auditoria',        icon: MapPinIcon,             disabled: false, action: () => setAuditModal(l) },
+                                  { label: 'Excluir lançamento',    icon: XMarkIcon,              disabled: false, danger: true, action: () => excluirLancamento(l) },
                                 ].map(item => (
                                   <button key={item.label} disabled={item.disabled} onClick={() => { item.action(); setActionMenuId(null) }} style={{
                                     display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                                     padding: '10px 14px', background: 'none', border: 'none',
-                                    color: item.disabled ? '#CBD5E1' : C.text, fontSize: 12,
+                                    color: item.disabled ? '#CBD5E1' : item.danger ? '#DC2626' : C.text, fontSize: 12,
                                     cursor: item.disabled ? 'not-allowed' : 'pointer', textAlign: 'left',
                                     borderBottom: `1px solid ${C.border}`,
                                     opacity: item.disabled ? 0.55 : 1,
@@ -1569,7 +1580,7 @@ export default function LancamentosERP() {
                                     onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.background = '#F8FAFC' }}
                                     onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                   >
-                                    <item.icon style={{ width: 14, height: 14, color: item.disabled ? '#CBD5E1' : C.textSec }} />
+                                    <item.icon style={{ width: 14, height: 14, color: item.disabled ? '#CBD5E1' : item.danger ? '#DC2626' : C.textSec }} />
                                     {item.label}
                                     {item.disabled && <span style={{ marginLeft: 'auto', fontSize: 9, color: '#CBD5E1', fontWeight: 600 }}>EM BREVE</span>}
                                   </button>
