@@ -547,7 +547,6 @@ function exportCSV(rows, lotesMap) {
     ['Unidade',               r => fmtV((r.dados_extras||{}).unidade_empresa || (r.dados_extras||{}).unidade)],
     ['Solicitante',           r => getSolicitante(r)],
     ['Condutor',              r => fmtV((r.dados_extras||{}).condutor)],
-    ['Operador',              r => fmtV((r.dados_extras||{}).operador || (r.dados_extras||{}).motorista)],
     ['Equipamento',           r => getEquipamento(r)],
     ['Placa',                 r => fmtV((r.dados_extras||{}).placa || (r.dados_extras||{}).veiculo_placa)],
     ['Frente / Local',        r => fmtV((r.dados_extras||{}).frente || (r.dados_extras||{}).local_servico || (r.dados_extras||{}).locais_servico)],
@@ -565,16 +564,6 @@ function exportCSV(rows, lotesMap) {
     ['H FDS Noturnas',        r => fmtV((r.dados_extras||{}).h_fds_noturnas)],
     ['H Feriado Diurnas',     r => fmtV((r.dados_extras||{}).h_feriado_diurnas)],
     ['H Feriado Noturnas',    r => fmtV((r.dados_extras||{}).h_feriado_noturnas)],
-    // ── KM ───────────────────────────────────────────────────────────────────
-    ['KM Asfalto',            r => fmtV(calcKmTipo(r.dados_extras||{}, 'ASFALTO'))],
-    ['KM Terra',              r => fmtV(calcKmTipo(r.dados_extras||{}, 'TERRA'))],
-    ['KM Total',              r => fmtV(calcKmTotal(r.dados_extras||{}))],
-    // ── Adicionais financeiros ────────────────────────────────────────────────
-    ['Pedágio (R$)',           r => fmtV((r.dados_extras||{}).pedagio)],
-    ['Pernoite (R$)',          r => fmtV((r.dados_extras||{}).pernoite)],
-    ['Refeição (R$)',          r => fmtV((r.dados_extras||{}).refeicao)],
-    ['Outros Adicionais (R$)', r => fmtV((r.dados_extras||{}).outros_adicionais)],
-    ['Desconto (R$)',          r => fmtV((r.dados_extras||{}).desconto)],
     // ── Validação ────────────────────────────────────────────────────────────
     ['Cliente Assinado',      r => getClienteAss(r) ? 'Sim' : 'Não'],
     ['Nome Assinante Cliente', r => fmtV((r.dados_extras||{}).assinatura_cliente_nome)],
