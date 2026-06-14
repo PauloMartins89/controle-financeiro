@@ -441,7 +441,7 @@ export function buildReciboERP({
   doc.text(`Data emissão: ${new Date().toLocaleDateString('pt-BR')}`, L + 110, y + 6.5)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
-  doc.setTextColor([134, 255, 180])
+  doc.setTextColor(134, 255, 180)
   doc.text(`TOTAL: ${fmtC(totalValor)}`, R - 4, y + 6.5, { align: 'right' })
 
   y += 16
