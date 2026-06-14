@@ -514,7 +514,7 @@ function mapOcrToExtras(ocr, data) {
     // Unidade da empresa
     unidade_empresa:       r.unidade_empresa || r.unidade || r.filial || '',
     // Cidade e estado (ex: "Três Lagoas/MS")
-    cidade_uf:             r.cidade_estado || r.cidade_uf || r.cidade || r.municipio || '',,
+    cidade_uf:             r.cidade_estado || r.cidade_uf || r.cidade || r.municipio || '',
     // Jornada (aceita aliases: entrada/saida usados em boletins HJ e similares)
     jornada_inicio: (() => {
       const linhas = Array.isArray(r.linhas_jornada) ? r.linhas_jornada : []
@@ -1165,9 +1165,10 @@ export default async function handler(req, res) {
   const { boletimId } = req.body || {}
   if (!boletimId) return res.status(400).json({ error: 'boletimId obrigat├│rio' })
 
-  // Responde 202 imediatamente — processamento continua em background (Vercel permite após res.end())
-  res.status(202).json({ ok: true, boletimId })
+  // Processa antes de responder — Vercel encerra a função logo após res.json(),
+  // portanto NÃO é seguro deixar processarBoletim em background pós-resposta.
   await processarBoletim(boletimId).catch(e =>
     console.error('[ocr-boletim-maquina] processarBoletim error:', e.message)
   )
+  res.status(200).json({ ok: true, boletimId })
 }
