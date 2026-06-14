@@ -1672,9 +1672,10 @@ export default function LancamentosERP() {
                   <th colSpan={2} style={{ background: C.groupVal, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
                     REVISÃO INTERNA
                   </th>
-                  <th colSpan={3} style={{ background: C.groupFin, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center' }}>
+                  <th colSpan={2} style={{ background: C.groupFin, padding: '7px 10px', fontSize: 10, fontWeight: 800, letterSpacing: 1, color: C.white, textAlign: 'center', borderRight: `1px solid rgba(255,255,255,0.2)` }}>
                     FINANCEIRO / LOTE
                   </th>
+                  <th style={{ background: '#1A2E4A', padding: '7px 10px' }} />
                 </tr>
                 {/* Linha 2: colunas individuais */}
                 <tr style={{ background: '#1A2E4A', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
