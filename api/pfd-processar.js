@@ -150,6 +150,7 @@ async function criarOuPrepararPublicacao({ sb, publicacao_id, payload, L }) {
       edicao: payload.edicao || null,
       idioma: payload.idioma || 'pt',
       url_pdf: payload.url_pdf || null,
+      pdf_storage_path: payload.storage_path || null,
       status: 'processando',
     })
     .select()
@@ -259,6 +260,18 @@ export default async function handler(req, res) {
     await sb.from('pfd_publicacoes')
       .update({ status: 'processado', updated_at: new Date().toISOString() })
       .eq('id', publicacao_id)
+
+    // Remove o PDF do storage após extração — só o texto extraído é necessário
+    const pathParaRemover = storage_path || publicacao?.pdf_storage_path
+    if (modo === 'storage' && pathParaRemover) {
+      const { error: removeErr } = await sb.storage.from('pfd-manuais').remove([pathParaRemover])
+      if (!removeErr) {
+        await sb.from('pfd_publicacoes').update({ pdf_storage_path: null }).eq('id', publicacao_id)
+        L(`PDF removido do storage (texto salvo no banco): ${pathParaRemover}`)
+      } else {
+        L(`⚠️ Falha ao remover PDF do storage (não crítico): ${removeErr.message}`)
+      }
+    }
 
     L(`✅ concluído: plano_id=${planoSalvo.id} (provider=${providerUsado})`)
 
