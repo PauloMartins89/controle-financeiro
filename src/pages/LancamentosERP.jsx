@@ -938,7 +938,7 @@ export default function LancamentosERP() {
   const [lotesMap, setLotesMap]         = useState({})
   const [eventos, setEventos]           = useState([])
   const [lastUpdate, setLastUpdate]     = useState(null)
-  const competenciaAjustada             = useRef(false)
+  const competenciaAjustada             = useRef(false) // mantido para compatibilidade — não usado na query
 
   // Filtros (persistidos em localStorage)
   const [competencia, setCompetencia]   = useState(() => { try { const s = JSON.parse(localStorage.getItem('erp_filters') || '{}'); return s.competencia || { month: new Date().getMonth() + 1, year: new Date().getFullYear() } } catch { return { month: new Date().getMonth() + 1, year: new Date().getFullYear() } } })
@@ -1073,9 +1073,8 @@ export default function LancamentosERP() {
       queryIni = dateFrom
       queryFim = dateTo
     } else {
-      const now = new Date()
-      const y = competenciaAjustada.current ? competencia.year  : now.getFullYear()
-      const m = competenciaAjustada.current ? competencia.month : now.getMonth() + 1
+      const y = competencia.year
+      const m = competencia.month
       queryIni = `${y}-${String(m).padStart(2, '0')}-01`
       queryFim = new Date(y, m, 0).toISOString().slice(0, 10) // último dia do mês
     }
@@ -1120,11 +1119,6 @@ export default function LancamentosERP() {
         setLastUpdate(new Date())
       }
     }
-
-    // Auto-ajusta competência para o mês mais recente com dados (só na primeira carga)
-    // Agora que a query é filtrada: se não veio nada no mês atual, não há ajuste automático
-    // O usuário navega manualmente pelas setas de competência
-    competenciaAjustada.current = true
 
     // Lotes (paralelo ao processamento dos itens)
     const loteIds = [...new Set(items.map(l => l.lote_cliente_id).filter(Boolean))]
