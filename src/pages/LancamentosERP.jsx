@@ -1245,8 +1245,8 @@ export default function LancamentosERP() {
             <FunnelIcon style={{ width: 11, height: 11 }} />
             Filtros de Consulta
           </div>
-          {/* Linha 1: filtros principais + botões */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 8 }}>
+          {/* Linha única: todos os filtros + botões */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>TIPO DE DOCUMENTO</div>
               <select value={filterForm} onChange={e => setFilterForm(e.target.value)} style={inputSel}>
@@ -1274,23 +1274,82 @@ export default function LancamentosERP() {
                 {clientesUnicos.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+
+            {/* Separador visual */}
+            <div style={{ width: 1, height: 30, background: C.border, alignSelf: 'flex-end', margin: '0 2px' }} />
+
+            {/* Competência */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>COMPETÊNCIA</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={prevCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
+                  <ChevronLeftIcon style={{ width: 14, height: 14 }} />
+                </button>
+                <span style={{ fontSize: 12, fontWeight: 700, color: dateFrom || dateTo ? C.textSec : C.navy, minWidth: 90, textAlign: 'center', opacity: dateFrom || dateTo ? 0.4 : 1 }}>
+                  {MONTHS[competencia.month - 1]}/{competencia.year}
+                </span>
+                <button onClick={nextCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
+                  <ChevronRightIcon style={{ width: 14, height: 14 }} />
+                </button>
+              </div>
+            </div>
+            <div style={{ alignSelf: 'flex-end', paddingBottom: 6, color: C.textSec, fontSize: 10, fontWeight: 500 }}>ou</div>
+            {/* Data inicial */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA INICIAL</div>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateFrom ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
+            </div>
+            {/* Data final */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA FINAL</div>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateTo ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
+            </div>
+            {/* Atalhos de período */}
+            <div style={{ alignSelf: 'flex-end', display: 'flex', gap: 4 }}>
+              {[10, 15, 30, 60].map(dias => {
+                const hoje = new Date()
+                const ini  = new Date(hoje); ini.setDate(hoje.getDate() - dias + 1)
+                const iniStr = ini.toISOString().slice(0, 10)
+                const fimStr = hoje.toISOString().slice(0, 10)
+                const ativo  = dateFrom === iniStr && dateTo === fimStr
+                return (
+                  <button key={dias}
+                    onClick={() => { setDateFrom(iniStr); setDateTo(fimStr) }}
+                    style={{ padding: '4px 8px', borderRadius: 5, border: `1px solid ${ativo ? C.blue : C.border}`, background: ativo ? '#EFF6FF' : 'transparent', color: ativo ? C.blue : C.textSec, fontSize: 11, cursor: 'pointer', fontWeight: ativo ? 700 : 500, height: 30 }}>
+                    {dias}d
+                  </button>
+                )
+              })}
+              {(dateFrom || dateTo) && (
+                <button onClick={() => { setDateFrom(''); setDateTo('') }}
+                  style={{ padding: '4px 8px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 11, cursor: 'pointer', fontWeight: 600, height: 30 }}>
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Separador visual */}
+            <div style={{ width: 1, height: 30, background: C.border, alignSelf: 'flex-end', margin: '0 2px' }} />
+
             {/* Botões filtro — ordem: Filtrar, Limpar, Exportar */}
-            <div style={{ display: 'flex', gap: 6, marginLeft: 4, alignSelf: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 6, alignSelf: 'flex-end' }}>
               <button
                 onClick={loadData}
-                style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 12, cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}
+                style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 12, cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, height: 30 }}
               >
                 <FunnelIcon style={{ width: 13, height: 13 }} /> Filtrar
               </button>
               <button
                 onClick={() => { setFilterStatus('todos'); setFilterCliente(''); setSearch(''); setFilterForm('rdo'); setDateFrom(''); setDateTo('') }}
-                style={{ padding: '7px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                style={{ padding: '6px 14px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 12, cursor: 'pointer', fontWeight: 600, height: 30 }}
               >Limpar</button>
               {/* Exportar dropdown */}
               <div ref={exportMenuRef} style={{ position: 'relative' }}>
                 <button
                   onClick={() => setExportMenu(v => !v)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.text, fontSize: 12, cursor: 'pointer', fontWeight: 600, height: 30 }}
                 >
                   <ArrowDownTrayIcon style={{ width: 13, height: 13, color: C.green }} /> Exportar <ChevronDownIcon style={{ width: 11, height: 11, color: C.textSec }} />
                 </button>
@@ -1328,63 +1387,6 @@ export default function LancamentosERP() {
               </div>
             </div>
           </div>
-
-          {/* Linha 2: período */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-            {/* Competência mensal */}
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>COMPETÊNCIA</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <button onClick={prevCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
-                  <ChevronLeftIcon style={{ width: 14, height: 14 }} />
-                </button>
-                <span style={{ fontSize: 12, fontWeight: 700, color: dateFrom || dateTo ? C.textSec : C.navy, minWidth: 110, textAlign: 'center', opacity: dateFrom || dateTo ? 0.4 : 1 }}>
-                  {MONTHS[competencia.month - 1]}/{competencia.year}
-                </span>
-                <button onClick={nextCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
-                  <ChevronRightIcon style={{ width: 14, height: 14 }} />
-                </button>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 2, color: C.textSec, fontSize: 11, fontWeight: 500 }}>ou</div>
-            {/* Data inicial */}
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA INICIAL</div>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-                style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateFrom ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
-            </div>
-            {/* Data final */}
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA FINAL</div>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateTo ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
-            </div>
-            {/* Atalhos de período */}
-            <div style={{ alignSelf: 'flex-end', display: 'flex', gap: 4 }}>
-              {[10, 15, 30, 60].map(dias => {
-                const hoje = new Date()
-                const ini  = new Date(hoje); ini.setDate(hoje.getDate() - dias + 1)
-                const iniStr = ini.toISOString().slice(0, 10)
-                const fimStr = hoje.toISOString().slice(0, 10)
-                const ativo  = dateFrom === iniStr && dateTo === fimStr
-                return (
-                  <button key={dias}
-                    onClick={() => { setDateFrom(iniStr); setDateTo(fimStr) }}
-                    style={{ padding: '4px 8px', borderRadius: 5, border: `1px solid ${ativo ? C.blue : C.border}`, background: ativo ? '#EFF6FF' : 'transparent', color: ativo ? C.blue : C.textSec, fontSize: 11, cursor: 'pointer', fontWeight: ativo ? 700 : 500, height: 30 }}>
-                    {dias}d
-                  </button>
-                )
-              })}
-            </div>
-            {(dateFrom || dateTo) && (
-              <button onClick={() => { setDateFrom(''); setDateTo('') }}
-                style={{ alignSelf: 'flex-end', padding: '5px 10px', borderRadius: 5, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 11, cursor: 'pointer', fontWeight: 600, height: 30 }}>
-                ✕ Limpar datas
-              </button>
-            )}
-          </div>
-
-        </div>
 
         {/* ── TABELA ───────────────────────────────────────────────────── */}
         <div style={{
