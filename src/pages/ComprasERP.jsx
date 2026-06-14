@@ -325,9 +325,12 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
   const [bCidade, setBCidade] = useState('')
   const [bUf, setBUf] = useState('')
   const [bLoading, setBLoading] = useState(false)
+  const [bLoadingMore, setBLoadingMore] = useState(false)
   const [bResultado, setBResultado] = useState(null)
   const [bSelecionados, setBSelecionados] = useState(new Set())
   const [bAdicionados, setBAdicionados] = useState(new Set())
+  const [bHasMore, setBHasMore] = useState(false)
+  const [bNextStart, setBNextStart] = useState(0)
   const [cidades, setCidades] = useState([])
   // ── estado pesquisa preços ──
   const [qPreco, setQPreco] = useState('')
@@ -352,18 +355,46 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
     const p = String(produtoOverride || bProduto || '').trim()
     if (!p) { toast.error('Informe o produto'); return }
     if (!bCidade.trim()) { toast.error('Informe a cidade'); return }
-    setBLoading(true); setBResultado(null); setBSelecionados(new Set())
+    setBLoading(true); setBResultado(null); setBSelecionados(new Set()); setBHasMore(false); setBNextStart(0)
     try {
       const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
-        body: { query: p, cidade: bCidade.trim(), uf: bUf || undefined },
+        body: { query: p, cidade: bCidade.trim(), uf: bUf || undefined, num: 20, start: 0 },
       })
       if (error) throw new Error(error.message || 'Erro na busca')
       if (data?.error) throw new Error(data.error)
       setBResultado({ ...data, produto: p, cidade: bCidade.trim(), uf: bUf })
+      setBHasMore(data?.hasMore ?? false)
+      setBNextStart(data?.nextStart ?? 20)
       if (!(data?.fornecedores || []).length) toast('Nenhum fornecedor encontrado.', { icon: '🔍', duration: 4000 })
     } catch (err) {
       toast.error(err.message || 'Falha na busca — verifique os critérios')
     } finally { setBLoading(false) }
+  }
+
+  async function carregarMais() {
+    if (!bResultado || bLoadingMore) return
+    setBLoadingMore(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('busca-fornecedores', {
+        body: { query: bResultado.produto, cidade: bResultado.cidade, uf: bResultado.uf || undefined, num: 20, start: bNextStart },
+      })
+      if (error) throw new Error(error.message || 'Erro')
+      if (data?.error) throw new Error(data.error)
+      const novos = (data?.fornecedores || []).filter(f =>
+        !(bResultado.fornecedores || []).some(e => e.id === f.id)
+      )
+      setBResultado(prev => ({
+        ...prev,
+        fornecedores: [...(prev?.fornecedores || []), ...novos],
+        total: (prev?.fornecedores?.length || 0) + novos.length,
+      }))
+      setBHasMore(data?.hasMore ?? false)
+      setBNextStart(data?.nextStart ?? (bNextStart + 20))
+      if (!novos.length) { toast('Sem novos resultados.', { icon: 'ℹ️' }); setBHasMore(false) }
+      else toast.success(`+${novos.length} fornecedor(es) carregado(s)`)
+    } catch (err) {
+      toast.error(err.message || 'Erro ao carregar mais')
+    } finally { setBLoadingMore(false) }
   }
 
   async function adicionarFornecedor(empresa) {
@@ -592,6 +623,20 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
                         onToggle={() => toggleSel(e.id)}
                         onCnpj={irParaCnpj} />
                     ))}
+                    {/* Carregar Mais */}
+                    {bHasMore && (
+                      <button onClick={carregarMais} disabled={bLoadingMore}
+                        style={{ width: '100%', padding: '9px 0', borderRadius: 8, border: '1.5px dashed #0ea5e9', background: 'rgba(14,165,233,0.05)', color: '#0ea5e9', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: bLoadingMore ? 0.7 : 1 }}>
+                        {bLoadingMore
+                          ? <><ArrowPathIcon style={{ width: 14, animation: 'spin 1s linear infinite' }} />Carregando...</>
+                          : <>+ Carregar mais resultados (próximos 20)</>}
+                      </button>
+                    )}
+                    {!bHasMore && (bResultado.fornecedores || []).length > 0 && (
+                      <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-secondary)', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
+                        {(bResultado.fornecedores || []).length} resultado(s) — fim da lista
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

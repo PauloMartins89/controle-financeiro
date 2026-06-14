@@ -54,6 +54,8 @@ serve(async (req) => {
 
     // ── Modo padrão: busca por região (Google Maps) ───────────────────────
     const { query, cidade, uf } = body
+    const start: number = typeof body.start === 'number' ? body.start : 0
+    const num: number   = typeof body.num   === 'number' ? Math.min(body.num, 20) : 20
 
     if (!query?.trim() || !cidade?.trim()) {
       return new Response(JSON.stringify({ error: 'query e cidade são obrigatórios' }), {
@@ -70,10 +72,13 @@ serve(async (req) => {
       ? `${query.trim()} em ${cidade.trim()}${uf?.trim() ? ` ${uf.trim()}` : ''} Brasil`
       : `fornecedor de ${query.trim()} em ${cidade.trim()}${uf?.trim() ? ` ${uf.trim()}` : ''} Brasil`
 
+    const serperBody: Record<string, unknown> = { q, gl: 'br', hl: 'pt-br', location, num }
+    if (start > 0) serperBody.start = start
+
     const resp = await fetch('https://google.serper.dev/maps', {
       method: 'POST',
       headers: { 'X-API-KEY': SERPER_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q, gl: 'br', hl: 'pt-br', location, num: 20 }),
+      body: JSON.stringify(serperBody),
       signal: AbortSignal.timeout(10000),
     })
 
@@ -104,7 +109,14 @@ serve(async (req) => {
     }))
 
     return new Response(
-      JSON.stringify({ fornecedores, total: fornecedores.length, local: location }),
+      JSON.stringify({
+        fornecedores,
+        total: fornecedores.length,
+        local: location,
+        start,
+        hasMore: fornecedores.length === num,   // se veio cheio, provavelmente há mais
+        nextStart: start + fornecedores.length,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err: unknown) {
