@@ -4,7 +4,7 @@ import Header from '../components/Header'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
 import { formatCurrency, formatDate } from '../lib/utils'
-import { buildLotePDFDoc } from '../lib/exportPDF'
+import { buildReciboERP } from '../lib/exportPDF'
 import {
   CheckCircleIcon, XCircleIcon, ClockIcon, PaperAirplaneIcon,
   ChevronDownIcon, ChevronUpIcon, PhotoIcon, DocumentTextIcon,
@@ -716,8 +716,8 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
         })
       } catch (_) {}
     }
-    return buildLotePDFDoc({
-      lancamentos, lote, link,
+    return buildReciboERP({
+      lancamentos, lote,
       assinaturaBase64,
       aprovadoEm: lote.aprovado_em || null,
       aprovadorNome: lote.confirmado_por || lote.aprovador_nome || null,
@@ -963,8 +963,8 @@ function LoteCard({ lote, onRefresh }) {
         } catch (_) {}
       }
       const link = lote.token_acesso ? `${window.location.origin}/lote/${lote.token_acesso}` : null
-      const doc = buildLotePDFDoc({
-        lancamentos: lancs, lote, link,
+      const doc = buildReciboERP({
+        lancamentos: lancs, lote,
         assinaturaBase64,
         aprovadoEm: lote.aprovado_em || null,
         aprovadorNome: lote.confirmado_por || lote.aprovador_nome || null,

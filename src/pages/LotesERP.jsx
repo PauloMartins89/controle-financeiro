@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-hot-toast'
 import useStore from '../store/useStore'
 import { supabase } from '../lib/supabase'
-import { buildLotePDFDoc, buildReciboERP } from '../lib/exportPDF'
+import { buildReciboERP } from '../lib/exportPDF'
 import { formatCurrency, formatDate } from '../lib/utils'
 import {
   CheckCircleIcon, XCircleIcon, ClockIcon, PaperAirplaneIcon,
@@ -251,7 +251,7 @@ function EnviarModal({ lote, workspaceId, onClose, onSent }) {
   }, [lote])
 
   async function buildPDF() {
-    return buildLotePDFDoc({ lancamentos, lote, link, assinaturaBase64: null, aprovadoEm: null, aprovadorNome: null })
+    return buildReciboERP({ lancamentos, lote, assinaturaBase64: null, aprovadoEm: null, aprovadorNome: null })
   }
 
   async function handleWA() {
@@ -491,13 +491,12 @@ function LoteDrawer({ lote, onClose, onRefresh }) {
         } catch (_) {}
       }
 
-      // Se o lote tiver assinatura digital → gera Recibo ERP
-      // Caso contrário → gera o PDF de aprovação padrão (landscape verde)
+      // Ambos os casos (assinado ou não) usam o Recibo ERP (padrão navy/azul)
       let doc
       if (assinaturaBase64) {
         doc = buildReciboERP({ lancamentos: lancs, lote, assinaturaBase64, aprovadoEm, aprovadorNome })
       } else {
-        doc = buildLotePDFDoc({ lancamentos: lancs, lote, link, assinaturaBase64: null, aprovadoEm, aprovadorNome })
+        doc = buildReciboERP({ lancamentos: lancs, lote, assinaturaBase64: null, aprovadoEm: null, aprovadorNome: null })
       }
 
       const url = URL.createObjectURL(doc.output('blob'))
