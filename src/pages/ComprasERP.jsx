@@ -717,7 +717,7 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
                     {[{ label: 'Menor', value: fmtBRL(menor), color: C.green }, { label: 'Média', value: fmtBRL(media), color: C.blue }, { label: 'Maior', value: fmtBRL(maior), color: C.amber }].map(k => (
                       <div key={k.label} style={{ background: `${k.color}10`, border: `1px solid ${k.color}25`, borderTop: `2px solid ${k.color}`, borderRadius: 6, padding: '7px 10px' }}>
-                        <div style={{ fontSize: 9, color: C.textSec, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5letterSpacing: 0.5 }}>{k.label}</div>
+                        <div style={{ fontSize: 9, color: C.textSec, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{k.label}</div>
                         <div style={{ fontSize: 12, fontWeight: 800, color: k.color }}>{k.value}</div>
                       </div>
                     ))}
