@@ -126,7 +126,7 @@ function getSolicitante(l) {
 }
 function getEquipamento(l) {
   const d = l.dados_extras || {}
-  return d.equipamento || d.placa || d.modelo_equipamento || '—'
+  return d.equipamento || d.modelo_equipamento || '—'
 }
 function getClienteAss(l) {
   const d = l.dados_extras || {}
@@ -531,6 +531,7 @@ function exportCSV(rows, lotesMap) {
     ['Cidade/UF',          r => getCidadeUF(r)],
     ['Solicitante',        r => getSolicitante(r)],
     ['Equipamento',        r => getEquipamento(r)],
+    ['Placa',               r => (r.dados_extras || {}).placa || ''],
     ['Início Jornada',     r => (r.dados_extras||{}).jornada_inicio || ''],
     ['Fim Jornada',        r => (r.dados_extras||{}).jornada_fim || ''],
     ['Total Horas',        r => { const t = calcTotalHorasJornada(r.dados_extras); return t != null ? String(t) : '' }],
@@ -570,6 +571,7 @@ function printTable(rows, lotesMap, competencia, wsName) {
     ['Cidade/UF',        r => getCidadeUF(r)],
     ['Solicitante',      r => getSolicitante(r)],
     ['Equipamento',      r => getEquipamento(r)],
+    ['Placa',             r => (r.dados_extras || {}).placa || ''],
     ['Total Horas',      r => fmtTotalHorasJornada(r.dados_extras)],
     ['H Diurnas',        r => (r.dados_extras||{}).horas_diurnas||'—'],
     ['H Noturnas',       r => (r.dados_extras||{}).horas_noturnas||'—'],
@@ -1546,6 +1548,7 @@ export default function LancamentosERP() {
                   <Th width={110}>Cidade/UF</Th>
                   <Th width={140}>Solicitante</Th>
                   <Th width={120}>Equipamento</Th>
+                  <Th width={90}>Placa</Th>
                   <Th width={70} align="center">Início da Jornada</Th>
                   <Th width={70} align="center">Fim da Jornada</Th>
                   <Th width={80} align="center">Total de Horas</Th>
@@ -1565,14 +1568,14 @@ export default function LancamentosERP() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={22} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={23} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Carregando lançamentos...
                     </td>
                   </tr>
                 )}
                 {!loading && paginated.length === 0 && (
                   <tr>
-                    <td colSpan={22} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
+                    <td colSpan={23} style={{ textAlign: 'center', padding: 48, color: C.textSec, fontSize: 13 }}>
                       Nenhum lançamento encontrado para os filtros selecionados.
                     </td>
                   </tr>
@@ -1621,6 +1624,7 @@ export default function LancamentosERP() {
                       <Td muted>{getCidadeUF(l)}</Td>
                       <Td>{getSolicitante(l)}</Td>
                       <Td muted>{getEquipamento(l)}</Td>
+                      <Td muted>{(l.dados_extras || {}).placa || '—'}</Td>
                       {/* JORNADA */}
                       <Td align="center" muted>{d.jornada_inicio || '—'}</Td>
                       <Td align="center" muted>{d.jornada_fim || '—'}</Td>
