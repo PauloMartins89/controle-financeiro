@@ -1516,21 +1516,24 @@ export default function LancamentosERP() {
             Filtros de Consulta
           </div>
           {/* Linha única: todos os filtros + botões */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'nowrap', width: '100%' }}>
+            {/* BUSCAR — flex 2 */}
+            <div style={{ flex: 2, minWidth: 120 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>BUSCAR</div>
               <div style={{ position: 'relative' }}>
                 <MagnifyingGlassIcon style={{ width: 13, height: 13, color: C.textSec, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }} />
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nº, empresa, placa..." style={{ ...inputSel, paddingLeft: 24, width: 160 }} />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nº, empresa, placa..." style={{ ...inputSel, paddingLeft: 24, width: '100%', boxSizing: 'border-box' }} />
               </div>
             </div>
-            <div>
+            {/* TIPO DE DOCUMENTO — flex 2 */}
+            <div style={{ flex: 2, minWidth: 140 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>TIPO DE DOCUMENTO</div>
-              <div style={{ ...inputSel, cursor: 'default', color: C.textSec, background: '#F8FAFC' }}>Relatório Diário de Obra</div>
+              <div style={{ ...inputSel, cursor: 'default', color: C.textSec, background: '#F8FAFC', boxSizing: 'border-box' }}>Relatório Diário de Obra</div>
             </div>
-            <div>
+            {/* STATUS — flex 2 */}
+            <div style={{ flex: 2, minWidth: 120 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>STATUS</div>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={inputSel}>
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ ...inputSel, width: '100%', boxSizing: 'border-box' }}>
                 <option value="todos">Todos</option>
                 <option value="rascunho">Boletim Recebido</option>
                 <option value="pendente">OCR Processado</option>
@@ -1542,19 +1545,20 @@ export default function LancamentosERP() {
                 <option value="faturado">Faturado</option>
               </select>
             </div>
-            <div>
+            {/* CLIENTE — flex 2 */}
+            <div style={{ flex: 2, minWidth: 100 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>CLIENTE</div>
-              <select value={filterCliente} onChange={e => setFilterCliente(e.target.value)} style={inputSel}>
+              <select value={filterCliente} onChange={e => setFilterCliente(e.target.value)} style={{ ...inputSel, width: '100%', boxSizing: 'border-box' }}>
                 <option value="">Todos</option>
                 {clientesUnicos.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 
             {/* Separador visual */}
-            <div style={{ width: 1, height: 30, background: C.border, alignSelf: 'flex-end', margin: '0 2px' }} />
+            <div style={{ width: 1, height: 30, background: C.border, alignSelf: 'flex-end', flexShrink: 0, margin: '0 2px' }} />
 
-            {/* Competência */}
-            <div>
+            {/* Competência — flex 0 (tamanho fixo) */}
+            <div style={{ flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>COMPETÊNCIA</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <button onClick={prevCompetencia} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 4, cursor: 'pointer', padding: '5px 6px', color: C.textSec, display: 'flex' }}>
@@ -1568,21 +1572,21 @@ export default function LancamentosERP() {
                 </button>
               </div>
             </div>
-            <div style={{ alignSelf: 'flex-end', paddingBottom: 6, color: C.textSec, fontSize: 10, fontWeight: 500 }}>ou</div>
+            <div style={{ alignSelf: 'flex-end', paddingBottom: 6, color: C.textSec, fontSize: 10, fontWeight: 500, flexShrink: 0 }}>ou</div>
             {/* Data inicial */}
-            <div>
+            <div style={{ flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA INICIAL</div>
               <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                 style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateFrom ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
             </div>
             {/* Data final */}
-            <div>
+            <div style={{ flexShrink: 0 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>DATA FINAL</div>
               <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
                 style={{ padding: '5px 8px', borderRadius: 5, border: `1px solid ${dateTo ? C.blue : C.border}`, background: C.white, color: C.text, fontSize: 12, outline: 'none', cursor: 'pointer', height: 30 }} />
             </div>
             {/* Atalhos de período */}
-            <div style={{ alignSelf: 'flex-end', display: 'flex', gap: 4 }}>
+            <div style={{ alignSelf: 'flex-end', display: 'flex', gap: 4, flexShrink: 0 }}>
               {[10, 15, 30, 60].map(dias => {
                 const hoje = new Date()
                 const ini  = new Date(hoje); ini.setDate(hoje.getDate() - dias + 1)
@@ -1606,10 +1610,10 @@ export default function LancamentosERP() {
             </div>
 
             {/* Separador visual */}
-            <div style={{ width: 1, height: 30, background: C.border, alignSelf: 'flex-end', margin: '0 2px' }} />
+            <div style={{ width: 1, height: 30, background: C.border, alignSelf: 'flex-end', margin: '0 2px', flexShrink: 0 }} />
 
             {/* Botões filtro — ordem: Filtrar, Limpar, Exportar */}
-            <div style={{ display: 'flex', gap: 6, alignSelf: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 6, alignSelf: 'flex-end', flexShrink: 0 }}>
               <button
                 onClick={loadData}
                 style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: C.blue, color: C.white, fontSize: 12, cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, height: 30 }}
