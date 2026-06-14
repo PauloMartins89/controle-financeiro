@@ -491,19 +491,33 @@ function DetailsDrawer({ record, lotesMap, navigate, onClose, onEdit }) {
 }
 
 // ─── TABLE CELL HELPERS ───────────────────────────────────────────────────────
-const Th = ({ children, align = 'left', width, group }) => (
-  <th style={{
-    padding: group ? '6px 8px' : '7px 8px',
-    fontSize: group ? 9 : 10, fontWeight: 700,
-    letterSpacing: group ? 0.8 : 0.4,
-    color: C.white,
-    textAlign: align,
-    whiteSpace: 'nowrap',
-    minWidth: width || 'auto',
-    borderRight: `1px solid rgba(255,255,255,0.15)`,
-    background: 'rgba(0,0,0,0.18)',
-    textTransform: 'uppercase',
-  }}>
+const Th = ({ children, align = 'left', width, group, sortKey, sortCol, sortDir, onSort }) => (
+  <th
+    onClick={sortKey && onSort ? () => onSort(sortKey) : undefined}
+    style={{
+      padding: group ? '6px 8px' : '7px 8px',
+      fontSize: group ? 9 : 10, fontWeight: 700,
+      letterSpacing: group ? 0.8 : 0.4,
+      color: C.white,
+      textAlign: align,
+      whiteSpace: 'nowrap',
+      minWidth: width || 'auto',
+      borderRight: `1px solid rgba(255,255,255,0.15)`,
+      background: sortKey && sortCol === sortKey ? 'rgba(29,78,216,0.5)' : 'rgba(0,0,0,0.18)',
+      textTransform: 'uppercase',
+      cursor: sortKey ? 'pointer' : 'default',
+      userSelect: 'none',
+    }}
+  >
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+      {children}
+      {sortKey && (
+        <span style={{ fontSize: 9, opacity: sortCol === sortKey ? 1 : 0.35 }}>
+          {sortCol === sortKey ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}
+        </span>
+      )}
+    </span>
+  </th>
     {children}
   </th>
 )
@@ -958,6 +972,8 @@ export default function LancamentosERP() {
   // UI
   const [page, setPage]                 = useState(1)
   const pageSize                        = 25
+  const [sortCol, setSortCol]           = useState(null)  // chave da coluna
+  const [sortDir, setSortDir]           = useState('asc') // 'asc' | 'desc'
   const [drawerRecord, setDrawerRecord] = useState(null)
   const [actionMenuId, setActionMenuId] = useState(null)
   const [actionMenuPos, setActionMenuPos] = useState({ top: 0, right: 0 })
@@ -1226,9 +1242,41 @@ export default function LancamentosERP() {
   }), [lancamentos, filterForm, filterStatus, filterCliente, search, dateFrom, dateTo]) // eslint-disable-line
 
   // ── Paginação ──────────────────────────────────────────────────────────────
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const paginated  = filtered.slice((page - 1) * pageSize, page * pageSize)
+  const sorted = useMemo(() => {
+    if (!sortCol) return filtered
+    return [...filtered].sort((a, b) => {
+      let va, vb
+      const da = a.dados_extras || {}
+      const db = b.dados_extras || {}
+      switch (sortCol) {
+        case 'num':        va = getLanNum(a);            vb = getLanNum(b);            break
+        case 'data':       va = a.data || '';            vb = b.data || '';            break
+        case 'empresa':    va = getEmpresa(a);           vb = getEmpresa(b);           break
+        case 'cidade':     va = getCidadeUF(a);          vb = getCidadeUF(b);          break
+        case 'solicitante':va = getSolicitante(a);       vb = getSolicitante(b);       break
+        case 'equipamento':va = getEquipamento(a);       vb = getEquipamento(b);       break
+        case 'placa':      va = da.placa||da.veiculo_placa||''; vb = db.placa||db.veiculo_placa||''; break
+        case 'horas':      va = calcTotalHorasJornada(da)||0; vb = calcTotalHorasJornada(db)||0; break
+        case 'valor':      va = parseFloat(a.valor)||0; vb = parseFloat(b.valor)||0;  break
+        case 'status':     va = a.status||'';            vb = b.status||'';            break
+        default:           return 0
+      }
+      if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va
+      return sortDir === 'asc' ? String(va).localeCompare(String(vb), 'pt-BR') : String(vb).localeCompare(String(va), 'pt-BR')
+    })
+  }, [filtered, sortCol, sortDir]) // eslint-disable-line
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
+  const paginated  = sorted.slice((page - 1) * pageSize, page * pageSize)
   useEffect(() => { setPage(1) }, [filterForm, filterStatus, filterCliente, search, competencia, dateFrom, dateTo])
+
+  function handleSort(col) {
+    setSortCol(prev => {
+      if (prev === col) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); return col }
+      setSortDir('asc'); return col
+    })
+    setPage(1)
+  }
   // Limpa seleção ao mudar filtro
   useEffect(() => { setSelecionados(new Set()) }, [filterForm, filterStatus, filterCliente, search, competencia])
 
@@ -1681,27 +1729,27 @@ export default function LancamentosERP() {
                 {/* Linha 2: colunas individuais */}
                 <tr style={{ background: '#1A2E4A', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                   <th style={{ width: 36, background: '#1A2E4A', padding: '6px 8px' }} />
-                  <Th width={70}>Nº</Th>
-                  <Th width={90}>Data</Th>
+                  <Th width={70}  sortKey="num"         sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Nº</Th>
+                  <Th width={90}  sortKey="data"        sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Data</Th>
                   <Th width={140}>Processado Em</Th>
-                  <Th width={200}>Empresa</Th>
-                  <Th width={110}>Cidade/UF</Th>
-                  <Th width={140}>Solicitante</Th>
-                  <Th width={120}>Equipamento</Th>
-                  <Th width={90}>Placa</Th>
-                  <Th width={70} align="center">Início da Jornada</Th>
-                  <Th width={70} align="center">Fim da Jornada</Th>
-                  <Th width={80} align="center">Total de Horas</Th>
-                  <Th width={90} align="center">H Diurnas</Th>
-                  <Th width={90} align="center">H Noturnas</Th>
-                  <Th width={90} align="center">H FDS Diurnas</Th>
-                  <Th width={90} align="center">H FDS Noturnas</Th>
+                  <Th width={200} sortKey="empresa"     sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Empresa</Th>
+                  <Th width={110} sortKey="cidade"      sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Cidade/UF</Th>
+                  <Th width={140} sortKey="solicitante" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Solicitante</Th>
+                  <Th width={120} sortKey="equipamento" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Equipamento</Th>
+                  <Th width={90}  sortKey="placa"       sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Placa</Th>
+                  <Th width={70}  align="center">Início da Jornada</Th>
+                  <Th width={70}  align="center">Fim da Jornada</Th>
+                  <Th width={80}  align="center" sortKey="horas" sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Total de Horas</Th>
+                  <Th width={90}  align="center">H Diurnas</Th>
+                  <Th width={90}  align="center">H Noturnas</Th>
+                  <Th width={90}  align="center">H FDS Diurnas</Th>
+                  <Th width={90}  align="center">H FDS Noturnas</Th>
                   <Th width={100} align="center">H Feriado Diurnas</Th>
                   <Th width={100} align="center">H Feriado Noturnas</Th>
                   <Th width={110} align="center">Conf. Interna</Th>
                   <Th width={110} align="center">Validado</Th>
-                  <Th width={110} align="right">Valor (R$)</Th>
-                  <Th width={160}>Status</Th>
+                  <Th width={110} align="right" sortKey="valor"  sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Valor (R$)</Th>
+                  <Th width={160} sortKey="status"      sortCol={sortCol} sortDir={sortDir} onSort={handleSort}>Status</Th>
                   <Th width={130} align="center">Ações</Th>
                 </tr>
               </thead>
