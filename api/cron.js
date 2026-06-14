@@ -520,7 +520,9 @@ async function handleStorageLimpeza(db, res) {
 
 // ── Entry point ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
-  if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+  const isVercelCron = req.headers['user-agent']?.startsWith('vercel-cron')
+  const hasSecret    = process.env.CRON_SECRET && req.headers.authorization === `Bearer ${process.env.CRON_SECRET}`
+  if (!isVercelCron && !hasSecret) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
   const db = getDb()
