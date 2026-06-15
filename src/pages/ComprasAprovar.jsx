@@ -51,6 +51,10 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
   const [acao, setAcao]     = useState(null)   // 'aprovar' | 'recusar' | 'leilao'
   const [obs, setObs]       = useState('')
   const [fornecedores, setFornecedores] = useState([{ nome: '', telefone: '' }])
+  const [modoLeilao, setModoLeilao] = useState('automatico') // 'automatico' | 'manual'
+  const [qtdAuto, setQtdAuto] = useState(3)
+  const [fornecedoresCadastrados, setFornecedoresCadastrados] = useState([])
+  const [loadingFornecedores, setLoadingFornecedores] = useState(false)
   const [prazo, setPrazo]   = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -62,9 +66,39 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
     }).catch(() => {})
   }
 
+  useEffect(() => {
+    if (acao !== 'leilao') return
+    let cancelado = false
+
+    async function loadFornecedoresAtivos() {
+      setLoadingFornecedores(true)
+      const { data } = await supabase
+        .from('fornecedores_compra')
+        .select('id, nome, telefone, ativo')
+        .eq('workspace_id', solicitacao.workspace_id)
+        .eq('ativo', true)
+        .order('nome', { ascending: true })
+
+      if (!cancelado) {
+        setFornecedoresCadastrados(data || [])
+        setLoadingFornecedores(false)
+      }
+    }
+
+    loadFornecedoresAtivos()
+    return () => { cancelado = true }
+  }, [acao, solicitacao.workspace_id])
+
   async function handleConfirm() {
     if (acao === 'recusar' && !obs.trim()) { toast.error('Informe o motivo da recusa'); return }
-    if (acao === 'leilao' && fornecedores.every(f => !f.nome)) { toast.error('Informe pelo menos 1 fornecedor'); return }
+    if (acao === 'leilao' && modoLeilao === 'manual' && fornecedores.every(f => !f.nome.trim())) {
+      toast.error('Informe pelo menos 1 fornecedor')
+      return
+    }
+    if (acao === 'leilao' && modoLeilao === 'automatico' && fornecedoresCadastrados.length === 0) {
+      toast.error('Nao ha fornecedores cadastrados ativos')
+      return
+    }
 
     setSaving(true)
     try {
@@ -124,19 +158,47 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
         }).eq('id', solicitacao.id)
         if (updErr) throw updErr
 
-        // Cria cotações para cada fornecedor
-        const cotacoes = fornecedores.filter(f => f.nome.trim()).map(f => ({
-          solicitacao_id: solicitacao.id,
-          fornecedor_nome: f.nome.trim(),
-          fornecedor_telefone: f.telefone.trim() || null,
-          token_expira_em: prazoTs,
-          status: 'convidado',
-        }))
+        const { data: existentes } = await supabase
+          .from('cotacoes_compra')
+          .select('fornecedor_nome, fornecedor_telefone')
+          .eq('solicitacao_id', solicitacao.id)
+
+        const jaConvidados = new Set((existentes || []).map(e => `${(e.fornecedor_nome || '').trim().toLowerCase()}|${String(e.fornecedor_telefone || '').replace(/\D/g, '')}`))
+
+        // Cria cotações para cada fornecedor (manual ou automatico)
+        let fornecedoresBase = []
+        if (modoLeilao === 'manual') {
+          fornecedoresBase = fornecedores
+            .filter(f => f.nome.trim())
+            .map(f => ({ nome: f.nome.trim(), telefone: f.telefone.trim() || null }))
+        } else {
+          const pool = [...fornecedoresCadastrados]
+          pool.sort(() => Math.random() - 0.5)
+          fornecedoresBase = pool.slice(0, Math.max(1, Number(qtdAuto) || 1)).map(f => ({ nome: (f.nome || '').trim(), telefone: (f.telefone || '').trim() || null }))
+        }
+
+        const cotacoes = fornecedoresBase
+          .filter(f => {
+            const key = `${(f.nome || '').trim().toLowerCase()}|${String(f.telefone || '').replace(/\D/g, '')}`
+            return !jaConvidados.has(key)
+          })
+          .map(f => ({
+            solicitacao_id: solicitacao.id,
+            fornecedor_nome: f.nome,
+            fornecedor_telefone: f.telefone,
+            token_expira_em: prazoTs,
+            status: 'convidado',
+          }))
+
+        if (cotacoes.length === 0) {
+          throw new Error('Todos os fornecedores selecionados ja foram convidados para este leilao')
+        }
+
         if (cotacoes.length > 0) {
           const { error: cErr } = await supabase.from('cotacoes_compra').insert(cotacoes)
           if (cErr) throw cErr
         }
-        toast.success(`Leilão aberto para ${cotacoes.length} fornecedor(es)!`)
+        toast.success(`Leilao aberto para ${cotacoes.length} fornecedor(es)!`)
         notifyCompras('leilao_aberto', solicitacao.id)
       }
 
@@ -239,6 +301,33 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
               <input type="date" style={inputStyle} value={prazo} onChange={e => setPrazo(e.target.value)} min={new Date().toISOString().split('T')[0]} />
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Se não preenchido, prazo automático de 48h</div>
             </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Modo de selecao de fornecedores</label>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <button
+                  onClick={() => setModoLeilao('automatico')}
+                  style={{ padding: '7px 10px', borderRadius: 7, border: `1px solid ${modoLeilao === 'automatico' ? '#8b5cf6' : 'var(--border)'}`, background: modoLeilao === 'automatico' ? 'rgba(139,92,246,0.1)' : 'transparent', color: modoLeilao === 'automatico' ? '#8b5cf6' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  Automatico (X fornecedores)
+                </button>
+                <button
+                  onClick={() => setModoLeilao('manual')}
+                  style={{ padding: '7px 10px', borderRadius: 7, border: `1px solid ${modoLeilao === 'manual' ? '#8b5cf6' : 'var(--border)'}`, background: modoLeilao === 'manual' ? 'rgba(139,92,246,0.1)' : 'transparent', color: modoLeilao === 'manual' ? '#8b5cf6' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+                  Manual
+                </button>
+              </div>
+              {modoLeilao === 'automatico' && (
+                <div style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.2)', background: 'rgba(139,92,246,0.05)' }}>
+                  <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, display: 'block', marginBottom: 5 }}>Quantidade de fornecedores para convidar</label>
+                  <select value={qtdAuto} onChange={e => setQtdAuto(Number(e.target.value))} style={inputStyle}>
+                    {[2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n} fornecedores</option>)}
+                  </select>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 5 }}>
+                    {loadingFornecedores ? 'Carregando fornecedores cadastrados...' : `${fornecedoresCadastrados.length} fornecedor(es) ativo(s) cadastrado(s)`}
+                  </div>
+                </div>
+              )}
+            </div>
+            {modoLeilao === 'manual' && (
             <div style={{ marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Fornecedores convidados</label>
@@ -256,6 +345,7 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
                 🔒 Cada fornecedor recebe um link único. Eles NÃO veem os preços dos concorrentes.
               </div>
             </div>
+            )}
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
               <button onClick={() => setAcao(null)} style={{ padding: '9px 16px', borderRadius: 8, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>Voltar</button>
               <button onClick={handleConfirm} disabled={saving} style={{ padding: '9px 20px', borderRadius: 8, background: '#8b5cf6', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
