@@ -1855,7 +1855,7 @@ export default function ComprasERP() {
     const { error } = await supabase.from('solicitacoes_compra').update({ status: novoStatus, updated_at: new Date().toISOString() }).eq('id', item.id)
     if (error) { toast.error('Erro ao atualizar'); return }
 
-    await supabase.from('solicitacao_compra_eventos').insert({
+    const { error: eventoError } = await supabase.from('solicitacao_compra_eventos').insert({
       solicitacao_id: item.id,
       workspace_id: item.workspace_id || workspaceId || null,
       acao: action,
@@ -1864,7 +1864,8 @@ export default function ComprasERP() {
       observacao: action === 'emitir_pedido' && item.status === 'leilao_encerrado' ? 'Pedido emitido após encerramento de leilão' : null,
       ator: 'compras_erp',
       criado_em: new Date().toISOString(),
-    }).catch(() => {})
+    })
+    if (eventoError) console.warn('[ComprasERP] falha ao registrar evento:', eventoError.message)
 
     if (action === 'enviar_aprovacao') {
       try {
