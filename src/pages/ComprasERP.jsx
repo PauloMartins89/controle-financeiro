@@ -29,6 +29,22 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
 function norm(s) {
   return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 }
+function normalizeCompraItem(row) {
+  if (!row) return row
+  return {
+    ...row,
+    valor_orcado: row.valor_orcado ?? row.valor_estimado ?? null,
+  }
+}
+function normalizeEvento(row) {
+  if (!row) return row
+  return {
+    ...row,
+    created_at: row.created_at ?? row.criado_em ?? null,
+    usuario_nome: row.usuario_nome ?? row.ator ?? null,
+    descricao: row.descricao ?? row.observacao ?? row.acao ?? '',
+  }
+}
 function fmtCNPJ(v = '') {
   const d = v.replace(/\D/g, '').slice(0, 14)
   if (d.length <= 2) return d
@@ -826,15 +842,18 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
   async function salvar() {
     if (!form.titulo.trim()) { toast.error('Informe o título'); return }
     setSaving(true)
+    const descricao = [
+      form.categoria ? `Categoria: ${form.categoria}` : null,
+      form.observacoes ? form.observacoes : null,
+    ].filter(Boolean).join('\n')
     const { error } = await supabase.from('solicitacoes_compra').insert({
       workspace_id: workspaceId,
       titulo: form.titulo.trim(),
-      categoria: form.categoria || null,
-      valor_orcado: form.valor_orcado ? parseFloat(form.valor_orcado) : null,
+      descricao: descricao || null,
+      valor_estimado: form.valor_orcado ? parseFloat(form.valor_orcado) : null,
       urgencia: form.urgencia,
-      fornecedor_sugerido: form.fornecedor_sugerido || null,
+      fornecedor: form.fornecedor_sugerido || null,
       data_necessidade: form.data_necessidade || null,
-      observacoes: form.observacoes || null,
       status: 'pendente',
     })
     setSaving(false)
@@ -924,10 +943,10 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     setTabD('detalhe')
     Promise.all([
       supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id),
-      supabase.from('solicitacao_compra_eventos').select('*').eq('solicitacao_id', item.id).order('created_at', { ascending: false }).limit(15),
+      supabase.from('solicitacao_compra_eventos').select('*').eq('solicitacao_id', item.id).order('criado_em', { ascending: false }).limit(15),
     ]).then(([{ data: cot }, { data: ev }]) => {
       setCotacoes(cot || [])
-      setEventos(ev || [])
+      setEventos((ev || []).map(normalizeEvento))
       setLoading(false)
     })
   }, [item?.id])
@@ -1301,10 +1320,10 @@ function AuditoriaRecente({ workspaceId }) {
   useEffect(() => {
     if (!workspaceId) return
     supabase.from('solicitacao_compra_eventos')
-      .select('id, descricao, acao, usuario_nome, created_at')
-      .order('created_at', { ascending: false })
+      .select('id, observacao, acao, ator, criado_em')
+      .order('criado_em', { ascending: false })
       .limit(8)
-      .then(({ data }) => setLogs(data || []))
+      .then(({ data }) => setLogs((data || []).map(normalizeEvento)))
   }, [workspaceId])
 
   return (
@@ -1375,11 +1394,11 @@ export default function ComprasERP() {
     const [{ data: curr }, { data: ant }] = await Promise.all([
       supabase.from('solicitacoes_compra').select('*').eq('workspace_id', workspaceId)
         .gte('created_at', inicioMes).lte('created_at', fimMes).order('created_at', { ascending: false }),
-      supabase.from('solicitacoes_compra').select('id,status,valor_aprovado,valor_orcado,urgencia,created_at')
+      supabase.from('solicitacoes_compra').select('id,status,valor_aprovado,valor_estimado,urgencia,created_at')
         .eq('workspace_id', workspaceId).gte('created_at', inicioMesAnt).lte('created_at', fimMesAnt),
     ])
-    setItems(curr || [])
-    setItemsMesAnt(ant || [])
+    setItems((curr || []).map(normalizeCompraItem))
+    setItemsMesAnt((ant || []).map(normalizeCompraItem))
     setLastUpdate(new Date())
     setLoading(false)
   }, [workspaceId, competencia, refresh])
