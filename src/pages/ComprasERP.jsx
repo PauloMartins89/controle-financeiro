@@ -1960,6 +1960,16 @@ export default function ComprasERP() {
         <button
           onClick={() => {
             if (!selecionado) { toast('Selecione uma requisição primeiro', { icon: 'ℹ️' }); return }
+            if (selecionado.status !== 'pendente') { toast.error('A requisição precisa estar pendente para enviar à aprovação'); return }
+            handleAcao(selecionado, 'enviar_aprovacao')
+          }}
+          title="Enviar a requisição selecionada para aprovação"
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.amber, border: `1px solid ${C.amber}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+          <ExclamationTriangleIcon style={{ width: 13 }} /> Enviar p/ Aprovação
+        </button>
+        <button
+          onClick={() => {
+            if (!selecionado) { toast('Selecione uma requisição primeiro', { icon: 'ℹ️' }); return }
             toast('Use o painel direito → Radar para buscar fornecedores e solicitar cotações', { icon: '💡', duration: 3000 })
           }}
           title="Solicitar cotação para a requisição selecionada"
