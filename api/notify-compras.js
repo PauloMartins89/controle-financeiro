@@ -214,6 +214,26 @@ export default async function handler(req, res) {
     }
   }
 
+  // ── PDF da lista de materiais (somente nova_solicitacao, fire-and-forget) ──
+  if (evento === 'nova_solicitacao' && telefones.size > 0) {
+    const { data: itens } = await db.from('itens_solicitacao_compra')
+      .select('id').eq('solicitacao_id', solicitacaoId).limit(1)
+    if (itens && itens.length > 0) {
+      const base = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://smartpro.app.br'
+      const linkAprovacao = `https://smartpro.app.br/aprovar/${sol.token_aprovador}`
+      // Envia para cada destinatário em paralelo (fire-and-forget)
+      for (const tel of telefones) {
+        fetch(`${base}/api/compras-pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ solicitacaoId, telefone: tel, linkAprovacao }),
+        }).catch(() => {})
+      }
+    }
+  }
+
   const enviados = resultados.filter(r => r.ok).length
   return res.status(200).json({ ok: true, sent: enviados, total: resultados.length, resultados })
 }
