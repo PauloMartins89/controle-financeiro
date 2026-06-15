@@ -63,6 +63,7 @@ export default function AprovarPublica() {
         setCotacoes(cots || [])
         setCotLoading(false)
       }
+    }
     load()
   }, [token])
 
@@ -239,7 +240,8 @@ export default function AprovarPublica() {
         </div>
       </div>
     )
-  } ────────────────────────────────────────────────────────
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px' }}>
       <Toaster />
