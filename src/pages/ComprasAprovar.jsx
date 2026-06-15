@@ -138,6 +138,7 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
 
         toast.success('Pedido aprovado! Despesa criada no financeiro.')
         notifyCompras('aprovado', solicitacao.id)
+        logEventoCompra(supabase, { solicitacaoId: solicitacao.id, workspaceId: solicitacao.workspace_id, acao: 'aprovado', statusDe: solicitacao.status, statusPara: 'aprovado', obs: obs.trim() || null, ator: 'aprovador_interno' })
 
       } else if (acao === 'recusar') {
         const { error } = await supabase.from('solicitacoes_compra').update({
@@ -147,6 +148,7 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
         if (error) throw error
         toast.success('Pedido recusado.')
         notifyCompras('recusado', solicitacao.id)
+        logEventoCompra(supabase, { solicitacaoId: solicitacao.id, workspaceId: solicitacao.workspace_id, acao: 'recusado', statusDe: solicitacao.status, statusPara: 'recusado', obs: obs.trim(), ator: 'aprovador_interno' })
 
       } else if (acao === 'leilao') {
         const prazoTs = prazo ? new Date(prazo + 'T23:59:00').toISOString() : new Date(Date.now() + 48 * 3600000).toISOString()
@@ -200,6 +202,7 @@ function ModalAcao({ solicitacao, onClose, onSaved }) {
         }
         toast.success(`Leilao aberto para ${cotacoes.length} fornecedor(es)!`)
         notifyCompras('leilao_aberto', solicitacao.id)
+        logEventoCompra(supabase, { solicitacaoId: solicitacao.id, workspaceId: solicitacao.workspace_id, acao: 'leilao_aberto', statusDe: solicitacao.status, statusPara: 'leilao_aberto', obs: `${cotacoes.length} fornecedor(es) convidado(s)`, ator: 'aprovador_interno' })
       }
 
       onSaved()
@@ -386,6 +389,16 @@ function ModalSelecionarVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
       if (perdedores.length > 0) {
         await supabase.from('cotacoes_compra').update({ status: 'perdeu' }).in('id', perdedores)
       }
+      await supabase.from('solicitacao_compra_eventos').insert({
+        solicitacao_id: solicitacao.id,
+        workspace_id: solicitacao.workspace_id || null,
+        acao: 'vencedor_leilao',
+        status_de: solicitacao.status || null,
+        status_para: 'aprovado',
+        observacao: `Vencedor selecionado: ${cot.fornecedor_nome} | melhor preço ${fmtCurrency(cot.valor_total)}`,
+        ator: 'aprovador_interno',
+        criado_em: new Date().toISOString(),
+      }).catch(() => {})
       notifyCompras('leilao_encerrado', solicitacao.id)
       toast.success(`${cot.fornecedor_nome} selecionado como vencedor!`)
       onSaved()

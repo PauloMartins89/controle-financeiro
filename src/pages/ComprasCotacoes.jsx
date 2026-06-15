@@ -135,6 +135,16 @@ function ModalVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
       await supabase.from('cotacoes_compra').update({ status: 'ganhou' }).eq('id', selecionado)
       const perdedores = cotacoes.filter(c => c.id !== selecionado && c.status === 'enviado').map(c => c.id)
       if (perdedores.length) await supabase.from('cotacoes_compra').update({ status: 'perdeu' }).in('id', perdedores)
+      await supabase.from('solicitacao_compra_eventos').insert({
+        solicitacao_id: solicitacao.id,
+        workspace_id: solicitacao.workspace_id || null,
+        acao: 'vencedor_leilao',
+        status_de: solicitacao.status || null,
+        status_para: 'aprovado',
+        observacao: `Vencedor selecionado: ${cot.fornecedor_nome} | melhor preço ${fmtCurrency(valorVencedor)}`,
+        ator: 'compras_cotacoes',
+        criado_em: new Date().toISOString(),
+      }).catch(() => {})
       fetch('/api/notify-compras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -219,6 +229,16 @@ function LeilaoCard({ sol, cotacoesDaSol, onRefresh }) {
   async function handleEncerrar() {
     if (!window.confirm('Encerrar este leilão?')) return
     await supabase.from('solicitacoes_compra').update({ status: 'leilao_encerrado' }).eq('id', sol.id)
+    await supabase.from('solicitacao_compra_eventos').insert({
+      solicitacao_id: sol.id,
+      workspace_id: sol.workspace_id || null,
+      acao: 'leilao_encerrado',
+      status_de: sol.status || null,
+      status_para: 'leilao_encerrado',
+      observacao: 'Leilão encerrado manualmente na tela de cotações',
+      ator: 'compras_cotacoes',
+      criado_em: new Date().toISOString(),
+    }).catch(() => {})
     fetch('/api/notify-compras', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
