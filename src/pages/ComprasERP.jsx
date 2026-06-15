@@ -852,36 +852,62 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
     return acc + (isNaN(v) ? 0 : v)
   }, 0)
 
+  async function _inserirItens(solicitacaoId, listaValida) {
+    if (listaValida.length === 0) return
+    await supabase.from('itens_solicitacao_compra').insert(
+      listaValida.map((it, i) => ({
+        solicitacao_id: solicitacaoId,
+        descricao:      it.descricao.trim(),
+        quantidade:     parseFloat(it.quantidade) || 1,
+        unidade:        it.unidade || 'un',
+        valor_unitario: it.valor_unitario ? parseFloat(it.valor_unitario) : null,
+        valor_total:    it.valor_unitario ? parseFloat(it.valor_unitario) * (parseFloat(it.quantidade) || 1) : null,
+        ordem:          i,
+      }))
+    )
+  }
+
+  async function salvarRascunho() {
+    if (!form.titulo.trim()) { toast.error('Informe pelo menos o título para salvar rascunho'); return }
+    setSaving(true)
+    const listaValida = itens.filter(it => it.descricao.trim())
+    const { data: inserted, error } = await supabase.from('solicitacoes_compra').insert({
+      workspace_id:     workspaceId,
+      titulo:           form.titulo.trim(),
+      descricao:        form.observacoes?.trim() || null,
+      valor_estimado:   totalItens > 0 ? totalItens : null,
+      urgencia:         form.urgencia,
+      fornecedor:       form.fornecedor_sugerido?.trim() || null,
+      data_necessidade: form.data_necessidade || null,
+      quantidade:       listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
+      status:           'rascunho',
+    }).select('id').single()
+    if (error) { toast.error('Erro ao salvar rascunho'); setSaving(false); return }
+    if (inserted?.id) await _inserirItens(inserted.id, listaValida)
+    setSaving(false)
+    toast.success('Rascunho salvo! Continue quando quiser.')
+    onSalvo()
+    onClose()
+  }
+
   async function salvar() {
     if (!form.titulo.trim()) { toast.error('Informe o título'); return }
     const listaValida = itens.filter(it => it.descricao.trim())
     if (listaValida.length === 0) { toast.error('Adicione pelo menos 1 item'); return }
     setSaving(true)
     const { data: inserted, error } = await supabase.from('solicitacoes_compra').insert({
-      workspace_id:    workspaceId,
-      titulo:          form.titulo.trim(),
-      descricao:       form.observacoes?.trim() || null,
-      valor_estimado:  totalItens > 0 ? totalItens : null,
-      urgencia:        form.urgencia,
-      fornecedor:      form.fornecedor_sugerido?.trim() || null,
+      workspace_id:     workspaceId,
+      titulo:           form.titulo.trim(),
+      descricao:        form.observacoes?.trim() || null,
+      valor_estimado:   totalItens > 0 ? totalItens : null,
+      urgencia:         form.urgencia,
+      fornecedor:       form.fornecedor_sugerido?.trim() || null,
       data_necessidade: form.data_necessidade || null,
-      quantidade:      `${listaValida.length} item(s)`,
-      status:          'pendente',
+      quantidade:       `${listaValida.length} item(s)`,
+      status:           'pendente',
     }).select('id').single()
     if (error) { toast.error('Erro ao criar requisição'); setSaving(false); return }
-    if (inserted?.id) {
-      await supabase.from('itens_solicitacao_compra').insert(
-        listaValida.map((it, i) => ({
-          solicitacao_id: inserted.id,
-          descricao:      it.descricao.trim(),
-          quantidade:     parseFloat(it.quantidade) || 1,
-          unidade:        it.unidade || 'un',
-          valor_unitario: it.valor_unitario ? parseFloat(it.valor_unitario) : null,
-          valor_total:    it.valor_unitario ? parseFloat(it.valor_unitario) * (parseFloat(it.quantidade) || 1) : null,
-          ordem:          i,
-        }))
-      )
-    }
+    if (inserted?.id) await _inserirItens(inserted.id, listaValida)
     setSaving(false)
     toast.success('Requisição criada!')
     onSalvo()
@@ -964,8 +990,11 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
             <textarea value={form.observacoes} onChange={e => F('observacoes', e.target.value)} rows={2} placeholder="Especificações, marca, etc." style={{ ...inputSt, resize: 'vertical' }} />
           </div>
         </div>
-        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+          <button onClick={salvarRascunho} disabled={saving} style={{ padding: '9px 18px', borderRadius: 6, border: `1px solid #64748b`, background: 'transparent', color: '#64748b', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', fontSize: 13, opacity: saving ? 0.6 : 1 }}>
+            {saving ? 'Salvando...' : 'Salvar Rascunho'}
+          </button>
           <button onClick={salvar} disabled={saving} style={{ padding: '9px 24px', borderRadius: 6, background: C.blue, color: C.white, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Salvando...' : 'Criar Requisição'}
           </button>
