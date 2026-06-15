@@ -57,6 +57,7 @@ function fmtCNPJ(v = '') {
 // ─── Status pipeline ──────────────────────────────────────────────────────────
 const STAGES = [
   { key: 'todos',               label: 'Todos',             color: '#6366f1', icon: Squares2X2Icon },
+  { key: 'rascunho',            label: 'Rascunhos',         color: '#64748b', icon: DocumentTextIcon },
   { key: 'pendente',            label: 'Requisições',       color: '#3b82f6', icon: ClipboardDocumentListIcon },
   { key: 'aguardando_aprovacao',label: 'Ag. Aprovação',     color: '#f59e0b', icon: ExclamationTriangleIcon },
   { key: 'em_cotacao',          label: 'Em Cotação',        color: '#8b5cf6', icon: SignalIcon },
@@ -69,6 +70,7 @@ const STAGES = [
 ]
 
 const STATUS_LABELS = {
+  rascunho:             { label: 'Rascunho',        color: '#64748b' },
   pendente:             { label: 'Pendente',       color: '#3b82f6' },
   aguardando_aprovacao: { label: 'Ag. Aprovação',  color: '#f59e0b' },
   em_cotacao:           { label: 'Em Cotação',     color: '#8b5cf6' },
@@ -118,6 +120,7 @@ const C = {
 
 // ─── sub-component: Badge de status ──────────────────────────────────────────
 const STATUS_BADGE_MAP = {
+  rascunho:             { label: 'Rascunho',        bg: '#F8FAFC', color: '#475569', border: '#CBD5E1' },
   pendente:             { label: 'Pendente',       bg: '#EFF6FF', color: '#1E40AF', border: '#BFDBFE' },
   aguardando_aprovacao: { label: 'Ag. Aprovação',  bg: '#FFFBEB', color: '#B45309', border: '#FCD34D' },
   em_cotacao:           { label: 'Em Cotação',     bg: '#F5F3FF', color: '#5B21B6', border: '#C4B5FD' },
@@ -1952,6 +1955,7 @@ export default function ComprasERP() {
   const counts = {}
   STAGES.forEach(s => {
     if (s.key === 'todos') counts[s.key] = items.length
+    else if (s.key === 'rascunho') counts[s.key] = items.filter(i => i.status === 'rascunho').length
     else if (s.key !== 'radar') counts[s.key] = items.filter(i => i.status === s.key).length
   })
   counts['leilao_encerrado'] = items.filter(i => i.status === 'leilao_encerrado').length

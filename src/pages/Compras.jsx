@@ -26,6 +26,7 @@ function diasAtras(iso) {
 
 // ─── Config de status ─────────────────────────────────────────────────────────
 const STATUS = {
+  rascunho:              { label: 'Rascunho',        color: '#64748b', bg: 'rgba(100,116,139,0.10)' },
   requisicao_nova:       { label: 'Requisição',      color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
   em_cotacao:            { label: 'Montando pedido', color: '#6366f1', bg: 'rgba(99,102,241,0.12)' },
   aguardando_aprovacao:  { label: 'Ag. Aprovação',   color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
@@ -70,6 +71,43 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
     const v = parseFloat(it.valor_unitario || 0) * parseFloat(it.quantidade || 1)
     return acc + (isNaN(v) ? 0 : v)
   }, 0)
+
+  async function handleSaveRascunho() {
+    if (!form.titulo.trim()) { toast.error('Informe pelo menos o título para salvar rascunho'); return }
+    setSaving(true)
+    const listaValida = itens.filter(it => it.descricao.trim())
+    const { data: inserted, error } = await supabase.from('solicitacoes_compra').insert({
+      workspace_id:          workspaceId,
+      titulo:                form.titulo.trim(),
+      descricao:             form.descricao.trim() || null,
+      valor_estimado:        totalItens > 0 ? totalItens : null,
+      fornecedor:            form.fornecedor.trim() || null,
+      quantidade:            listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
+      urgencia:              form.urgencia,
+      tipo:                  form.tipo,
+      data_necessidade:      form.data_necessidade || null,
+      requisitante_nome:     form.requisitante_nome.trim() || null,
+      requisitante_telefone: form.requisitante_telefone.trim() || null,
+      status:                'rascunho',
+    }).select('id').single()
+    if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
+    if (inserted?.id && listaValida.length > 0) {
+      await supabase.from('itens_solicitacao_compra').insert(
+        listaValida.map((it, i) => ({
+          solicitacao_id: inserted.id,
+          descricao:      it.descricao.trim(),
+          quantidade:     parseFloat(it.quantidade) || 1,
+          unidade:        it.unidade || 'un',
+          valor_unitario: it.valor_unitario ? parseFloat(it.valor_unitario) : null,
+          valor_total:    it.valor_unitario ? parseFloat(it.valor_unitario) * (parseFloat(it.quantidade) || 1) : null,
+          ordem:          i,
+        }))
+      )
+    }
+    toast.success('Rascunho salvo! Continue quando quiser.')
+    onSaved()
+    onClose()
+  }
 
   async function handleSave() {
     if (!form.titulo.trim()) { toast.error('Informe o título da solicitação'); return }
@@ -223,8 +261,12 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22 }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 22, flexWrap: 'wrap' }}>
           <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>Cancelar</button>
+          <button onClick={handleSaveRascunho} disabled={saving} style={{ padding: '9px 18px', borderRadius: 8, background: 'none', border: '1px solid #64748b', cursor: saving ? 'not-allowed' : 'pointer', color: '#64748b', fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+            {saving ? <ArrowPathIcon style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} /> : <DocumentTextIcon style={{ width: 14, height: 14 }} />}
+            Salvar Rascunho
+          </button>
           <button onClick={handleSave} disabled={saving} style={{ padding: '9px 20px', borderRadius: 8, background: '#6366f1', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 7 }}>
             {saving ? <ArrowPathIcon style={{ width: 15, height: 15, animation: 'spin 1s linear infinite' }} /> : <ShoppingCartIcon style={{ width: 15, height: 15 }} />}
             {saving ? 'Salvando...' : 'Enviar para Aprovação'}
@@ -774,8 +816,8 @@ function SolicitacaoCard({ s, cotacoes, itens, onRefresh }) {
   const isAprovado = s.status === 'aprovado' || s.status === 'pedido_emitido'
   const isPago = s.status === 'pago' || s.status === 'recebido'
   const isAberto = ['em_cotacao', 'aguardando_aprovacao', 'leilao_aberto'].includes(s.status)
-  const canEdit = ['em_cotacao', 'requisicao_nova', 'aguardando_aprovacao'].includes(s.status)
-  const canDelete = ['em_cotacao', 'requisicao_nova', 'aguardando_aprovacao', 'recusado'].includes(s.status)
+  const canEdit = ['rascunho', 'em_cotacao', 'requisicao_nova', 'aguardando_aprovacao'].includes(s.status)
+  const canDelete = ['rascunho', 'em_cotacao', 'requisicao_nova', 'aguardando_aprovacao', 'recusado'].includes(s.status)
   const isLeilao = ['leilao_aberto', 'leilao_encerrado'].includes(s.status) || s.tipo === 'leilao'
   const meusCotacoes = (cotacoes || []).filter(c => c.solicitacao_id === s.id)
   const temPropostas = meusCotacoes.some(c => c.status === 'enviado')
@@ -1241,7 +1283,7 @@ export default function Compras() {
               style={{ width: '100%', paddingLeft: 32, padding: '9px 12px 9px 32px', borderRadius: 9, border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {['todos', 'aguardando_aprovacao', 'aprovado', 'leilao_aberto', 'pago', 'recusado'].map(s => (
+            {['todos', 'rascunho', 'aguardando_aprovacao', 'aprovado', 'leilao_aberto', 'pago', 'recusado'].map(s => (
               <button key={s} onClick={() => setFiltroStatus(s)}
                 style={{ padding: '7px 13px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s',
                   background: filtroStatus === s ? '#6366f1' : 'var(--bg-secondary)',
