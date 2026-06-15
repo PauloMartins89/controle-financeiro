@@ -1135,17 +1135,27 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     { key: 'radar',     label: 'Radar' },
   ]
 
+  function resolverFornecedorIdCotacao(cotacao) {
+    const selecionado = trocaFornecedorPorCotacao[cotacao.id]
+    if (selecionado) return selecionado
+    const nomeCot = norm(cotacao.fornecedor_nome)
+    const match = fornecedoresCadastro.find(f => norm(f.nome) === nomeCot)
+      || fornecedoresCadastro.find(f => norm(f.nome).includes(nomeCot) || nomeCot.includes(norm(f.nome)))
+    return match?.id || null
+  }
+
   async function enviarCotacaoAutomatico(cotacao) {
     if (!cotacao?.id) return
     setSendingCotacaoId(cotacao.id)
     try {
+      const fornecedorId = resolverFornecedorIdCotacao(cotacao)
       const res = await fetch('/api/cotacao-enviar-wa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cotacaoId: cotacao.id }),
+        body: JSON.stringify({ cotacaoId: cotacao.id, fornecedorId }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok || !json?.ok) {
+      if (!json?.ok) {
         toast.error(json?.error || 'Falha ao enviar mensagem automatica')
         return
       }

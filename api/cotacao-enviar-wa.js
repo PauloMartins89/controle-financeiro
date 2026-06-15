@@ -42,9 +42,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'Method not allowed' })
   }
 
-  const { cotacaoId } = req.body || {}
+  const { cotacaoId, fornecedorId } = req.body || {}
   if (!cotacaoId) {
-    return res.status(400).json({ ok: false, error: 'cotacaoId obrigatorio' })
+    return res.status(200).json({ ok: false, error: 'cotacaoId obrigatorio' })
   }
 
   const db = getDb()
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     .single()
 
   if (cotErr || !cot) {
-    return res.status(404).json({ ok: false, error: 'Cotacao nao encontrada' })
+    return res.status(200).json({ ok: false, error: 'Cotacao nao encontrada' })
   }
 
   let tokenAcesso = cot.token_acesso || null
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       .eq('id', cot.id)
 
     if (tokenErr) {
-      return res.status(400).json({ ok: false, error: 'Cotacao sem token de acesso' })
+      return res.status(200).json({ ok: false, error: 'Cotacao sem token de acesso' })
     }
   }
 
@@ -79,6 +79,26 @@ export default async function handler(req, res) {
     .single()
 
   let telefoneFornecedor = cot.fornecedor_telefone || null
+  if (!telefoneFornecedor && fornecedorId && sol?.workspace_id) {
+    const { data: fornById } = await db
+      .from('fornecedores_compra')
+      .select('id, nome, telefone')
+      .eq('workspace_id', sol.workspace_id)
+      .eq('id', fornecedorId)
+      .limit(1)
+
+    if (fornById?.[0]?.telefone) {
+      telefoneFornecedor = fornById[0].telefone
+      await db
+        .from('cotacoes_compra')
+        .update({
+          fornecedor_nome: fornById[0].nome || cot.fornecedor_nome,
+          fornecedor_telefone: telefoneFornecedor,
+        })
+        .eq('id', cot.id)
+    }
+  }
+
   if (!telefoneFornecedor && sol?.workspace_id && cot?.fornecedor_nome) {
     const { data: fornecedoresAtivos } = await db
       .from('fornecedores_compra')
@@ -101,7 +121,7 @@ export default async function handler(req, res) {
   }
 
   if (!telefoneFornecedor) {
-    return res.status(400).json({ ok: false, error: 'Fornecedor sem WhatsApp/telefone no cadastro' })
+    return res.status(200).json({ ok: false, error: 'Fornecedor sem WhatsApp/telefone no cadastro' })
   }
 
   const appUrl = (process.env.APP_URL || 'https://smartpro.app.br').replace(/\/$/, '')
