@@ -51,19 +51,38 @@ export default async function handler(req, res) {
     return res.status(404).json({ ok: false, error: 'Cotacao nao encontrada' })
   }
 
-  if (!cot.fornecedor_telefone) {
-    return res.status(400).json({ ok: false, error: 'Fornecedor sem telefone cadastrado' })
-  }
-
   if (!cot.token_acesso) {
     return res.status(400).json({ ok: false, error: 'Cotacao sem token de acesso' })
   }
 
   const { data: sol } = await db
     .from('solicitacoes_compra')
-    .select('id, titulo, descricao, quantidade, prazo_cotacao')
+    .select('id, workspace_id, titulo, descricao, quantidade, prazo_cotacao')
     .eq('id', cot.solicitacao_id)
     .single()
+
+  let telefoneFornecedor = cot.fornecedor_telefone || null
+  if (!telefoneFornecedor && sol?.workspace_id && cot?.fornecedor_nome) {
+    const { data: fornByNome } = await db
+      .from('fornecedores_compra')
+      .select('id, nome, telefone')
+      .eq('workspace_id', sol.workspace_id)
+      .eq('ativo', true)
+      .ilike('nome', cot.fornecedor_nome)
+      .limit(1)
+
+    if (fornByNome?.[0]?.telefone) {
+      telefoneFornecedor = fornByNome[0].telefone
+      await db
+        .from('cotacoes_compra')
+        .update({ fornecedor_telefone: telefoneFornecedor })
+        .eq('id', cot.id)
+    }
+  }
+
+  if (!telefoneFornecedor) {
+    return res.status(400).json({ ok: false, error: 'Fornecedor sem WhatsApp/telefone no cadastro' })
+  }
 
   const appUrl = (process.env.APP_URL || 'https://smartpro.app.br').replace(/\/$/, '')
   const link = `${appUrl}/cotacao/${cot.token_acesso}`
@@ -76,7 +95,7 @@ export default async function handler(req, res) {
     (sol?.prazo_cotacao ? `Prazo: ${new Date(sol.prazo_cotacao).toLocaleDateString('pt-BR')}\n` : '') +
     `\nLink para cotar:\n${link}`
 
-  const ok = await sendWA(cot.fornecedor_telefone, msg)
+  const ok = await sendWA(telefoneFornecedor, msg)
 
   if (!ok) {
     return res.status(502).json({ ok: false, error: 'Falha no envio via Z-API' })
@@ -84,7 +103,7 @@ export default async function handler(req, res) {
 
   try {
     await db.from('mensagens_whatsapp').insert({
-      telefone: String(cot.fornecedor_telefone).replace(/\D/g, ''),
+      telefone: String(telefoneFornecedor).replace(/\D/g, ''),
       mensagem: msg,
       status: 'enviado',
       modulo: 'compras',

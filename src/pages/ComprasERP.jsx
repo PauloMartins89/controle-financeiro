@@ -1104,10 +1104,6 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
 
   async function enviarCotacaoAutomatico(cotacao) {
     if (!cotacao?.id) return
-    if (!cotacao?.fornecedor_telefone) {
-      toast.error('Fornecedor sem telefone cadastrado')
-      return
-    }
     setSendingCotacaoId(cotacao.id)
     try {
       const res = await fetch('/api/cotacao-enviar-wa', {
