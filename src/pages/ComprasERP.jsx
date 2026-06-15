@@ -1043,6 +1043,7 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
   const [cotacoes, setCotacoes] = useState([])
   const [eventos, setEventos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [sendingCotacaoId, setSendingCotacaoId] = useState(null)
 
   useEffect(() => {
     if (!item) return
@@ -1092,6 +1093,32 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     { key: 'historico', label: 'Histórico' },
     { key: 'radar',     label: 'Radar' },
   ]
+
+  async function enviarCotacaoAutomatico(cotacao) {
+    if (!cotacao?.id) return
+    if (!cotacao?.fornecedor_telefone) {
+      toast.error('Fornecedor sem telefone cadastrado')
+      return
+    }
+    setSendingCotacaoId(cotacao.id)
+    try {
+      const res = await fetch('/api/cotacao-enviar-wa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cotacaoId: cotacao.id }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json?.ok) {
+        toast.error(json?.error || 'Falha ao enviar mensagem automatica')
+        return
+      }
+      toast.success('Link enviado automaticamente no WhatsApp')
+    } catch (e) {
+      toast.error('Erro de rede: ' + e.message)
+    } finally {
+      setSendingCotacaoId(null)
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -1265,6 +1292,12 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
                             }}
                             style={{ padding: '4px 8px', borderRadius: 5, background: '#EEF2FF', border: '1px solid #C7D2FE', cursor: 'pointer', color: '#4F46E5', fontSize: 10, fontWeight: 700 }}>
                             Copiar link
+                          </button>
+                          <button
+                            onClick={() => enviarCotacaoAutomatico(c)}
+                            disabled={sendingCotacaoId === c.id}
+                            style={{ padding: '4px 8px', borderRadius: 5, background: '#E0F2FE', border: '1px solid #7DD3FC', cursor: sendingCotacaoId === c.id ? 'not-allowed' : 'pointer', color: '#0369A1', fontSize: 10, fontWeight: 700, opacity: sendingCotacaoId === c.id ? 0.6 : 1 }}>
+                            {sendingCotacaoId === c.id ? 'Enviando...' : 'Enviar automatico'}
                           </button>
                           {c.fornecedor_telefone && (
                             <a
