@@ -1731,6 +1731,105 @@ function AuditoriaRecente({ workspaceId }) {
   )
 }
 
+// ─── Modal: Encerrar leilão + selecionar vencedor (inline no ERP) ────────────
+function ModalVencedorERP({ item, workspaceId, onClose, onSaved }) {
+  const [cotacoes,   setCotacoes]   = useState([])
+  const [selecionado, setSelecionado] = useState(null)
+  const [saving,     setSaving]     = useState(false)
+
+  useEffect(() => {
+    supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id)
+      .then(({ data }) => setCotacoes(data || []))
+  }, [item.id])
+
+  const enviadas = cotacoes.filter(c => c.status === 'enviado').sort((a, b) => (a.valor_total || 999999) - (b.valor_total || 999999))
+
+  async function handleSelecionar() {
+    if (!selecionado) { toast.error('Selecione um fornecedor'); return }
+    setSaving(true)
+    try {
+      const cot = cotacoes.find(c => c.id === selecionado)
+      const { error } = await supabase.from('solicitacoes_compra').update({
+        status: 'aprovado',
+        fornecedor_vencedor: cot.fornecedor_nome,
+        valor_aprovado: cot.valor_total,
+        economia: Math.max(0, (item.valor_estimado || 0) - (cot.valor_total || 0)),
+        data_aprovacao: new Date().toISOString(),
+      }).eq('id', item.id)
+      if (error) throw error
+      await supabase.from('cotacoes_compra').update({ status: 'ganhou' }).eq('id', selecionado)
+      const perdedores = cotacoes.filter(c => c.id !== selecionado && c.status === 'enviado').map(c => c.id)
+      if (perdedores.length) await supabase.from('cotacoes_compra').update({ status: 'perdeu' }).in('id', perdedores)
+      await supabase.from('solicitacao_compra_eventos').insert({
+        solicitacao_id: item.id,
+        workspace_id: workspaceId || item.workspace_id || null,
+        acao: 'vencedor_leilao',
+        status_de: 'leilao_encerrado',
+        status_para: 'aprovado',
+        observacao: `Vencedor selecionado: ${cot.fornecedor_nome} | melhor preço ${fmtBRL(cot.valor_total)}`,
+        ator: 'compras_erp',
+        criado_em: new Date().toISOString(),
+      }).catch(() => {})
+      fetch('/api/notify-compras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evento: 'leilao_encerrado', solicitacaoId: item.id }),
+      }).catch(() => {})
+      toast.success(`Vencedor: ${cot.fornecedor_nome}`)
+      onSaved(); onClose()
+    } catch (e) {
+      toast.error('Erro: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '85vh', overflowY: 'auto', padding: 28, boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>🏆 Selecionar Vencedor do Leilão</div>
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{item.titulo} · {enviadas.length} proposta(s) recebida(s)</div>
+
+        {enviadas.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)', fontSize: 13 }}>Nenhum fornecedor enviou proposta ainda.<br/>O leilão foi encerrado mas você pode selecionar o vencedor depois na aba Cotações.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+            {enviadas.map((c, i) => (
+              <div key={c.id} onClick={() => setSelecionado(c.id)}
+                style={{ padding: '14px 16px', borderRadius: 10, cursor: 'pointer', border: `2px solid ${selecionado === c.id ? '#10b981' : 'var(--border)'}`, background: selecionado === c.id ? 'rgba(16,185,129,0.06)' : 'var(--bg-primary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{i === 0 ? '🥇 ' : '🥈 '}{c.fornecedor_nome}</div>
+                    {c.condicao_pagamento && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>{c.condicao_pagamento}{c.prazo_entrega_dias ? ` · ${c.prazo_entrega_dias}d` : ''}</div>}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: i === 0 ? '#10b981' : 'var(--text-primary)' }}>{fmtBRL(c.valor_total)}</div>
+                    {item.valor_estimado && c.valor_total < item.valor_estimado && (
+                      <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>-{Math.round(((item.valor_estimado - c.valor_total) / item.valor_estimado) * 100)}%</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button onClick={onClose} style={{ padding: '9px 16px', borderRadius: 8, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 13 }}>Fechar</button>
+          {enviadas.length > 0 && !selecionado && (
+            <button onClick={() => setSelecionado(enviadas[0].id)} style={{ padding: '9px 18px', borderRadius: 8, background: '#f59e0b', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>⚡ Melhor Preço</button>
+          )}
+          {selecionado && (
+            <button onClick={handleSelecionar} disabled={saving} style={{ padding: '9px 20px', borderRadius: 8, background: '#10b981', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Salvando...' : '🏆 Confirmar Vencedor'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ComprasERP() {
   const workspaceId = useStore(s => s.workspaceId)
@@ -1742,6 +1841,7 @@ export default function ComprasERP() {
   const [selecionado, setSelecionado] = useState(null)
   const [showNovaReq, setShowNovaReq] = useState(false)
   const [showConfigAprovador, setShowConfigAprovador] = useState(false)
+  const [vencedorErpItem, setVencedorErpItem] = useState(null)
   const [refresh, setRefresh]       = useState(0)
   const [lastUpdate, setLastUpdate] = useState(now)
   const [wsNome, setWsNome]         = useState('')
@@ -1845,7 +1945,7 @@ export default function ComprasERP() {
   }
 
   async function handleAcao(item, action) {
-    const map = { enviar_aprovacao: 'aguardando_aprovacao', aprovar: 'aprovado', recusar: 'recusado', leilao: 'leilao_aberto', emitir_pedido: 'pedido_emitido', receber: 'recebido', pagar: 'pago' }
+    const map = { enviar_aprovacao: 'aguardando_aprovacao', aprovar: 'aprovado', recusar: 'recusado', leilao: 'leilao_aberto', encerrar_leilao: 'leilao_encerrado', emitir_pedido: 'pedido_emitido', receber: 'recebido', pagar: 'pago' }
     const novoStatus = map[action]
     if (!novoStatus) return
     if (action === 'emitir_pedido' && item.status === 'leilao_encerrado' && !item.fornecedor_vencedor) {
@@ -1881,10 +1981,13 @@ export default function ComprasERP() {
       }
     }
 
-    const labels = { enviar_aprovacao: 'Enviado para aprovação interna', aprovar: 'Aprovado!', recusar: 'Recusado', leilao: 'Leilão aberto', emitir_pedido: 'Pedido emitido', receber: 'Recebimento confirmado', pagar: 'Marcado como pago' }
+    const labels = { enviar_aprovacao: 'Enviado para aprovação interna', aprovar: 'Aprovado!', recusar: 'Recusado', leilao: 'Leilão aberto', encerrar_leilao: 'Leilão encerrado', emitir_pedido: 'Pedido emitido', receber: 'Recebimento confirmado', pagar: 'Marcado como pago' }
     toast.success(labels[action] || 'Atualizado!')
     setRefresh(p => p + 1)
     setSelecionado(p => p ? { ...p, status: novoStatus } : null)
+    if (action === 'encerrar_leilao') {
+      setVencedorErpItem({ ...item, status: 'leilao_encerrado' })
+    }
   }
 
   function proximaAcaoInfo(status) {
@@ -1892,7 +1995,7 @@ export default function ComprasERP() {
       pendente:             { label: 'Enviar p/ aprovação', key: 'enviar_aprovacao' },
       aguardando_aprovacao: { label: 'Aprovar',             key: 'aprovar' },
       em_cotacao:           { label: 'Comparar cotações',   key: null },
-      leilao_aberto:        { label: 'Encerrar leilão',     key: null },
+      leilao_aberto:        { label: 'Encerrar leilão',     key: 'encerrar_leilao' },
       leilao_encerrado:     { label: 'Gerar pedido',        key: null },
       aprovado:             { label: 'Emitir Pedido',       key: 'emitir_pedido' },
       pedido_emitido:       { label: 'Acompanhar entrega',  key: 'receber' },
@@ -2203,6 +2306,14 @@ export default function ComprasERP() {
       )}
       {showConfigAprovador && (
         <ModalConfigAprovador onClose={() => setShowConfigAprovador(false)} />
+      )}
+      {vencedorErpItem && (
+        <ModalVencedorERP
+          item={vencedorErpItem}
+          workspaceId={workspaceId}
+          onClose={() => setVencedorErpItem(null)}
+          onSaved={() => { setVencedorErpItem(null); setRefresh(p => p + 1) }}
+        />
       )}
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
