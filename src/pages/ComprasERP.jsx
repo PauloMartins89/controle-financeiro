@@ -21,6 +21,7 @@ import {
   ChatBubbleLeftEllipsisIcon, DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 import { LC } from '../lib/theme'
+import { useNavigate } from 'react-router-dom'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const fmtBRL = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
