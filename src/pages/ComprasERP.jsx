@@ -202,6 +202,93 @@ function AutocompleteInput({ value, onChange, onSelect, sugestoes, placeholder, 
 }
 
 // ─── Score Fiscal completo ───────────────────────────────────────────────────
+// ─── CatalogoItemInput — autocomplete do catálogo de compras ─────────────────
+function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, onCadastrar }) {
+  const [sugestoes, setSugestoes] = useState([])
+  const [open, setOpen]           = useState(false)
+  const [cursor, setCursor]       = useState(-1)
+  const [semResultado, setSemResultado] = useState(false)
+  const wRef = useRef(null)
+  const timerRef = useRef(null)
+  const normStr = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
+  useEffect(() => {
+    const fn = e => { if (wRef.current && !wRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [])
+
+  useEffect(() => {
+    clearTimeout(timerRef.current)
+    if (!value.trim() || value.trim().length < 2 || !workspaceId) { setSugestoes([]); setSemResultado(false); setOpen(false); return }
+    timerRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('catalogo_compras').select('id,nome,unidade,valor_estimado,categoria')
+        .eq('workspace_id', workspaceId).eq('ativo', true)
+        .ilike('nome', `%${value.trim()}%`).order('nome').limit(10)
+      setSugestoes(data || [])
+      setSemResultado((data || []).length === 0)
+      setOpen(true)
+      setCursor(-1)
+    }, 200)
+    return () => clearTimeout(timerRef.current)
+  }, [value, workspaceId])
+
+  function handleKey(e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c + 1, sugestoes.length - 1)) }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); setCursor(c => Math.max(c - 1, -1)) }
+    if (e.key === 'Escape')    { setOpen(false); setCursor(-1) }
+    if (e.key === 'Enter' && open && cursor >= 0 && sugestoes[cursor]) {
+      e.preventDefault()
+      onSelect(sugestoes[cursor])
+      setOpen(false); setCursor(-1)
+    }
+  }
+
+  return (
+    <div ref={wRef} style={{ position: 'relative' }}>
+      <input
+        value={value}
+        onChange={e => { onChange(e.target.value); }}
+        onFocus={() => value.trim().length >= 2 && sugestoes.length > 0 && setOpen(true)}
+        onKeyDown={handleKey}
+        placeholder="Digite para buscar no catálogo..."
+        style={inputSt}
+        autoComplete="off"
+      />
+      {open && (sugestoes.length > 0 || semResultado) && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 400, background: '#fff', border: '1px solid #D8DEE9', borderRadius: 8, boxShadow: '0 8px 24px rgba(11,31,58,.15)', marginTop: 2, maxHeight: 220, overflowY: 'auto' }}>
+          {sugestoes.map((s, i) => (
+            <div key={s.id} onMouseDown={() => { onSelect(s); setOpen(false); setCursor(-1) }}
+              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12, background: cursor === i ? '#EFF6FF' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, borderBottom: '1px solid #F1F5F9' }}>
+              <div>
+                <span style={{ fontWeight: 600, color: '#172033' }}>{s.nome}</span>
+                {s.categoria && <span style={{ fontSize: 10, color: '#64748B', marginLeft: 6 }}>{s.categoria}</span>}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+                {s.unidade && <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', background: '#F1F5F9', padding: '1px 5px', borderRadius: 4 }}>{s.unidade}</span>}
+                {s.valor_estimado > 0 && <span style={{ fontSize: 10, color: '#059669', fontWeight: 700 }}>{Number(s.valor_estimado).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span>}
+              </div>
+            </div>
+          ))}
+          {semResultado && (
+            <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#64748B' }}>"{value}" não encontrado no catálogo</span>
+              {onCadastrar && (
+                <button onMouseDown={e => { e.preventDefault(); onCadastrar(value) }}
+                  style={{ fontSize: 11, padding: '4px 10px', borderRadius: 5, background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  + Cadastrar no catálogo
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Score Fiscal completo ───────────────────────────────────────────────────
 function calcFiscalScore(d) {
   let score = 0
   const breakdown = []
@@ -951,7 +1038,14 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
             </div>
             {itens.map((it, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 56px 46px 88px 22px', gap: 4, marginBottom: 4, alignItems: 'center' }}>
-                <input style={inputSt} value={it.descricao} onChange={e => setItem(i, 'descricao', e.target.value)} placeholder={`Item ${i + 1}`} />
+                <CatalogoItemInput
+                  value={it.descricao}
+                  onChange={v => setItem(i, 'descricao', v)}
+                  onSelect={s => setItens(p => p.map((it2, idx) => idx === i ? { ...it2, descricao: s.nome, unidade: s.unidade || it2.unidade, valor_unitario: s.valor_estimado ? String(s.valor_estimado) : it2.valor_unitario } : it2))}
+                  workspaceId={workspaceId}
+                  inputSt={inputSt}
+                  onCadastrar={nome => window.open(`/compras/cadastros/catalogo?novo=${encodeURIComponent(nome)}`, '_blank')}
+                />
                 <input style={inputSt} value={it.quantidade} onChange={e => setItem(i, 'quantidade', e.target.value)} type="number" min="0.001" step="any" />
                 <select style={{ ...inputSt, padding: '8px 4px' }} value={it.unidade} onChange={e => setItem(i, 'unidade', e.target.value)}>
                   {['un','cx','kg','L','m','m²','sc','pc','par','rl'].map(u => <option key={u}>{u}</option>)}
@@ -1136,7 +1230,14 @@ function ModalContinuarRascunho({ item, workspaceId, onClose, onSalvo }) {
                 </div>
                 {itens.map((it, i) => (
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 56px 46px 88px 22px', gap: 4, marginBottom: 4, alignItems: 'center' }}>
-                    <input style={inputSt} value={it.descricao} onChange={e => setItem(i, 'descricao', e.target.value)} placeholder={`Item ${i + 1}`} />
+                    <CatalogoItemInput
+                      value={it.descricao}
+                      onChange={v => setItem(i, 'descricao', v)}
+                      onSelect={s => setItens(p => p.map((it2, idx) => idx === i ? { ...it2, descricao: s.nome, unidade: s.unidade || it2.unidade, valor_unitario: s.valor_estimado ? String(s.valor_estimado) : it2.valor_unitario } : it2))}
+                      workspaceId={workspaceId}
+                      inputSt={inputSt}
+                      onCadastrar={nome => window.open(`/compras/cadastros/catalogo?novo=${encodeURIComponent(nome)}`, '_blank')}
+                    />
                     <input style={inputSt} value={it.quantidade} onChange={e => setItem(i, 'quantidade', e.target.value)} type="number" min="0.001" step="any" />
                     <select style={{ ...inputSt, padding: '8px 4px' }} value={it.unidade} onChange={e => setItem(i, 'unidade', e.target.value)}>
                       {['un','cx','kg','L','m','m²','sc','pc','par','rl'].map(u => <option key={u}>{u}</option>)}
