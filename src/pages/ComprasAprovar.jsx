@@ -461,8 +461,13 @@ function ModalSelecionarVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button onClick={onClose} style={{ padding: '9px 16px', borderRadius: 8, background: 'none', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>Fechar</button>
+          {enviadas.length > 0 && !selecionado && (
+            <button onClick={() => setSelecionado(enviadas[0].id)} style={{ padding: '9px 18px', borderRadius: 8, background: '#f59e0b', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}>
+              ⚡ Melhor Preço
+            </button>
+          )}
           {selecionado && (
             <button onClick={handleSelecionar} disabled={saving} style={{ padding: '9px 20px', borderRadius: 8, background: '#10b981', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
               {saving ? 'Selecionando...' : '🏆 Selecionar Vencedor'}
