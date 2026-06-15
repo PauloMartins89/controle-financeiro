@@ -1042,6 +1042,10 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
   const [tabD, setTabD] = useState('detalhe') // detalhe | cotacoes | historico | radar
   const [cotacoes, setCotacoes] = useState([])
   const [eventos, setEventos] = useState([])
+  const [fornecedoresCadastro, setFornecedoresCadastro] = useState([])
+  const [novoFornecedorId, setNovoFornecedorId] = useState('')
+  const [trocaFornecedorPorCotacao, setTrocaFornecedorPorCotacao] = useState({})
+  const [updatingCotacaoId, setUpdatingCotacaoId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [sendingCotacaoId, setSendingCotacaoId] = useState(null)
 
@@ -1052,12 +1056,16 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     Promise.all([
       supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id),
       supabase.from('solicitacao_compra_eventos').select('*').eq('solicitacao_id', item.id).order('criado_em', { ascending: false }).limit(15),
-    ]).then(([{ data: cot }, { data: ev }]) => {
+      supabase.from('fornecedores_compra').select('id, nome, telefone, ativo').eq('workspace_id', workspaceId).eq('ativo', true).order('nome', { ascending: true }),
+    ]).then(([{ data: cot }, { data: ev }, { data: forn }]) => {
       setCotacoes(cot || [])
       setEventos((ev || []).map(normalizeEvento))
+      setFornecedoresCadastro(forn || [])
+      setNovoFornecedorId('')
+      setTrocaFornecedorPorCotacao({})
       setLoading(false)
     })
-  }, [item?.id])
+  }, [item?.id, workspaceId])
 
   if (!item) {
     return (
@@ -1118,6 +1126,87 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     } finally {
       setSendingCotacaoId(null)
     }
+  }
+
+  async function trocarFornecedorCotacao(cotacao) {
+    const fornecedorId = trocaFornecedorPorCotacao[cotacao.id]
+    if (!fornecedorId) {
+      toast.error('Selecione um fornecedor cadastrado')
+      return
+    }
+    const fornecedor = fornecedoresCadastro.find(f => String(f.id) === String(fornecedorId))
+    if (!fornecedor) {
+      toast.error('Fornecedor nao encontrado')
+      return
+    }
+
+    setUpdatingCotacaoId(cotacao.id)
+    const { error } = await supabase
+      .from('cotacoes_compra')
+      .update({
+        fornecedor_nome: fornecedor.nome,
+        fornecedor_telefone: fornecedor.telefone || null,
+        status: 'convidado',
+      })
+      .eq('id', cotacao.id)
+
+    if (error) {
+      setUpdatingCotacaoId(null)
+      toast.error('Erro ao alterar fornecedor: ' + error.message)
+      return
+    }
+
+    const { data: cotAtualizadas } = await supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id)
+    setCotacoes(cotAtualizadas || [])
+    setTrocaFornecedorPorCotacao(prev => ({ ...prev, [cotacao.id]: '' }))
+    setUpdatingCotacaoId(null)
+    toast.success('Fornecedor da cotacao atualizado')
+  }
+
+  async function adicionarFornecedorCadastrado() {
+    if (!novoFornecedorId) {
+      toast.error('Selecione um fornecedor cadastrado')
+      return
+    }
+
+    const fornecedor = fornecedoresCadastro.find(f => String(f.id) === String(novoFornecedorId))
+    if (!fornecedor) {
+      toast.error('Fornecedor nao encontrado')
+      return
+    }
+
+    const jaExiste = cotacoes.some(c => {
+      const nomeA = String(c.fornecedor_nome || '').trim().toLowerCase()
+      const nomeB = String(fornecedor.nome || '').trim().toLowerCase()
+      const telA = String(c.fornecedor_telefone || '').replace(/\D/g, '')
+      const telB = String(fornecedor.telefone || '').replace(/\D/g, '')
+      return nomeA === nomeB && telA === telB
+    })
+    if (jaExiste) {
+      toast.error('Este fornecedor ja foi indicado neste leilao')
+      return
+    }
+
+    setUpdatingCotacaoId('new')
+    const { error } = await supabase.from('cotacoes_compra').insert({
+      solicitacao_id: item.id,
+      fornecedor_nome: fornecedor.nome,
+      fornecedor_telefone: fornecedor.telefone || null,
+      token_expira_em: item.prazo_cotacao || null,
+      status: 'convidado',
+    })
+
+    if (error) {
+      setUpdatingCotacaoId(null)
+      toast.error('Erro ao adicionar fornecedor: ' + error.message)
+      return
+    }
+
+    const { data: cotAtualizadas } = await supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id)
+    setCotacoes(cotAtualizadas || [])
+    setNovoFornecedorId('')
+    setUpdatingCotacaoId(null)
+    toast.success('Fornecedor cadastrado adicionado ao leilao')
   }
 
   return (
@@ -1244,6 +1333,26 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
         {/* ── Tab Cotações ── */}
         {tabD === 'cotacoes' && (
           <div style={{ padding: '12px 14px' }}>
+            <div style={{ marginBottom: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#F8FAFC' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 7 }}>Indicar novo fornecedor cadastrado</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <select
+                  value={novoFornecedorId}
+                  onChange={e => setNovoFornecedorId(e.target.value)}
+                  style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.text, fontSize: 11, outline: 'none' }}>
+                  <option value="">Selecione na tabela fornecedores</option>
+                  {fornecedoresCadastro.map(f => (
+                    <option key={f.id} value={f.id}>{f.nome}{f.telefone ? ` - ${f.telefone}` : ''}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={adicionarFornecedorCadastrado}
+                  disabled={updatingCotacaoId === 'new'}
+                  style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #BFDBFE', background: '#EFF6FF', color: C.blue, fontSize: 11, fontWeight: 700, cursor: updatingCotacaoId === 'new' ? 'not-allowed' : 'pointer', opacity: updatingCotacaoId === 'new' ? 0.6 : 1 }}>
+                  {updatingCotacaoId === 'new' ? 'Adicionando...' : 'Adicionar'}
+                </button>
+              </div>
+            </div>
             {cotacoes.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 16px', color: C.textSec, fontSize: 12 }}>
                 <DocumentTextIcon style={{ width: 28, margin: '0 auto 8px', display: 'block', opacity: 0.2 }} />
@@ -1284,7 +1393,7 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
                       </div>
 
                       {link && ['convidado', 'visualizado'].includes(c.status) && (
-                        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(link)
@@ -1308,6 +1417,21 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
                               Enviar no WhatsApp
                             </a>
                           )}
+                            <select
+                              value={trocaFornecedorPorCotacao[c.id] || ''}
+                              onChange={e => setTrocaFornecedorPorCotacao(prev => ({ ...prev, [c.id]: e.target.value }))}
+                              style={{ minWidth: 170, padding: '4px 8px', borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', color: C.text, fontSize: 10, outline: 'none' }}>
+                              <option value="">Trocar por fornecedor cadastrado</option>
+                              {fornecedoresCadastro.map(f => (
+                                <option key={f.id} value={f.id}>{f.nome}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => trocarFornecedorCotacao(c)}
+                              disabled={updatingCotacaoId === c.id}
+                              style={{ padding: '4px 8px', borderRadius: 5, background: '#FEF3C7', border: '1px solid #FDE68A', color: '#92400E', fontSize: 10, fontWeight: 700, cursor: updatingCotacaoId === c.id ? 'not-allowed' : 'pointer', opacity: updatingCotacaoId === c.id ? 0.6 : 1 }}>
+                              {updatingCotacaoId === c.id ? 'Salvando...' : 'Trocar'}
+                            </button>
                         </div>
                       )}
                     </div>
