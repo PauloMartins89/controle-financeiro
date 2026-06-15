@@ -33,6 +33,9 @@ export default function AprovarPublica() {
   const [fornecedores, setFornecedores] = useState([{ nome: '', telefone: '' }])
   const [saving, setSaving]   = useState(false)
   const [done, setDone]       = useState(null)   // acao concluída
+  const [cotacoes, setCotacoes] = useState([])
+  const [cotLoading, setCotLoading] = useState(false)
+  const [selecionado, setSelecionado] = useState(null) // cotacaoId
 
   useEffect(() => {
     async function load() {
@@ -49,7 +52,17 @@ export default function AprovarPublica() {
       }
       setSol(data)
       setLoading(false)
-    }
+      if (data.status === 'leilao_encerrado') {
+        setCotLoading(true)
+        const { data: cots } = await supabase
+          .from('cotacoes_compra')
+          .select('*')
+          .eq('solicitacao_id', data.id)
+          .in('status', ['enviada', 'vencedor', 'nao_selecionado'])
+          .order('valor_total', { ascending: true })
+        setCotacoes(cots || [])
+        setCotLoading(false)
+      }
     load()
   }, [token])
 
@@ -59,12 +72,16 @@ export default function AprovarPublica() {
   async function handleConfirm() {
     if (acao === 'recusar' && !obs.trim()) { toast.error('Informe o motivo da recusa'); return }
     if (acao === 'leilao' && fornecedores.every(f => !f.nome.trim())) { toast.error('Informe pelo menos 1 fornecedor'); return }
+    if (acao === 'selecionar_vencedor' && !selecionado) { toast.error('Selecione um fornecedor vencedor'); return }
     setSaving(true)
     try {
+      const body = acao === 'selecionar_vencedor'
+        ? { token, acao, cotacaoId: selecionado }
+        : { token, acao, obs, fornecedores, prazo }
       const res = await fetch('/api/aprovar-compra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, acao, obs, fornecedores, prazo }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Erro ao processar')
@@ -132,6 +149,7 @@ export default function AprovarPublica() {
       aprovar: { icon: '✅', titulo: 'Compra Aprovada!', sub: 'O comprador será notificado e já pode realizar o pedido.', color: '#10b981' },
       recusar: { icon: '❌', titulo: 'Pedido Recusado', sub: 'O comprador será notificado com o motivo informado.', color: '#ef4444' },
       leilao:  { icon: '🏷', titulo: 'Leilão Aberto!', sub: `${fornecedores.filter(f=>f.nome.trim()).length} fornecedor(es) convidado(s). Links enviados.`, color: '#a78bfa' },
+      selecionar_vencedor: { icon: '🏆', titulo: 'Vencedor Selecionado!', sub: 'O comprador será notificado. A compra está autorizada.', color: '#f59e0b' },
     }
     const m = msgs[done]
     return (
@@ -156,7 +174,72 @@ export default function AprovarPublica() {
 
   const urg = URGENCIA[sol.urgencia] || URGENCIA.media
 
-  // ─── tela principal ────────────────────────────────────────────────────────
+  // ─── leilão encerrado: seleção de vencedor ────────────────────────────────────────
+  if (!done && sol.status === 'leilao_encerrado') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px' }}>
+        <Toaster />
+        <div style={{ maxWidth: 540, width: '100%' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#f1f5f9' }}>🏆 Selecionar Vencedor do Leilão</div>
+            <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{sol.titulo}</div>
+          </div>
+          {cotLoading ? (
+            <div style={{ textAlign: 'center', color: '#94a3b8', padding: 40 }}><ArrowPathIcon style={{ width: 28, height: 28, animation: 'spin 1s linear infinite', color: '#6366f1' }} /></div>
+          ) : cotacoes.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#64748b', padding: 40 }}>
+              Nenhuma cotação recebida ainda. Aguarde os fornecedores enviarem seus preços.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {cotacoes.map((c, i) => (
+                <button key={c.id} onClick={() => setSelecionado(c.id)}
+                  style={{ padding: '14px 18px', borderRadius: 12, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: selecionado === c.id ? 'rgba(245,158,11,0.10)' : '#1e293b',
+                    border: selecionado === c.id ? '2px solid #f59e0b' : '1px solid rgba(255,255,255,0.08)' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: 14 }}>
+                      {i === 0 ? '⚡ ' : ''}{c.fornecedor_nome}
+                      {i === 0 && <span style={{ marginLeft: 8, fontSize: 10, background: '#10b981', color: '#fff', padding: '2px 7px', borderRadius: 20 }}>Menor preço</span>}
+                    </div>
+                    {c.observacoes && <div style={{ fontSize: 12, color: '#64748b', marginTop: 3 }}>{c.observacoes}</div>}
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 12 }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: i === 0 ? '#10b981' : '#f59e0b' }}>
+                      {(c.valor_total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+                    {sol.valor_estimado && c.valor_total < sol.valor_estimado && (
+                      <div style={{ fontSize: 10, color: '#10b981' }}>-{((sol.valor_estimado - c.valor_total) / sol.valor_estimado * 100).toFixed(0)}% do orçamento</div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            {selecionado && (
+              <button onClick={async () => {
+                setSaving(true)
+                try {
+                  const r = await fetch('/api/aprovar-compra', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token, acao: 'selecionar_vencedor', cotacaoId: selecionado }),
+                  })
+                  const j = await r.json()
+                  if (!r.ok) throw new Error(j.error || 'Erro ao processar')
+                  setDone('selecionar_vencedor')
+                } catch (e) { toast.error(e.message) } finally { setSaving(false) }
+              }} disabled={saving}
+                style={{ padding: '12px 24px', borderRadius: 9, background: '#f59e0b', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 14, fontWeight: 800, opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {saving ? <><ArrowPathIcon style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} /> Salvando...</> : <>🏆 Confirmar Vencedor</>}
+              </button>
+            )}
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    )
+  } ────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '32px 16px' }}>
       <Toaster />

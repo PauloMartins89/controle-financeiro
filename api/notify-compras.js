@@ -80,7 +80,7 @@ const MENSAGENS = {
     `📋 *${sol.titulo}*\n` +
     (sol.quantidade ? `📦 Qtd: ${sol.quantidade}\n` : '') +
     (sol.prazo_cotacao ? `⏱ Prazo para cotar: ${new Date(sol.prazo_cotacao).toLocaleDateString('pt-BR')}\n` : '') +
-    `\nFornecedores foram convidados a enviar cotações. Acompanhe em: https://smartpro.app.br/compras/aprovar`,
+    `\nFornecedores foram convidados a enviar cotações. Acompanhe em: https://smartpro.app.br/aprovar/${sol.token_aprovador}`,
 
   leilao_encerrado: (sol) => {
     const vencedor = sol.fornecedor_vencedor || sol.fornecedor || '—'
@@ -91,7 +91,7 @@ const MENSAGENS = {
       (valor ? `💰 Melhor preço: ${fmtCurrency(valor)}\n` : '') +
       (vencedor ? `🏪 Fornecedor: ${vencedor}\n` : '') +
       (sol.economia ? `💚 Economia estimada: ${fmtCurrency(sol.economia)}\n` : '') +
-      `\nAtualize a seleção em: https://smartpro.app.br/compras/aprovar`
+      `\nAtualize a seleção em: https://smartpro.app.br/aprovar/${sol.token_aprovador}`
     )
   },
 
