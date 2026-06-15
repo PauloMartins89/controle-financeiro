@@ -386,6 +386,7 @@ function ModalSelecionarVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
       if (perdedores.length > 0) {
         await supabase.from('cotacoes_compra').update({ status: 'perdeu' }).in('id', perdedores)
       }
+      notifyCompras('leilao_encerrado', solicitacao.id)
       toast.success(`${cot.fornecedor_nome} selecionado como vencedor!`)
       onSaved()
       onClose()

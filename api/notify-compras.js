@@ -82,6 +82,19 @@ const MENSAGENS = {
     (sol.prazo_cotacao ? `⏱ Prazo para cotar: ${new Date(sol.prazo_cotacao).toLocaleDateString('pt-BR')}\n` : '') +
     `\nFornecedores foram convidados a enviar cotações. Acompanhe em: https://dividiai.app.br/compras/aprovar`,
 
+  leilao_encerrado: (sol) => {
+    const vencedor = sol.fornecedor_vencedor || sol.fornecedor || '—'
+    const valor = sol.valor_aprovado || sol.valor_vencedor || sol.melhor_preco || null
+    return (
+      `🏁 *Leilão Encerrado*\n\n` +
+      `📋 *${sol.titulo}*\n` +
+      (valor ? `💰 Melhor preço: ${fmtCurrency(valor)}\n` : '') +
+      (vencedor ? `🏪 Fornecedor: ${vencedor}\n` : '') +
+      (sol.economia ? `💚 Economia estimada: ${fmtCurrency(sol.economia)}\n` : '') +
+      `\nAtualize a seleção em: https://dividiai.app.br/compras/aprovar`
+    )
+  },
+
   compra_paga: (sol) =>
     `💰 *Compra Concluída e Paga!*\n\n` +
     `📋 *${sol.titulo}*\n` +
@@ -140,14 +153,28 @@ export default async function handler(req, res) {
   const telefones = new Set()
 
   // 1. Telefone do aprovador salvo nas configurações do workspace (lê automaticamente)
-  if (evento === 'nova_solicitacao' && sol.workspace_id) {
-    const { data: cfg } = await db
+  if (['nova_solicitacao', 'leilao_encerrado'].includes(evento) && sol.workspace_id) {
+    let cfgValor = null
+    const cfgComWorkspace = await db
       .from('configuracoes')
       .select('valor')
       .eq('chave', 'aprovador_compras_telefone')
+      .eq('workspace_id', sol.workspace_id)
       .limit(1)
-    // A config pode existir por user_id; pega a primeira encontrada
-    const cfgValor = cfg?.[0]?.valor
+
+    if (!cfgComWorkspace.error) {
+      cfgValor = cfgComWorkspace.data?.[0]?.valor || null
+    }
+
+    if (!cfgValor) {
+      const { data: cfgFallback } = await db
+        .from('configuracoes')
+        .select('valor')
+        .eq('chave', 'aprovador_compras_telefone')
+        .limit(1)
+      cfgValor = cfgFallback?.[0]?.valor || null
+    }
+
     if (cfgValor) {
       const tel = String(cfgValor).replace(/\"/g, '').replace(/\D/g, '')
       if (tel) telefones.add(tel)
@@ -160,7 +187,7 @@ export default async function handler(req, res) {
   }
 
   // 3. Telefone do requisitante (quem pediu a compra)
-  if (sol.requisitante_telefone && ['aprovado', 'recusado', 'leilao_aberto', 'compra_paga'].includes(evento)) {
+  if (sol.requisitante_telefone && ['aprovado', 'recusado', 'leilao_aberto', 'leilao_encerrado', 'compra_paga'].includes(evento)) {
     telefones.add(sol.requisitante_telefone.replace(/\D/g, ''))
   }
 

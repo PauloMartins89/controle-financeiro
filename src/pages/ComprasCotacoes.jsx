@@ -135,6 +135,11 @@ function ModalVencedor({ solicitacao, cotacoes, onClose, onSaved }) {
       await supabase.from('cotacoes_compra').update({ status: 'ganhou' }).eq('id', selecionado)
       const perdedores = cotacoes.filter(c => c.id !== selecionado && c.status === 'enviado').map(c => c.id)
       if (perdedores.length) await supabase.from('cotacoes_compra').update({ status: 'perdeu' }).in('id', perdedores)
+      fetch('/api/notify-compras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evento: 'leilao_encerrado', solicitacaoId: solicitacao.id }),
+      }).catch(() => {})
       toast.success(`Vencedor: ${cot.fornecedor_nome}`)
       onSaved(); onClose()
     } catch (e) {
@@ -214,6 +219,11 @@ function LeilaoCard({ sol, cotacoesDaSol, onRefresh }) {
   async function handleEncerrar() {
     if (!window.confirm('Encerrar este leilão?')) return
     await supabase.from('solicitacoes_compra').update({ status: 'leilao_encerrado' }).eq('id', sol.id)
+    fetch('/api/notify-compras', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evento: 'leilao_encerrado', solicitacaoId: sol.id }),
+    }).catch(() => {})
     toast.success('Leilão encerrado')
     onRefresh()
   }
