@@ -54,5 +54,9 @@ CREATE POLICY "itens_compra_workspace_policy" ON itens_solicitacao_compra
     )
   );
 
--- 6. Índice
+-- 6. Coluna unidade (adicionada posteriormente)
+ALTER TABLE itens_solicitacao_compra
+  ADD COLUMN IF NOT EXISTS unidade text DEFAULT 'un';
+
+-- 7. Índice
 CREATE INDEX IF NOT EXISTS idx_itens_solicitacao ON itens_solicitacao_compra(solicitacao_id);

@@ -36,6 +36,7 @@ export default function AprovarPublica() {
   const [cotacoes, setCotacoes] = useState([])
   const [cotLoading, setCotLoading] = useState(false)
   const [selecionado, setSelecionado] = useState(null)
+  const [itensSol, setItensSol] = useState([])
 
   useEffect(() => {
     async function load() {
@@ -52,17 +53,21 @@ export default function AprovarPublica() {
       }
       setSol(data)
       setLoading(false)
+      // Carrega itens e cotações em paralelo
+      setCotLoading(true)
+      const queries = [
+        supabase.from('itens_solicitacao_compra').select('*').eq('solicitacao_id', data.id).order('ordem'),
+      ]
       if (data.status === 'leilao_encerrado') {
-        setCotLoading(true)
-        const { data: cots } = await supabase
-          .from('cotacoes_compra')
-          .select('*')
-          .eq('solicitacao_id', data.id)
-          .in('status', ['enviada', 'vencedor', 'nao_selecionado'])
-          .order('valor_total', { ascending: true })
-        setCotacoes(cots || [])
-        setCotLoading(false)
+        queries.push(
+          supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', data.id)
+            .in('status', ['enviada', 'vencedor', 'nao_selecionado']).order('valor_total', { ascending: true })
+        )
       }
+      const [itensRes, cotsRes] = await Promise.all(queries)
+      setItensSol(itensRes.data || [])
+      if (cotsRes) setCotacoes(cotsRes.data || [])
+      setCotLoading(false)
     }
     load()
   }, [token])
@@ -272,6 +277,28 @@ export default function AprovarPublica() {
           {sol.descricao && (
             <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 16, fontSize: 13, color: '#94a3b8', fontStyle: 'italic' }}>
               "{sol.descricao}"
+            </div>
+          )}
+
+          {/* Lista de itens */}
+          {itensSol.length > 0 && (
+            <div style={{ marginBottom: 16, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ padding: '8px 14px', background: 'rgba(99,102,241,0.08)', fontSize: 11, fontWeight: 700, color: '#818cf8', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                📋 {itensSol.length} item(s)
+              </div>
+              {itensSol.map((it, idx) => (
+                <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '8px 14px', fontSize: 13, background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent', borderTop: idx > 0 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                  <span style={{ color: '#f1f5f9' }}>{it.descricao}</span>
+                  <span style={{ color: '#94a3b8', flexShrink: 0, marginLeft: 12 }}>
+                    {it.quantidade} {it.unidade || 'un'}{it.valor_total ? ` · ${fmtCurrency(it.valor_total)}` : ''}
+                  </span>
+                </div>
+              ))}
+              {sol.valor_estimado > 0 && (
+                <div style={{ padding: '8px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', textAlign: 'right', fontSize: 13, fontWeight: 800, color: '#10b981' }}>
+                  Total: {fmtCurrency(sol.valor_estimado)}
+                </div>
+              )}
             </div>
           )}
 

@@ -55,24 +55,34 @@ function StatusBadge({ status }) {
 // ─── Modal: Nova Solicitação ──────────────────────────────────────────────────
 function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
   const [form, setForm] = useState({
-    titulo: '', descricao: '', valor_estimado: '', fornecedor: '',
-    quantidade: '', urgencia: 'media', data_necessidade: '', tipo: 'direta',
+    titulo: '', descricao: '', fornecedor: '',
+    urgencia: 'media', data_necessidade: '', tipo: 'direta',
     requisitante_nome: '', requisitante_telefone: '',
   })
+  const [itens, setItens] = useState([{ descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
   const [saving, setSaving] = useState(false)
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+  const addItem    = () => setItens(p => [...p, { descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
+  const removeItem = i  => setItens(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p)
+  const setItem    = (i, k, v) => setItens(p => p.map((it, idx) => idx === i ? { ...it, [k]: v } : it))
+  const totalItens = itens.reduce((acc, it) => {
+    const v = parseFloat(it.valor_unitario || 0) * parseFloat(it.quantidade || 1)
+    return acc + (isNaN(v) ? 0 : v)
+  }, 0)
 
   async function handleSave() {
-    if (!form.titulo.trim()) { toast.error('Informe o que precisa comprar'); return }
+    if (!form.titulo.trim()) { toast.error('Informe o título da solicitação'); return }
+    const listaValida = itens.filter(it => it.descricao.trim())
+    if (listaValida.length === 0) { toast.error('Adicione pelo menos 1 item'); return }
     setSaving(true)
     const { data: inserted, error } = await supabase.from('solicitacoes_compra').insert({
       workspace_id:          workspaceId,
       titulo:                form.titulo.trim(),
       descricao:             form.descricao.trim() || null,
-      valor_estimado:        form.valor_estimado ? parseFloat(form.valor_estimado.replace(',', '.')) : null,
+      valor_estimado:        totalItens > 0 ? totalItens : null,
       fornecedor:            form.fornecedor.trim() || null,
-      quantidade:            form.quantidade.trim() || null,
+      quantidade:            `${listaValida.length} item(s)`,
       urgencia:              form.urgencia,
       tipo:                  form.tipo,
       data_necessidade:      form.data_necessidade || null,
@@ -81,15 +91,25 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
       status:                'em_cotacao',
     }).select('id').single()
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
-    toast.success('Solicitação criada!')
-    // Notifica aprovador (telefone buscado automaticamente das configurações)
     if (inserted?.id) {
+      await supabase.from('itens_solicitacao_compra').insert(
+        listaValida.map((it, i) => ({
+          solicitacao_id: inserted.id,
+          descricao:      it.descricao.trim(),
+          quantidade:     parseFloat(it.quantidade) || 1,
+          unidade:        it.unidade || 'un',
+          valor_unitario: it.valor_unitario ? parseFloat(it.valor_unitario) : null,
+          valor_total:    it.valor_unitario ? parseFloat(it.valor_unitario) * (parseFloat(it.quantidade) || 1) : null,
+          ordem:          i,
+        }))
+      )
       fetch('/api/notify-compras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ evento: 'nova_solicitacao', solicitacaoId: inserted.id }),
       }).catch(() => {})
     }
+    toast.success('Solicitação criada!')
     onSaved()
     onClose()
   }
@@ -130,24 +150,44 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
 
         {/* Pedido */}
         <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>O que comprar? *</label>
-          <input style={inputStyle} value={form.titulo} onChange={e => set('titulo', e.target.value)} placeholder="Ex: Óleo 15W40 — 50 litros" autoFocus />
+          <label style={labelStyle}>Título da solicitação *</label>
+          <input style={inputStyle} value={form.titulo} onChange={e => set('titulo', e.target.value)} placeholder="Ex: Compras Almoxarifado — Junho" autoFocus />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-          <div>
-            <label style={labelStyle}>Quantidade / Unidade</label>
-            <input style={inputStyle} value={form.quantidade} onChange={e => set('quantidade', e.target.value)} placeholder="Ex: 50 litros" />
+        {/* Lista de itens */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Itens a comprar *</label>
+            <button type="button" onClick={addItem} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <PlusIcon style={{ width: 12, height: 12 }} /> Item
+            </button>
           </div>
-          <div>
-            <label style={labelStyle}>Valor estimado (R$)</label>
-            <input style={inputStyle} value={form.valor_estimado} onChange={e => set('valor_estimado', e.target.value)} placeholder="0,00" type="number" step="0.01" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 52px 96px 26px', gap: 5, marginBottom: 4 }}>
+            {['Descrição','Qtd','Un.','Valor unit.',''].map((h, i) => (
+              <span key={i} style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>{h}</span>
+            ))}
           </div>
+          {itens.map((it, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 52px 96px 26px', gap: 5, marginBottom: 5, alignItems: 'center' }}>
+              <input style={inputStyle} value={it.descricao} onChange={e => setItem(i, 'descricao', e.target.value)} placeholder={`Item ${i + 1}`} />
+              <input style={inputStyle} value={it.quantidade} onChange={e => setItem(i, 'quantidade', e.target.value)} type="number" min="0.001" step="any" />
+              <select style={inputStyle} value={it.unidade} onChange={e => setItem(i, 'unidade', e.target.value)}>
+                {['un','cx','kg','L','m','m²','sc','pc','par','rl'].map(u => <option key={u}>{u}</option>)}
+              </select>
+              <input style={inputStyle} value={it.valor_unitario} onChange={e => setItem(i, 'valor_unitario', e.target.value)} type="number" step="0.01" placeholder="0,00" />
+              <button type="button" onClick={() => removeItem(i)} style={{ padding: '3px 6px', borderRadius: 5, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', cursor: 'pointer', color: '#ef4444', fontSize: 15, lineHeight: 1 }}>×</button>
+            </div>
+          ))}
+          {totalItens > 0 && (
+            <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 800, color: '#10b981', marginTop: 4 }}>
+              Total estimado: {fmtCurrency(totalItens)}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>Fornecedor sugerido</label>
-          <input style={inputStyle} value={form.fornecedor} onChange={e => set('fornecedor', e.target.value)} placeholder="Ex: Auto Peças Central" />
+          <label style={labelStyle}>Fornecedor preferencial</label>
+          <input style={inputStyle} value={form.fornecedor} onChange={e => set('fornecedor', e.target.value)} placeholder="Ex: Auto Peças Central (opcional)" />
         </div>
 
         <div style={{ marginBottom: 14 }}>
@@ -199,34 +239,73 @@ function ModalNovaSolicitacao({ onClose, onSaved, workspaceId }) {
 // ─── Modal: Editar Solicitação ───────────────────────────────────────────────
 function ModalEditar({ solicitacao, onClose, onSaved }) {
   const [form, setForm] = useState({
-    titulo:            solicitacao.titulo || '',
-    descricao:         solicitacao.descricao || '',
-    valor_estimado:    solicitacao.valor_estimado ? String(solicitacao.valor_estimado) : '',
-    fornecedor:        solicitacao.fornecedor || '',
-    quantidade:        solicitacao.quantidade || '',
-    urgencia:          solicitacao.urgencia || 'media',
-    data_necessidade:  solicitacao.data_necessidade || '',
-    requisitante_nome: solicitacao.requisitante_nome || '',
+    titulo:                solicitacao.titulo || '',
+    descricao:             solicitacao.descricao || '',
+    fornecedor:            solicitacao.fornecedor || '',
+    urgencia:              solicitacao.urgencia || 'media',
+    data_necessidade:      solicitacao.data_necessidade || '',
+    requisitante_nome:     solicitacao.requisitante_nome || '',
     requisitante_telefone: solicitacao.requisitante_telefone || '',
   })
-  const [saving, setSaving] = useState(false)
+  const [itens, setItens]     = useState([])
+  const [saving, setSaving]   = useState(false)
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
+
+  useEffect(() => {
+    supabase.from('itens_solicitacao_compra').select('*').eq('solicitacao_id', solicitacao.id).order('ordem')
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setItens(data.map(it => ({
+            id: it.id,
+            descricao:      it.descricao,
+            quantidade:     String(it.quantidade || 1),
+            unidade:        it.unidade || 'un',
+            valor_unitario: it.valor_unitario ? String(it.valor_unitario) : '',
+          })))
+        } else {
+          setItens([{ descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
+        }
+      })
+  }, [solicitacao.id])
+
+  const addItem    = () => setItens(p => [...p, { descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
+  const removeItem = i  => setItens(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p)
+  const setItem    = (i, k, v) => setItens(p => p.map((it, idx) => idx === i ? { ...it, [k]: v } : it))
+  const totalItens = itens.reduce((acc, it) => {
+    const v = parseFloat(it.valor_unitario || 0) * parseFloat(it.quantidade || 1)
+    return acc + (isNaN(v) ? 0 : v)
+  }, 0)
 
   async function handleSave() {
     if (!form.titulo.trim()) { toast.error('Informe o que precisa comprar'); return }
+    const listaValida = itens.filter(it => it.descricao.trim())
     setSaving(true)
     const { error } = await supabase.from('solicitacoes_compra').update({
       titulo:                form.titulo.trim(),
       descricao:             form.descricao.trim() || null,
-      valor_estimado:        form.valor_estimado ? parseFloat(form.valor_estimado.replace(',', '.')) : null,
+      valor_estimado:        totalItens > 0 ? totalItens : null,
       fornecedor:            form.fornecedor.trim() || null,
-      quantidade:            form.quantidade.trim() || null,
+      quantidade:            listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
       urgencia:              form.urgencia,
       data_necessidade:      form.data_necessidade || null,
       requisitante_nome:     form.requisitante_nome.trim() || null,
       requisitante_telefone: form.requisitante_telefone.trim() || null,
     }).eq('id', solicitacao.id)
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
+    if (listaValida.length > 0) {
+      await supabase.from('itens_solicitacao_compra').delete().eq('solicitacao_id', solicitacao.id)
+      await supabase.from('itens_solicitacao_compra').insert(
+        listaValida.map((it, i) => ({
+          solicitacao_id: solicitacao.id,
+          descricao:      it.descricao.trim(),
+          quantidade:     parseFloat(it.quantidade) || 1,
+          unidade:        it.unidade || 'un',
+          valor_unitario: it.valor_unitario ? parseFloat(it.valor_unitario) : null,
+          valor_total:    it.valor_unitario ? parseFloat(it.valor_unitario) * (parseFloat(it.quantidade) || 1) : null,
+          ordem:          i,
+        }))
+      )
+    }
     toast.success('Solicitação atualizada!')
     onSaved(); onClose()
   }
@@ -260,19 +339,39 @@ function ModalEditar({ solicitacao, onClose, onSaved }) {
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>O que comprar? *</label>
+          <label style={labelStyle}>Título da solicitação *</label>
           <input style={inputStyle} value={form.titulo} onChange={e => set('titulo', e.target.value)} autoFocus />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-          <div>
-            <label style={labelStyle}>Quantidade / Unidade</label>
-            <input style={inputStyle} value={form.quantidade} onChange={e => set('quantidade', e.target.value)} placeholder="Ex: 50 litros" />
+        {/* Lista de itens */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Itens</label>
+            <button type="button" onClick={addItem} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <PlusIcon style={{ width: 12, height: 12 }} /> Item
+            </button>
           </div>
-          <div>
-            <label style={labelStyle}>Valor estimado (R$)</label>
-            <input style={inputStyle} type="number" step="0.01" value={form.valor_estimado} onChange={e => set('valor_estimado', e.target.value)} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 52px 96px 26px', gap: 5, marginBottom: 4 }}>
+            {['Descrição','Qtd','Un.','Valor unit.',''].map((h, i) => (
+              <span key={i} style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 700 }}>{h}</span>
+            ))}
           </div>
+          {itens.map((it, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 52px 96px 26px', gap: 5, marginBottom: 5, alignItems: 'center' }}>
+              <input style={inputStyle} value={it.descricao} onChange={e => setItem(i, 'descricao', e.target.value)} placeholder={`Item ${i + 1}`} />
+              <input style={inputStyle} value={it.quantidade} onChange={e => setItem(i, 'quantidade', e.target.value)} type="number" min="0.001" step="any" />
+              <select style={inputStyle} value={it.unidade} onChange={e => setItem(i, 'unidade', e.target.value)}>
+                {['un','cx','kg','L','m','m²','sc','pc','par','rl'].map(u => <option key={u}>{u}</option>)}
+              </select>
+              <input style={inputStyle} value={it.valor_unitario} onChange={e => setItem(i, 'valor_unitario', e.target.value)} type="number" step="0.01" placeholder="0,00" />
+              <button type="button" onClick={() => removeItem(i)} style={{ padding: '3px 6px', borderRadius: 5, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', cursor: 'pointer', color: '#ef4444', fontSize: 15, lineHeight: 1 }}>×</button>
+            </div>
+          ))}
+          {totalItens > 0 && (
+            <div style={{ textAlign: 'right', fontSize: 13, fontWeight: 800, color: '#10b981', marginTop: 4 }}>
+              Total: {fmtCurrency(totalItens)}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 14 }}>
@@ -664,7 +763,7 @@ function ModalComprovante({ solicitacao, onClose, onSaved }) {
 }
 
 // ─── Card de solicitação ──────────────────────────────────────────────────────
-function SolicitacaoCard({ s, cotacoes, onRefresh }) {
+function SolicitacaoCard({ s, cotacoes, itens, onRefresh }) {
   const [showComprovante, setShowComprovante] = useState(false)
   const [showEditar, setShowEditar]           = useState(false)
   const [showHistorico, setShowHistorico]     = useState(false)
@@ -711,6 +810,27 @@ function SolicitacaoCard({ s, cotacoes, onRefresh }) {
             </div>
 
             {s.descricao && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>{s.descricao}</div>}
+
+            {/* Lista de itens */}
+            {itens && itens.length > 0 && (
+              <div style={{ marginBottom: 8, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-primary)', border: '1px solid var(--border)' }}>
+                {itens.map((it, idx) => (
+                  <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12,
+                    paddingBottom: idx < itens.length - 1 ? 4 : 0, marginBottom: idx < itens.length - 1 ? 4 : 0,
+                    borderBottom: idx < itens.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                    <span style={{ color: 'var(--text-primary)' }}>{it.descricao}</span>
+                    <span style={{ color: 'var(--text-secondary)', flexShrink: 0, marginLeft: 12 }}>
+                      {it.quantidade} {it.unidade || 'un'}{it.valor_total ? ` · ${fmtCurrency(it.valor_total)}` : ''}
+                    </span>
+                  </div>
+                ))}
+                {s.valor_estimado > 0 && (
+                  <div style={{ marginTop: 6, textAlign: 'right', fontSize: 12, fontWeight: 800, color: '#10b981' }}>
+                    Total: {fmtCurrency(s.valor_estimado)}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-secondary)' }}>
               {s.valor_estimado && <span>💰 {fmtCurrency(s.valor_estimado)}</span>}
@@ -1021,6 +1141,7 @@ export default function Compras() {
   const { workspaceId } = useStore()
   const [solicitacoes, setSolicitacoes] = useState([])
   const [cotacoes, setCotacoes]         = useState([])
+  const [itensCompra, setItensCompra]   = useState([])
   const [loading, setLoading]           = useState(true)
   const [showModal, setShowModal]       = useState(false)
   const [showConfig, setShowConfig]     = useState(false)
@@ -1038,6 +1159,13 @@ export default function Compras() {
     else {
       setSolicitacoes(sols || [])
       setCotacoes(cots || [])
+      if (sols && sols.length > 0) {
+        const { data: itensData } = await supabase.from('itens_solicitacao_compra')
+          .select('*').in('solicitacao_id', sols.map(s => s.id)).order('ordem', { ascending: true })
+        setItensCompra(itensData || [])
+      } else {
+        setItensCompra([])
+      }
     }
     setLoading(false)
   }, [workspaceId])
@@ -1149,7 +1277,7 @@ export default function Compras() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filtradas.map(s => (
-              <SolicitacaoCard key={s.id} s={s} cotacoes={cotacoes} onRefresh={loadData} />
+              <SolicitacaoCard key={s.id} s={s} cotacoes={cotacoes} itens={itensCompra.filter(it => it.solicitacao_id === s.id)} onRefresh={loadData} />
             ))}
           </div>
         )}
