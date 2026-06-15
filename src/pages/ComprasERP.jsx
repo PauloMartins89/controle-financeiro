@@ -911,7 +911,7 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
 }
 
 // ─── Painel Detalhe da requisição selecionada ─────────────────────────────────
-function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
+function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
   const [tabD, setTabD] = useState('detalhe') // detalhe | cotacoes | historico | radar
   const [cotacoes, setCotacoes] = useState([])
   const [eventos, setEventos] = useState([])
@@ -1059,12 +1059,23 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
               <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Atalhos Rápidos</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {[
-                  { label: '+ Nova Requisição', color: C.blue, icon: PlusCircleIcon },
-                  { label: 'Solicitar Cotação', color: C.sky, icon: DocumentTextIcon },
-                  { label: 'Aprovar Itens', color: C.green, icon: CheckCircleIcon },
-                  { label: 'Pedidos Emitidos', color: C.violet, icon: ShoppingCartIcon },
+                  { label: '+ Nova Requisição', color: C.blue, icon: PlusCircleIcon, action: () => { onNovaReq?.() } },
+                  { label: 'Solicitar Cotação', color: C.sky, icon: DocumentTextIcon, action: () => {
+                    if (!item) { toast('Selecione uma requisição', { icon: 'ℹ️' }); return }
+                    onClose(); toast('Acesse a aba Radar para solicitar cotações', { icon: '💡' })
+                  }},
+                  { label: 'Aprovar Itens', color: C.green, icon: CheckCircleIcon, action: () => {
+                    if (!item) { toast('Selecione uma requisição', { icon: 'ℹ️' }); return }
+                    if (item.status !== 'aguardando_aprovacao') { toast.error('Item não está aguardando aprovação'); return }
+                    onAcao(item, 'aprovar')
+                  }},
+                  { label: 'Pedidos Emitidos', color: C.violet, icon: ShoppingCartIcon, action: () => {
+                    if (!item) { toast('Selecione uma requisição', { icon: 'ℹ️' }); return }
+                    if (!['aprovado','leilao_encerrado'].includes(item.status)) { toast.error('Item precisa estar Aprovado para emitir pedido'); return }
+                    onAcao(item, 'emitir_pedido')
+                  }},
                 ].map(a => (
-                  <button key={a.label} style={{ padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: `${a.color}0F`, cursor: 'pointer', fontSize: 10, fontWeight: 700, color: a.color, display: 'flex', alignItems: 'center', gap: 5, textAlign: 'left' }}>
+                  <button key={a.label} onClick={a.action} style={{ padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: `${a.color}0F`, cursor: 'pointer', fontSize: 10, fontWeight: 700, color: a.color, display: 'flex', alignItems: 'center', gap: 5, textAlign: 'left' }}>
                     <a.icon style={{ width: 12, flexShrink: 0 }} /> {a.label}
                   </button>
                 ))}
@@ -1284,6 +1295,7 @@ function MapaComparativo({ item }) {
 
 // ─── Auditoria Recente ────────────────────────────────────────────────────────
 function AuditoriaRecente({ workspaceId }) {
+  const navigate = useNavigate()
   const [logs, setLogs] = useState([])
   useEffect(() => {
     if (!workspaceId) return
@@ -1298,7 +1310,7 @@ function AuditoriaRecente({ workspaceId }) {
     <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, padding: '12px 14px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: C.text }}>Auditoria Recente</div>
-        <button style={{ fontSize: 10, color: C.blue, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Ver todas</button>
+        <button onClick={() => navigate('/compras')} style={{ fontSize: 10, color: C.blue, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Ver todas</button>
       </div>
       {logs.length === 0 ? (
         <div style={{ fontSize: 11, color: C.textSec, textAlign: 'center', padding: '12px 0' }}>Sem registros</div>
@@ -1512,10 +1524,25 @@ export default function ComprasERP() {
         <button onClick={() => setShowNovaReq(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
           <PlusIcon style={{ width: 13 }} /> Nova Requisição
         </button>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.sky, border: `1px solid ${C.sky}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+        <button
+          onClick={() => {
+            if (!selecionado) { toast('Selecione uma requisição primeiro', { icon: 'ℹ️' }); return }
+            toast('Use o painel direito → Radar para buscar fornecedores e solicitar cotações', { icon: '💡', duration: 3000 })
+          }}
+          title="Solicitar cotação para a requisição selecionada"
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.sky, border: `1px solid ${C.sky}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
           <DocumentTextIcon style={{ width: 13 }} /> Solicitar Cotação
         </button>
-        <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.green, border: `1px solid ${C.green}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+        <button
+          onClick={() => {
+            if (!selecionado) { toast('Selecione uma requisição primeiro', { icon: 'ℹ️' }); return }
+            if (!['aprovado','leilao_encerrado'].includes(selecionado.status)) {
+              toast.error(`Status "${STATUS_LABELS[selecionado.status]?.label}" não permite emitir pedido`); return
+            }
+            handleAcao(selecionado, 'emitir_pedido')
+          }}
+          title="Emitir pedido para a requisição selecionada"
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.green, border: `1px solid ${C.green}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
           <ShoppingCartIcon style={{ width: 13 }} /> Gerar Pedido
         </button>
         {/* Search */}
@@ -1723,7 +1750,7 @@ export default function ComprasERP() {
 
         {/* ── Painel Detalhe ── */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: C.bgCard }}>
-          <PainelDetalhe item={selecionado} workspaceId={workspaceId} onAcao={handleAcao} onClose={() => setSelecionado(null)} />
+          <PainelDetalhe item={selecionado} workspaceId={workspaceId} onAcao={handleAcao} onClose={() => setSelecionado(null)} onNovaReq={() => setShowNovaReq(true)} />
         </div>
       </div>
 
