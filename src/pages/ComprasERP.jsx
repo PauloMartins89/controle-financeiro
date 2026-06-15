@@ -1760,16 +1760,18 @@ function ModalVencedorERP({ item, workspaceId, onClose, onSaved }) {
       await supabase.from('cotacoes_compra').update({ status: 'ganhou' }).eq('id', selecionado)
       const perdedores = cotacoes.filter(c => c.id !== selecionado && c.status === 'enviado').map(c => c.id)
       if (perdedores.length) await supabase.from('cotacoes_compra').update({ status: 'perdeu' }).in('id', perdedores)
-      await supabase.from('solicitacao_compra_eventos').insert({
-        solicitacao_id: item.id,
-        workspace_id: workspaceId || item.workspace_id || null,
-        acao: 'vencedor_leilao',
-        status_de: 'leilao_encerrado',
-        status_para: 'aprovado',
-        observacao: `Vencedor selecionado: ${cot.fornecedor_nome} | melhor preço ${fmtBRL(cot.valor_total)}`,
-        ator: 'compras_erp',
-        criado_em: new Date().toISOString(),
-      }).catch(() => {})
+      try {
+        await supabase.from('solicitacao_compra_eventos').insert({
+          solicitacao_id: item.id,
+          workspace_id: workspaceId || item.workspace_id || null,
+          acao: 'vencedor_leilao',
+          status_de: 'leilao_encerrado',
+          status_para: 'aprovado',
+          observacao: `Vencedor selecionado: ${cot.fornecedor_nome} | melhor preço ${fmtBRL(cot.valor_total)}`,
+          ator: 'compras_erp',
+          criado_em: new Date().toISOString(),
+        })
+      } catch {}
       fetch('/api/notify-compras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
