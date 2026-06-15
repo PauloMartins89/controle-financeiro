@@ -1220,30 +1220,68 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
             {cotacoes.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 16px', color: C.textSec, fontSize: 12 }}>
                 <DocumentTextIcon style={{ width: 28, margin: '0 auto 8px', display: 'block', opacity: 0.2 }} />
-                Nenhuma cotação ainda
+                Nenhum fornecedor indicado para leilão ainda
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {cotacoes.map(c => {
-                  const statusCot = c.proposta_valor ? 'Proposta Recebida' : c.visualizado_em ? 'Visualizou' : 'Convidado'
-                  const colorCot = c.proposta_valor ? C.green : c.visualizado_em ? C.blue : C.textSec
+              <>
+                <div style={{ marginBottom: 8, fontSize: 11, fontWeight: 700, color: C.violet }}>
+                  LEILAO - {cotacoes.filter(c => c.status === 'enviado').length}/{cotacoes.length} propostas recebidas
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {cotacoes.map(c => {
+                  const statusCot = c.status === 'enviado'
+                    ? 'Proposta Recebida'
+                    : c.status === 'visualizado'
+                      ? 'Visualizou'
+                      : c.status === 'ganhou'
+                        ? 'Vencedor'
+                        : c.status === 'perdeu'
+                          ? 'Nao selecionado'
+                          : 'Convidado'
+                  const colorCot = c.status === 'enviado' || c.status === 'ganhou' ? C.green : c.status === 'visualizado' ? C.blue : C.textSec
+                  const link = c.token_acesso ? `${window.location.origin}/cotacao/${c.token_acesso}` : null
+                  const msgWA = `Ola ${c.fornecedor_nome || 'fornecedor'}! Por favor envie sua cotacao para *${item?.titulo || 'esta solicitacao'}* pelo link abaixo:\n${link || ''}`
                   return (
                     <div key={c.id} style={{ padding: '10px 12px', background: c.vencedor ? '#F0FDF4' : '#F8FAFC', borderRadius: 8, border: `1px solid ${c.vencedor ? '#86EFAC' : C.border}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                           <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{c.fornecedor_nome}</div>
                           <div style={{ fontSize: 10, color: colorCot, fontWeight: 600, marginTop: 2 }}>{statusCot}</div>
-                          {c.prazo_entrega && <div style={{ fontSize: 10, color: C.textSec, marginTop: 2 }}>Prazo: {c.prazo_entrega}</div>}
+                          {c.fornecedor_telefone && <div style={{ fontSize: 10, color: C.textSec, marginTop: 2 }}>Tel: {c.fornecedor_telefone}</div>}
+                          {c.prazo_entrega_dias && <div style={{ fontSize: 10, color: C.textSec, marginTop: 2 }}>Prazo: {c.prazo_entrega_dias} dias</div>}
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          {c.proposta_valor && <div style={{ fontSize: 14, fontWeight: 800, color: C.green }}>{fmtBRL(c.proposta_valor)}</div>}
-                          {c.vencedor && <div style={{ fontSize: 10, color: C.green, fontWeight: 700 }}>🏆 Vencedor</div>}
+                          {c.valor_total && <div style={{ fontSize: 14, fontWeight: 800, color: C.green }}>{fmtBRL(c.valor_total)}</div>}
+                          {c.status === 'ganhou' && <div style={{ fontSize: 10, color: C.green, fontWeight: 700 }}>🏆 Vencedor</div>}
                         </div>
                       </div>
+
+                      {link && ['convidado', 'visualizado'].includes(c.status) && (
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(link)
+                              toast.success('Link de cotacao copiado!')
+                            }}
+                            style={{ padding: '4px 8px', borderRadius: 5, background: '#EEF2FF', border: '1px solid #C7D2FE', cursor: 'pointer', color: '#4F46E5', fontSize: 10, fontWeight: 700 }}>
+                            Copiar link
+                          </button>
+                          {c.fornecedor_telefone && (
+                            <a
+                              href={`https://wa.me/${String(c.fornecedor_telefone).replace(/\D/g, '')}?text=${encodeURIComponent(msgWA)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ padding: '4px 8px', borderRadius: 5, background: '#ECFDF3', border: '1px solid #86EFAC', textDecoration: 'none', color: '#16A34A', fontSize: 10, fontWeight: 700 }}>
+                              Enviar no WhatsApp
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
-                })}
-              </div>
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}
