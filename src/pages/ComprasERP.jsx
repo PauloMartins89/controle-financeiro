@@ -1060,10 +1060,36 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
       detailWorkspaceId
         ? supabase.from('fornecedores_compra').select('id, nome, telefone, ativo').eq('workspace_id', detailWorkspaceId).eq('ativo', true).order('nome', { ascending: true })
         : Promise.resolve({ data: [] }),
-    ]).then(([{ data: cot }, { data: ev }, { data: forn }]) => {
-      setCotacoes(cot || [])
+    ]).then(async ([{ data: cot }, { data: ev }, { data: forn }]) => {
+      const cotacoesBase = cot || []
+      const fornecedoresBase = forn || []
+
+      // Reconcilia telefone ausente em todas as cotações usando a tabela de fornecedores.
+      const updatesTelefone = []
+      const cotacoesRecon = cotacoesBase.map(c => {
+        if (c.fornecedor_telefone) return c
+        const nomeCot = norm(c.fornecedor_nome)
+        const match = fornecedoresBase.find(f => norm(f.nome) === nomeCot)
+          || fornecedoresBase.find(f => norm(f.nome).includes(nomeCot) || nomeCot.includes(norm(f.nome)))
+
+        if (match?.telefone) {
+          updatesTelefone.push({ id: c.id, fornecedor_telefone: match.telefone })
+          return { ...c, fornecedor_telefone: match.telefone }
+        }
+        return c
+      })
+
+      if (updatesTelefone.length > 0) {
+        await Promise.all(
+          updatesTelefone.map(u =>
+            supabase.from('cotacoes_compra').update({ fornecedor_telefone: u.fornecedor_telefone }).eq('id', u.id)
+          )
+        )
+      }
+
+      setCotacoes(cotacoesRecon)
       setEventos((ev || []).map(normalizeEvento))
-      setFornecedoresCadastro(forn || [])
+      setFornecedoresCadastro(fornecedoresBase)
       setNovoFornecedorId('')
       setTrocaFornecedorPorCotacao({})
       setLoading(false)
