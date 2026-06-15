@@ -220,12 +220,14 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
 
   useEffect(() => {
     clearTimeout(timerRef.current)
-    if (!value.trim() || value.trim().length < 2 || !workspaceId) { setSugestoes([]); setSemResultado(false); setOpen(false); return }
+    if (!value.trim() || value.trim().length < 2) { setSugestoes([]); setSemResultado(false); setOpen(false); return }
     timerRef.current = setTimeout(async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('catalogo_compras').select('id,nome,unidade,unidade_medida,valor_estimado,preco_referencia,categoria')
-        .eq('workspace_id', workspaceId).neq('ativo', false)
         .ilike('nome', `%${value.trim()}%`).order('nome').limit(10)
+      if (workspaceId) query = query.eq('workspace_id', workspaceId)
+      const { data, error } = await query
+      console.log('[CatalogoItemInput] workspaceId=', workspaceId, 'busca=', value, 'resultado=', data, 'erro=', error)
       const rows = (data || []).map(r => ({ ...r, unidade: r.unidade || r.unidade_medida || 'un', valor_estimado: r.valor_estimado || r.preco_referencia || null }))
       setSugestoes(rows)
       setSemResultado(rows.length === 0)
