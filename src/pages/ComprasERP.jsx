@@ -2021,6 +2021,70 @@ function DonutCategoria({ items }) {
   )
 }
 
+// ─── Donut Economia por Mês ───────────────────────────────────────────────────
+function DonutEconomiaMes({ gasto, economia, mesLabel }) {
+  const total = gasto + economia
+  const R = 36, cx = 50, cy = 50, sw = 14
+  function arc(pct, start) {
+    if (pct <= 0) return null
+    if (pct >= 1) pct = 0.9999
+    const s = start * 2 * Math.PI - Math.PI / 2
+    const e = (start + pct) * 2 * Math.PI - Math.PI / 2
+    return `M ${cx + R * Math.cos(s)} ${cy + R * Math.sin(s)} A ${R} ${R} 0 ${pct > 0.5 ? 1 : 0} 1 ${cx + R * Math.cos(e)} ${cy + R * Math.sin(e)}`
+  }
+  const pctEco = total > 0 ? economia / total : 0
+  const pctGasto = total > 0 ? gasto / total : 1
+  const mesFormatado = (() => {
+    if (!mesLabel) return ''
+    const [ano, mes] = mesLabel.split('-')
+    return new Date(Number(ano), Number(mes) - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, s => s.toUpperCase())
+  })()
+  return (
+    <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, padding: '12px 14px', overflow: 'hidden' }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: C.text }}>Economia por mês</div>
+      <div style={{ fontSize: 9, color: C.textSec, marginBottom: 8 }}>{mesFormatado}</div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <svg width={90} height={90} viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+          {total === 0 ? (
+            <circle cx={cx} cy={cy} r={R} fill="none" stroke="#E2E8F0" strokeWidth={sw} />
+          ) : (
+            <>
+              {arc(pctGasto, 0) && <path d={arc(pctGasto, 0)} fill="none" stroke={C.navy} strokeWidth={sw} strokeLinecap="butt" />}
+              {arc(pctEco, pctGasto) && <path d={arc(pctEco, pctGasto)} fill="none" stroke={C.green} strokeWidth={sw} strokeLinecap="butt" />}
+            </>
+          )}
+          <circle cx={cx} cy={cy} r={R - sw / 2 - 1} fill={C.bgCard} />
+          <text x={cx} y={cy - 3} textAnchor="middle" fontSize={7} fill={C.textSec}>total</text>
+          <text x={cx} y={cy + 8} textAnchor="middle" fontSize={9} fontWeight={900} fill={C.text}>
+            {fmtBRL(gasto).replace('R$\u00a0', 'R$')}
+          </text>
+        </svg>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: C.green, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 9, color: C.textSec }}>Economia</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.green }}>{fmtBRL(economia)}</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: C.navy, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 9, color: C.textSec }}>Gasto</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.text }}>{fmtBRL(gasto)}</div>
+            </div>
+          </div>
+          {total > 0 && (
+            <div style={{ fontSize: 9, color: C.green, fontWeight: 700, background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 4, padding: '2px 6px', alignSelf: 'flex-start' }}>
+              {Math.round(pctEco * 100)}% economizado
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Mapa Comparativo ────────────────────────────────────────────────────────
 function MapaComparativo({ item }) {
   const [cotacoes, setCotacoes] = useState([])
@@ -2685,8 +2749,9 @@ export default function ComprasERP() {
           </div>
 
           {/* ── Analytics Bottom ── */}
-          <div style={{ borderTop: `2px solid ${C.border}`, padding: '12px 14px', background: C.bgPage, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, flexShrink: 0, maxHeight: 210, overflowY: 'auto' }}>
+          <div style={{ borderTop: `2px solid ${C.border}`, padding: '12px 14px', background: C.bgPage, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, flexShrink: 0, maxHeight: 210, overflowY: 'auto' }}>
             <MapaComparativo item={selecionado} />
+            <DonutEconomiaMes gasto={gastoMes} economia={economiaMes} mesLabel={competencia} />
             <DonutCategoria items={items} />
             <AuditoriaRecente workspaceId={workspaceId} />
           </div>
