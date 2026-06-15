@@ -1193,6 +1193,9 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     ? item.valor_orcado - item.valor_aprovado : null
 
   const acoes = []
+  if (item.status === 'rascunho') {
+    acoes.push({ label: 'Enviar p/ Aprovação', color: C.blue, border: '#BFDBFE', bg: '#EFF6FF', action: 'enviar_aprovacao' })
+  }
   if (item.status === 'pendente') {
     acoes.push({ label: 'Enviar p/ Aprovação', color: C.blue, border: '#BFDBFE', bg: '#EFF6FF', action: 'enviar_aprovacao' })
   }
@@ -2091,6 +2094,7 @@ export default function ComprasERP() {
 
   function proximaAcaoInfo(status) {
     const map = {
+      rascunho:             { label: 'Enviar p/ aprovação', key: 'enviar_aprovacao' },
       pendente:             { label: 'Enviar p/ aprovação', key: 'enviar_aprovacao' },
       aguardando_aprovacao: { label: 'Aprovar',             key: 'aprovar' },
       em_cotacao:           { label: 'Comparar cotações',   key: null },
