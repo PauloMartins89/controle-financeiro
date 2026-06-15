@@ -29,6 +29,14 @@ async function sendWA(to, text) {
   }
 }
 
+function norm(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ ok: false, error: 'Method not allowed' })
@@ -51,8 +59,17 @@ export default async function handler(req, res) {
     return res.status(404).json({ ok: false, error: 'Cotacao nao encontrada' })
   }
 
-  if (!cot.token_acesso) {
-    return res.status(400).json({ ok: false, error: 'Cotacao sem token de acesso' })
+  let tokenAcesso = cot.token_acesso || null
+  if (!tokenAcesso) {
+    tokenAcesso = crypto.randomUUID()
+    const { error: tokenErr } = await db
+      .from('cotacoes_compra')
+      .update({ token_acesso: tokenAcesso })
+      .eq('id', cot.id)
+
+    if (tokenErr) {
+      return res.status(400).json({ ok: false, error: 'Cotacao sem token de acesso' })
+    }
   }
 
   const { data: sol } = await db
@@ -63,16 +80,19 @@ export default async function handler(req, res) {
 
   let telefoneFornecedor = cot.fornecedor_telefone || null
   if (!telefoneFornecedor && sol?.workspace_id && cot?.fornecedor_nome) {
-    const { data: fornByNome } = await db
+    const { data: fornecedoresAtivos } = await db
       .from('fornecedores_compra')
       .select('id, nome, telefone')
       .eq('workspace_id', sol.workspace_id)
       .eq('ativo', true)
-      .ilike('nome', cot.fornecedor_nome)
-      .limit(1)
+      .order('nome', { ascending: true })
 
-    if (fornByNome?.[0]?.telefone) {
-      telefoneFornecedor = fornByNome[0].telefone
+    const nomeCotacao = norm(cot.fornecedor_nome)
+    const fornecedorMatch = (fornecedoresAtivos || []).find(f => norm(f.nome) === nomeCotacao)
+      || (fornecedoresAtivos || []).find(f => norm(f.nome).includes(nomeCotacao) || nomeCotacao.includes(norm(f.nome)))
+
+    if (fornecedorMatch?.telefone) {
+      telefoneFornecedor = fornecedorMatch.telefone
       await db
         .from('cotacoes_compra')
         .update({ fornecedor_telefone: telefoneFornecedor })
@@ -85,7 +105,7 @@ export default async function handler(req, res) {
   }
 
   const appUrl = (process.env.APP_URL || 'https://smartpro.app.br').replace(/\/$/, '')
-  const link = `${appUrl}/cotacao/${cot.token_acesso}`
+  const link = `${appUrl}/cotacao/${tokenAcesso}`
 
   const msg =
     `Ola ${cot.fornecedor_nome || 'fornecedor'}!\n\n` +

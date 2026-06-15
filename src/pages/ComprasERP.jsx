@@ -1048,6 +1048,7 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
   const [updatingCotacaoId, setUpdatingCotacaoId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [sendingCotacaoId, setSendingCotacaoId] = useState(null)
+  const detailWorkspaceId = workspaceId || item?.workspace_id || null
 
   useEffect(() => {
     if (!item) return
@@ -1056,7 +1057,9 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     Promise.all([
       supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id),
       supabase.from('solicitacao_compra_eventos').select('*').eq('solicitacao_id', item.id).order('criado_em', { ascending: false }).limit(15),
-      supabase.from('fornecedores_compra').select('id, nome, telefone, ativo').eq('workspace_id', workspaceId).eq('ativo', true).order('nome', { ascending: true }),
+      detailWorkspaceId
+        ? supabase.from('fornecedores_compra').select('id, nome, telefone, ativo').eq('workspace_id', detailWorkspaceId).eq('ativo', true).order('nome', { ascending: true })
+        : Promise.resolve({ data: [] }),
     ]).then(([{ data: cot }, { data: ev }, { data: forn }]) => {
       setCotacoes(cot || [])
       setEventos((ev || []).map(normalizeEvento))
@@ -1065,7 +1068,7 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
       setTrocaFornecedorPorCotacao({})
       setLoading(false)
     })
-  }, [item?.id, workspaceId])
+  }, [item?.id, detailWorkspaceId])
 
   if (!item) {
     return (
