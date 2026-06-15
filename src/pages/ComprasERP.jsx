@@ -912,17 +912,18 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
 
 // ─── Painel Detalhe da requisição selecionada ─────────────────────────────────
 function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
+  const [tabD, setTabD] = useState('detalhe') // detalhe | cotacoes | historico | radar
   const [cotacoes, setCotacoes] = useState([])
   const [eventos, setEventos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showRadar, setShowRadar] = useState(false)
 
   useEffect(() => {
     if (!item) return
     setLoading(true)
+    setTabD('detalhe')
     Promise.all([
       supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id),
-      supabase.from('solicitacao_compra_eventos').select('*').eq('solicitacao_id', item.id).order('created_at', { ascending: false }).limit(10),
+      supabase.from('solicitacao_compra_eventos').select('*').eq('solicitacao_id', item.id).order('created_at', { ascending: false }).limit(15),
     ]).then(([{ data: cot }, { data: ev }]) => {
       setCotacoes(cot || [])
       setEventos(ev || [])
@@ -935,12 +936,15 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12, color: C.textSec }}>
         <ClipboardDocumentListIcon style={{ width: 36, opacity: 0.2 }} />
         <div style={{ fontSize: 12, fontWeight: 600 }}>Selecione uma requisição</div>
+        <div style={{ fontSize: 11, color: C.textSec }}>Clique em um item da lista</div>
       </div>
     )
   }
 
   const badge = STATUS_BADGE_MAP[item.status] || { label: item.status, bg: '#F8FAFC', color: C.textSec, border: C.border }
   const urgColor = URGENCIA_COLORS[item.urgencia] || '#6b7280'
+  const economia = (item.valor_orcado && item.valor_aprovado && item.valor_aprovado < item.valor_orcado)
+    ? item.valor_orcado - item.valor_aprovado : null
 
   const acoes = []
   if (item.status === 'aguardando_aprovacao') {
@@ -948,121 +952,187 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
     acoes.push({ label: 'Abrir Leilão', color: C.sky, border: '#BAE6FD', bg: '#F0F9FF', action: 'leilao' })
     acoes.push({ label: 'Recusar', color: C.red, border: '#FECACA', bg: '#FEF2F2', action: 'recusar' })
   }
-  if (item.status === 'aprovado') {
-    acoes.push({ label: 'Emitir Pedido', color: C.violet, border: '#C4B5FD', bg: '#F5F3FF', action: 'emitir_pedido' })
-  }
-  if (item.status === 'pedido_emitido') {
-    acoes.push({ label: 'Confirmar Recebimento', color: C.green, border: '#86EFAC', bg: '#F0FDF4', action: 'receber' })
-  }
-  if (item.status === 'recebido') {
-    acoes.push({ label: 'Marcar Pago', color: '#0F766E', border: '#99F6E4', bg: '#F0FDFA', action: 'pagar' })
-  }
+  if (item.status === 'aprovado') acoes.push({ label: 'Emitir Pedido', color: C.violet, border: '#C4B5FD', bg: '#F5F3FF', action: 'emitir_pedido' })
+  if (item.status === 'pedido_emitido') acoes.push({ label: 'Confirmar Recebimento', color: C.green, border: '#86EFAC', bg: '#F0FDF4', action: 'receber' })
+  if (item.status === 'recebido') acoes.push({ label: 'Marcar Pago', color: '#0F766E', border: '#99F6E4', bg: '#F0FDFA', action: 'pagar' })
+
+  const TABS_D = [
+    { key: 'detalhe',   label: 'Detalhe' },
+    { key: 'cotacoes',  label: `Cotações${cotacoes.length ? ` (${cotacoes.length})` : ''}` },
+    { key: 'historico', label: 'Histórico' },
+    { key: 'radar',     label: 'Radar' },
+  ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* header — navy ERP */}
-      <div style={{ padding: '14px 16px 12px', background: C.navy, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 }}>
-            DETALHES DA REQUISIÇÃO
+      {/* header navy */}
+      <div style={{ padding: '12px 14px 0', background: C.navy }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 3 }}>
+              INFORMAÇÕES DA REQUISIÇÃO
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: C.white, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.titulo}</div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>{badge.label}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: urgColor, background: `${urgColor}33`, padding: '2px 7px', borderRadius: 4 }}>{(item.urgencia || '').toUpperCase()}</span>
+            </div>
           </div>
-          <div style={{ fontSize: 14, fontWeight: 800, color: C.white, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.titulo}</div>
-          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ display: 'inline-block', padding: '3px 9px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>{badge.label}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, color: urgColor, background: `${urgColor}22`, padding: '2px 7px', borderRadius: 4, border: `1px solid ${urgColor}44` }}>
-              {item.urgencia?.toUpperCase()}
-            </span>
-          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex', flexShrink: 0 }}>
+            <XMarkIcon style={{ width: 14 }} />
+          </button>
         </div>
-        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex', flexShrink: 0 }}>
-          <XMarkIcon style={{ width: 15 }} />
-        </button>
+        {/* tabs */}
+        <div style={{ display: 'flex' }}>
+          {TABS_D.map(t => (
+            <button key={t.key} onClick={() => setTabD(t.key)} style={{ flex: 1, padding: '7px 3px', fontSize: 10, fontWeight: 700, cursor: 'pointer', border: 'none', borderBottom: tabD === t.key ? '2px solid #fff' : '2px solid transparent', background: 'transparent', color: tabD === t.key ? '#fff' : 'rgba(255,255,255,0.45)', whiteSpace: 'nowrap' }}>{t.label}</button>
+          ))}
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {/* infos */}
-        <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {[
-            { label: 'Requisitante', value: item.requisitante_nome || '—' },
-            { label: 'Fornecedor sugerido', value: item.fornecedor_sugerido || '—' },
-            { label: 'Valor Orçado', value: item.valor_orcado ? fmtBRL(item.valor_orcado) : '—' },
-            { label: 'Valor Aprovado', value: item.valor_aprovado ? fmtBRL(item.valor_aprovado) : '—' },
-            { label: 'Necessidade até', value: fmtDate(item.data_necessidade) },
-            { label: 'Categoria', value: item.categoria || '—' },
-          ].map(r => (
-            <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, gap: 8 }}>
-              <span style={{ color: C.textSec }}>{r.label}</span>
-              <span style={{ color: C.text, fontWeight: 600, textAlign: 'right' }}>{r.value}</span>
-            </div>
-          ))}
-          {item.observacoes && (
-            <div style={{ marginTop: 4, padding: '8px 10px', background: '#F8FAFC', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12, color: C.textSec, fontStyle: 'italic', lineHeight: 1.5 }}>
-              {item.observacoes}
-            </div>
-          )}
-        </div>
 
-        {/* ações inline */}
-        {acoes.length > 0 && (
-          <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {acoes.map(a => (
-              <button key={a.action} onClick={() => onAcao(item, a.action)}
-                style={{ flex: 1, minWidth: 80, padding: '7px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: a.bg, color: a.color, cursor: 'pointer', border: `1px solid ${a.border}` }}>
-                {a.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* cotações */}
-        {cotacoes.length > 0 && (
-          <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Cotações ({cotacoes.length})</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {cotacoes.map(c => {
-                const statusCot = c.proposta_valor ? 'Proposta Recebida' : c.visualizado_em ? 'Visualizou' : 'Convidado'
-                const colorCot = c.proposta_valor ? C.green : c.visualizado_em ? C.blue : C.textSec
-                return (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: '#F8FAFC', borderRadius: 6, border: `1px solid ${C.border}` }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{c.fornecedor_nome}</div>
-                      <div style={{ fontSize: 10, color: colorCot, fontWeight: 600 }}>{statusCot}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      {c.proposta_valor && <div style={{ fontSize: 13, fontWeight: 800, color: C.green }}>{fmtBRL(c.proposta_valor)}</div>}
-                      {c.vencedor && <div style={{ fontSize: 10, color: C.green, fontWeight: 700 }}>🏆 Vencedor</div>}
-                    </div>
+        {/* ── Tab Detalhe ── */}
+        {tabD === 'detalhe' && (
+          <>
+            <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px' }}>
+                {[
+                  { label: 'Item', value: item.categoria || '—' },
+                  { label: 'Origem', value: item.origem || 'Manual' },
+                  { label: 'Equipamento', value: item.equipamento || '—' },
+                  { label: 'Solicitante', value: item.requisitante_nome || '—' },
+                  { label: 'Prioridade', value: <span style={{ color: urgColor, fontWeight: 700 }}>{item.urgencia ? item.urgencia.charAt(0).toUpperCase() + item.urgencia.slice(1) : '—'}</span> },
+                  { label: 'Prazo necessário', value: item.data_necessidade ? <span style={{ color: new Date(item.data_necessidade) <= new Date() ? C.red : C.text, fontWeight: 700 }}>{fmtDate(item.data_necessidade)}</span> : '—' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 }}>{r.label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{r.value}</div>
                   </div>
-                )
-              })}
+                ))}
+              </div>
+              {item.observacoes && (
+                <div style={{ marginTop: 10, padding: '8px 10px', background: '#F8FAFC', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 11, color: C.textSec, fontStyle: 'italic', lineHeight: 1.5 }}>{item.observacoes}</div>
+              )}
             </div>
-          </div>
-        )}
 
-        {/* radar rápido */}
-        <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}` }}>
-          <button onClick={() => setShowRadar(p => !p)}
-            style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: `1px dashed ${C.red}`, background: '#FEF2F2', color: C.red, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-            <MagnifyingGlassIcon style={{ width: 13 }} />
-            {showRadar ? 'Ocultar Radar' : 'Pesquisar Preços / Fornecedor'}
-          </button>
-        </div>
-
-        {/* timeline */}
-        {eventos.length > 0 && (
-          <div style={{ padding: '12px 14px' }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, paddingBottom: 6, borderBottom: `1px solid ${C.border}` }}>Timeline</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {eventos.map(e => (
-                <div key={e.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.violet, marginTop: 5, flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{e.descricao || e.acao}</div>
-                    <div style={{ fontSize: 10, color: C.textSec }}>{fmtDate(e.created_at)} — {e.usuario_nome || 'Sistema'}</div>
+            {/* Resumo Financeiro */}
+            <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Resumo Financeiro</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'Valor estimado', value: item.valor_orcado ? fmtBRL(item.valor_orcado) : '—', color: C.text },
+                  { label: 'Valor aprovado', value: item.valor_aprovado ? fmtBRL(item.valor_aprovado) : '—', color: C.green },
+                  { label: 'Fornecedor', value: item.fornecedor_vencedor || item.fornecedor_sugerido || '—', color: C.textSec },
+                  { label: 'Última compra', value: item.ultima_compra ? fmtDate(item.ultima_compra) : '—', color: C.textSec },
+                ].map(r => (
+                  <div key={r.label} style={{ padding: '7px 10px', background: '#F8FAFC', borderRadius: 6, border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 9, color: C.textSec, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 }}>{r.label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: r.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.value}</div>
                   </div>
+                ))}
+              </div>
+              {economia && (
+                <div style={{ marginTop: 8, padding: '6px 10px', background: '#F0FDF4', borderRadius: 6, border: '1px solid #86EFAC', fontSize: 11, color: C.green, fontWeight: 700 }}>
+                  Economia estimada: {fmtBRL(economia)} ({Math.round((economia / item.valor_orcado) * 100)}%)
                 </div>
-              ))}
+              )}
             </div>
+
+            {/* Próximas Ações */}
+            {acoes.length > 0 && (
+              <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Próximas Ações</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {acoes.map(a => (
+                    <button key={a.action} onClick={() => onAcao(item, a.action)}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 6, fontSize: 12, fontWeight: 700, background: a.bg, color: a.color, cursor: 'pointer', border: `1px solid ${a.border}`, textAlign: 'left' }}>
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Atalhos Rápidos */}
+            <div style={{ padding: '12px 14px' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Atalhos Rápidos</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {[
+                  { label: '+ Nova Requisição', color: C.blue, icon: PlusCircleIcon },
+                  { label: 'Solicitar Cotação', color: C.sky, icon: DocumentTextIcon },
+                  { label: 'Aprovar Itens', color: C.green, icon: CheckCircleIcon },
+                  { label: 'Pedidos Emitidos', color: C.violet, icon: ShoppingCartIcon },
+                ].map(a => (
+                  <button key={a.label} style={{ padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.border}`, background: `${a.color}0F`, cursor: 'pointer', fontSize: 10, fontWeight: 700, color: a.color, display: 'flex', alignItems: 'center', gap: 5, textAlign: 'left' }}>
+                    <a.icon style={{ width: 12, flexShrink: 0 }} /> {a.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Tab Cotações ── */}
+        {tabD === 'cotacoes' && (
+          <div style={{ padding: '12px 14px' }}>
+            {cotacoes.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: C.textSec, fontSize: 12 }}>
+                <DocumentTextIcon style={{ width: 28, margin: '0 auto 8px', display: 'block', opacity: 0.2 }} />
+                Nenhuma cotação ainda
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {cotacoes.map(c => {
+                  const statusCot = c.proposta_valor ? 'Proposta Recebida' : c.visualizado_em ? 'Visualizou' : 'Convidado'
+                  const colorCot = c.proposta_valor ? C.green : c.visualizado_em ? C.blue : C.textSec
+                  return (
+                    <div key={c.id} style={{ padding: '10px 12px', background: c.vencedor ? '#F0FDF4' : '#F8FAFC', borderRadius: 8, border: `1px solid ${c.vencedor ? '#86EFAC' : C.border}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{c.fornecedor_nome}</div>
+                          <div style={{ fontSize: 10, color: colorCot, fontWeight: 600, marginTop: 2 }}>{statusCot}</div>
+                          {c.prazo_entrega && <div style={{ fontSize: 10, color: C.textSec, marginTop: 2 }}>Prazo: {c.prazo_entrega}</div>}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          {c.proposta_valor && <div style={{ fontSize: 14, fontWeight: 800, color: C.green }}>{fmtBRL(c.proposta_valor)}</div>}
+                          {c.vencedor && <div style={{ fontSize: 10, color: C.green, fontWeight: 700 }}>🏆 Vencedor</div>}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Tab Histórico ── */}
+        {tabD === 'historico' && (
+          <div style={{ padding: '12px 14px' }}>
+            {eventos.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 16px', color: C.textSec, fontSize: 12 }}>Sem eventos registrados</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {eventos.map((e, i) => (
+                  <div key={e.id} style={{ display: 'flex', gap: 10, paddingBottom: 14, position: 'relative' }}>
+                    {i < eventos.length - 1 && <div style={{ position: 'absolute', left: 7, top: 14, bottom: 0, width: 1, background: C.border }} />}
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: C.violet, border: '2px solid #fff', flexShrink: 0, marginTop: 1, zIndex: 1 }} />
+                    <div>
+                      <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{e.descricao || e.acao}</div>
+                      <div style={{ fontSize: 10, color: C.textSec, marginTop: 2 }}>{fmtDate(e.created_at)} · {e.usuario_nome || 'Sistema'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Tab Radar ── */}
+        {tabD === 'radar' && (
+          <div style={{ minHeight: 400 }}>
+            <RadarPanel workspaceId={workspaceId} onAdicionarFornecedor={() => toast.success('Fornecedor adicionado!')} />
           </div>
         )}
       </div>
@@ -1070,8 +1140,600 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose }) {
   )
 }
 
+// ─── Fluxo Horizontal ────────────────────────────────────────────────────────
+function FluxoHorizontal({ counts }) {
+  const FLOW = [
+    { key: 'pendente',             label: 'Requisição',      icon: ClipboardDocumentListIcon, color: '#3b82f6' },
+    { key: 'aguardando_aprovacao', label: 'Aprovação',       icon: ExclamationTriangleIcon,   color: '#f59e0b' },
+    { key: 'em_cotacao',           label: 'Cotação',         icon: SignalIcon,                color: '#8b5cf6' },
+    { key: 'leilao_encerrado',     label: 'Comparativo',     icon: ChartBarIcon,              color: '#0ea5e9' },
+    { key: 'aprovado',             label: 'Pedido',          icon: ShoppingCartIcon,          color: '#10b981' },
+    { key: 'pedido_emitido',       label: 'Recebimento',     icon: TruckIcon,                 color: '#059669' },
+    { key: 'recebido',             label: 'NF / Financeiro', icon: BanknotesIcon,             color: '#14b8a6' },
+    { key: 'pago',                 label: 'Pago',            icon: CheckCircleIcon,           color: '#6b7280' },
+  ]
+  return (
+    <div style={{ padding: '8px 20px', background: C.bgCard, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', overflowX: 'auto', gap: 0, flexShrink: 0 }}>
+      {FLOW.map((f, i) => {
+        const count = counts[f.key] || 0
+        const Icon = f.icon
+        return (
+          <div key={f.key} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '5px 12px', borderRadius: 7, background: count > 0 ? `${f.color}0F` : 'transparent', border: count > 0 ? `1px solid ${f.color}30` : '1px solid transparent' }}>
+              <div style={{ position: 'relative' }}>
+                <Icon style={{ width: 18, height: 18, color: count > 0 ? f.color : '#cbd5e1' }} />
+                {count > 0 && (
+                  <span style={{ position: 'absolute', top: -5, right: -7, fontSize: 9, fontWeight: 900, color: '#fff', background: f.color, borderRadius: 99, padding: '0 4px', minWidth: 13, textAlign: 'center', lineHeight: '13px' }}>{count}</span>
+                )}
+              </div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: count > 0 ? f.color : '#94a3b8', whiteSpace: 'nowrap' }}>{f.label}</div>
+            </div>
+            {i < FLOW.length - 1 && <div style={{ color: '#cbd5e1', fontSize: 14, margin: '0 1px', paddingBottom: 14 }}>›</div>}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Donut Categorias ────────────────────────────────────────────────────────
+function DonutCategoria({ items }) {
+  const catMap = {}
+  items.forEach(i => { const k = i.categoria || 'Outros'; catMap[k] = (catMap[k] || 0) + (i.valor_orcado || 1) })
+  const total = Object.values(catMap).reduce((a, b) => a + b, 0)
+  const entries = Object.entries(catMap).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
+  const R = 36, cx = 50, cy = 50, sw = 14
+  let cum = 0
+  const arcs = entries.map(([label, val], i) => {
+    const pct = val / total; const start = cum; cum += pct
+    return { label, val, pct, start, color: COLORS[i] }
+  })
+  function describeArc(pct, start) {
+    if (pct >= 1) pct = 0.9999
+    const s = start * 2 * Math.PI - Math.PI / 2, e = (start + pct) * 2 * Math.PI - Math.PI / 2
+    return `M ${cx + R * Math.cos(s)} ${cy + R * Math.sin(s)} A ${R} ${R} 0 ${pct > 0.5 ? 1 : 0} 1 ${cx + R * Math.cos(e)} ${cy + R * Math.sin(e)}`
+  }
+  if (entries.length === 0) return (
+    <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textSec, fontSize: 11 }}>
+      Sem dados de categoria
+    </div>
+  )
+  return (
+    <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, padding: '12px 14px', overflow: 'hidden' }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: C.text, marginBottom: 10 }}>Compras por Categoria</div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <svg width={90} height={90} viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+          {arcs.map(a => (
+            <path key={a.label} d={describeArc(a.pct, a.start)} fill="none" stroke={a.color} strokeWidth={sw} strokeLinecap="butt" />
+          ))}
+          <circle cx={cx} cy={cy} r={R - sw / 2 - 1} fill={C.bgCard} />
+          <text x={cx} y={cy + 4} textAnchor="middle" fontSize={14} fontWeight={900} fill={C.text}>{items.length}</text>
+          <text x={cx} y={cy + 14} textAnchor="middle" fontSize={7} fill={C.textSec}>itens</text>
+        </svg>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {arcs.map(a => (
+            <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+              <div style={{ fontSize: 10, color: C.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.label}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: C.textSec }}>{Math.round(a.pct * 100)}%</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Mapa Comparativo ────────────────────────────────────────────────────────
+function MapaComparativo({ item }) {
+  const [cotacoes, setCotacoes] = useState([])
+  useEffect(() => {
+    if (!item?.id) { setCotacoes([]); return }
+    supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id)
+      .then(({ data }) => setCotacoes((data || []).filter(c => c.proposta_valor)))
+  }, [item?.id])
+
+  const menorPreco = cotacoes.length ? Math.min(...cotacoes.map(c => c.proposta_valor)) : null
+  return (
+    <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: C.text }}>Mapa Comparativo</div>
+          <div style={{ fontSize: 10, color: C.textSec, marginTop: 1 }}>{item ? item.titulo : 'Selecione uma requisição'}</div>
+        </div>
+        {cotacoes.length > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: C.blue }}>{cotacoes.length} proposta(s)</span>}
+      </div>
+      {!item || cotacoes.length === 0 ? (
+        <div style={{ padding: '16px', textAlign: 'center', color: C.textSec, fontSize: 11 }}>
+          {!item ? 'Selecione uma requisição' : 'Nenhuma proposta recebida'}
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC' }}>
+                {['Fornecedor', 'Preço', 'Prazo', 'Cond.', 'Aval.', ''].map(h => (
+                  <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, color: C.textSec, fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.4, borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {cotacoes.map(c => {
+                const isMelhor = c.proposta_valor === menorPreco
+                return (
+                  <tr key={c.id} style={{ background: isMelhor ? '#F0FDF4' : 'transparent', borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '7px 10px', fontWeight: 600, color: C.text }}>{c.fornecedor_nome}</td>
+                    <td style={{ padding: '7px 10px', fontWeight: 800, color: isMelhor ? C.green : C.text }}>{fmtBRL(c.proposta_valor)}</td>
+                    <td style={{ padding: '7px 10px', color: C.textSec }}>{c.prazo_entrega || '—'}</td>
+                    <td style={{ padding: '7px 10px', color: C.textSec }}>{c.condicao_pagamento || '—'}</td>
+                    <td style={{ padding: '7px 10px', color: C.amber }}>{c.avaliacao ? '★'.repeat(Math.round(c.avaliacao)) : '—'}</td>
+                    <td style={{ padding: '7px 10px' }}>
+                      {isMelhor && <span style={{ fontSize: 9, fontWeight: 800, color: C.green, background: '#DCFCE7', border: '1px solid #86EFAC', padding: '1px 6px', borderRadius: 99 }}>Melhor custo</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Auditoria Recente ────────────────────────────────────────────────────────
+function AuditoriaRecente({ workspaceId }) {
+  const [logs, setLogs] = useState([])
+  useEffect(() => {
+    if (!workspaceId) return
+    supabase.from('solicitacao_compra_eventos')
+      .select('id, descricao, acao, usuario_nome, created_at')
+      .order('created_at', { ascending: false })
+      .limit(8)
+      .then(({ data }) => setLogs(data || []))
+  }, [workspaceId])
+
+  return (
+    <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, padding: '12px 14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: C.text }}>Auditoria Recente</div>
+        <button style={{ fontSize: 10, color: C.blue, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Ver todas</button>
+      </div>
+      {logs.length === 0 ? (
+        <div style={{ fontSize: 11, color: C.textSec, textAlign: 'center', padding: '12px 0' }}>Sem registros</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          {logs.map(l => {
+            const dtStr = new Date(l.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+            const inicial = (l.usuario_nome || 'S')[0].toUpperCase()
+            return (
+              <div key={l.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: C.navy, color: '#fff', fontSize: 9, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{inicial}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, color: C.text, fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.descricao || l.acao}</div>
+                  <div style={{ fontSize: 9, color: C.textSec, marginTop: 1 }}>{dtStr} · {l.usuario_nome || 'Sistema'}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function ComprasERP() {
+  const workspaceId = useStore(s => s.workspaceId)
+  const now = new Date()
+
+  const [items, setItems]           = useState([])
+  const [itemsMesAnt, setItemsMesAnt] = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [selecionado, setSelecionado] = useState(null)
+  const [showNovaReq, setShowNovaReq] = useState(false)
+  const [refresh, setRefresh]       = useState(0)
+  const [lastUpdate, setLastUpdate] = useState(now)
+  const [wsNome, setWsNome]         = useState('')
+
+  // filtros
+  const [busca, setBusca]                   = useState('')
+  const [competencia, setCompetencia]       = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+  const [filtroStatus, setFiltroStatus]     = useState('todos')
+  const [filtroOrigem, setFiltroOrigem]     = useState('todos')
+  const [filtroPrioridade, setFiltroPrioridade] = useState('todos')
+  const [filtroCategoria, setFiltroCategoria] = useState('todos')
+  const [tabAtiva, setTabAtiva]             = useState('todos')
+  const [sortBy, setSortBy]                 = useState('recente')
+
+  useEffect(() => {
+    if (workspaceId) supabase.from('workspaces').select('nome').eq('id', workspaceId).single().then(({ data }) => setWsNome(data?.nome || ''))
+  }, [workspaceId])
+
+  const load = useCallback(async () => {
+    if (!workspaceId) return
+    setLoading(true)
+    const [anoComp, mesComp] = competencia.split('-').map(Number)
+    const inicioMes    = new Date(anoComp, mesComp - 1, 1).toISOString()
+    const fimMes       = new Date(anoComp, mesComp, 0, 23, 59, 59).toISOString()
+    const inicioMesAnt = new Date(anoComp, mesComp - 2, 1).toISOString()
+    const fimMesAnt    = new Date(anoComp, mesComp - 1, 0, 23, 59, 59).toISOString()
+    const [{ data: curr }, { data: ant }] = await Promise.all([
+      supabase.from('solicitacoes_compra').select('*').eq('workspace_id', workspaceId)
+        .gte('created_at', inicioMes).lte('created_at', fimMes).order('created_at', { ascending: false }),
+      supabase.from('solicitacoes_compra').select('id,status,valor_aprovado,valor_orcado,urgencia,created_at')
+        .eq('workspace_id', workspaceId).gte('created_at', inicioMesAnt).lte('created_at', fimMesAnt),
+    ])
+    setItems(curr || [])
+    setItemsMesAnt(ant || [])
+    setLastUpdate(new Date())
+    setLoading(false)
+  }, [workspaceId, competencia, refresh])
+
+  useEffect(() => { load() }, [load])
+
+  // contagens
+  const counts = {}
+  STAGES.forEach(s => {
+    if (s.key === 'todos') counts[s.key] = items.length
+    else if (s.key !== 'radar') counts[s.key] = items.filter(i => i.status === s.key).length
+  })
+  counts['leilao_encerrado'] = items.filter(i => i.status === 'leilao_encerrado').length
+
+  function pctVsAnt(curr, ant) {
+    if (!ant) return null
+    const d = ((curr - ant) / ant) * 100
+    return { v: Math.abs(Math.round(d)), up: d >= 0 }
+  }
+
+  const gastoMes    = items.filter(i => i.valor_aprovado && !['recusado','pendente'].includes(i.status)).reduce((s, i) => s + (i.valor_aprovado || 0), 0)
+  const gastoAnt    = itemsMesAnt.filter(i => i.valor_aprovado && !['recusado','pendente'].includes(i.status)).reduce((s, i) => s + (i.valor_aprovado || 0), 0)
+  const economiaMes = items.filter(i => i.valor_orcado && i.valor_aprovado && i.valor_aprovado < i.valor_orcado).reduce((s, i) => s + (i.valor_orcado - i.valor_aprovado), 0)
+  const economiaAnt = itemsMesAnt.filter(i => i.valor_orcado && i.valor_aprovado && i.valor_aprovado < i.valor_orcado).reduce((s, i) => s + (i.valor_orcado - i.valor_aprovado), 0)
+  const pendCrit    = items.filter(i => i.urgencia === 'alta' && !['pago','recusado','recebido'].includes(i.status)).length
+  const pendCritAnt = itemsMesAnt.filter(i => i.urgencia === 'alta' && !['pago','recusado','recebido'].includes(i.status)).length
+
+  const kpis = [
+    { label: 'Requisições Abertas', value: items.filter(i => !['pago','recusado'].includes(i.status)).length, pct: pctVsAnt(items.length, itemsMesAnt.length), color: C.blue, icon: ClipboardDocumentListIcon, alert: false },
+    { label: 'Ag. Aprovação',       value: counts['aguardando_aprovacao'] || 0, pct: pctVsAnt(counts['aguardando_aprovacao'] || 0, itemsMesAnt.filter(i => i.status === 'aguardando_aprovacao').length), color: C.amber, icon: ExclamationTriangleIcon, alert: (counts['aguardando_aprovacao'] || 0) > 0 },
+    { label: 'Em Cotação',          value: (counts['em_cotacao'] || 0) + (counts['leilao_aberto'] || 0), pct: null, color: '#8b5cf6', icon: SignalIcon, alert: false },
+    { label: 'Pedidos Emitidos',    value: counts['pedido_emitido'] || 0, pct: pctVsAnt(counts['pedido_emitido'] || 0, itemsMesAnt.filter(i => i.status === 'pedido_emitido').length), color: '#059669', icon: ShoppingCartIcon, alert: false },
+    { label: 'A Receber',           value: counts['recebido'] || 0, pct: null, color: '#14b8a6', icon: TruckIcon, alert: false },
+    { label: 'Gasto no Mês',        value: fmtBRL(gastoMes), pct: pctVsAnt(gastoMes, gastoAnt), color: C.sky, icon: BanknotesIcon, alert: false, isText: true },
+    { label: 'Economia Gerada',     value: fmtBRL(economiaMes), pct: pctVsAnt(economiaMes, economiaAnt), color: C.green, icon: ChartBarIcon, alert: false, isText: true },
+    { label: 'Pendências Críticas', value: pendCrit, pct: pctVsAnt(pendCrit, pendCritAnt), color: C.red, icon: ExclamationCircleIcon, alert: pendCrit > 0 },
+  ]
+
+  const categorias = [...new Set(items.map(i => i.categoria).filter(Boolean))]
+  const origens    = [...new Set(items.map(i => i.origem).filter(Boolean))]
+
+  const filtered = items.filter(i => {
+    if (filtroStatus !== 'todos' && i.status !== filtroStatus) return false
+    if (filtroOrigem !== 'todos' && (i.origem || 'Manual') !== filtroOrigem) return false
+    if (filtroPrioridade !== 'todos' && i.urgencia !== filtroPrioridade) return false
+    if (filtroCategoria !== 'todos' && i.categoria !== filtroCategoria) return false
+    if (busca.trim()) {
+      const q = norm(busca)
+      if (!norm(i.titulo).includes(q) && !norm(i.categoria).includes(q) && !norm(i.requisitante_nome).includes(q)) return false
+    }
+    return true
+  }).filter(i => {
+    if (tabAtiva === 'urgentes')  return i.urgencia === 'alta'
+    if (tabAtiva === 'atrasados') return i.data_necessidade && new Date(i.data_necessidade) < now && !['pago','recusado','recebido'].includes(i.status)
+    return true
+  }).sort((a, b) => {
+    if (sortBy === 'urgencia') { const o = { alta: 0, media: 1, baixa: 2 }; return (o[a.urgencia] ?? 2) - (o[b.urgencia] ?? 2) }
+    if (sortBy === 'valor')    return (b.valor_orcado || 0) - (a.valor_orcado || 0)
+    if (sortBy === 'prazo')    return new Date(a.data_necessidade || '9999') - new Date(b.data_necessidade || '9999')
+    return new Date(b.created_at) - new Date(a.created_at)
+  })
+
+  const tabCounts = {
+    todos:     items.length,
+    urgentes:  items.filter(i => i.urgencia === 'alta').length,
+    atrasados: items.filter(i => i.data_necessidade && new Date(i.data_necessidade) < now && !['pago','recusado','recebido'].includes(i.status)).length,
+  }
+
+  async function handleAcao(item, action) {
+    const map = { aprovar: 'aprovado', recusar: 'recusado', leilao: 'leilao_aberto', emitir_pedido: 'pedido_emitido', receber: 'recebido', pagar: 'pago' }
+    const novoStatus = map[action]
+    if (!novoStatus) return
+    const { error } = await supabase.from('solicitacoes_compra').update({ status: novoStatus, updated_at: new Date().toISOString() }).eq('id', item.id)
+    if (error) { toast.error('Erro ao atualizar'); return }
+    const labels = { aprovar: 'Aprovado!', recusar: 'Recusado', leilao: 'Leilão aberto', emitir_pedido: 'Pedido emitido', receber: 'Recebimento confirmado', pagar: 'Marcado como pago' }
+    toast.success(labels[action] || 'Atualizado!')
+    setRefresh(p => p + 1)
+    setSelecionado(p => p ? { ...p, status: novoStatus } : null)
+  }
+
+  function proximaAcaoInfo(status) {
+    const map = {
+      pendente:             { label: 'Enviar p/ aprovação', key: null },
+      aguardando_aprovacao: { label: 'Aprovar',             key: 'aprovar' },
+      em_cotacao:           { label: 'Comparar cotações',   key: null },
+      leilao_aberto:        { label: 'Encerrar leilão',     key: null },
+      leilao_encerrado:     { label: 'Gerar pedido',        key: null },
+      aprovado:             { label: 'Emitir Pedido',       key: 'emitir_pedido' },
+      pedido_emitido:       { label: 'Acompanhar entrega',  key: 'receber' },
+      recebido:             { label: 'Emitir NF',           key: 'pagar' },
+      pago:                 { label: '—',                   key: null },
+      recusado:             { label: '—',                   key: null },
+    }
+    return map[status] || { label: '—', key: null }
+  }
+
+  const ORIGEM_COLORS = { Manutenção: '#3b82f6', SmartLider: '#6366f1', Refeições: '#f97316', Manual: '#6b7280' }
+  function origemBadge(item) {
+    const orig = item.origem || 'Manual'
+    const color = ORIGEM_COLORS[orig] || '#6b7280'
+    return <span style={{ fontSize: 10, fontWeight: 700, color, background: `${color}15`, padding: '2px 7px', borderRadius: 4, border: `1px solid ${color}30`, whiteSpace: 'nowrap' }}>{orig}</span>
+  }
+
+  const lastUpdateStr = lastUpdate.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const mesesDisponiveis = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, s => s.toUpperCase())
+    return { val, label }
+  })
+
+  return (
+    <div style={{ flex: 1, background: C.bgPage, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <Header title="Compras ERP" subtitle="Central de operações de compras" />
+
+      {/* ── TopBar ── */}
+      <div style={{ background: C.bgCard, borderBottom: `1px solid ${C.border}`, padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
+        {/* Cliente */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#F1F5F9', borderRadius: 6, padding: '5px 10px', border: `1px solid ${C.border}`, fontSize: 12, flexShrink: 0 }}>
+          <span style={{ color: C.textSec, fontWeight: 600 }}>Cliente:</span>
+          <span style={{ fontWeight: 700, color: C.text }}>{wsNome || '—'}</span>
+          <ChevronDownIcon style={{ width: 11, color: C.textSec }} />
+        </div>
+        {/* Competência */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#F1F5F9', borderRadius: 6, padding: '4px 8px', border: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <CalendarDaysIcon style={{ width: 12, color: C.textSec }} />
+          <select value={competencia} onChange={e => setCompetencia(e.target.value)}
+            style={{ border: 'none', background: 'transparent', fontSize: 12, fontWeight: 700, color: C.text, cursor: 'pointer', outline: 'none' }}>
+            {mesesDisponiveis.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
+          </select>
+        </div>
+        {/* Status filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#F1F5F9', borderRadius: 6, padding: '4px 8px', border: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <FunnelIcon style={{ width: 12, color: C.textSec }} />
+          <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
+            style={{ border: 'none', background: 'transparent', fontSize: 12, fontWeight: 700, color: C.text, cursor: 'pointer', outline: 'none' }}>
+            <option value="todos">Status: Todos</option>
+            {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1 }} />
+        {/* Ações */}
+        <button onClick={() => setShowNovaReq(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+          <PlusIcon style={{ width: 13 }} /> Nova Requisição
+        </button>
+        <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.sky, border: `1px solid ${C.sky}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+          <DocumentTextIcon style={{ width: 13 }} /> Solicitar Cotação
+        </button>
+        <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.green, border: `1px solid ${C.green}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+          <ShoppingCartIcon style={{ width: 13 }} /> Gerar Pedido
+        </button>
+        {/* Search */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <MagnifyingGlassIcon style={{ width: 12, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: C.textSec }} />
+          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar requisições, pedidos..."
+            style={{ padding: '6px 10px 6px 26px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#F8FAFC', color: C.text, fontSize: 12, outline: 'none', width: 200 }} />
+        </div>
+        <span style={{ fontSize: 10, color: C.textSec, whiteSpace: 'nowrap', flexShrink: 0 }}>Última atualização: {lastUpdateStr}</span>
+        <button onClick={() => setRefresh(p => p + 1)} style={{ padding: 6, borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer', color: C.textSec, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <ArrowPathIcon style={{ width: 12 }} />
+        </button>
+      </div>
+
+      {/* ── KPI Strip ── */}
+      <div style={{ padding: '10px 20px 8px', background: C.bgPage, flexShrink: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 8 }}>
+          {kpis.map(({ label, value, pct, color, icon: Icon, alert, isText }) => (
+            <div key={label} style={{ background: C.bgCard, border: `1px solid ${C.border}`, borderTop: `3px solid ${alert ? color : C.border}`, borderRadius: 8, padding: '10px 12px', boxShadow: alert ? `0 2px 8px ${color}20` : '0 1px 3px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.3, lineHeight: 1.3 }}>{label}</div>
+                <Icon style={{ width: 13, color, flexShrink: 0 }} />
+              </div>
+              <div style={{ fontSize: isText ? 13 : 20, fontWeight: 900, color, lineHeight: 1, marginBottom: 3 }}>{value}</div>
+              {pct !== null && pct !== undefined ? (
+                <div style={{ fontSize: 9, color: pct.up ? C.green : C.red, fontWeight: 700 }}>
+                  {pct.up ? '↑' : '↓'} {pct.v}% vs mês ant.
+                </div>
+              ) : (
+                <div style={{ fontSize: 9, color: C.textSec }}>Sem pendências</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Fluxo Horizontal ── */}
+      <FluxoHorizontal counts={counts} />
+
+      {/* ── Layout: filtros | tabela | detalhe ── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '175px 1fr 340px', overflow: 'hidden', borderTop: `1px solid ${C.border}` }}>
+
+        {/* ── Filtros laterais ── */}
+        <div style={{ borderRight: `1px solid ${C.border}`, overflowY: 'auto', background: C.bgCard, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Status */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Status</div>
+            {['todos', ...Object.keys(STATUS_LABELS)].map(k => (
+              <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', cursor: 'pointer', fontSize: 11, color: filtroStatus === k ? C.blue : C.text, fontWeight: filtroStatus === k ? 700 : 400 }}>
+                <input type="radio" name="fstatus" value={k} checked={filtroStatus === k} onChange={() => setFiltroStatus(k)} style={{ accentColor: C.blue, cursor: 'pointer' }} />
+                {k === 'todos' ? 'Todos' : STATUS_LABELS[k]?.label}
+              </label>
+            ))}
+          </div>
+          {/* Prioridade */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Prioridade</div>
+            {[['todos','Todas'], ['alta','Alta'], ['media','Média'], ['baixa','Baixa']].map(([v, l]) => (
+              <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', cursor: 'pointer', fontSize: 11, color: filtroPrioridade === v ? C.blue : C.text, fontWeight: filtroPrioridade === v ? 700 : 400 }}>
+                <input type="radio" name="fprio" value={v} checked={filtroPrioridade === v} onChange={() => setFiltroPrioridade(v)} style={{ accentColor: C.blue, cursor: 'pointer' }} />
+                {l}
+              </label>
+            ))}
+          </div>
+          {/* Origem */}
+          {origens.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Origem</div>
+              {['todos', ...origens].map(o => (
+                <label key={o} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', cursor: 'pointer', fontSize: 11, color: filtroOrigem === o ? C.blue : C.text, fontWeight: filtroOrigem === o ? 700 : 400 }}>
+                  <input type="radio" name="forigem" value={o} checked={filtroOrigem === o} onChange={() => setFiltroOrigem(o)} style={{ accentColor: C.blue, cursor: 'pointer' }} />
+                  {o === 'todos' ? 'Todos' : o}
+                </label>
+              ))}
+            </div>
+          )}
+          {/* Categorias */}
+          {categorias.length > 0 && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Categoria</div>
+              {['todos', ...categorias.slice(0, 8)].map(c => (
+                <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', cursor: 'pointer', fontSize: 11, color: filtroCategoria === c ? C.blue : C.text, fontWeight: filtroCategoria === c ? 700 : 400 }}>
+                  <input type="radio" name="fcat" value={c} checked={filtroCategoria === c} onChange={() => setFiltroCategoria(c)} style={{ accentColor: C.blue, cursor: 'pointer' }} />
+                  {c === 'todos' ? 'Todas' : c}
+                </label>
+              ))}
+            </div>
+          )}
+          <button onClick={() => { setFiltroStatus('todos'); setFiltroOrigem('todos'); setFiltroPrioridade('todos'); setFiltroCategoria('todos'); setBusca('') }}
+            style={{ marginTop: 'auto', padding: '7px 0', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+            + Filtros avançados
+          </button>
+        </div>
+
+        {/* ── Caixa de Trabalho ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', borderRight: `1px solid ${C.border}` }}>
+          {/* header */}
+          <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}`, background: C.bgCard, display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>Caixa de Trabalho</div>
+            <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: C.blue, borderRadius: 99, padding: '1px 7px' }}>{items.length}</span>
+            <div style={{ flex: 1 }} />
+            {[
+              { key: 'todos',     label: 'Todos',    count: tabCounts.todos },
+              { key: 'urgentes',  label: 'Urgentes', count: tabCounts.urgentes },
+              { key: 'atrasados', label: 'Atrasados',count: tabCounts.atrasados },
+            ].map(t => (
+              <button key={t.key} onClick={() => setTabAtiva(t.key)} style={{ padding: '4px 10px', borderRadius: 6, border: `1px solid ${tabAtiva === t.key ? C.blue : C.border}`, background: tabAtiva === t.key ? '#EFF6FF' : 'transparent', color: tabAtiva === t.key ? C.blue : C.textSec, fontWeight: tabAtiva === t.key ? 700 : 500, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {t.label} {t.count > 0 && <span style={{ fontSize: 9, fontWeight: 800, color: tabAtiva === t.key ? '#fff' : C.textSec, background: tabAtiva === t.key ? C.blue : '#E2E8F0', borderRadius: 99, padding: '0 4px', minWidth: 13, textAlign: 'center' }}>{t.count}</span>}
+              </button>
+            ))}
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+              style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.bgCard, color: C.textSec, fontSize: 11, cursor: 'pointer', outline: 'none' }}>
+              <option value="recente">Mais recente</option>
+              <option value="urgencia">Urgência</option>
+              <option value="valor">Maior valor</option>
+              <option value="prazo">Prazo</option>
+            </select>
+          </div>
+
+          {/* tabela */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {loading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 100, color: C.textSec, fontSize: 12 }}>Carregando...</div>
+            ) : filtered.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 100, gap: 8, color: C.textSec }}>
+                <ClipboardDocumentListIcon style={{ width: 28, opacity: 0.2 }} />
+                <div style={{ fontSize: 12 }}>Nenhuma requisição</div>
+              </div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', position: 'sticky', top: 0, zIndex: 2 }}>
+                    {['Item / Descrição', 'Origem', 'Solicitante', 'Prioridade', 'Status', 'Prazo Necessário', 'Valor Estimado', 'Próxima Ação'].map(h => (
+                      <th key={h} style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700, color: C.textSec, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.3, borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                    <th style={{ width: 28 }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(item => {
+                    const isSel = selecionado?.id === item.id
+                    const isAtrasado = item.data_necessidade && new Date(item.data_necessidade) < now && !['pago','recusado','recebido'].includes(item.status)
+                    const isHoje = item.data_necessidade && new Date(item.data_necessidade).toDateString() === now.toDateString()
+                    const { label: proxLabel, key: proxKey } = proximaAcaoInfo(item.status)
+                    return (
+                      <tr key={item.id} onClick={() => setSelecionado(item)}
+                        style={{ background: isSel ? '#EFF6FF' : 'transparent', borderBottom: `1px solid ${C.border}`, cursor: 'pointer' }}
+                        onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = '#F8FAFC' }}
+                        onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent' }}>
+                        <td style={{ padding: '9px 12px', minWidth: 140 }}>
+                          <div style={{ fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.titulo}</div>
+                          {item.categoria && <div style={{ fontSize: 10, color: C.textSec, marginTop: 1 }}>{item.categoria}</div>}
+                        </td>
+                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>{origemBadge(item)}</td>
+                        <td style={{ padding: '9px 12px', color: C.text, whiteSpace: 'nowrap', fontSize: 11 }}>{item.requisitante_nome || '—'}</td>
+                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: URGENCIA_COLORS[item.urgencia] || C.textSec }}>
+                            {item.urgencia ? item.urgencia.charAt(0).toUpperCase() + item.urgencia.slice(1) : '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}><StatusBadge status={item.status} /></td>
+                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
+                          {item.data_necessidade ? (
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: isAtrasado ? C.red : C.text }}>{fmtDate(item.data_necessidade)}</div>
+                              {isHoje && <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', background: C.red, borderRadius: 3, padding: '1px 5px' }}>Hoje</span>}
+                              {isAtrasado && !isHoje && <span style={{ fontSize: 9, color: C.red, fontWeight: 700 }}>Atrasado</span>}
+                            </div>
+                          ) : <span style={{ color: C.textSec }}>—</span>}
+                        </td>
+                        <td style={{ padding: '9px 12px', fontWeight: 700, color: C.green, whiteSpace: 'nowrap' }}>
+                          {item.valor_orcado ? fmtBRL(item.valor_orcado) : '—'}
+                        </td>
+                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
+                          {proxKey ? (
+                            <button onClick={e => { e.stopPropagation(); handleAcao(item, proxKey) }}
+                              style={{ padding: '4px 9px', borderRadius: 5, fontSize: 10, fontWeight: 700, background: '#EFF6FF', color: C.blue, border: `1px solid #BFDBFE`, cursor: 'pointer' }}>
+                              {proxLabel}
+                            </button>
+                          ) : <span style={{ fontSize: 11, color: C.textSec }}>{proxLabel}</span>}
+                        </td>
+                        <td style={{ padding: '6px' }}>
+                          <ChevronRightIcon style={{ width: 13, color: C.textSec }} />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* rodapé */}
+          <div style={{ padding: '5px 14px', borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.textSec, background: '#F8FAFC', flexShrink: 0 }}>
+            Mostrando {filtered.length} de {items.length} itens
+          </div>
+
+          {/* ── Analytics Bottom ── */}
+          <div style={{ borderTop: `2px solid ${C.border}`, padding: '12px 14px', background: C.bgPage, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, flexShrink: 0, maxHeight: 210, overflowY: 'auto' }}>
+            <MapaComparativo item={selecionado} />
+            <DonutCategoria items={items} />
+            <AuditoriaRecente workspaceId={workspaceId} />
+          </div>
+        </div>
+
+        {/* ── Painel Detalhe ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: C.bgCard }}>
+          <PainelDetalhe item={selecionado} workspaceId={workspaceId} onAcao={handleAcao} onClose={() => setSelecionado(null)} />
+        </div>
+      </div>
+
+      {showNovaReq && (
+        <ModalNovaReq workspaceId={workspaceId} onClose={() => setShowNovaReq(false)} onSalvo={() => setRefresh(p => p + 1)} />
+      )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  )
+}
   const workspaceId = useStore(s => s.workspaceId)
 
   const [stage, setStage] = useState('todos')
