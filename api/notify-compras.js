@@ -80,7 +80,7 @@ const MENSAGENS = {
     `📋 *${sol.titulo}*\n` +
     (sol.quantidade ? `📦 Qtd: ${sol.quantidade}\n` : '') +
     (sol.prazo_cotacao ? `⏱ Prazo para cotar: ${new Date(sol.prazo_cotacao).toLocaleDateString('pt-BR')}\n` : '') +
-    `\nFornecedores foram convidados a enviar cotações. Acompanhe em: https://smartpro.app.br/aprovar/${sol.token_aprovador}`,
+    `\nO operador de compras irá adicionar os fornecedores e coletar as cotações.`,
 
   leilao_encerrado: (sol) => {
     const vencedor = sol.fornecedor_vencedor || sol.fornecedor || '—'

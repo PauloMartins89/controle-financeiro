@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import toast, { Toaster } from 'react-hot-toast'
 import {
   CheckCircleIcon, XCircleIcon, TrophyIcon, ArrowPathIcon,
-  ShoppingCartIcon, PlusIcon, ClockIcon,
+  ShoppingCartIcon,
 } from '@heroicons/react/24/outline'
 
 function fmtCurrency(v) {
@@ -32,10 +32,10 @@ export default function AprovarPublica() {
   const [prazo, setPrazo]     = useState('')
   const [fornecedores, setFornecedores] = useState([{ nome: '', telefone: '' }])
   const [saving, setSaving]   = useState(false)
-  const [done, setDone]       = useState(null)   // acao concluída
+  const [done, setDone]       = useState(null)
   const [cotacoes, setCotacoes] = useState([])
   const [cotLoading, setCotLoading] = useState(false)
-  const [selecionado, setSelecionado] = useState(null) // cotacaoId
+  const [selecionado, setSelecionado] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -67,18 +67,14 @@ export default function AprovarPublica() {
     load()
   }, [token])
 
-  const addFornecedor = () => setFornecedores(p => [...p, { nome: '', telefone: '' }])
-  const setForn = (i, k, v) => setFornecedores(p => p.map((f, idx) => idx === i ? { ...f, [k]: v } : f))
-
   async function handleConfirm() {
     if (acao === 'recusar' && !obs.trim()) { toast.error('Informe o motivo da recusa'); return }
-    if (acao === 'leilao' && fornecedores.every(f => !f.nome.trim())) { toast.error('Informe pelo menos 1 fornecedor'); return }
     if (acao === 'selecionar_vencedor' && !selecionado) { toast.error('Selecione um fornecedor vencedor'); return }
     setSaving(true)
     try {
       const body = acao === 'selecionar_vencedor'
         ? { token, acao, cotacaoId: selecionado }
-        : { token, acao, obs, fornecedores, prazo }
+        : { token, acao, obs, prazo }
       const res = await fetch('/api/aprovar-compra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,7 +145,7 @@ export default function AprovarPublica() {
     const msgs = {
       aprovar: { icon: '✅', titulo: 'Compra Aprovada!', sub: 'O comprador será notificado e já pode realizar o pedido.', color: '#10b981' },
       recusar: { icon: '❌', titulo: 'Pedido Recusado', sub: 'O comprador será notificado com o motivo informado.', color: '#ef4444' },
-      leilao:  { icon: '🏷', titulo: 'Leilão Aberto!', sub: `${fornecedores.filter(f=>f.nome.trim()).length} fornecedor(es) convidado(s). Links enviados.`, color: '#a78bfa' },
+      leilao:  { icon: '🏷', titulo: 'Leilão Aberto!', sub: 'O operador de compras irá convidar os fornecedores e coletar as cotações.', color: '#a78bfa' },
       selecionar_vencedor: { icon: '🏆', titulo: 'Vencedor Selecionado!', sub: 'O comprador será notificado. A compra está autorizada.', color: '#f59e0b' },
     }
     const m = msgs[done]
@@ -335,7 +331,7 @@ export default function AprovarPublica() {
                   <TrophyIcon style={{ width: 24, height: 24, flexShrink: 0 }} />
                   <div>
                     <div>🏷 Abrir leilão de preços</div>
-                    <div style={{ fontSize: 12, fontWeight: 400, color: '#64748b', marginTop: 3 }}>Convidar fornecedores para cotar — vence o menor preço</div>
+                    <div style={{ fontSize: 12, fontWeight: 400, color: '#64748b', marginTop: 3 }}>Operador irá cotar com fornecedores — vence o menor preço</div>
                   </div>
                 </button>
                 <button onClick={() => setAcao('recusar')}
@@ -391,27 +387,12 @@ export default function AprovarPublica() {
             <div>
               <div style={{ fontSize: 14, fontWeight: 800, color: '#a78bfa', marginBottom: 16 }}>🏷 Abrir Leilão de Preços</div>
               <div style={{ marginBottom: 16 }}>
-                <label style={labelStyle}>Prazo para receber cotações</label>
+                <label style={labelStyle}>Prazo para receber cotações (opcional)</label>
                 <input type="date" style={inputStyle} value={prazo} onChange={e => setPrazo(e.target.value)} min={new Date().toISOString().split('T')[0]} />
                 <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Se não preenchido, prazo automático de 48h</div>
               </div>
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>Fornecedores convidados</label>
-                  <button onClick={addFornecedor}
-                    style={{ fontSize: 12, padding: '5px 12px', borderRadius: 7, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', color: '#818cf8', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <PlusIcon style={{ width: 13, height: 13 }} /> Adicionar
-                  </button>
-                </div>
-                {fornecedores.map((f, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                    <input style={inputStyle} value={f.nome} onChange={e => setForn(i, 'nome', e.target.value)} placeholder={`Fornecedor ${i + 1}`} />
-                    <input style={inputStyle} value={f.telefone} onChange={e => setForn(i, 'telefone', e.target.value)} placeholder="WhatsApp (opcional)" />
-                  </div>
-                ))}
-                <div style={{ fontSize: 12, color: '#a78bfa', marginTop: 8, padding: '8px 12px', borderRadius: 8, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)' }}>
-                  🔒 Cada fornecedor recebe um link único. Eles NÃO veem os preços dos concorrentes.
-                </div>
+              <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 10, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)', fontSize: 13, color: '#94a3b8' }}>
+                ℹ️ O operador de compras irá inserir os fornecedores e enviar os convites de cotação.
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
                 <button onClick={() => setAcao(null)} style={{ padding: '10px 18px', borderRadius: 9, background: 'none', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', color: '#94a3b8', fontSize: 13 }}>Voltar</button>

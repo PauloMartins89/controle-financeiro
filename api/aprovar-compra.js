@@ -135,10 +135,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, acao: 'recusado' })
 
     } else if (acao === 'leilao') {
-      const lista = (fornecedores || []).filter(f => f?.nome?.trim())
-      if (lista.length === 0) {
-        return res.status(400).json({ error: 'Informe pelo menos 1 fornecedor.' })
-      }
       const prazoTs = prazo
         ? new Date(prazo + 'T23:59:00').toISOString()
         : new Date(Date.now() + 48 * 3600000).toISOString()
@@ -151,19 +147,9 @@ export default async function handler(req, res) {
       }).eq('id', sol.id)
       if (updErr) throw updErr
 
-      const cotacoes = lista.map(f => ({
-        solicitacao_id:    sol.id,
-        fornecedor_nome:   f.nome.trim(),
-        fornecedor_telefone: f.telefone?.trim() || null,
-        token_expira_em:   prazoTs,
-        status:            'convidado',
-      }))
-      const { error: cErr } = await db.from('cotacoes_compra').insert(cotacoes)
-      if (cErr) throw cErr
-
       notifyCompras('leilao_aberto', sol.id)
-      logEventoCompra(db, { solicitacaoId: sol.id, workspaceId: sol.workspace_id, acao: 'leilao_aberto', statusDe: sol.status, statusPara: 'leilao_aberto', obs: `${cotacoes.length} fornecedor(es) convidado(s)` })
-      return res.status(200).json({ ok: true, acao: 'leilao_aberto', fornecedores: cotacoes.length })
+      logEventoCompra(db, { solicitacaoId: sol.id, workspaceId: sol.workspace_id, acao: 'leilao_aberto', statusDe: sol.status, statusPara: 'leilao_aberto', obs: 'Leilão aberto pelo aprovador' })
+      return res.status(200).json({ ok: true, acao: 'leilao_aberto' })
 
     } else if (acao === 'selecionar_vencedor') {
       const { cotacaoId } = req.body || {}
