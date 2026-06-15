@@ -169,6 +169,7 @@ const navGroups = [
     defaultOpen: true,
     items: [
       { to: '/agenda-servicos', icon: CalendarDaysIcon, label: 'Agendamentos', moduleKey: 'agendamentos' },
+      { to: '/agenda-servicos/erp', icon: CalendarDaysIcon, label: 'Agenda ERP', moduleKey: 'agendamentos' },
     ],
   },
   {

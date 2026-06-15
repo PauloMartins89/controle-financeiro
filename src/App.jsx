@@ -75,6 +75,7 @@ import ManutencaoEquipamentos from './pages/ManutencaoEquipamentos'
 import ManutencaoAPIPlanos from './pages/ManutencaoAPIPlanos'
 import ManutencaoPlanosPFD from './pages/ManutencaoPlanosPFD'
 import AgendaServicos from './pages/AgendaServicos'
+import AgendaServicosERP from './pages/AgendaServicosERP'
 import MapaApontamentoMaquina from './pages/MapaApontamentoMaquina'
 import MaquinasDashboard from './pages/MaquinasDashboard'
 import BoletinsPendencias from './pages/BoletinsPendencias'
@@ -680,6 +681,7 @@ export default function App() {
                   <Route path="/manutencao/api-planos" element={<ManutencaoAPIPlanos />} />
                   <Route path="/manutencao/planos-pfd" element={<ManutencaoPlanosPFD />} />
                   <Route path="/agenda-servicos" element={<AgendaServicos />} />
+                  <Route path="/agenda-servicos/erp" element={<AgendaServicosERP />} />
                   <Route path="/mapa-maquina" element={<MapaApontamentoMaquina />} />
                   <Route path="/maquinas/dashboard" element={<MaquinasDashboard />} />
                   <Route path="/maquinas/pendencias" element={<BoletinsPendencias />} />
