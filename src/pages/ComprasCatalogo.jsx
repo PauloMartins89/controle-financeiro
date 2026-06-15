@@ -2,7 +2,7 @@
 import * as XLSX from 'xlsx'
 import { supabase } from '../lib/supabase'
 import Header from '../components/Header'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import useStore from '../store/useStore'
 import {
@@ -27,6 +27,7 @@ const UNIDADES = ['un','kg','g','l','ml','m','m²','m³','cx','pc','par','fardo'
 export default function ComprasCatalogo() {
   const { currentUser: user, workspaceId } = useStore()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [wsId, setWsId] = useState(null)
   const [items, setItems] = useState([])
   const [categorias, setCategorias] = useState([])
@@ -46,7 +47,14 @@ export default function ComprasCatalogo() {
     if (!workspaceId) return
     setWsId(workspaceId)
     Promise.all([loadItems(workspaceId), loadCategorias(workspaceId)])
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        const nomeNovo = searchParams.get('novo')
+        if (nomeNovo) {
+          setEditItem({ _preNome: nomeNovo })
+          setModalOpen(true)
+        }
+      })
   }, [workspaceId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadItems(wid) {
@@ -464,7 +472,7 @@ function CatalogoTable({ items, categorias, onEdit, onDelete, onHistorico, onPed
 // ─── Modal Criar/Editar Item ─────────────────────────────────────────────────
 function ModalItemCatalogo({ item, categorias, workspaceId, onClose, onSaved }) {
   const [form, setForm] = useState({
-    nome: item?.nome || '',
+    nome: item?.nome || item?._preNome || '',
     descricao: item?.descricao || '',
     unidade_medida: item?.unidade_medida || 'un',
     categoria: item?.categoria || '',
