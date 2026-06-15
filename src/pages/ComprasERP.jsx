@@ -1044,7 +1044,9 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
   const [eventos, setEventos] = useState([])
   const [fornecedoresCadastro, setFornecedoresCadastro] = useState([])
   const [novoFornecedorId, setNovoFornecedorId] = useState('')
+  const [novoFornecedorBusca, setNovoFornecedorBusca] = useState('')
   const [trocaFornecedorPorCotacao, setTrocaFornecedorPorCotacao] = useState({})
+  const [trocaFornecedorBuscaPorCotacao, setTrocaFornecedorBuscaPorCotacao] = useState({})
   const [updatingCotacaoId, setUpdatingCotacaoId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [sendingCotacaoId, setSendingCotacaoId] = useState(null)
@@ -1091,7 +1093,9 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
       setEventos((ev || []).map(normalizeEvento))
       setFornecedoresCadastro(fornecedoresBase)
       setNovoFornecedorId('')
+      setNovoFornecedorBusca('')
       setTrocaFornecedorPorCotacao({})
+      setTrocaFornecedorBuscaPorCotacao({})
       setLoading(false)
     })
   }, [item?.id, detailWorkspaceId])
@@ -1154,7 +1158,13 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
   }
 
   async function trocarFornecedorCotacao(cotacao) {
-    const fornecedorId = trocaFornecedorPorCotacao[cotacao.id]
+    let fornecedorId = trocaFornecedorPorCotacao[cotacao.id]
+    if (!fornecedorId && (trocaFornecedorBuscaPorCotacao[cotacao.id] || '').trim()) {
+      const q = norm(trocaFornecedorBuscaPorCotacao[cotacao.id])
+      const byName = fornecedoresCadastro.find(f => norm(f.nome) === q)
+        || fornecedoresCadastro.find(f => norm(f.nome).includes(q))
+      if (byName) fornecedorId = byName.id
+    }
     if (!fornecedorId) {
       toast.error('Selecione um fornecedor cadastrado')
       return
@@ -1184,17 +1194,25 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     const { data: cotAtualizadas } = await supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id)
     setCotacoes(cotAtualizadas || [])
     setTrocaFornecedorPorCotacao(prev => ({ ...prev, [cotacao.id]: '' }))
+    setTrocaFornecedorBuscaPorCotacao(prev => ({ ...prev, [cotacao.id]: '' }))
     setUpdatingCotacaoId(null)
     toast.success('Fornecedor da cotacao atualizado')
   }
 
   async function adicionarFornecedorCadastrado() {
-    if (!novoFornecedorId) {
+    let fornecedorId = novoFornecedorId
+    if (!fornecedorId && novoFornecedorBusca.trim()) {
+      const q = norm(novoFornecedorBusca)
+      const byName = fornecedoresCadastro.find(f => norm(f.nome) === q)
+        || fornecedoresCadastro.find(f => norm(f.nome).includes(q))
+      if (byName) fornecedorId = byName.id
+    }
+    if (!fornecedorId) {
       toast.error('Selecione um fornecedor cadastrado')
       return
     }
 
-    const fornecedor = fornecedoresCadastro.find(f => String(f.id) === String(novoFornecedorId))
+    const fornecedor = fornecedoresCadastro.find(f => String(f.id) === String(fornecedorId))
     if (!fornecedor) {
       toast.error('Fornecedor nao encontrado')
       return
@@ -1230,9 +1248,16 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     const { data: cotAtualizadas } = await supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id)
     setCotacoes(cotAtualizadas || [])
     setNovoFornecedorId('')
+    setNovoFornecedorBusca('')
     setUpdatingCotacaoId(null)
     toast.success('Fornecedor cadastrado adicionado ao leilao')
   }
+
+  const sugestoesFornecedores = fornecedoresCadastro.map(f => ({
+    id: f.id,
+    label: f.nome,
+    sub: f.telefone || '',
+  }))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -1361,15 +1386,19 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
             <div style={{ marginBottom: 10, padding: '10px 12px', borderRadius: 8, border: `1px solid ${C.border}`, background: '#F8FAFC' }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 7 }}>Indicar novo fornecedor cadastrado</div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <select
-                  value={novoFornecedorId}
-                  onChange={e => setNovoFornecedorId(e.target.value)}
-                  style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.text, fontSize: 11, outline: 'none' }}>
-                  <option value="">Selecione na tabela fornecedores</option>
-                  {fornecedoresCadastro.map(f => (
-                    <option key={f.id} value={f.id}>{f.nome}{f.telefone ? ` - ${f.telefone}` : ''}</option>
-                  ))}
-                </select>
+                <div style={{ flex: 1 }}>
+                  <AutocompleteInput
+                    value={novoFornecedorBusca}
+                    onChange={v => { setNovoFornecedorBusca(v); setNovoFornecedorId('') }}
+                    onSelect={s => {
+                      setNovoFornecedorId(s.id)
+                      setNovoFornecedorBusca(s.label)
+                    }}
+                    sugestoes={sugestoesFornecedores}
+                    placeholder="Digite para buscar fornecedor"
+                    inputStyle={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#fff', color: C.text, fontSize: 11, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
                 <button
                   onClick={adicionarFornecedorCadastrado}
                   disabled={updatingCotacaoId === 'new'}
@@ -1442,15 +1471,22 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
                               Enviar no WhatsApp
                             </a>
                           )}
-                            <select
-                              value={trocaFornecedorPorCotacao[c.id] || ''}
-                              onChange={e => setTrocaFornecedorPorCotacao(prev => ({ ...prev, [c.id]: e.target.value }))}
-                              style={{ minWidth: 170, padding: '4px 8px', borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', color: C.text, fontSize: 10, outline: 'none' }}>
-                              <option value="">Trocar por fornecedor cadastrado</option>
-                              {fornecedoresCadastro.map(f => (
-                                <option key={f.id} value={f.id}>{f.nome}</option>
-                              ))}
-                            </select>
+                          <div style={{ minWidth: 210, flex: '1 1 210px' }}>
+                            <AutocompleteInput
+                              value={trocaFornecedorBuscaPorCotacao[c.id] || ''}
+                              onChange={v => {
+                                setTrocaFornecedorBuscaPorCotacao(prev => ({ ...prev, [c.id]: v }))
+                                setTrocaFornecedorPorCotacao(prev => ({ ...prev, [c.id]: '' }))
+                              }}
+                              onSelect={s => {
+                                setTrocaFornecedorPorCotacao(prev => ({ ...prev, [c.id]: s.id }))
+                                setTrocaFornecedorBuscaPorCotacao(prev => ({ ...prev, [c.id]: s.label }))
+                              }}
+                              sugestoes={sugestoesFornecedores}
+                              placeholder="Trocar por fornecedor cadastrado"
+                              inputStyle={{ width: '100%', padding: '4px 8px', borderRadius: 5, border: `1px solid ${C.border}`, background: '#fff', color: C.text, fontSize: 10, outline: 'none', boxSizing: 'border-box' }}
+                            />
+                          </div>
                             <button
                               onClick={() => trocarFornecedorCotacao(c)}
                               disabled={updatingCotacaoId === c.id}
