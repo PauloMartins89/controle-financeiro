@@ -967,6 +967,9 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
     ? item.valor_orcado - item.valor_aprovado : null
 
   const acoes = []
+  if (item.status === 'pendente') {
+    acoes.push({ label: 'Enviar p/ Aprovação', color: C.blue, border: '#BFDBFE', bg: '#EFF6FF', action: 'enviar_aprovacao' })
+  }
   if (item.status === 'aguardando_aprovacao') {
     acoes.push({ label: 'Aprovar', color: C.green, border: '#86EFAC', bg: '#F0FDF4', action: 'aprovar' })
     acoes.push({ label: 'Abrir Leilão', color: C.sky, border: '#BAE6FD', bg: '#F0F9FF', action: 'leilao' })
@@ -1468,12 +1471,12 @@ export default function ComprasERP() {
   }
 
   async function handleAcao(item, action) {
-    const map = { aprovar: 'aprovado', recusar: 'recusado', leilao: 'leilao_aberto', emitir_pedido: 'pedido_emitido', receber: 'recebido', pagar: 'pago' }
+    const map = { enviar_aprovacao: 'aguardando_aprovacao', aprovar: 'aprovado', recusar: 'recusado', leilao: 'leilao_aberto', emitir_pedido: 'pedido_emitido', receber: 'recebido', pagar: 'pago' }
     const novoStatus = map[action]
     if (!novoStatus) return
     const { error } = await supabase.from('solicitacoes_compra').update({ status: novoStatus, updated_at: new Date().toISOString() }).eq('id', item.id)
     if (error) { toast.error('Erro ao atualizar'); return }
-    const labels = { aprovar: 'Aprovado!', recusar: 'Recusado', leilao: 'Leilão aberto', emitir_pedido: 'Pedido emitido', receber: 'Recebimento confirmado', pagar: 'Marcado como pago' }
+    const labels = { enviar_aprovacao: 'Enviado para aprovação interna', aprovar: 'Aprovado!', recusar: 'Recusado', leilao: 'Leilão aberto', emitir_pedido: 'Pedido emitido', receber: 'Recebimento confirmado', pagar: 'Marcado como pago' }
     toast.success(labels[action] || 'Atualizado!')
     setRefresh(p => p + 1)
     setSelecionado(p => p ? { ...p, status: novoStatus } : null)
@@ -1481,7 +1484,7 @@ export default function ComprasERP() {
 
   function proximaAcaoInfo(status) {
     const map = {
-      pendente:             { label: 'Enviar p/ aprovação', key: null },
+      pendente:             { label: 'Enviar p/ aprovação', key: 'enviar_aprovacao' },
       aguardando_aprovacao: { label: 'Aprovar',             key: 'aprovar' },
       em_cotacao:           { label: 'Comparar cotações',   key: null },
       leilao_aberto:        { label: 'Encerrar leilão',     key: null },
