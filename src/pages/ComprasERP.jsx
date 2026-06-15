@@ -834,42 +834,63 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
 // ─── sub-component: Modal Nova Requisição ────────────────────────────────────
 function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
   const [form, setForm] = useState({
-    titulo: '', categoria: '', valor_orcado: '', urgencia: 'media',
+    titulo: '', urgencia: 'media',
     fornecedor_sugerido: '', data_necessidade: '', observacoes: '',
   })
+  const [itens, setItens] = useState([{ descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
   const [saving, setSaving] = useState(false)
+
+  const F = (field, value) => setForm(p => ({ ...p, [field]: value }))
+  const addItem    = () => setItens(p => [...p, { descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
+  const removeItem = i  => setItens(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p)
+  const setItem    = (i, k, v) => setItens(p => p.map((it, idx) => idx === i ? { ...it, [k]: v } : it))
+  const totalItens = itens.reduce((acc, it) => {
+    const v = parseFloat(it.valor_unitario || 0) * parseFloat(it.quantidade || 1)
+    return acc + (isNaN(v) ? 0 : v)
+  }, 0)
 
   async function salvar() {
     if (!form.titulo.trim()) { toast.error('Informe o título'); return }
+    const listaValida = itens.filter(it => it.descricao.trim())
+    if (listaValida.length === 0) { toast.error('Adicione pelo menos 1 item'); return }
     setSaving(true)
-    const descricao = [
-      form.categoria ? `Categoria: ${form.categoria}` : null,
-      form.observacoes ? form.observacoes : null,
-    ].filter(Boolean).join('\n')
-    const { error } = await supabase.from('solicitacoes_compra').insert({
-      workspace_id: workspaceId,
-      titulo: form.titulo.trim(),
-      descricao: descricao || null,
-      valor_estimado: form.valor_orcado ? parseFloat(form.valor_orcado) : null,
-      urgencia: form.urgencia,
-      fornecedor: form.fornecedor_sugerido || null,
+    const { data: inserted, error } = await supabase.from('solicitacoes_compra').insert({
+      workspace_id:    workspaceId,
+      titulo:          form.titulo.trim(),
+      descricao:       form.observacoes?.trim() || null,
+      valor_estimado:  totalItens > 0 ? totalItens : null,
+      urgencia:        form.urgencia,
+      fornecedor:      form.fornecedor_sugerido?.trim() || null,
       data_necessidade: form.data_necessidade || null,
-      status: 'pendente',
-    })
+      quantidade:      `${listaValida.length} item(s)`,
+      status:          'pendente',
+    }).select('id').single()
+    if (error) { toast.error('Erro ao criar requisição'); setSaving(false); return }
+    if (inserted?.id) {
+      await supabase.from('itens_solicitacao_compra').insert(
+        listaValida.map((it, i) => ({
+          solicitacao_id: inserted.id,
+          descricao:      it.descricao.trim(),
+          quantidade:     parseFloat(it.quantidade) || 1,
+          unidade:        it.unidade || 'un',
+          valor_unitario: it.valor_unitario ? parseFloat(it.valor_unitario) : null,
+          valor_total:    it.valor_unitario ? parseFloat(it.valor_unitario) * (parseFloat(it.quantidade) || 1) : null,
+          ordem:          i,
+        }))
+      )
+    }
     setSaving(false)
-    if (error) { toast.error('Erro ao criar requisição'); return }
     toast.success('Requisição criada!')
     onSalvo()
     onClose()
   }
 
-  const F = (field, value) => setForm(p => ({ ...p, [field]: value }))
   const inputSt = { width: '100%', padding: '8px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.bgCard, color: C.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
   const labelSt = { fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,31,58,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: C.bgCard, borderRadius: 12, width: '100%', maxWidth: 480, boxShadow: '0 16px 48px rgba(11,31,58,0.2)', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden' }}>
+      <div style={{ background: C.bgCard, borderRadius: 12, width: '100%', maxWidth: 560, boxShadow: '0 16px 48px rgba(11,31,58,0.2)', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden' }}>
         {/* header navy */}
         <div style={{ background: C.navy, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -882,28 +903,49 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
         </div>
         <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={labelSt}>Título / Produto *</label>
-            <input value={form.titulo} onChange={e => F('titulo', e.target.value)} placeholder="Ex: Pneus 295/80 R22.5" style={inputSt} />
+            <label style={labelSt}>Título da solicitação *</label>
+            <input value={form.titulo} onChange={e => F('titulo', e.target.value)} placeholder="Ex: Compras Almoxarifado — Junho" style={inputSt} autoFocus />
           </div>
+
+          {/* Lista de itens */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ ...labelSt, marginBottom: 0 }}>Itens a comprar *</label>
+              <button type="button" onClick={addItem} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 5, background: 'rgba(59,130,246,0.1)', border: `1px solid ${C.blue}40`, cursor: 'pointer', color: C.blue, display: 'flex', alignItems: 'center', gap: 4 }}>
+                + Item
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 46px 88px 22px', gap: 4, marginBottom: 4 }}>
+              {['Descrição','Qtd','Un.','Vlr unit.',''].map((h, i) => (
+                <span key={i} style={{ fontSize: 9, color: C.textSec, textTransform: 'uppercase', fontWeight: 700 }}>{h}</span>
+              ))}
+            </div>
+            {itens.map((it, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 56px 46px 88px 22px', gap: 4, marginBottom: 4, alignItems: 'center' }}>
+                <input style={inputSt} value={it.descricao} onChange={e => setItem(i, 'descricao', e.target.value)} placeholder={`Item ${i + 1}`} />
+                <input style={inputSt} value={it.quantidade} onChange={e => setItem(i, 'quantidade', e.target.value)} type="number" min="0.001" step="any" />
+                <select style={{ ...inputSt, padding: '8px 4px' }} value={it.unidade} onChange={e => setItem(i, 'unidade', e.target.value)}>
+                  {['un','cx','kg','L','m','m²','sc','pc','par','rl'].map(u => <option key={u}>{u}</option>)}
+                </select>
+                <input style={inputSt} value={it.valor_unitario} onChange={e => setItem(i, 'valor_unitario', e.target.value)} type="number" step="0.01" placeholder="0,00" />
+                <button type="button" onClick={() => removeItem(i)} style={{ padding: '2px 5px', borderRadius: 4, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', color: '#ef4444', fontSize: 14, lineHeight: 1 }}>×</button>
+              </div>
+            ))}
+            {totalItens > 0 && (
+              <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 800, color: '#10b981', marginTop: 2 }}>
+                Total estimado: {totalItens.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelSt}>Categoria</label>
-              <input value={form.categoria} onChange={e => F('categoria', e.target.value)} placeholder="Ex: Pneus" style={inputSt} />
-            </div>
-            <div>
               <label style={labelSt}>Urgência</label>
-              <select value={form.urgencia} onChange={e => F('urgencia', e.target.value)}
-                style={{ ...inputSt, appearance: 'none' }}>
+              <select value={form.urgencia} onChange={e => F('urgencia', e.target.value)} style={{ ...inputSt, appearance: 'none' }}>
                 <option value="baixa">Baixa</option>
                 <option value="media">Média</option>
                 <option value="alta">Alta</option>
               </select>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={labelSt}>Valor Orçado (R$)</label>
-              <input type="number" value={form.valor_orcado} onChange={e => F('valor_orcado', e.target.value)} placeholder="0,00" style={inputSt} />
             </div>
             <div>
               <label style={labelSt}>Necessidade até</label>
@@ -1042,6 +1084,7 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
   const [tabD, setTabD] = useState('detalhe') // detalhe | cotacoes | historico | radar
   const [cotacoes, setCotacoes] = useState([])
   const [eventos, setEventos] = useState([])
+  const [itensReq, setItensReq] = useState([])
   const [fornecedoresCadastro, setFornecedoresCadastro] = useState([])
   const [novoFornecedorId, setNovoFornecedorId] = useState('')
   const [novoFornecedorBusca, setNovoFornecedorBusca] = useState('')
@@ -1062,7 +1105,8 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
       detailWorkspaceId
         ? supabase.from('fornecedores_compra').select('id, nome, telefone, ativo').eq('workspace_id', detailWorkspaceId).eq('ativo', true).order('nome', { ascending: true })
         : Promise.resolve({ data: [] }),
-    ]).then(async ([{ data: cot }, { data: ev }, { data: forn }]) => {
+      supabase.from('itens_solicitacao_compra').select('*').eq('solicitacao_id', item.id).order('ordem', { ascending: true }),
+    ]).then(async ([{ data: cot }, { data: ev }, { data: forn }, { data: itens }]) => {
       const cotacoesBase = cot || []
       const fornecedoresBase = forn || []
 
@@ -1092,6 +1136,7 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
       setCotacoes(cotacoesRecon)
       setEventos((ev || []).map(normalizeEvento))
       setFornecedoresCadastro(fornecedoresBase)
+      setItensReq(itens || [])
       setNovoFornecedorId('')
       setNovoFornecedorBusca('')
       setTrocaFornecedorPorCotacao({})
@@ -1322,7 +1367,26 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
               )}
             </div>
 
-            {/* Resumo Financeiro */}
+            {/* Lista de Itens */}
+            {itensReq.length > 0 && (
+              <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Itens ({itensReq.length})</div>
+                {itensReq.map((it, idx) => (
+                  <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12,
+                    padding: '5px 0', borderBottom: idx < itensReq.length - 1 ? `1px solid ${C.border}` : 'none' }}>
+                    <span style={{ color: C.text }}>{it.descricao}</span>
+                    <span style={{ color: C.textSec, flexShrink: 0, marginLeft: 8 }}>
+                      {it.quantidade} {it.unidade || 'un'}{it.valor_total ? ` · ${fmtBRL(it.valor_total)}` : ''}
+                    </span>
+                  </div>
+                ))}
+                {item.valor_estimado > 0 && (
+                  <div style={{ marginTop: 6, textAlign: 'right', fontSize: 12, fontWeight: 800, color: C.green }}>
+                    Total: {fmtBRL(item.valor_estimado)}
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: C.textSec, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Resumo Financeiro</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
