@@ -59,7 +59,7 @@ const MENSAGENS = {
     (sol.requisitante_nome ? `👤 Solicitante: ${sol.requisitante_nome}\n` : '') +
     `⚡ Urgência: ${{ baixa: 'Baixa', media: 'Média', alta: '🔴 ALTA' }[sol.urgencia] || sol.urgencia}\n\n` +
     `� *Toque para aprovar/recusar (sem precisar de login):*\n` +
-    `https://dividiai.app.br/aprovar/${sol.token_aprovador}`,
+    `https://smartpro.app.br/aprovar/${sol.token_aprovador}`,
 
   aprovado: (sol) =>
     `✅ *Compra Aprovada!*\n\n` +
@@ -67,20 +67,20 @@ const MENSAGENS = {
     (sol.valor_aprovado ? `💰 Valor aprovado: ${fmtCurrency(sol.valor_aprovado)}\n` : '') +
     (sol.fornecedor_vencedor ? `🏪 Fornecedor: ${sol.fornecedor_vencedor}\n` : sol.fornecedor ? `🏪 Fornecedor: ${sol.fornecedor}\n` : '') +
     (sol.observacao_aprovador ? `📝 Observação: "${sol.observacao_aprovador}"\n` : '') +
-    `\n👉 Realize a compra e confirme em: https://dividiai.app.br/compras`,
+    `\n👉 Realize a compra e confirme em: https://smartpro.app.br/compras`,
 
   recusado: (sol) =>
     `❌ *Compra Recusada*\n\n` +
     `📋 *${sol.titulo}*\n` +
     (sol.justificativa_recusa ? `📝 Motivo: "${sol.justificativa_recusa}"\n` : '') +
-    `\nCaso necessário, crie uma nova solicitação com os ajustes: https://dividiai.app.br/compras`,
+    `\nCaso necessário, crie uma nova solicitação com os ajustes: https://smartpro.app.br/compras`,
 
   leilao_aberto: (sol) =>
     `🏷 *Leilão de Preços Aberto!*\n\n` +
     `📋 *${sol.titulo}*\n` +
     (sol.quantidade ? `📦 Qtd: ${sol.quantidade}\n` : '') +
     (sol.prazo_cotacao ? `⏱ Prazo para cotar: ${new Date(sol.prazo_cotacao).toLocaleDateString('pt-BR')}\n` : '') +
-    `\nFornecedores foram convidados a enviar cotações. Acompanhe em: https://dividiai.app.br/compras/aprovar`,
+    `\nFornecedores foram convidados a enviar cotações. Acompanhe em: https://smartpro.app.br/compras/aprovar`,
 
   leilao_encerrado: (sol) => {
     const vencedor = sol.fornecedor_vencedor || sol.fornecedor || '—'
@@ -91,7 +91,7 @@ const MENSAGENS = {
       (valor ? `💰 Melhor preço: ${fmtCurrency(valor)}\n` : '') +
       (vencedor ? `🏪 Fornecedor: ${vencedor}\n` : '') +
       (sol.economia ? `💚 Economia estimada: ${fmtCurrency(sol.economia)}\n` : '') +
-      `\nAtualize a seleção em: https://dividiai.app.br/compras/aprovar`
+      `\nAtualize a seleção em: https://smartpro.app.br/compras/aprovar`
     )
   },
 
@@ -101,7 +101,7 @@ const MENSAGENS = {
     (sol.valor_aprovado ? `💵 Valor pago: ${fmtCurrency(sol.valor_aprovado)}\n` : '') +
     (sol.fornecedor_vencedor || sol.fornecedor ? `🏪 Fornecedor: ${sol.fornecedor_vencedor || sol.fornecedor}\n` : '') +
     (sol.economia > 0 ? `💚 Economia: ${fmtCurrency(sol.economia)} abaixo do orçamento\n` : '') +
-    `\nComprovante registrado em: https://dividiai.app.br/compras`,
+    `\nComprovante registrado em: https://smartpro.app.br/compras`,
 }
 
 export default async function handler(req, res) {

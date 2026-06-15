@@ -1,4 +1,4 @@
-/**
+﻿/**
  * agenda-link.js
  * API pública para o formulário de agendamento gerado via WhatsApp bot.
  *
@@ -14,7 +14,7 @@ const supabaseUrl        = process.env.SUPABASE_URL       || process.env.VITE_SU
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
 const zapiInstanceId     = process.env.ZAPI_INSTANCE_ID
 const zapiToken          = process.env.ZAPI_TOKEN
-const APP_URL            = process.env.APP_URL || 'https://dividiai.app.br'
+const APP_URL            = process.env.APP_URL || 'https://smartpro.app.br'
 
 function getDb() {
   if (!supabaseUrl || !supabaseServiceKey) return null

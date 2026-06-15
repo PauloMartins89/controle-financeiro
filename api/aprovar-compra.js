@@ -25,7 +25,7 @@ function getDb() {
 function notifyCompras(evento, solicitacaoId) {
   const base = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : 'https://dividiai.app.br'
+    : 'https://smartpro.app.br'
   fetch(`${base}/api/notify-compras`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

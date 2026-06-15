@@ -26,7 +26,7 @@ const supabaseServiceKey= process.env.SUPABASE_SERVICE_KEY
 const zapiInstanceId    = process.env.ZAPI_INSTANCE_ID
 const zapiToken         = process.env.ZAPI_TOKEN
 const webhookToken      = process.env.WHATSAPP_WEBHOOK_TOKEN
-const APP_URL           = process.env.APP_URL || 'https://dividiai.app.br'
+const APP_URL           = process.env.APP_URL || 'https://smartpro.app.br'
 
 function getSupabase() {
   if (!supabaseUrl || !supabaseServiceKey) return null

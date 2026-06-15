@@ -1,4 +1,4 @@
-/**
+﻿/**
  * _agenda-wa.js
  * Módulo auxiliar — processa mensagens WhatsApp (Z-API) de gestores cadastrados
  * para criar agendamentos de serviços via:
@@ -12,7 +12,7 @@
 import Groq, { toFile } from 'groq-sdk'
 import { aplicarRegrasAlerta } from './_agenda-motor-alertas.js'
 
-const APP_URL = process.env.APP_URL || 'https://dividiai.app.br'
+const APP_URL = process.env.APP_URL || 'https://smartpro.app.br'
 
 // ─── Tipos de serviço válidos ────────────────────────────────────────────────
 const TIPOS_SERVICO = [
