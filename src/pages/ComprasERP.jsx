@@ -930,6 +930,113 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
   )
 }
 
+// ─── sub-component: Modal Configuração de Aprovador ─────────────────────────
+function ModalConfigAprovador({ onClose }) {
+  const [telefone, setTelefone] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.from('configuracoes').select('valor').eq('chave', 'aprovador_compras_telefone').limit(1)
+      .then(({ data }) => {
+        if (data?.[0]?.valor) {
+          const val = String(data[0].valor).replace(/"/g, '')
+          setTelefone(val)
+          setSaved(true)
+        }
+      })
+  }, [])
+
+  async function handleSave() {
+    if (!telefone.trim()) { toast.error('Informe o telefone do aprovador'); return }
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { toast.error('Usuario nao autenticado'); setSaving(false); return }
+
+    const { error } = await supabase.from('configuracoes').upsert(
+      { chave: 'aprovador_compras_telefone', valor: telefone.trim(), user_id: user.id, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,chave' }
+    )
+    setSaving(false)
+    if (error) { toast.error('Erro ao salvar: ' + error.message); return }
+    setSaved(true)
+    toast.success('Aprovador configurado!')
+    onClose()
+  }
+
+  async function handleTestar() {
+    if (!saved && !telefone.trim()) { toast.error('Salve o telefone primeiro'); return }
+    setTesting(true)
+    try {
+      const res = await fetch('/api/notify-compras', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evento: '_teste', telefone: telefone.replace(/\D/g, '') }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (json.ok) toast.success('Mensagem de teste enviada!')
+      else toast.error('Falha no teste: ' + (json.error || res.status))
+    } catch (e) {
+      toast.error('Erro de rede: ' + e.message)
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: C.bgPage, border: `1px solid ${C.border}`, color: C.text, outline: 'none', boxSizing: 'border-box' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,31,58,0.55)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.bgCard, border: `1px solid ${C.border}`, boxShadow: '0 16px 48px rgba(11,31,58,0.2)', borderRadius: 14, width: '100%', maxWidth: 430, padding: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.text }}>Aprovador de Compras</div>
+            <div style={{ fontSize: 12, color: C.textSec, marginTop: 3 }}>Recebe aviso no WhatsApp a cada nova solicitacao</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textSec, fontSize: 20 }}>x</button>
+        </div>
+
+        {saved && (
+          <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', marginBottom: 12, fontSize: 12, color: '#10b981', display: 'flex', alignItems: 'center', gap: 8 }}>
+            Aprovador configurado - notificacoes ativas
+          </div>
+        )}
+
+        <div style={{ padding: '14px', borderRadius: 10, background: '#F5F3FF', border: '1px solid #DDD6FE', marginBottom: 16, fontSize: 12, color: C.textSec, lineHeight: 1.6 }}>
+          Configure uma vez e toda requisicao enviada para aprovacao interna dispara notificacao automatica para este numero.
+        </div>
+
+        <label style={{ fontSize: 11, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6, display: 'block' }}>
+          WhatsApp do aprovador
+        </label>
+        <input
+          style={inputStyle}
+          value={telefone}
+          onChange={e => { setTelefone(e.target.value); setSaved(false) }}
+          placeholder="5511999990000"
+          autoFocus
+        />
+        <div style={{ fontSize: 11, color: C.textSec, marginTop: 5 }}>
+          Inclua DDD e codigo do pais. Ex: 5511999990000
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', marginTop: 18 }}>
+          <button onClick={handleTestar} disabled={testing || !telefone.trim()} style={{ padding: '9px 14px', borderRadius: 8, background: 'none', border: `1px solid ${C.border}`, cursor: (testing || !telefone.trim()) ? 'not-allowed' : 'pointer', color: C.textSec, fontSize: 12, opacity: (testing || !telefone.trim()) ? 0.5 : 1 }}>
+            {testing ? 'Enviando...' : 'Testar'}
+          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose} style={{ padding: '9px 16px', borderRadius: 8, background: 'none', border: `1px solid ${C.border}`, cursor: 'pointer', color: C.textSec, fontSize: 13 }}>Cancelar</button>
+            <button onClick={handleSave} disabled={saving} style={{ padding: '9px 20px', borderRadius: 8, background: C.violet, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, opacity: saving ? 0.7 : 1 }}>
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Painel Detalhe da requisição selecionada ─────────────────────────────────
 function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
   const [tabD, setTabD] = useState('detalhe') // detalhe | cotacoes | historico | radar
@@ -1368,6 +1475,7 @@ export default function ComprasERP() {
   const [loading, setLoading]       = useState(true)
   const [selecionado, setSelecionado] = useState(null)
   const [showNovaReq, setShowNovaReq] = useState(false)
+  const [showConfigAprovador, setShowConfigAprovador] = useState(false)
   const [refresh, setRefresh]       = useState(0)
   const [lastUpdate, setLastUpdate] = useState(now)
   const [wsNome, setWsNome]         = useState('')
@@ -1476,6 +1584,21 @@ export default function ComprasERP() {
     if (!novoStatus) return
     const { error } = await supabase.from('solicitacoes_compra').update({ status: novoStatus, updated_at: new Date().toISOString() }).eq('id', item.id)
     if (error) { toast.error('Erro ao atualizar'); return }
+
+    if (action === 'enviar_aprovacao') {
+      try {
+        const res = await fetch('/api/notify-compras', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ solicitacaoId: item.id, evento: 'nova_solicitacao' }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (res.ok && json?.sent > 0) toast.success('Aprovador notificado no WhatsApp')
+      } catch {
+        // silencioso: o status foi atualizado com sucesso
+      }
+    }
+
     const labels = { enviar_aprovacao: 'Enviado para aprovação interna', aprovar: 'Aprovado!', recusar: 'Recusado', leilao: 'Leilão aberto', emitir_pedido: 'Pedido emitido', receber: 'Recebimento confirmado', pagar: 'Marcado como pago' }
     toast.success(labels[action] || 'Atualizado!')
     setRefresh(p => p + 1)
@@ -1546,6 +1669,12 @@ export default function ComprasERP() {
         {/* Ações */}
         <button onClick={() => setShowNovaReq(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', background: C.blue, color: '#fff', border: 'none', borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
           <PlusIcon style={{ width: 13 }} /> Nova Requisição
+        </button>
+        <button
+          onClick={() => setShowConfigAprovador(true)}
+          title="Configurar aprovador por WhatsApp"
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.violet, border: `1px solid ${C.violet}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
+          <ShieldCheckIcon style={{ width: 13 }} /> Aprovador
         </button>
         <button
           onClick={() => {
@@ -1779,6 +1908,9 @@ export default function ComprasERP() {
 
       {showNovaReq && (
         <ModalNovaReq workspaceId={workspaceId} onClose={() => setShowNovaReq(false)} onSalvo={() => setRefresh(p => p + 1)} />
+      )}
+      {showConfigAprovador && (
+        <ModalConfigAprovador onClose={() => setShowConfigAprovador(false)} />
       )}
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
