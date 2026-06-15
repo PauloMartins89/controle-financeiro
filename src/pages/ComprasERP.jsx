@@ -223,7 +223,7 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
     if (!value.trim() || value.trim().length < 2) { setSugestoes([]); setSemResultado(false); setOpen(false); return }
     timerRef.current = setTimeout(async () => {
       let query = supabase
-        .from('catalogo_compras').select('id,nome,unidade_medida,valor_estimado,preco_referencia,categoria')
+        .from('catalogo_compras').select('id,nome,unidade_medida,preco_referencia,categoria')
         .ilike('nome', `%${value.trim()}%`).order('nome').limit(10)
       if (workspaceId) query = query.eq('workspace_id', workspaceId)
       const { data, error } = await query
