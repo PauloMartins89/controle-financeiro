@@ -208,6 +208,7 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
   const [cursor, setCursor]       = useState(-1)
   const [semResultado, setSemResultado] = useState(false)
   const [erroBusca, setErroBusca] = useState('')
+  const [retryTick, setRetryTick] = useState(0)
   const wRef = useRef(null)
   const timerRef = useRef(null)
   const lastErrToastRef = useRef(0)
@@ -217,6 +218,14 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [])
+
+  useEffect(() => {
+    const retryOnOnline = () => {
+      if (erroBusca) setRetryTick(t => t + 1)
+    }
+    window.addEventListener('online', retryOnOnline)
+    return () => window.removeEventListener('online', retryOnOnline)
+  }, [erroBusca])
 
   useEffect(() => {
     clearTimeout(timerRef.current)
@@ -246,7 +255,7 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
       setCursor(-1)
     }, 200)
     return () => clearTimeout(timerRef.current)
-  }, [value, workspaceId])
+  }, [value, workspaceId, retryTick])
 
   function handleKey(e) {
     if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c + 1, sugestoes.length - 1)) }
@@ -2204,10 +2213,10 @@ function AuditoriaRecente({ workspaceId }) {
 function AnalyticsSkeletonCard() {
   return (
     <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, padding: '12px 14px', minHeight: 110 }}>
-      <div style={{ width: '45%', height: 10, borderRadius: 6, background: '#E2E8F0', marginBottom: 10 }} />
-      <div style={{ width: '80%', height: 8, borderRadius: 6, background: '#E2E8F0', marginBottom: 8 }} />
-      <div style={{ width: '70%', height: 8, borderRadius: 6, background: '#E2E8F0', marginBottom: 8 }} />
-      <div style={{ width: '55%', height: 8, borderRadius: 6, background: '#E2E8F0' }} />
+      <div className="skeleton-bar" style={{ width: '45%', height: 10, borderRadius: 6, background: '#E2E8F0', marginBottom: 10 }} />
+      <div className="skeleton-bar" style={{ width: '80%', height: 8, borderRadius: 6, background: '#E2E8F0', marginBottom: 8 }} />
+      <div className="skeleton-bar" style={{ width: '70%', height: 8, borderRadius: 6, background: '#E2E8F0', marginBottom: 8 }} />
+      <div className="skeleton-bar" style={{ width: '55%', height: 8, borderRadius: 6, background: '#E2E8F0' }} />
     </div>
   )
 }
@@ -2609,6 +2618,9 @@ export default function ComprasERP() {
             style={{ padding: '6px 10px 6px 26px', borderRadius: 7, border: `1px solid ${C.border}`, background: '#F8FAFC', color: C.text, fontSize: 12, outline: 'none', width: 200 }} />
         </div>
         <span style={{ fontSize: 10, color: C.textSec, whiteSpace: 'nowrap', flexShrink: 0 }}>Última atualização: {lastUpdateStr}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0, padding: '4px 8px', borderRadius: 999, border: `1px solid ${isOnline ? '#86EFAC' : '#FDE68A'}`, background: isOnline ? '#F0FDF4' : '#FFFBEB', color: isOnline ? '#166534' : '#92400E' }}>
+          {isOnline ? 'Online' : 'Offline'}
+        </span>
         <button onClick={() => setRefresh(p => p + 1)} style={{ padding: 6, borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer', color: C.textSec, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <ArrowPathIcon style={{ width: 12 }} />
         </button>
@@ -2802,10 +2814,21 @@ export default function ComprasERP() {
 
           {/* ── Analytics Bottom ── */}
           <div style={{ borderTop: `2px solid ${C.border}`, padding: '12px 14px', background: C.bgPage, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, flexShrink: 0, maxHeight: 210, overflowY: 'auto' }}>
-            <MapaComparativo item={selecionado} />
-            <DonutEconomiaMes gasto={gastoMes} economia={economiaMes} mesLabel={competencia} />
-            <DonutCategoria items={items} />
-            <AuditoriaRecente workspaceId={workspaceId} />
+            {loading ? (
+              <>
+                <AnalyticsSkeletonCard />
+                <AnalyticsSkeletonCard />
+                <AnalyticsSkeletonCard />
+                <AnalyticsSkeletonCard />
+              </>
+            ) : (
+              <>
+                <MapaComparativo item={selecionado} />
+                <DonutEconomiaMes gasto={gastoMes} economia={economiaMes} mesLabel={competencia} />
+                <DonutCategoria items={items} />
+                <AuditoriaRecente workspaceId={workspaceId} />
+              </>
+            )}
           </div>
         </div>
 
@@ -2837,7 +2860,15 @@ export default function ComprasERP() {
           onSaved={() => { setVencedorErpItem(null); setRefresh(p => p + 1) }}
         />
       )}
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+        .skeleton-bar {
+          background: linear-gradient(90deg, #E2E8F0 0%, #F8FAFC 35%, #E2E8F0 70%);
+          background-size: 200% 100%;
+          animation: shimmer 1.4s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   )
 }
