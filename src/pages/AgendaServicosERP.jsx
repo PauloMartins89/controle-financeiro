@@ -13,7 +13,6 @@ import {
   MagnifyingGlassIcon, MapPinIcon, PlayIcon,
   DevicePhoneMobileIcon, PlusIcon, XMarkIcon,
   TrashIcon, ExclamationTriangleIcon, ChatBubbleLeftRightIcon,
-  ChevronLeftIcon, ChevronRightIcon,
 } from '@heroicons/react/24/outline'
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
@@ -641,7 +640,6 @@ export default function AgendaServicosERP() {
   const [filtroMotorista, setFiltroMotorista] = useState('')
   const [filtroCliente, setFiltroCliente] = useState('')
   const [filtroSalvo, setFiltroSalvo] = useState(false)
-  const [filtroColapsado, setFiltroColapsado] = useState(false)
 
   const hoje = new Date().toISOString().slice(0, 10)
   const amanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
@@ -807,48 +805,38 @@ export default function AgendaServicosERP() {
         ))}
       </div>
 
-      {/* ── Layout 3 painéis ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      {/* ── Layout: filtros | tabela | detalhe ── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '175px 1fr 340px', overflow: 'hidden', borderTop: '1px solid var(--border)' }}>
 
-        {/* ── Filtros laterais (recolhível) ── */}
-        <div style={{ width: filtroColapsado ? 44 : 220, flexShrink: 0, borderRight: '1px solid var(--border)', overflowY: filtroColapsado ? 'hidden' : 'auto', overflowX: 'hidden', background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', transition: 'width 0.22s cubic-bezier(.4,0,.2,1)' }}>
+        {/* ── Filtros laterais ── */}
+        <div style={{ borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg-card)', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-          {/* Botão toggle + header */}
-          <div style={{ padding: filtroColapsado ? '10px 0' : '10px 12px', display: 'flex', alignItems: 'center', justifyContent: filtroColapsado ? 'center' : 'space-between', borderBottom: '1px solid var(--border)', flexShrink: 0, gap: 6 }}>
-            {!filtroColapsado && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>Filtros rápidos</span>}
-            <div style={{ display: 'flex', gap: 4 }}>
-              {!filtroColapsado && <button onClick={limparFiltros} style={{ fontSize: 10, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 4px', whiteSpace: 'nowrap' }}>Limpar</button>}
-              <button onClick={() => setFiltroColapsado(!filtroColapsado)} title={filtroColapsado ? 'Expandir filtros' : 'Recolher filtros'} style={{ padding: '4px 6px', borderRadius: 5, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                {filtroColapsado ? <ChevronRightIcon style={{ width: 13 }} /> : <ChevronLeftIcon style={{ width: 13 }} />}
-              </button>
-            </div>
+          {/* Header filtros */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1 }}>Filtros</span>
+            <button onClick={limparFiltros} style={{ fontSize: 10, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Limpar</button>
           </div>
-
-          {/* Conteúdo dos filtros — oculto quando colapsado */}
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: filtroColapsado ? 0 : '12px 12px', display: 'flex', flexDirection: 'column', gap: 14, opacity: filtroColapsado ? 0 : 1, transition: 'opacity 0.15s', pointerEvents: filtroColapsado ? 'none' : 'auto' }}>
 
           {/* Período */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Período</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} style={inpF} />
-              <input type="date" value={periodoFim}    onChange={e => setPeriodoFim(e.target.value)}    style={inpF} />
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Período</div>
+            <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} style={inpF} placeholder="De" />
+            <input type="date" value={periodoFim} onChange={e => setPeriodoFim(e.target.value)} style={{ ...inpF, marginTop: 4 }} placeholder="Até" />
           </div>
 
           {/* Status */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Status</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Status</div>
             {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
               const qtd = agendamentos.filter(a => a.status === key).length
               const ativo = filtroStatus.includes(key)
               return (
-                <label key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0', cursor: 'pointer', fontSize: 11 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: ativo ? cfg.color : 'var(--text-secondary)', fontWeight: ativo ? 700 : 400 }}>
-                    <input type="checkbox" checked={ativo} onChange={() => toggleStatusFiltro(key)} style={{ accentColor: cfg.color }} />
+                <label key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0', cursor: 'pointer' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: ativo ? cfg.color : 'var(--text-primary)', fontWeight: ativo ? 700 : 400 }}>
+                    <input type="checkbox" checked={ativo} onChange={() => toggleStatusFiltro(key)} style={{ accentColor: cfg.color, cursor: 'pointer' }} />
                     {cfg.label}
                   </span>
-                  <span style={{ fontSize: 10, fontWeight: 700, background: ativo ? cfg.color : 'var(--bg-card)', color: ativo ? '#fff' : 'var(--text-secondary)', borderRadius: 99, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>{qtd}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, background: ativo ? cfg.color : 'var(--bg-secondary)', color: ativo ? '#fff' : 'var(--text-secondary)', borderRadius: 99, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>{qtd}</span>
                 </label>
               )
             })}
@@ -856,93 +844,73 @@ export default function AgendaServicosERP() {
 
           {/* Tipo de serviço */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Tipo de Serviço</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Tipo de Serviço</div>
             <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} style={inpF}>
-              <option value="">Todos os tipos</option>
+              <option value="">Todos</option>
               {TIPOS_SERVICO.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
 
           {/* Veículo */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Veículo</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Veículo</div>
             <select value={filtroVeiculo} onChange={e => setFiltroVeiculo(e.target.value)} style={inpF}>
-              <option value="">Todos os veículos</option>
+              <option value="">Todos</option>
               {veiculosDisponiveis.map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
 
           {/* Motorista */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Motorista</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Motorista</div>
             <select value={filtroMotorista} onChange={e => setFiltroMotorista(e.target.value)} style={inpF}>
-              <option value="">Todos os motoristas</option>
+              <option value="">Todos</option>
               {motoristasDisponiveis.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
 
           {/* Cliente */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Cliente</div>
+            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Cliente</div>
             <div style={{ position: 'relative' }}>
-              <MagnifyingGlassIcon style={{ width: 12, position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-              <input value={filtroCliente} onChange={e => setFiltroCliente(e.target.value)} placeholder="Buscar cliente..." style={{ ...inpF, paddingLeft: 24 }} />
+              <MagnifyingGlassIcon style={{ width: 11, position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <input value={filtroCliente} onChange={e => setFiltroCliente(e.target.value)} placeholder="Buscar..." style={{ ...inpF, paddingLeft: 22 }} />
             </div>
           </div>
 
-            <button onClick={() => setFiltroSalvo(true)} style={{ marginTop: 'auto', padding: '8px 0', borderRadius: 7, border: '1px solid var(--border)', background: filtroSalvo ? 'var(--accent)' : 'transparent', color: filtroSalvo ? '#fff' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-              {filtroSalvo ? '✓ Filtro salvo' : '💾 Salvar filtro'}
-            </button>
-          </div>
-
-          {/* Ícones quando colapsado */}
-          {filtroColapsado && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '10px 0' }}>
-              {[
-                { icon: '📅', title: 'Período', ativo: !!(periodoInicio || periodoFim) },
-                { icon: '🏷', title: 'Status', ativo: filtroStatus.length > 0 },
-                { icon: '🚛', title: 'Tipo', ativo: !!filtroTipo },
-                { icon: '🚗', title: 'Veículo', ativo: !!filtroVeiculo },
-                { icon: '👤', title: 'Motorista', ativo: !!filtroMotorista },
-                { icon: '🏢', title: 'Cliente', ativo: !!filtroCliente },
-              ].map(f => (
-                <button key={f.icon} title={f.title} onClick={() => setFiltroColapsado(false)} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${f.ativo ? 'var(--accent)' : 'var(--border)'}`, background: f.ativo ? 'rgba(99,102,241,0.12)' : 'transparent', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  {f.icon}
-                  {f.ativo && <span style={{ position: 'absolute', top: -2, right: -2, width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)' }} />}
-                </button>
-              ))}
-            </div>
-          )}
+          <button onClick={() => setFiltroSalvo(true)} style={{ marginTop: 'auto', padding: '7px 0', borderRadius: 7, border: '1px solid var(--border)', background: filtroSalvo ? 'var(--accent)' : 'transparent', color: filtroSalvo ? '#fff' : 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+            {filtroSalvo ? '✓ Filtro salvo' : '💾 Salvar filtro'}
+          </button>
         </div>
 
         {/* ── Painel Central: Tabela ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           {/* Busca global */}
-          <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', gap: 10, alignItems: 'center', background: 'var(--bg-card)' }}>
+          <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', gap: 8, alignItems: 'center', background: 'var(--bg-card)' }}>
             <div style={{ flex: 1, position: 'relative' }}>
-              <MagnifyingGlassIcon style={{ width: 13, position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <MagnifyingGlassIcon style={{ width: 12, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
               <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por cliente, tipo, motorista, veículo..."
-                style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 10px 6px 28px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+                style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 10px 6px 26px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
             </div>
-            <button onClick={() => setModalNovo(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 8, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-              <PlusIcon style={{ width: 14 }} /> Novo Agendamento
+            <button onClick={() => setModalNovo(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+              <PlusIcon style={{ width: 13 }} /> Novo
             </button>
             <button onClick={carregar} style={{ padding: 6, borderRadius: 7, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-              <ArrowPathIcon style={{ width: 14 }} />
+              <ArrowPathIcon style={{ width: 13 }} />
             </button>
           </div>
 
           {/* Tabs */}
-          <div style={{ borderBottom: '1px solid var(--border)', display: 'flex', flexShrink: 0, background: 'var(--bg-card)', paddingLeft: 12 }}>
+          <div style={{ borderBottom: '1px solid var(--border)', display: 'flex', flexShrink: 0, background: 'var(--bg-card)', paddingLeft: 10 }}>
             {TABS.map(t => (
-              <button key={t.key} onClick={() => setTabAtiva(t.key)} style={{ padding: '8px 12px', fontSize: 11, fontWeight: tabAtiva === t.key ? 700 : 500, cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${tabAtiva === t.key ? (t.color || 'var(--accent)') : 'transparent'}`, color: tabAtiva === t.key ? (t.color || 'var(--accent)') : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
+              <button key={t.key} onClick={() => setTabAtiva(t.key)} style={{ padding: '7px 10px', fontSize: 11, fontWeight: tabAtiva === t.key ? 700 : 500, cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${tabAtiva === t.key ? (t.color || 'var(--accent)') : 'transparent'}`, color: tabAtiva === t.key ? (t.color || 'var(--accent)') : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                 {t.label}
                 {t.count > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '0 5px', borderRadius: 99, background: tabAtiva === t.key ? (t.color || 'var(--accent)') : 'rgba(148,163,184,0.25)', color: tabAtiva === t.key ? '#fff' : 'var(--text-secondary)', minWidth: 16, textAlign: 'center' }}>{t.count}</span>}
               </button>
             ))}
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 12 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{filtrados.length} agendamentos</span>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{filtrados.length} itens</span>
             </div>
           </div>
 
@@ -957,14 +925,14 @@ export default function AgendaServicosERP() {
               <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                 <CalendarDaysIcon style={{ width: 36, margin: '0 auto 10px', opacity: 0.3 }} />
                 <p style={{ fontSize: 14, fontWeight: 600 }}>Nenhum agendamento</p>
-                <p style={{ fontSize: 12, marginTop: 4 }}>{busca ? 'Nenhum resultado para a busca.' : 'Clique em "+ Novo Agendamento" para criar o primeiro.'}</p>
+                <p style={{ fontSize: 12, marginTop: 4 }}>{busca ? 'Nenhum resultado para a busca.' : 'Clique em "+ Novo" para criar o primeiro.'}</p>
               </div>
             ) : (
-              <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', fontSize: 12 }}>
+              <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: 'var(--bg-secondary)', position: 'sticky', top: 0, zIndex: 2 }}>
                     {['Data / Hora', 'Cliente', 'Tipo de Serviço', 'Atividade', 'Origem → Destino', 'Motorista', 'Veículo', 'Status', 'WA', 'Ações'].map(h => (
-                      <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                      <th key={h} style={{ padding: '7px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -979,55 +947,55 @@ export default function AgendaServicosERP() {
                         style={{ background: isSel ? 'rgba(99,102,241,0.06)' : 'transparent', borderBottom: '1px solid var(--border)', cursor: 'pointer', borderLeft: `3px solid ${isSel ? 'var(--accent)' : 'transparent'}` }}
                         onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'var(--bg-card-hover)' }}
                         onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent' }}>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '9px 10px', whiteSpace: 'nowrap' }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: isAtrasado ? '#f59e0b' : 'var(--text-primary)' }}>{fmtDate(ag.data_servico)}</div>
                           <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{ag.horario_servico?.slice(0,5) || '—'}</div>
                           {isAtrasado && <span style={{ fontSize: 9, color: '#f59e0b', fontWeight: 700 }}>Atrasado</span>}
                         </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{ag.cliente_nome}</div>
+                        <td style={{ padding: '9px 10px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', fontSize: 11 }}>{ag.cliente_nome}</div>
                         </td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            <span style={{ fontSize: 14 }}>🚛</span>
-                            <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 11 }}>{ag.tipo_servico}</span>
+                        <td style={{ padding: '9px 10px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+                            <span>🚛</span>
+                            <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{ag.tipo_servico}</span>
                           </div>
                           {isFalha && <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 700 }}>⚠ Falha WA</span>}
                         </td>
-                        <td style={{ padding: '10px 12px', maxWidth: 130 }}>
+                        <td style={{ padding: '9px 10px', maxWidth: 110 }}>
                           <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ag.atividade || '—'}</div>
                         </td>
-                        <td style={{ padding: '10px 12px', maxWidth: 140 }}>
+                        <td style={{ padding: '9px 10px', maxWidth: 120 }}>
                           {ag.origem || ag.destino ? (
                             <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {ag.origem || ''}{ag.origem && ag.destino ? ' → ' : ''}{ag.destino || ''}
                             </div>
                           ) : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
                         </td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 11 }}>{ag.motorista_nome || '—'}</td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 11 }}>{ag.veiculo_nome || '—'}</td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}><StatusChip status={ag.status} /></td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                        <td style={{ padding: '9px 10px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 11 }}>{ag.motorista_nome || '—'}</td>
+                        <td style={{ padding: '9px 10px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 11 }}>{ag.veiculo_nome || '—'}</td>
+                        <td style={{ padding: '9px 10px', whiteSpace: 'nowrap' }}><StatusChip status={ag.status} /></td>
+                        <td style={{ padding: '9px 10px', whiteSpace: 'nowrap' }}>
                           {alerta ? <AlertaChip status={alerta.status} /> : <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>—</span>}
                         </td>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button onClick={() => setModalEditar(ag)} title="Editar" style={{ padding: '4px 7px', borderRadius: 5, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                              <PencilIcon style={{ width: 12 }} />
+                        <td style={{ padding: '9px 10px', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: 3 }}>
+                            <button onClick={() => setModalEditar(ag)} title="Editar" style={{ padding: '3px 6px', borderRadius: 5, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                              <PencilIcon style={{ width: 11 }} />
                             </button>
                             {ag.responsavel_whatsapp && waLink(ag.responsavel_whatsapp) && (
-                              <a href={waLink(ag.responsavel_whatsapp)} target="_blank" rel="noreferrer" title="WhatsApp" style={{ padding: '4px 7px', borderRadius: 5, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', cursor: 'pointer', color: '#25d366', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-                                <ChatBubbleLeftRightIcon style={{ width: 12 }} />
+                              <a href={waLink(ag.responsavel_whatsapp)} target="_blank" rel="noreferrer" title="WhatsApp" style={{ padding: '3px 6px', borderRadius: 5, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', cursor: 'pointer', color: '#25d366', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                                <ChatBubbleLeftRightIcon style={{ width: 11 }} />
                               </a>
                             )}
                             {!['cancelado','concluido'].includes(ag.status) && (
-                              <button onClick={() => mudarStatus(ag.id, 'concluido')} title="Registrar conclusão" style={{ padding: '4px 7px', borderRadius: 5, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', cursor: 'pointer', color: '#10b981' }}>
-                                <CheckCircleIcon style={{ width: 12 }} />
+                              <button onClick={() => mudarStatus(ag.id, 'concluido')} title="Concluir" style={{ padding: '3px 6px', borderRadius: 5, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', cursor: 'pointer', color: '#10b981' }}>
+                                <CheckCircleIcon style={{ width: 11 }} />
                               </button>
                             )}
                             {!['cancelado','concluido'].includes(ag.status) && (
-                              <button onClick={() => mudarStatus(ag.id, 'cancelado')} title="Cancelar agendamento" style={{ padding: '4px 7px', borderRadius: 5, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', color: '#ef4444' }}>
-                                <XCircleIcon style={{ width: 12 }} />
+                              <button onClick={() => mudarStatus(ag.id, 'cancelado')} title="Cancelar" style={{ padding: '3px 6px', borderRadius: 5, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', color: '#ef4444' }}>
+                                <XCircleIcon style={{ width: 11 }} />
                               </button>
                             )}
                           </div>
@@ -1039,18 +1007,21 @@ export default function AgendaServicosERP() {
               </table>
             )}
           </div>
+
+          {/* Footer contagem — igual ao ComprasERP */}
+          <div style={{ padding: '5px 14px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+            Mostrando {filtrados.length} de {agendamentos.length} agendamentos
+          </div>
         </div>
 
-        {/* ── Painel Direito: Detalhes (flex sibling, empurra a tabela) ── */}
-        <div style={{ width: selected ? 360 : 0, flexShrink: 0, overflow: 'hidden', transition: 'width 0.25s cubic-bezier(.4,0,.2,1)', borderLeft: selected ? '1px solid var(--border)' : 'none' }}>
-          <PainelDetalhe
-            ag={selected}
-            onClose={() => setSelected(null)}
-            onEdit={ag => { setModalEditar(ag); setSelected(null) }}
-            onStatusChange={async (id, status) => { await mudarStatus(id, status) }}
-            onNovoAgendamento={() => setModalNovo(true)}
-          />
-        </div>
+        {/* ── Painel Direito: Detalhes (sempre visível, 340px fixos) ── */}
+        <PainelDetalhe
+          ag={selected}
+          onClose={() => setSelected(null)}
+          onEdit={ag => { setModalEditar(ag); setSelected(null) }}
+          onStatusChange={async (id, status) => { await mudarStatus(id, status) }}
+          onNovoAgendamento={() => setModalNovo(true)}
+        />
       </div>
 
       {/* ── Modais ── */}
