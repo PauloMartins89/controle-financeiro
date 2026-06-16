@@ -378,23 +378,23 @@ function ModalAgendamento({ agendamento, onClose, onSaved, workspaceId }) {
 }
 
 // ─── Painel Direito: Detalhes ──────────────────────────────────────────────────
-function PainelDetalhe({ ag, onClose, onEdit, onStatusChange }) {
+function PainelDetalhe({ ag, onClose, onEdit, onStatusChange, onNovoAgendamento }) {
   const [historico, setHistorico] = useState([])
   const [alertas, setAlertas] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tabD, setTabD] = useState('info')
+  const [loadingD, setLoadingD] = useState(false)
+  const [tabD, setTabD] = useState('resumo')
 
   useEffect(() => {
     if (!ag?.id) return
-    setLoading(true)
-    setTabD('info')
+    setLoadingD(true)
+    setTabD('resumo')
     Promise.all([
       supabase.from('agendamento_historico').select('*').eq('agendamento_id', ag.id).order('data_evento', { ascending: false }),
       supabase.from('agendamento_alertas').select('*').eq('agendamento_id', ag.id).order('created_at', { ascending: false }),
     ]).then(([h, a]) => {
       setHistorico(h.data || [])
       setAlertas(a.data || [])
-      setLoading(false)
+      setLoadingD(false)
     })
   }, [ag?.id])
 
@@ -404,130 +404,167 @@ function PainelDetalhe({ ag, onClose, onEdit, onStatusChange }) {
     ajuste_solicitado: '⚠️', cancelamento: '🚫', conclusao: '🏁', em_execucao: '▶️',
   }
 
-  const cfg = STATUS_CONFIG[ag.status] || { color: '#94a3b8' }
+  const cfg = ag ? (STATUS_CONFIG[ag.status] || { color: '#94a3b8' }) : { color: '#94a3b8' }
+  const proximoAlerta = alertas.find(al => al.status === 'pendente' || al.status === 'agendado')
+
+  // Placeholder quando nada selecionado
+  if (!ag) {
+    return (
+      <div style={{ width: 340, flexShrink: 0, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, background: 'var(--bg-secondary)', color: 'var(--text-secondary)', padding: 24 }}>
+        <CalendarDaysIcon style={{ width: 48, height: 48, opacity: 0.2 }} />
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Nenhum agendamento selecionado</p>
+          <p style={{ fontSize: 12 }}>Clique em uma linha da tabela para ver os detalhes.</p>
+        </div>
+        <button onClick={onNovoAgendamento} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 18px', borderRadius: 8, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <PlusIcon style={{ width: 14 }} /> Novo Agendamento
+        </button>
+      </div>
+    )
+  }
+
+  const isAtrasado = ag.data_servico < new Date().toISOString().slice(0, 10) && !['cancelado','concluido'].includes(ag.status)
 
   return (
-    <div style={{ width: 360, flexShrink: 0, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-primary)' }}>
-      {/* Header */}
-      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0, borderTop: `3px solid ${cfg.color}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ marginBottom: 6 }}>
-              <StatusChip status={ag.status} />
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>🚛 {ag.tipo_servico}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-              {ag.cliente_nome} · {fmtDate(ag.data_servico)}{ag.horario_servico ? ` às ${ag.horario_servico.slice(0, 5)}` : ''}
-            </div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 4, flexShrink: 0 }}>
-            <XMarkIcon style={{ width: 18, height: 18 }} />
+    <div style={{ width: 340, flexShrink: 0, borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-primary)' }}>
+      {/* Header do painel */}
+      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0, borderTop: `3px solid ${cfg.color}`, background: 'var(--bg-card)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.4 }}>Detalhes do agendamento</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 2 }}>
+            <XMarkIcon style={{ width: 16 }} />
           </button>
         </div>
 
-        {/* Ações rápidas */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-          <button onClick={() => onEdit(ag)} style={{ padding: '5px 12px', borderRadius: 7, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)', color: '#6366f1', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <PencilIcon style={{ width: 12, height: 12 }} /> Editar
-          </button>
-          {!['em_execucao', 'concluido', 'cancelado'].includes(ag.status) && (
-            <button onClick={() => onStatusChange(ag.id, 'em_execucao')} style={{ padding: '5px 12px', borderRadius: 7, background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.25)', color: '#06b6d4', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <PlayIcon style={{ width: 12, height: 12 }} /> Iniciar
-            </button>
-          )}
-          {ag.status === 'em_execucao' && (
-            <button onClick={() => onStatusChange(ag.id, 'concluido')} style={{ padding: '5px 12px', borderRadius: 7, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <CheckCircleIcon style={{ width: 12, height: 12 }} /> Concluir
-            </button>
-          )}
-          {!['cancelado', 'concluido'].includes(ag.status) && (
-            <button onClick={() => onStatusChange(ag.id, 'cancelado')} style={{ padding: '5px 12px', borderRadius: 7, background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <XCircleIcon style={{ width: 12, height: 12 }} /> Cancelar
-            </button>
-          )}
+        {isAtrasado && (
+          <div style={{ marginBottom: 8, padding: '6px 10px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13 }}>⏰</span>
+            <span style={{ fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>Atraso identificado</span>
+          </div>
+        )}
+
+        <div style={{ marginBottom: 6 }}><StatusChip status={ag.status} /></div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>🚛 {ag.tipo_servico}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+          {ag.cliente_nome} · {fmtDate(ag.data_servico)}{ag.horario_servico ? ` às ${ag.horario_servico.slice(0, 5)}` : ''}
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        {[{ key: 'info', label: '📋 Dados' }, { key: 'alertas', label: '🔔 Alertas' }, { key: 'timeline', label: '📅 Timeline' }].map(t => (
-          <button key={t.key} onClick={() => setTabD(t.key)} style={{ flex: 1, padding: '9px 4px', fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${tabD === t.key ? 'var(--accent)' : 'transparent'}`, color: tabD === t.key ? 'var(--accent)' : 'var(--text-secondary)' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-card)' }}>
+        {[
+          { key: 'resumo',         label: 'Resumo' },
+          { key: 'comunicacoes',   label: `Comunicações${alertas.length > 0 ? ` (${alertas.length})` : ''}` },
+          { key: 'historico',      label: 'Histórico' },
+          { key: 'anexos',         label: 'Anexos' },
+        ].map(t => (
+          <button key={t.key} onClick={() => setTabD(t.key)} style={{ flex: 1, padding: '8px 4px', fontSize: 10, fontWeight: tabD === t.key ? 700 : 500, cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${tabD === t.key ? 'var(--accent)' : 'transparent'}`, color: tabD === t.key ? 'var(--accent)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {t.label}
           </button>
         ))}
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
 
-        {/* ─ ABA: Dados ─ */}
-        {tabD === 'info' && (
-          <>
-            <section style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>DADOS DO SERVIÇO</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                {[
-                  { label: 'Cliente', value: ag.cliente_nome },
-                  { label: 'Tipo', value: ag.tipo_servico },
-                  { label: 'Atividade', value: ag.atividade },
-                  { label: 'Data', value: fmtDate(ag.data_servico) },
-                  { label: 'Horário', value: ag.horario_servico?.slice(0, 5) },
-                  { label: 'Veículo', value: ag.veiculo_nome },
-                ].filter(i => i.value).map(item => (
-                  <div key={item.label}>
-                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{item.label}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-primary)', marginTop: 1 }}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
-              {(ag.origem || ag.destino) && (
-                <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
-                  {ag.origem && <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}><MapPinIcon style={{ width: 11, height: 11 }} /> {ag.origem}</div>}
-                  {ag.destino && <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>→ {ag.destino}</div>}
-                </div>
-              )}
-              {ag.observacao && (
-                <div style={{ marginTop: 8, padding: '8px 10px', background: 'var(--bg-secondary)', borderRadius: 8, borderLeft: '3px solid var(--border)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 2 }}>OBSERVAÇÃO</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{ag.observacao}</div>
-                </div>
-              )}
-            </section>
-
-            <section>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>EQUIPE</div>
+        {/* ─ Resumo ─ */}
+        {tabD === 'resumo' && (
+          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Campo grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
-                { label: 'Responsável', nome: ag.responsavel_nome, wa: ag.responsavel_whatsapp },
-                { label: 'Motorista', nome: ag.motorista_nome, wa: ag.motorista_whatsapp },
-                { label: 'Cliente', nome: ag.contato_cliente || ag.cliente_nome, wa: ag.whatsapp_cliente },
-              ].filter(p => p.nome || p.wa).map(pessoa => (
-                <div key={pessoa.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', background: 'var(--bg-secondary)', borderRadius: 8, marginBottom: 6 }}>
-                  <div>
-                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>{pessoa.label}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{pessoa.nome || '—'}</div>
-                  </div>
-                  {pessoa.wa && waLink(pessoa.wa) && (
-                    <a href={waLink(pessoa.wa)} target="_blank" rel="noreferrer" style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.2)', color: '#25d366', fontSize: 11, fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <DevicePhoneMobileIcon style={{ width: 12, height: 12 }} /> WA
-                    </a>
-                  )}
+                { label: 'Data',       value: fmtDate(ag.data_servico) },
+                { label: 'Horário',    value: ag.horario_servico?.slice(0,5) || '—' },
+                { label: 'Cliente',    value: ag.cliente_nome },
+                { label: 'Tipo',       value: ag.tipo_servico },
+                { label: 'Atividade',  value: ag.atividade || '—' },
+                { label: 'Veículo',    value: ag.veiculo_nome || '—' },
+                { label: 'Motorista',  value: ag.motorista_nome || '—' },
+                { label: 'Responsável',value: ag.responsavel_nome || '—' },
+              ].map(f => (
+                <div key={f.label}>
+                  <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 }}>{f.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{f.value}</div>
                 </div>
               ))}
-            </section>
-          </>
-        )}
+            </div>
 
-        {/* ─ ABA: Alertas ─ */}
-        {tabD === 'alertas' && (
-          <div>
-            {loading && <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: 20 }}>Carregando...</div>}
-            {!loading && alertas.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-secondary)' }}>
-                <BellAlertIcon style={{ width: 32, height: 32, margin: '0 auto 8px', opacity: 0.3 }} />
-                <p style={{ fontSize: 12 }}>Nenhum alerta configurado</p>
+            {(ag.origem || ag.destino) && (
+              <div style={{ padding: '9px 12px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
+                <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 5 }}>Localização</div>
+                {ag.origem && <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}><MapPinIcon style={{ width: 11 }} /> {ag.origem}</div>}
+                {ag.destino && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>→ {ag.destino}</div>}
               </div>
             )}
-            {alertas.map(al => (
+
+            {ag.observacao && (
+              <div style={{ padding: '9px 12px', background: 'var(--bg-secondary)', borderRadius: 8, borderLeft: '3px solid var(--border)' }}>
+                <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Observação</div>
+                <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{ag.observacao}</div>
+              </div>
+            )}
+
+            {/* Próximas ações */}
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 8 }}>Próximas ações</div>
+              {proximoAlerta ? (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>🔔</span>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Alerta agendado</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{fmtDateTime(proximoAlerta.horario_previsto_envio)}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Para: {proximoAlerta.destinatario_nome || '—'}</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>📭</span> Nenhum alerta pendente
+                </div>
+              )}
+            </div>
+
+            {/* Ações rápidas */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 8 }}>Ações rápidas</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
+                <button onClick={() => onEdit(ag)} style={{ padding: '8px 10px', borderRadius: 7, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', color: '#6366f1', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <PencilIcon style={{ width: 12 }} /> Editar
+                </button>
+                {ag.responsavel_whatsapp && waLink(ag.responsavel_whatsapp) && (
+                  <a href={waLink(ag.responsavel_whatsapp)} target="_blank" rel="noreferrer" style={{ padding: '8px 10px', borderRadius: 7, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.2)', color: '#25d366', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}>
+                    <ChatBubbleLeftRightIcon style={{ width: 12 }} /> WhatsApp
+                  </a>
+                )}
+                {!['em_execucao','concluido','cancelado'].includes(ag.status) && (
+                  <button onClick={() => onStatusChange(ag.id, 'em_execucao')} style={{ padding: '8px 10px', borderRadius: 7, background: 'rgba(6,182,212,0.1)', border: '1px solid rgba(6,182,212,0.2)', color: '#06b6d4', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <PlayIcon style={{ width: 12 }} /> Iniciar
+                  </button>
+                )}
+                {ag.status === 'em_execucao' && (
+                  <button onClick={() => onStatusChange(ag.id, 'concluido')} style={{ padding: '8px 10px', borderRadius: 7, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <CheckCircleIcon style={{ width: 12 }} /> Concluir
+                  </button>
+                )}
+                {!['cancelado','concluido'].includes(ag.status) && (
+                  <button onClick={() => onStatusChange(ag.id, 'cancelado')} style={{ padding: '8px 10px', borderRadius: 7, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <XCircleIcon style={{ width: 12 }} /> Cancelar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─ Comunicações (alertas) ─ */}
+        {tabD === 'comunicacoes' && (
+          <div style={{ padding: '14px 16px' }}>
+            {loadingD ? <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>Carregando...</div>
+            : alertas.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-secondary)' }}>
+                <BellAlertIcon style={{ width: 32, margin: '0 auto 8px', opacity: 0.3 }} />
+                <p style={{ fontSize: 12 }}>Nenhum alerta configurado</p>
+              </div>
+            ) : alertas.map(al => (
               <div key={al.id} style={{ padding: '10px 12px', background: 'var(--bg-secondary)', borderRadius: 8, marginBottom: 8, border: `1px solid ${ALERTA_STATUS_CONFIG[al.status]?.color || '#94a3b8'}22` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
@@ -535,9 +572,9 @@ function PainelDetalhe({ ag, onClose, onEdit, onStatusChange }) {
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                       {ANTECEDENCIAS.find(a => a.value === al.antecedencia_minutos)?.label || al.antecedencia_minutos + ' min'} antes
                     </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Envio previsto: {fmtDateTime(al.horario_previsto_envio)}</div>
-                    {al.enviado_em && <div style={{ fontSize: 10, color: '#10b981' }}>Enviado: {fmtDateTime(al.enviado_em)}</div>}
-                    {al.erro_envio && <div style={{ fontSize: 10, color: '#ef4444' }}>Erro: {al.erro_envio}</div>}
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>Envio: {fmtDateTime(al.horario_previsto_envio)}</div>
+                    {al.enviado_em && <div style={{ fontSize: 10, color: '#10b981' }}>✓ {fmtDateTime(al.enviado_em)}</div>}
+                    {al.erro_envio && <div style={{ fontSize: 10, color: '#ef4444' }}>⚠ {al.erro_envio}</div>}
                   </div>
                   <AlertaChip status={al.status} />
                 </div>
@@ -546,12 +583,12 @@ function PainelDetalhe({ ag, onClose, onEdit, onStatusChange }) {
           </div>
         )}
 
-        {/* ─ ABA: Timeline ─ */}
-        {tabD === 'timeline' && (
-          <div>
-            {loading && <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: 20 }}>Carregando...</div>}
-            {!loading && historico.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: 20 }}>Nenhum evento registrado</div>}
-            {historico.map((ev, i) => (
+        {/* ─ Histórico ─ */}
+        {tabD === 'historico' && (
+          <div style={{ padding: '14px 16px' }}>
+            {loadingD ? <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>Carregando...</div>
+            : historico.length === 0 ? <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: 24 }}>Nenhum evento registrado</div>
+            : historico.map((ev, i) => (
               <div key={ev.id} style={{ display: 'flex', gap: 10, position: 'relative' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                   <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--bg-card)', border: '2px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
@@ -568,6 +605,16 @@ function PainelDetalhe({ ag, onClose, onEdit, onStatusChange }) {
             ))}
           </div>
         )}
+
+        {/* ─ Anexos ─ */}
+        {tabD === 'anexos' && (
+          <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: 36 }}>📎</span>
+            <p style={{ fontSize: 13, fontWeight: 600, marginTop: 10, marginBottom: 4 }}>Nenhum anexo</p>
+            <p style={{ fontSize: 12 }}>Anexos serão exibidos aqui quando disponíveis.</p>
+          </div>
+        )}
+
       </div>
     </div>
   )
@@ -578,11 +625,21 @@ export default function AgendaServicosERP() {
   const { workspaceId } = useStore()
   const [agendamentos, setAgendamentos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filtroKey, setFiltroKey] = useState('todos')
+  const [tabAtiva, setTabAtiva] = useState('todos')
   const [busca, setBusca] = useState('')
   const [selected, setSelected] = useState(null)
   const [modalNovo, setModalNovo] = useState(false)
   const [modalEditar, setModalEditar] = useState(null)
+
+  // filtros laterais
+  const [periodoInicio, setPeriodoInicio] = useState('')
+  const [periodoFim, setPeriodoFim] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState([])
+  const [filtroTipo, setFiltroTipo] = useState('')
+  const [filtroVeiculo, setFiltroVeiculo] = useState('')
+  const [filtroMotorista, setFiltroMotorista] = useState('')
+  const [filtroCliente, setFiltroCliente] = useState('')
+  const [filtroSalvo, setFiltroSalvo] = useState(false)
 
   const hoje = new Date().toISOString().slice(0, 10)
   const amanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
@@ -609,7 +666,6 @@ export default function AgendaServicosERP() {
 
   useEffect(() => { carregar() }, [carregar])
 
-  // Atualiza o item selecionado quando a lista recarregar
   useEffect(() => {
     if (selected) {
       const updated = agendamentos.find(a => a.id === selected.id)
@@ -617,29 +673,53 @@ export default function AgendaServicosERP() {
     }
   }, [agendamentos]) // eslint-disable-line
 
-  // Contagem por pipeline key
-  function countFor(key) {
-    if (key === 'todos') return agendamentos.length
-    if (key === 'hoje') return agendamentos.filter(a => a.data_servico === hoje && !['cancelado', 'concluido'].includes(a.status)).length
-    if (key === 'amanha') return agendamentos.filter(a => a.data_servico === amanha && !['cancelado', 'concluido'].includes(a.status)).length
-    if (key === 'semana') return agendamentos.filter(a => a.data_servico > hoje && a.data_servico <= em7dias && !['cancelado', 'concluido'].includes(a.status)).length
-    return agendamentos.filter(a => a.status === key).length
+  // ── Contagens para KPIs e tabs ──
+  const kpis = {
+    hoje:      agendamentos.filter(a => a.data_servico === hoje && !['cancelado','concluido'].includes(a.status)).length,
+    amanha:    agendamentos.filter(a => a.data_servico === amanha && !['cancelado','concluido'].includes(a.status)).length,
+    prox7:     agendamentos.filter(a => a.data_servico > hoje && a.data_servico <= em7dias && !['cancelado','concluido'].includes(a.status)).length,
+    atrasados: agendamentos.filter(a => a.data_servico < hoje && !['cancelado','concluido'].includes(a.status)).length,
+    alertasEnviados: agendamentos.flatMap(a => a.agendamento_alertas || []).filter(al => al.status === 'enviado').length,
+    falhas:    agendamentos.flatMap(a => a.agendamento_alertas || []).filter(al => al.status === 'falha').length,
+    concluidos:agendamentos.filter(a => a.status === 'concluido').length,
+    todos:     agendamentos.length,
   }
 
-  // Filtro
+  // ── Filtro lateral + tab ──
   const filtrados = agendamentos.filter(a => {
+    if (tabAtiva === 'atrasados' && !(a.data_servico < hoje && !['cancelado','concluido'].includes(a.status))) return false
+    if (tabAtiva === 'hoje'      && a.data_servico !== hoje) return false
+    if (tabAtiva === 'amanha'    && a.data_servico !== amanha) return false
+    if (tabAtiva === 'prox7'     && !(a.data_servico > hoje && a.data_servico <= em7dias)) return false
+    if (tabAtiva === 'concluidos'&& a.status !== 'concluido') return false
+    if (periodoInicio && a.data_servico < periodoInicio) return false
+    if (periodoFim    && a.data_servico > periodoFim)    return false
+    if (filtroStatus.length > 0 && !filtroStatus.includes(a.status)) return false
+    if (filtroTipo      && a.tipo_servico !== filtroTipo) return false
+    if (filtroVeiculo   && !(a.veiculo_nome || '').toLowerCase().includes(filtroVeiculo.toLowerCase())) return false
+    if (filtroMotorista && !(a.motorista_nome || '').toLowerCase().includes(filtroMotorista.toLowerCase())) return false
+    if (filtroCliente   && !(a.cliente_nome || '').toLowerCase().includes(filtroCliente.toLowerCase())) return false
     if (busca) {
       const q = busca.toLowerCase()
       if (!`${a.cliente_nome} ${a.tipo_servico} ${a.atividade} ${a.responsavel_nome} ${a.motorista_nome} ${a.veiculo_nome} ${a.origem} ${a.destino}`.toLowerCase().includes(q)) return false
     }
-    if (filtroKey === 'todos') return true
-    if (filtroKey === 'hoje') return a.data_servico === hoje
-    if (filtroKey === 'amanha') return a.data_servico === amanha
-    if (filtroKey === 'semana') return a.data_servico > hoje && a.data_servico <= em7dias
-    return a.status === filtroKey
+    return true
   })
 
-  // Ações de status
+  const veiculosDisponiveis  = [...new Set(agendamentos.map(a => a.veiculo_nome).filter(Boolean))]
+  const motoristasDisponiveis = [...new Set(agendamentos.map(a => a.motorista_nome).filter(Boolean))]
+
+  function limparFiltros() {
+    setPeriodoInicio(''); setPeriodoFim(''); setFiltroStatus([])
+    setFiltroTipo(''); setFiltroVeiculo(''); setFiltroMotorista(''); setFiltroCliente('')
+    setFiltroSalvo(false)
+  }
+
+  function toggleStatusFiltro(s) {
+    setFiltroStatus(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+  }
+
+  // ── Ações de status ──
   async function mudarStatus(id, novoStatus) {
     if ((novoStatus === 'cancelado' || novoStatus === 'concluido') && !window.confirm(`Confirma marcar como "${STATUS_CONFIG[novoStatus]?.label}"?`)) return
     try {
@@ -668,241 +748,273 @@ export default function AgendaServicosERP() {
     await carregar()
   }
 
-  // Highlight de linha
-  function rowBg(ag) {
-    if (ag.id === selected?.id) return 'var(--bg-card-hover)'
-    if (ag.data_servico === hoje && !['cancelado', 'concluido'].includes(ag.status)) return 'rgba(0,200,150,0.04)'
-    if ((ag.agendamento_alertas || []).some(al => al.status === 'falha')) return 'rgba(239,68,68,0.04)'
-    return 'transparent'
-  }
-
-  // Alerta principal
   function alertaPrincipal(ag) {
     const alertas = ag.agendamento_alertas || []
     return alertas.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0] || null
   }
 
-  // Stats rápidos
-  const stats = {
-    hoje: agendamentos.filter(a => a.data_servico === hoje && !['cancelado', 'concluido'].includes(a.status)).length,
-    execucao: agendamentos.filter(a => a.status === 'em_execucao').length,
-    alertasPendentes: agendamentos.flatMap(a => a.agendamento_alertas || []).filter(al => al.status === 'pendente').length,
-    falhas: agendamentos.flatMap(a => a.agendamento_alertas || []).filter(al => al.status === 'falha').length,
-  }
+  const TABS = [
+    { key: 'todos',      label: 'Todos',        count: kpis.todos },
+    { key: 'atrasados',  label: 'Atrasados',    count: kpis.atrasados, color: '#f59e0b' },
+    { key: 'hoje',       label: 'Hoje',         count: kpis.hoje },
+    { key: 'amanha',     label: 'Amanhã',       count: kpis.amanha },
+    { key: 'prox7',      label: 'Próx. 7 dias', count: kpis.prox7 },
+    { key: 'concluidos', label: 'Concluídos',   count: kpis.concluidos, color: '#10b981' },
+  ]
+
+  const inpF = { width: '100%', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 9px', color: 'var(--text-primary)', fontSize: 12, outline: 'none', boxSizing: 'border-box' }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Header
-        title="Agenda — ERP"
-        subtitle="Gestão operacional de agendamentos com pipeline e painel de detalhe"
-        action={{ label: 'Novo Agendamento', onClick: () => setModalNovo(true) }}
+        title="Agendamentos"
+        subtitle="Gerencie agendamentos operacionais com alertas e anúncios via WhatsApp"
+        action={{ label: '+ Novo Agendamento', onClick: () => setModalNovo(true) }}
       />
 
-      {/* ── Barra de Stats ── */}
-      <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)', display: 'flex', gap: 16, alignItems: 'center', flexShrink: 0 }}>
+      {/* ── KPI strip ── */}
+      <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
         {[
-          { label: 'Hoje', value: stats.hoje, color: '#00c896' },
-          { label: 'Em Execução', value: stats.execucao, color: '#06b6d4' },
-          { label: 'Alertas Pend.', value: stats.alertasPendentes, color: '#f59e0b' },
-          { label: 'Falhas WA', value: stats.falhas, color: '#ef4444' },
-          { label: 'Total', value: agendamentos.length, color: '#6366f1' },
-        ].map(s => (
-          <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</span>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{s.label}</span>
+          { label: 'Hoje',             value: kpis.hoje,           icon: '📅', color: '#6366f1', accent: false },
+          { label: 'Amanhã',           value: kpis.amanha,         icon: '📆', color: '#6366f1', accent: false },
+          { label: 'Próximos 7 dias',  value: kpis.prox7,          icon: '🗓', color: '#0ea5e9', accent: false },
+          { label: 'Atrasos Pendentes',value: kpis.atrasados,      icon: '⏰', color: '#f59e0b', accent: kpis.atrasados > 0 },
+          { label: 'Alertas Enviados', value: kpis.alertasEnviados,icon: '📲', color: '#10b981', accent: false },
+          { label: 'Falhas de Envio',  value: kpis.falhas,         icon: '⚠️', color: '#ef4444', accent: kpis.falhas > 0 },
+          { label: 'Concluídos',       value: kpis.concluidos,     icon: '✅', color: '#6b7280', accent: false },
+        ].map(k => (
+          <div key={k.label} style={{ flex: 1, minWidth: 110, background: k.accent ? `${k.color}12` : 'var(--bg-secondary)', border: `1px solid ${k.accent ? k.color + '40' : 'var(--border)'}`, borderRadius: 10, padding: '10px 14px', cursor: 'pointer' }}
+            onClick={() => {
+              if (k.label === 'Hoje') setTabAtiva('hoje')
+              else if (k.label === 'Amanhã') setTabAtiva('amanha')
+              else if (k.label === 'Próximos 7 dias') setTabAtiva('prox7')
+              else if (k.label === 'Atrasos Pendentes') setTabAtiva('atrasados')
+              else if (k.label === 'Concluídos') setTabAtiva('concluidos')
+              else setTabAtiva('todos')
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+              <span>{k.icon}</span> {k.label}
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: k.color, lineHeight: 1 }}>{k.value}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>
+              {kpis.todos > 0 ? Math.round((k.value / kpis.todos) * 100) : 0}% do total
+            </div>
           </div>
         ))}
-        <div style={{ flex: 1 }} />
-        <button onClick={carregar} style={{ padding: '5px', borderRadius: 7, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-          <ArrowPathIcon style={{ width: 14, height: 14 }} />
-        </button>
       </div>
 
       {/* ── Layout 3 painéis ── */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-        {/* ── Painel Esquerdo: Pipeline ── */}
-        <div style={{ width: 210, flexShrink: 0, borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg-secondary)', padding: '10px 0' }}>
-          {PIPELINE.map(p => {
-            if (p.sep) return (
-              <div key={p.key} style={{ padding: '10px 14px 4px', fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.8 }}>
-                {p.label}
-              </div>
-            )
-            const count = countFor(p.key)
-            const isActive = filtroKey === p.key
-            return (
-              <button
-                key={p.key}
-                onClick={() => { setFiltroKey(p.key); setSelected(null) }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '7px 14px', border: 'none', cursor: 'pointer',
-                  background: isActive ? `${p.color}18` : 'transparent',
-                  borderLeft: `3px solid ${isActive ? p.color : 'transparent'}`,
-                  color: isActive ? p.color : 'var(--text-secondary)',
-                  fontSize: 12, fontWeight: isActive ? 700 : 400,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13 }}>{p.icon}</span>
-                  {p.label}
-                </span>
-                {count > 0 && (
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 20, background: isActive ? p.color : 'rgba(148,163,184,0.2)', color: isActive ? '#fff' : 'var(--text-secondary)', minWidth: 20, textAlign: 'center' }}>
-                    {count}
+        {/* ── Filtros laterais ── */}
+        <div style={{ width: 220, flexShrink: 0, borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg-secondary)', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>Filtros rápidos</span>
+            <button onClick={limparFiltros} style={{ fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Limpar filtros</button>
+          </div>
+
+          {/* Período */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Período</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <input type="date" value={periodoInicio} onChange={e => setPeriodoInicio(e.target.value)} style={inpF} />
+              <input type="date" value={periodoFim}    onChange={e => setPeriodoFim(e.target.value)}    style={inpF} />
+            </div>
+          </div>
+
+          {/* Status */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Status</div>
+            {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
+              const qtd = agendamentos.filter(a => a.status === key).length
+              const ativo = filtroStatus.includes(key)
+              return (
+                <label key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0', cursor: 'pointer', fontSize: 11 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: ativo ? cfg.color : 'var(--text-secondary)', fontWeight: ativo ? 700 : 400 }}>
+                    <input type="checkbox" checked={ativo} onChange={() => toggleStatusFiltro(key)} style={{ accentColor: cfg.color }} />
+                    {cfg.label}
                   </span>
-                )}
-              </button>
-            )
-          })}
+                  <span style={{ fontSize: 10, fontWeight: 700, background: ativo ? cfg.color : 'var(--bg-card)', color: ativo ? '#fff' : 'var(--text-secondary)', borderRadius: 99, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>{qtd}</span>
+                </label>
+              )
+            })}
+          </div>
+
+          {/* Tipo de serviço */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Tipo de Serviço</div>
+            <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} style={inpF}>
+              <option value="">Todos os tipos</option>
+              {TIPOS_SERVICO.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+
+          {/* Veículo */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Veículo</div>
+            <select value={filtroVeiculo} onChange={e => setFiltroVeiculo(e.target.value)} style={inpF}>
+              <option value="">Todos os veículos</option>
+              {veiculosDisponiveis.map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+
+          {/* Motorista */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Motorista</div>
+            <select value={filtroMotorista} onChange={e => setFiltroMotorista(e.target.value)} style={inpF}>
+              <option value="">Todos os motoristas</option>
+              {motoristasDisponiveis.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+
+          {/* Cliente */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>Cliente</div>
+            <div style={{ position: 'relative' }}>
+              <MagnifyingGlassIcon style={{ width: 12, position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <input value={filtroCliente} onChange={e => setFiltroCliente(e.target.value)} placeholder="Buscar cliente..." style={{ ...inpF, paddingLeft: 24 }} />
+            </div>
+          </div>
+
+          <button onClick={() => setFiltroSalvo(true)} style={{ marginTop: 'auto', padding: '8px 0', borderRadius: 7, border: '1px solid var(--border)', background: filtroSalvo ? 'var(--accent)' : 'transparent', color: filtroSalvo ? '#fff' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            {filtroSalvo ? '✓ Filtro salvo' : '💾 Salvar filtro'}
+          </button>
         </div>
 
-        {/* ── Painel Central: Lista ── */}
+        {/* ── Painel Central: Tabela ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Busca */}
-          <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', gap: 10, alignItems: 'center' }}>
+
+          {/* Busca global */}
+          <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', gap: 10, alignItems: 'center', background: 'var(--bg-card)' }}>
             <div style={{ flex: 1, position: 'relative' }}>
-              <MagnifyingGlassIcon style={{ width: 15, height: 15, position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-              <input
-                value={busca}
-                onChange={e => setBusca(e.target.value)}
-                placeholder="Buscar cliente, tipo, motorista, veículo..."
-                style={{ width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 12px 7px 32px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }}
-              />
+              <MagnifyingGlassIcon style={{ width: 13, position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Buscar por cliente, tipo, motorista, veículo..."
+                style={{ width: '100%', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 10px 6px 28px', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
             </div>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-              {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''}
-            </span>
-            <button onClick={() => setModalNovo(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 8, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-              <PlusIcon style={{ width: 14, height: 14 }} /> Novo
+            <button onClick={() => setModalNovo(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 8, background: 'var(--accent)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+              <PlusIcon style={{ width: 14 }} /> Novo Agendamento
+            </button>
+            <button onClick={carregar} style={{ padding: 6, borderRadius: 7, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <ArrowPathIcon style={{ width: 14 }} />
             </button>
           </div>
 
-          {/* Lista */}
+          {/* Tabs */}
+          <div style={{ borderBottom: '1px solid var(--border)', display: 'flex', flexShrink: 0, background: 'var(--bg-card)', paddingLeft: 12 }}>
+            {TABS.map(t => (
+              <button key={t.key} onClick={() => setTabAtiva(t.key)} style={{ padding: '8px 12px', fontSize: 11, fontWeight: tabAtiva === t.key ? 700 : 500, cursor: 'pointer', background: 'none', border: 'none', borderBottom: `2px solid ${tabAtiva === t.key ? (t.color || 'var(--accent)') : 'transparent'}`, color: tabAtiva === t.key ? (t.color || 'var(--accent)') : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
+                {t.label}
+                {t.count > 0 && <span style={{ fontSize: 9, fontWeight: 700, padding: '0 5px', borderRadius: 99, background: tabAtiva === t.key ? (t.color || 'var(--accent)') : 'rgba(148,163,184,0.25)', color: tabAtiva === t.key ? '#fff' : 'var(--text-secondary)', minWidth: 16, textAlign: 'center' }}>{t.count}</span>}
+              </button>
+            ))}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 12 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{filtrados.length} agendamentos</span>
+            </div>
+          </div>
+
+          {/* Tabela */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loading ? (
               <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                <ArrowPathIcon style={{ width: 28, height: 28, margin: '0 auto 10px', opacity: 0.4 }} />
+                <ArrowPathIcon style={{ width: 28, margin: '0 auto 10px', opacity: 0.4 }} />
                 <p style={{ fontSize: 13 }}>Carregando...</p>
               </div>
             ) : filtrados.length === 0 ? (
               <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                <CalendarDaysIcon style={{ width: 36, height: 36, margin: '0 auto 10px', opacity: 0.3 }} />
+                <CalendarDaysIcon style={{ width: 36, margin: '0 auto 10px', opacity: 0.3 }} />
                 <p style={{ fontSize: 14, fontWeight: 600 }}>Nenhum agendamento</p>
-                <p style={{ fontSize: 12, marginTop: 4 }}>
-                  {busca ? 'Nenhum resultado para a busca.' : 'Clique em "+ Novo" para criar o primeiro.'}
-                </p>
+                <p style={{ fontSize: 12, marginTop: 4 }}>{busca ? 'Nenhum resultado para a busca.' : 'Clique em "+ Novo Agendamento" para criar o primeiro.'}</p>
               </div>
             ) : (
-              filtrados.map(ag => {
-                const alerta = alertaPrincipal(ag)
-                const isHoje = ag.data_servico === hoje
-                const isFalha = (ag.agendamento_alertas || []).some(al => al.status === 'falha')
-                const isSelected = selected?.id === ag.id
-
-                return (
-                  <div
-                    key={ag.id}
-                    onClick={() => setSelected(isSelected ? null : ag)}
-                    style={{
-                      padding: '12px 16px',
-                      borderBottom: '1px solid var(--border)',
-                      background: rowBg(ag),
-                      cursor: 'pointer',
-                      transition: 'background 0.15s',
-                      borderLeft: `3px solid ${isSelected ? 'var(--accent)' : 'transparent'}`,
-                    }}
-                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'var(--bg-card-hover)' }}
-                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = rowBg(ag) }}
-                  >
-                    {/* Linha 1: Tipo + Status + Alerta */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: isHoje ? 'var(--accent)' : 'var(--text-primary)' }}>
-                          🚛 {ag.tipo_servico}
-                        </span>
-                        {isFalha && <span style={{ fontSize: 10, color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>⚠ Falha WA</span>}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {alerta && <AlertaChip status={alerta.status} />}
-                        <StatusChip status={ag.status} />
-                      </div>
-                    </div>
-
-                    {/* Linha 2: Cliente + Data */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 500 }}>{ag.cliente_nome}</span>
-                      <span style={{ fontSize: 11, color: isHoje ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: isHoje ? 700 : 400 }}>
-                        📅 {fmtDate(ag.data_servico)}{ag.horario_servico ? ` · ${ag.horario_servico.slice(0, 5)}` : ''}
-                      </span>
-                    </div>
-
-                    {/* Linha 3: Equipe + Localização */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                      {ag.responsavel_nome && (
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                          👤 {ag.responsavel_nome}
-                        </span>
-                      )}
-                      {ag.motorista_nome && (
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                          🚗 {ag.motorista_nome}
-                        </span>
-                      )}
-                      {ag.veiculo_nome && (
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>🔩 {ag.veiculo_nome}</span>
-                      )}
-                      {ag.origem && (
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <MapPinIcon style={{ width: 10, height: 10 }} /> {ag.origem}{ag.destino ? ` → ${ag.destino}` : ''}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Linha 4: Ações rápidas inline (visíveis só no hover/selected) */}
-                    {isSelected && (
-                      <div style={{ display: 'flex', gap: 5, marginTop: 8 }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setModalEditar(ag)} style={{ padding: '3px 9px', borderRadius: 6, background: 'rgba(99,102,241,0.12)', border: 'none', color: '#6366f1', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
-                          Editar
-                        </button>
-                        {!['em_execucao', 'concluido', 'cancelado'].includes(ag.status) && (
-                          <button onClick={() => mudarStatus(ag.id, 'em_execucao')} style={{ padding: '3px 9px', borderRadius: 6, background: 'rgba(6,182,212,0.12)', border: 'none', color: '#06b6d4', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
-                            Iniciar
-                          </button>
-                        )}
-                        {ag.status === 'em_execucao' && (
-                          <button onClick={() => mudarStatus(ag.id, 'concluido')} style={{ padding: '3px 9px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', border: 'none', color: '#10b981', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
-                            Concluir
-                          </button>
-                        )}
-                        {!['cancelado', 'concluido'].includes(ag.status) && (
-                          <button onClick={() => mudarStatus(ag.id, 'cancelado')} style={{ padding: '3px 9px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', border: 'none', color: '#ef4444', fontSize: 10, fontWeight: 600, cursor: 'pointer' }}>
-                            Cancelar
-                          </button>
-                        )}
-                        <button onClick={() => excluir(ag)} style={{ padding: '3px 7px', borderRadius: 6, background: 'rgba(239,68,68,0.08)', border: 'none', color: '#ef4444', fontSize: 10, cursor: 'pointer' }}>
-                          <TrashIcon style={{ width: 11, height: 11 }} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-secondary)', position: 'sticky', top: 0, zIndex: 2 }}>
+                    {['Data / Hora', 'Cliente', 'Tipo de Serviço', 'Atividade', 'Origem → Destino', 'Motorista', 'Veículo', 'Status', 'WhatsApp', 'Ações'].map(h => (
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtrados.map(ag => {
+                    const alerta = alertaPrincipal(ag)
+                    const isSel  = selected?.id === ag.id
+                    const isAtrasado = ag.data_servico < hoje && !['cancelado','concluido'].includes(ag.status)
+                    const isFalha = (ag.agendamento_alertas || []).some(al => al.status === 'falha')
+                    return (
+                      <tr key={ag.id} onClick={() => setSelected(isSel ? null : ag)}
+                        style={{ background: isSel ? 'rgba(99,102,241,0.06)' : 'transparent', borderBottom: '1px solid var(--border)', cursor: 'pointer', borderLeft: `3px solid ${isSel ? 'var(--accent)' : 'transparent'}` }}
+                        onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = 'var(--bg-card-hover)' }}
+                        onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent' }}>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: isAtrasado ? '#f59e0b' : 'var(--text-primary)' }}>{fmtDate(ag.data_servico)}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{ag.horario_servico?.slice(0,5) || '—'}</div>
+                          {isAtrasado && <span style={{ fontSize: 9, color: '#f59e0b', fontWeight: 700 }}>Atrasado</span>}
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{ag.cliente_nome}</div>
+                        </td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ fontSize: 14 }}>🚛</span>
+                            <span style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 11 }}>{ag.tipo_servico}</span>
+                          </div>
+                          {isFalha && <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 700 }}>⚠ Falha WA</span>}
+                        </td>
+                        <td style={{ padding: '10px 12px', maxWidth: 130 }}>
+                          <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ag.atividade || '—'}</div>
+                        </td>
+                        <td style={{ padding: '10px 12px', maxWidth: 140 }}>
+                          {ag.origem || ag.destino ? (
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {ag.origem || ''}{ag.origem && ag.destino ? ' → ' : ''}{ag.destino || ''}
+                            </div>
+                          ) : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                        </td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 11 }}>{ag.motorista_nome || '—'}</td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: 11 }}>{ag.veiculo_nome || '—'}</td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}><StatusChip status={ag.status} /></td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                          {alerta ? <AlertaChip status={alerta.status} /> : <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>—</span>}
+                        </td>
+                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button onClick={() => setModalEditar(ag)} title="Editar" style={{ padding: '4px 7px', borderRadius: 5, background: 'transparent', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                              <PencilIcon style={{ width: 12 }} />
+                            </button>
+                            {ag.responsavel_whatsapp && waLink(ag.responsavel_whatsapp) && (
+                              <a href={waLink(ag.responsavel_whatsapp)} target="_blank" rel="noreferrer" title="WhatsApp" style={{ padding: '4px 7px', borderRadius: 5, background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.3)', cursor: 'pointer', color: '#25d366', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                                <ChatBubbleLeftRightIcon style={{ width: 12 }} />
+                              </a>
+                            )}
+                            {!['cancelado','concluido'].includes(ag.status) && (
+                              <button onClick={() => mudarStatus(ag.id, 'concluido')} title="Registrar conclusão" style={{ padding: '4px 7px', borderRadius: 5, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', cursor: 'pointer', color: '#10b981' }}>
+                                <CheckCircleIcon style={{ width: 12 }} />
+                              </button>
+                            )}
+                            {!['cancelado','concluido'].includes(ag.status) && (
+                              <button onClick={() => mudarStatus(ag.id, 'cancelado')} title="Cancelar agendamento" style={{ padding: '4px 7px', borderRadius: 5, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', color: '#ef4444' }}>
+                                <XCircleIcon style={{ width: 12 }} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
 
-        {/* ── Painel Direito: Detalhe ── */}
-        {selected && (
-          <PainelDetalhe
-            ag={selected}
-            onClose={() => setSelected(null)}
-            onEdit={ag => { setModalEditar(ag); setSelected(null) }}
-            onStatusChange={async (id, status) => { await mudarStatus(id, status) }}
-          />
-        )}
+        {/* ── Painel Direito: Detalhes ── */}
+        <PainelDetalhe
+          ag={selected}
+          onClose={() => setSelected(null)}
+          onEdit={ag => { setModalEditar(ag); setSelected(null) }}
+          onStatusChange={async (id, status) => { await mudarStatus(id, status) }}
+          onNovoAgendamento={() => setModalNovo(true)}
+        />
       </div>
 
       {/* ── Modais ── */}
