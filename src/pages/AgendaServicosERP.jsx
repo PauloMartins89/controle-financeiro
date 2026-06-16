@@ -773,36 +773,30 @@ export default function AgendaServicosERP() {
       />
 
       {/* ── KPI strip ── */}
-      <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: 8, flexShrink: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
-        {[
-          { label: 'Hoje',             value: kpis.hoje,           icon: '📅', color: '#6366f1', accent: false },
-          { label: 'Amanhã',           value: kpis.amanha,         icon: '📆', color: '#6366f1', accent: false },
-          { label: 'Próximos 7 dias',  value: kpis.prox7,          icon: '🗓', color: '#0ea5e9', accent: false },
-          { label: 'Atrasos Pendentes',value: kpis.atrasados,      icon: '⏰', color: '#f59e0b', accent: kpis.atrasados > 0 },
-          { label: 'Alertas Enviados', value: kpis.alertasEnviados,icon: '📲', color: '#10b981', accent: false },
-          { label: 'Falhas de Envio',  value: kpis.falhas,         icon: '⚠️', color: '#ef4444', accent: kpis.falhas > 0 },
-          { label: 'Concluídos',       value: kpis.concluidos,     icon: '✅', color: '#6b7280', accent: false },
-        ].map(k => (
-          <div key={k.label} style={{ flexShrink: 0, width: 130, background: k.accent ? `${k.color}12` : 'var(--bg-secondary)', border: `1px solid ${k.accent ? k.color + '40' : 'var(--border)'}`, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
-            onClick={() => {
-              if (k.label === 'Hoje') setTabAtiva('hoje')
-              else if (k.label === 'Amanhã') setTabAtiva('amanha')
-              else if (k.label === 'Próximos 7 dias') setTabAtiva('prox7')
-              else if (k.label === 'Atrasos Pendentes') setTabAtiva('atrasados')
-              else if (k.label === 'Concluídos') setTabAtiva('concluidos')
-              else setTabAtiva('todos')
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.15)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <span style={{ fontSize: 12 }}>{k.icon}</span> {k.label}
+      <div style={{ padding: '10px 20px 8px', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8 }}>
+          {[
+            { label: 'Hoje',              value: kpis.hoje,            icon: CalendarDaysIcon, color: '#6366f1', alert: false,            tab: 'hoje'      },
+            { label: 'Amanhã',            value: kpis.amanha,          icon: CalendarDaysIcon, color: '#6366f1', alert: false,            tab: 'amanha'    },
+            { label: 'Próximos 7 dias',   value: kpis.prox7,           icon: CalendarDaysIcon, color: '#0ea5e9', alert: false,            tab: 'prox7'     },
+            { label: 'Atrasos Pendentes', value: kpis.atrasados,       icon: ExclamationTriangleIcon, color: '#f59e0b', alert: kpis.atrasados > 0, tab: 'atrasados' },
+            { label: 'Alertas Enviados',  value: kpis.alertasEnviados, icon: ChatBubbleLeftRightIcon, color: '#10b981', alert: false,      tab: 'todos'     },
+            { label: 'Falhas de Envio',   value: kpis.falhas,          icon: ExclamationTriangleIcon, color: '#ef4444', alert: kpis.falhas > 0, tab: 'todos' },
+            { label: 'Concluídos',        value: kpis.concluidos,      icon: CheckCircleIcon,  color: '#6b7280', alert: false,            tab: 'concluidos'},
+          ].map(({ label, value, icon: Icon, color, alert, tab }) => (
+            <div key={label} onClick={() => setTabAtiva(tab)}
+              style={{ background: 'var(--bg-card)', border: `1px solid var(--border)`, borderTop: `3px solid ${alert ? color : 'var(--border)'}`, borderRadius: 8, padding: '10px 12px', boxShadow: alert ? `0 2px 8px ${color}20` : '0 1px 3px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, lineHeight: 1.3 }}>{label}</div>
+                <Icon style={{ width: 13, color, flexShrink: 0 }} />
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 900, color, lineHeight: 1, marginBottom: 3 }}>{value}</div>
+              <div style={{ fontSize: 9, color: 'var(--text-secondary)' }}>
+                {kpis.todos > 0 ? Math.round((value / kpis.todos) * 100) : 0}% do total
+              </div>
             </div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{k.value}</div>
-            <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 2 }}>
-              {kpis.todos > 0 ? Math.round((k.value / kpis.todos) * 100) : 0}% do total
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* ── Layout: filtros | tabela | detalhe ── */}
