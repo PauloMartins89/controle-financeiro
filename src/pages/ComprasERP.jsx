@@ -20,7 +20,6 @@ import {
   EnvelopeIcon, ExclamationCircleIcon, ShieldCheckIcon,
   ChatBubbleLeftEllipsisIcon, DocumentTextIcon,
 } from '@heroicons/react/24/outline'
-import { LC } from '../lib/theme'
 import { useNavigate } from 'react-router-dom'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -210,7 +209,6 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
   const [semResultado, setSemResultado] = useState(false)
   const wRef = useRef(null)
   const timerRef = useRef(null)
-  const normStr = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
   useEffect(() => {
     const fn = e => { if (wRef.current && !wRef.current.contains(e.target)) setOpen(false) }
@@ -226,9 +224,8 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
         .from('catalogo_compras').select('id,nome,unidade_medida,preco_referencia,categoria')
         .ilike('nome', `%${value.trim()}%`).order('nome').limit(10)
       if (workspaceId) query = query.eq('workspace_id', workspaceId)
-      const { data, error } = await query
-      console.log('[CatalogoItemInput] workspaceId=', workspaceId, 'busca=', value, 'resultado=', data, 'erro=', error)
-      const rows = (data || []).map(r => ({ ...r, unidade: r.unidade || r.unidade_medida || 'un', valor_estimado: r.valor_estimado || r.preco_referencia || null }))
+      const { data } = await query
+      const rows = (data || []).map(r => ({ ...r, unidade: r.unidade_medida || 'un', valor_estimado: r.preco_referencia || null }))
       setSugestoes(rows)
       setSemResultado(rows.length === 0)
       setOpen(true)
@@ -1718,7 +1715,7 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
                 {[
                   { label: 'Valor estimado', value: item.valor_orcado ? fmtBRL(item.valor_orcado) : '—', color: C.text },
                   { label: 'Valor aprovado', value: item.valor_aprovado ? fmtBRL(item.valor_aprovado) : '—', color: C.green },
-                  { label: 'Fornecedor', value: item.fornecedor_vencedor || item.fornecedor_sugerido || '—', color: C.textSec },
+                  { label: 'Fornecedor', value: item.fornecedor_vencedor || item.fornecedor || '—', color: C.textSec },
                   { label: 'Última compra', value: item.ultima_compra ? fmtDate(item.ultima_compra) : '—', color: C.textSec },
                 ].map(r => (
                   <div key={r.label} style={{ padding: '7px 10px', background: '#F8FAFC', borderRadius: 6, border: `1px solid ${C.border}` }}>
@@ -2091,10 +2088,10 @@ function MapaComparativo({ item }) {
   useEffect(() => {
     if (!item?.id) { setCotacoes([]); return }
     supabase.from('cotacoes_compra').select('*').eq('solicitacao_id', item.id)
-      .then(({ data }) => setCotacoes((data || []).filter(c => c.proposta_valor)))
+      .then(({ data }) => setCotacoes((data || []).filter(c => c.valor_total)))
   }, [item?.id])
 
-  const menorPreco = cotacoes.length ? Math.min(...cotacoes.map(c => c.proposta_valor)) : null
+  const menorPreco = cotacoes.length ? Math.min(...cotacoes.map(c => c.valor_total)) : null
   return (
     <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2120,11 +2117,11 @@ function MapaComparativo({ item }) {
             </thead>
             <tbody>
               {cotacoes.map(c => {
-                const isMelhor = c.proposta_valor === menorPreco
+                const isMelhor = c.valor_total === menorPreco
                 return (
                   <tr key={c.id} style={{ background: isMelhor ? '#F0FDF4' : 'transparent', borderBottom: `1px solid ${C.border}` }}>
                     <td style={{ padding: '7px 10px', fontWeight: 600, color: C.text }}>{c.fornecedor_nome}</td>
-                    <td style={{ padding: '7px 10px', fontWeight: 800, color: isMelhor ? C.green : C.text }}>{fmtBRL(c.proposta_valor)}</td>
+                    <td style={{ padding: '7px 10px', fontWeight: 800, color: isMelhor ? C.green : C.text }}>{fmtBRL(c.valor_total)}</td>
                     <td style={{ padding: '7px 10px', color: C.textSec }}>{c.prazo_entrega || '—'}</td>
                     <td style={{ padding: '7px 10px', color: C.textSec }}>{c.condicao_pagamento || '—'}</td>
                     <td style={{ padding: '7px 10px', color: C.amber }}>{c.avaliacao ? '★'.repeat(Math.round(c.avaliacao)) : '—'}</td>
@@ -2150,6 +2147,7 @@ function AuditoriaRecente({ workspaceId }) {
     if (!workspaceId) return
     supabase.from('solicitacao_compra_eventos')
       .select('id, observacao, acao, ator, criado_em')
+      .eq('workspace_id', workspaceId)
       .order('criado_em', { ascending: false })
       .limit(8)
       .then(({ data }) => setLogs((data || []).map(normalizeEvento)))
