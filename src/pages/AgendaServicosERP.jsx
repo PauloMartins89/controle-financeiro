@@ -13,6 +13,7 @@ import {
   MagnifyingGlassIcon, MapPinIcon, PlayIcon,
   DevicePhoneMobileIcon, PlusIcon, XMarkIcon,
   TrashIcon, ExclamationTriangleIcon, ChatBubbleLeftRightIcon,
+  ChevronLeftIcon, ChevronRightIcon,
 } from '@heroicons/react/24/outline'
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
@@ -640,6 +641,7 @@ export default function AgendaServicosERP() {
   const [filtroMotorista, setFiltroMotorista] = useState('')
   const [filtroCliente, setFiltroCliente] = useState('')
   const [filtroSalvo, setFiltroSalvo] = useState(false)
+  const [filtroColapsado, setFiltroColapsado] = useState(false)
 
   const hoje = new Date().toISOString().slice(0, 10)
   const amanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
@@ -773,7 +775,7 @@ export default function AgendaServicosERP() {
       />
 
       {/* ── KPI strip ── */}
-      <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
+      <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)', display: 'flex', gap: 8, flexShrink: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
         {[
           { label: 'Hoje',             value: kpis.hoje,           icon: '📅', color: '#6366f1', accent: false },
           { label: 'Amanhã',           value: kpis.amanha,         icon: '📆', color: '#6366f1', accent: false },
@@ -783,7 +785,7 @@ export default function AgendaServicosERP() {
           { label: 'Falhas de Envio',  value: kpis.falhas,         icon: '⚠️', color: '#ef4444', accent: kpis.falhas > 0 },
           { label: 'Concluídos',       value: kpis.concluidos,     icon: '✅', color: '#6b7280', accent: false },
         ].map(k => (
-          <div key={k.label} style={{ flex: 1, minWidth: 110, background: k.accent ? `${k.color}12` : 'var(--bg-secondary)', border: `1px solid ${k.accent ? k.color + '40' : 'var(--border)'}`, borderRadius: 10, padding: '10px 14px', cursor: 'pointer' }}
+          <div key={k.label} style={{ flexShrink: 0, width: 130, background: k.accent ? `${k.color}12` : 'var(--bg-secondary)', border: `1px solid ${k.accent ? k.color + '40' : 'var(--border)'}`, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
             onClick={() => {
               if (k.label === 'Hoje') setTabAtiva('hoje')
               else if (k.label === 'Amanhã') setTabAtiva('amanha')
@@ -791,12 +793,14 @@ export default function AgendaServicosERP() {
               else if (k.label === 'Atrasos Pendentes') setTabAtiva('atrasados')
               else if (k.label === 'Concluídos') setTabAtiva('concluidos')
               else setTabAtiva('todos')
-            }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              <span>{k.icon}</span> {k.label}
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 3px 10px rgba(0,0,0,0.15)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ fontSize: 12 }}>{k.icon}</span> {k.label}
             </div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: k.color, lineHeight: 1 }}>{k.value}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{k.value}</div>
+            <div style={{ fontSize: 9, color: 'var(--text-secondary)', marginTop: 2 }}>
               {kpis.todos > 0 ? Math.round((k.value / kpis.todos) * 100) : 0}% do total
             </div>
           </div>
@@ -804,14 +808,24 @@ export default function AgendaServicosERP() {
       </div>
 
       {/* ── Layout 3 painéis ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
-        {/* ── Filtros laterais ── */}
-        <div style={{ width: 220, flexShrink: 0, borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg-secondary)', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>Filtros rápidos</span>
-            <button onClick={limparFiltros} style={{ fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Limpar filtros</button>
+        {/* ── Filtros laterais (recolhível) ── */}
+        <div style={{ width: filtroColapsado ? 44 : 220, flexShrink: 0, borderRight: '1px solid var(--border)', overflowY: filtroColapsado ? 'hidden' : 'auto', overflowX: 'hidden', background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', transition: 'width 0.22s cubic-bezier(.4,0,.2,1)' }}>
+
+          {/* Botão toggle + header */}
+          <div style={{ padding: filtroColapsado ? '10px 0' : '10px 12px', display: 'flex', alignItems: 'center', justifyContent: filtroColapsado ? 'center' : 'space-between', borderBottom: '1px solid var(--border)', flexShrink: 0, gap: 6 }}>
+            {!filtroColapsado && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>Filtros rápidos</span>}
+            <div style={{ display: 'flex', gap: 4 }}>
+              {!filtroColapsado && <button onClick={limparFiltros} style={{ fontSize: 10, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '2px 4px', whiteSpace: 'nowrap' }}>Limpar</button>}
+              <button onClick={() => setFiltroColapsado(!filtroColapsado)} title={filtroColapsado ? 'Expandir filtros' : 'Recolher filtros'} style={{ padding: '4px 6px', borderRadius: 5, background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                {filtroColapsado ? <ChevronRightIcon style={{ width: 13 }} /> : <ChevronLeftIcon style={{ width: 13 }} />}
+              </button>
+            </div>
           </div>
+
+          {/* Conteúdo dos filtros — oculto quando colapsado */}
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: filtroColapsado ? 0 : '12px 12px', display: 'flex', flexDirection: 'column', gap: 14, opacity: filtroColapsado ? 0 : 1, transition: 'opacity 0.15s', pointerEvents: filtroColapsado ? 'none' : 'auto' }}>
 
           {/* Período */}
           <div>
@@ -876,9 +890,29 @@ export default function AgendaServicosERP() {
             </div>
           </div>
 
-          <button onClick={() => setFiltroSalvo(true)} style={{ marginTop: 'auto', padding: '8px 0', borderRadius: 7, border: '1px solid var(--border)', background: filtroSalvo ? 'var(--accent)' : 'transparent', color: filtroSalvo ? '#fff' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-            {filtroSalvo ? '✓ Filtro salvo' : '💾 Salvar filtro'}
-          </button>
+            <button onClick={() => setFiltroSalvo(true)} style={{ marginTop: 'auto', padding: '8px 0', borderRadius: 7, border: '1px solid var(--border)', background: filtroSalvo ? 'var(--accent)' : 'transparent', color: filtroSalvo ? '#fff' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              {filtroSalvo ? '✓ Filtro salvo' : '💾 Salvar filtro'}
+            </button>
+          </div>
+
+          {/* Ícones quando colapsado */}
+          {filtroColapsado && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '10px 0' }}>
+              {[
+                { icon: '📅', title: 'Período', ativo: !!(periodoInicio || periodoFim) },
+                { icon: '🏷', title: 'Status', ativo: filtroStatus.length > 0 },
+                { icon: '🚛', title: 'Tipo', ativo: !!filtroTipo },
+                { icon: '🚗', title: 'Veículo', ativo: !!filtroVeiculo },
+                { icon: '👤', title: 'Motorista', ativo: !!filtroMotorista },
+                { icon: '🏢', title: 'Cliente', ativo: !!filtroCliente },
+              ].map(f => (
+                <button key={f.icon} title={f.title} onClick={() => setFiltroColapsado(false)} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${f.ativo ? 'var(--accent)' : 'var(--border)'}`, background: f.ativo ? 'rgba(99,102,241,0.12)' : 'transparent', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  {f.icon}
+                  {f.ativo && <span style={{ position: 'absolute', top: -2, right: -2, width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)' }} />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Painel Central: Tabela ── */}
@@ -913,7 +947,7 @@ export default function AgendaServicosERP() {
           </div>
 
           {/* Tabela */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
             {loading ? (
               <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                 <ArrowPathIcon style={{ width: 28, margin: '0 auto 10px', opacity: 0.4 }} />
@@ -926,11 +960,11 @@ export default function AgendaServicosERP() {
                 <p style={{ fontSize: 12, marginTop: 4 }}>{busca ? 'Nenhum resultado para a busca.' : 'Clique em "+ Novo Agendamento" para criar o primeiro.'}</p>
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: 'var(--bg-secondary)', position: 'sticky', top: 0, zIndex: 2 }}>
-                    {['Data / Hora', 'Cliente', 'Tipo de Serviço', 'Atividade', 'Origem → Destino', 'Motorista', 'Veículo', 'Status', 'WhatsApp', 'Ações'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                    {['Data / Hora', 'Cliente', 'Tipo de Serviço', 'Atividade', 'Origem → Destino', 'Motorista', 'Veículo', 'Status', 'WA', 'Ações'].map(h => (
+                      <th key={h} style={{ padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -1007,14 +1041,16 @@ export default function AgendaServicosERP() {
           </div>
         </div>
 
-        {/* ── Painel Direito: Detalhes ── */}
-        <PainelDetalhe
-          ag={selected}
-          onClose={() => setSelected(null)}
-          onEdit={ag => { setModalEditar(ag); setSelected(null) }}
-          onStatusChange={async (id, status) => { await mudarStatus(id, status) }}
-          onNovoAgendamento={() => setModalNovo(true)}
-        />
+        {/* ── Drawer de Detalhes (overlay, não reduz tabela) ── */}
+        <div style={{ position: 'absolute', top: 0, right: 0, height: '100%', width: selected ? 360 : 0, transition: 'width 0.25s cubic-bezier(.4,0,.2,1)', overflow: 'hidden', zIndex: 10, boxShadow: selected ? '-4px 0 24px rgba(0,0,0,0.2)' : 'none' }}>
+          <PainelDetalhe
+            ag={selected}
+            onClose={() => setSelected(null)}
+            onEdit={ag => { setModalEditar(ag); setSelected(null) }}
+            onStatusChange={async (id, status) => { await mudarStatus(id, status) }}
+            onNovoAgendamento={() => setModalNovo(true)}
+          />
+        </div>
       </div>
 
       {/* ── Modais ── */}
