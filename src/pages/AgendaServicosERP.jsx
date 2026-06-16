@@ -808,7 +808,7 @@ export default function AgendaServicosERP() {
       </div>
 
       {/* ── Layout 3 painéis ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* ── Filtros laterais (recolhível) ── */}
         <div style={{ width: filtroColapsado ? 44 : 220, flexShrink: 0, borderRight: '1px solid var(--border)', overflowY: filtroColapsado ? 'hidden' : 'auto', overflowX: 'hidden', background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', transition: 'width 0.22s cubic-bezier(.4,0,.2,1)' }}>
@@ -1041,8 +1041,8 @@ export default function AgendaServicosERP() {
           </div>
         </div>
 
-        {/* ── Drawer de Detalhes (overlay, não reduz tabela) ── */}
-        <div style={{ position: 'absolute', top: 0, right: 0, height: '100%', width: selected ? 360 : 0, transition: 'width 0.25s cubic-bezier(.4,0,.2,1)', overflow: 'hidden', zIndex: 10, boxShadow: selected ? '-4px 0 24px rgba(0,0,0,0.2)' : 'none' }}>
+        {/* ── Painel Direito: Detalhes (flex sibling, empurra a tabela) ── */}
+        <div style={{ width: selected ? 360 : 0, flexShrink: 0, overflow: 'hidden', transition: 'width 0.25s cubic-bezier(.4,0,.2,1)', borderLeft: selected ? '1px solid var(--border)' : 'none' }}>
           <PainelDetalhe
             ag={selected}
             onClose={() => setSelected(null)}
