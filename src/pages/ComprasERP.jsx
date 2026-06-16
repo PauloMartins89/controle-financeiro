@@ -207,8 +207,10 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
   const [open, setOpen]           = useState(false)
   const [cursor, setCursor]       = useState(-1)
   const [semResultado, setSemResultado] = useState(false)
+  const [erroBusca, setErroBusca] = useState('')
   const wRef = useRef(null)
   const timerRef = useRef(null)
+  const lastErrToastRef = useRef(0)
 
   useEffect(() => {
     const fn = e => { if (wRef.current && !wRef.current.contains(e.target)) setOpen(false) }
@@ -218,16 +220,28 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
 
   useEffect(() => {
     clearTimeout(timerRef.current)
-    if (!value.trim() || value.trim().length < 2) { setSugestoes([]); setSemResultado(false); setOpen(false); return }
+    if (!value.trim() || value.trim().length < 2) { setSugestoes([]); setSemResultado(false); setErroBusca(''); setOpen(false); return }
     timerRef.current = setTimeout(async () => {
       let query = supabase
         .from('catalogo_compras').select('id,nome,unidade_medida,preco_referencia,categoria')
         .ilike('nome', `%${value.trim()}%`).order('nome').limit(10)
       if (workspaceId) query = query.eq('workspace_id', workspaceId)
-      const { data } = await query
+      const { data, error } = await query
+      if (error) {
+        setSugestoes([])
+        setSemResultado(false)
+        setErroBusca('Falha ao consultar o catálogo')
+        setOpen(true)
+        if (Date.now() - lastErrToastRef.current > 3000) {
+          toast.error('Falha ao consultar o catálogo')
+          lastErrToastRef.current = Date.now()
+        }
+        return
+      }
       const rows = (data || []).map(r => ({ ...r, unidade: r.unidade_medida || 'un', valor_estimado: r.preco_referencia || null }))
       setSugestoes(rows)
       setSemResultado(rows.length === 0)
+      setErroBusca('')
       setOpen(true)
       setCursor(-1)
     }, 200)
@@ -282,6 +296,11 @@ function CatalogoItemInput({ value, onChange, onSelect, workspaceId, inputSt, on
               )}
             </div>
           )}
+            {erroBusca && (
+              <div style={{ padding: '10px 12px', fontSize: 12, color: '#B45309', background: '#FFFBEB', borderTop: '1px solid #FDE68A' }}>
+                {erroBusca}. Verifique a conexão e tente novamente.
+              </div>
+            )}
         </div>
       )}
     </div>
@@ -2182,6 +2201,17 @@ function AuditoriaRecente({ workspaceId }) {
   )
 }
 
+function AnalyticsSkeletonCard() {
+  return (
+    <div style={{ background: C.bgCard, borderRadius: 10, border: `1px solid ${C.border}`, padding: '12px 14px', minHeight: 110 }}>
+      <div style={{ width: '45%', height: 10, borderRadius: 6, background: '#E2E8F0', marginBottom: 10 }} />
+      <div style={{ width: '80%', height: 8, borderRadius: 6, background: '#E2E8F0', marginBottom: 8 }} />
+      <div style={{ width: '70%', height: 8, borderRadius: 6, background: '#E2E8F0', marginBottom: 8 }} />
+      <div style={{ width: '55%', height: 8, borderRadius: 6, background: '#E2E8F0' }} />
+    </div>
+  )
+}
+
 // ─── Modal: Encerrar leilão + selecionar vencedor (inline no ERP) ────────────
 function ModalVencedorERP({ item, workspaceId, onClose, onSaved }) {
   const [cotacoes,   setCotacoes]   = useState([])
@@ -2287,6 +2317,7 @@ function ModalVencedorERP({ item, workspaceId, onClose, onSaved }) {
 export default function ComprasERP() {
   const workspaceId = useStore(s => s.workspaceId)
   const now = new Date()
+  const [isOnline, setIsOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine)
 
   const [items, setItems]           = useState([])
   const [itemsMesAnt, setItemsMesAnt] = useState([])
@@ -2313,6 +2344,24 @@ export default function ComprasERP() {
   useEffect(() => {
     if (workspaceId) supabase.from('workspaces').select('nome').eq('id', workspaceId).single().then(({ data }) => setWsNome(data?.nome || ''))
   }, [workspaceId])
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true)
+      setRefresh(p => p + 1)
+      toast.success('Conexão restabelecida. Dados atualizados.')
+    }
+    const handleOffline = () => {
+      setIsOnline(false)
+      toast('Sem internet. Realtime indisponível temporariamente.', { icon: '⚠️' })
+    }
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   const load = useCallback(async () => {
     if (!workspaceId) return
@@ -2548,6 +2597,11 @@ export default function ComprasERP() {
           style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', color: C.green, border: `1px solid ${C.green}50`, borderRadius: 7, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>
           <ShoppingCartIcon style={{ width: 13 }} /> Gerar Pedido
         </button>
+        {!isOnline && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 7, border: '1px solid #FDE68A', background: '#FFFBEB', color: '#92400E', fontWeight: 700, fontSize: 11 }}>
+            <ExclamationTriangleIcon style={{ width: 13 }} /> Offline
+          </div>
+        )}
         {/* Search */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
           <MagnifyingGlassIcon style={{ width: 12, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: C.textSec }} />
