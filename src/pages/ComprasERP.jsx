@@ -953,7 +953,7 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
 function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
   const [form, setForm] = useState({
     titulo: '', urgencia: 'media',
-    numero_os: '', numero_req: '',
+    numero_os: '',
     fornecedor_sugerido: '', data_necessidade: '', observacoes: '',
   })
   const [itens, setItens] = useState([{ descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
@@ -994,7 +994,6 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
       valor_estimado:   totalItens > 0 ? totalItens : null,
       urgencia:         form.urgencia,
       numero_os:        form.numero_os?.trim() || null,
-      numero_req:       form.numero_req?.trim() || null,
       fornecedor:       form.fornecedor_sugerido?.trim() || null,
       data_necessidade: form.data_necessidade || null,
       quantidade:       listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
@@ -1020,7 +1019,6 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
       valor_estimado:   totalItens > 0 ? totalItens : null,
       urgencia:         form.urgencia,
       numero_os:        form.numero_os?.trim() || null,
-      numero_req:       form.numero_req?.trim() || null,
       fornecedor:       form.fornecedor_sugerido?.trim() || null,
       data_necessidade: form.data_necessidade || null,
       quantidade:       `${listaValida.length} item(s)`,
@@ -1058,7 +1056,9 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelSt}>Nº da Requisição</label>
-              <input value={form.numero_req} onChange={e => F('numero_req', e.target.value)} placeholder="Ex: REQ-2024-001" style={inputSt} />
+              <div style={{ padding: '7px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#F1F5F9', color: '#475569', fontSize: 13, fontWeight: 700, letterSpacing: 0.3 }}>
+                {item.numero_req || '—'}
+              </div>
             </div>
             <div>
               <label style={labelSt}>Nº da Ordem de Serviço</label>
@@ -1147,7 +1147,6 @@ function ModalEditarReq({ item, workspaceId, onClose, onSalvo }) {
     titulo:              item.titulo || '',
     urgencia:            item.urgencia || 'media',
     numero_os:           item.numero_os || '',
-    numero_req:          item.numero_req || '',
     fornecedor_sugerido: item.fornecedor || '',
     data_necessidade:    item.data_necessidade || '',
     observacoes:         item.descricao || '',
@@ -1191,7 +1190,6 @@ function ModalEditarReq({ item, workspaceId, onClose, onSalvo }) {
         valor_estimado:   totalItens > 0 ? totalItens : null,
         urgencia:         form.urgencia,
         numero_os:        form.numero_os?.trim() || null,
-        numero_req:       form.numero_req?.trim() || null,
         fornecedor:       form.fornecedor_sugerido?.trim() || null,
         data_necessidade: form.data_necessidade || null,
         quantidade:       listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
@@ -1241,7 +1239,9 @@ function ModalEditarReq({ item, workspaceId, onClose, onSalvo }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelSt}>Nº da Requisição</label>
-              <input value={form.numero_req} onChange={e => F('numero_req', e.target.value)} placeholder="Ex: REQ-2024-001" style={inputSt} />
+              <div style={{ padding: '7px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#F1F5F9', color: '#475569', fontSize: 13, fontWeight: 700, letterSpacing: 0.3 }}>
+                {item.numero_req || '—'}
+              </div>
             </div>
             <div>
               <label style={labelSt}>Nº da Ordem de Serviço</label>
@@ -1328,7 +1328,6 @@ function ModalContinuarRascunho({ item, workspaceId, onClose, onSalvo }) {
     titulo:              item.titulo || '',
     urgencia:            item.urgencia || 'media',
     numero_os:           item.numero_os || '',
-    numero_req:          item.numero_req || '',
     fornecedor_sugerido: item.fornecedor || '',
     data_necessidade:    item.data_necessidade || '',
     observacoes:         item.descricao || '',
@@ -1369,7 +1368,6 @@ function ModalContinuarRascunho({ item, workspaceId, onClose, onSalvo }) {
       valor_estimado:   totalItens > 0 ? totalItens : null,
       urgencia:         form.urgencia,
       numero_os:        form.numero_os?.trim() || null,
-      numero_req:       form.numero_req?.trim() || null,
       fornecedor:       form.fornecedor_sugerido?.trim() || null,
       data_necessidade: form.data_necessidade || null,
       quantidade:       listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
@@ -1445,7 +1443,9 @@ function ModalContinuarRascunho({ item, workspaceId, onClose, onSalvo }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelSt}>Nº da Requisição</label>
-              <input value={form.numero_req} onChange={e => F('numero_req', e.target.value)} placeholder="Ex: REQ-2024-001" style={inputSt} />
+              <div style={{ padding: '7px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: '#F1F5F9', color: '#475569', fontSize: 13, fontWeight: 700, letterSpacing: 0.3 }}>
+                {item.numero_req || '—'}
+              </div>
             </div>
             <div>
               <label style={labelSt}>Nº da Ordem de Serviço</label>
