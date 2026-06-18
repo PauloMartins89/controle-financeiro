@@ -2964,7 +2964,7 @@ export default function ComprasERP() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: '#F8FAFC', position: 'sticky', top: 0, zIndex: 2 }}>
-                    {['Item / Descrição', 'Origem', 'Solicitante', 'Prioridade', 'Status', 'Prazo Necessário', 'Valor Estimado', 'Próxima Ação'].map(h => (
+                    {['Item / Descrição', 'Nº Req', 'Nº OS', 'Origem', 'Solicitante', 'Prioridade', 'Status', 'Prazo Necessário', 'Valor Estimado', 'Próxima Ação'].map(h => (
                       <th key={h} style={{ padding: '7px 12px', textAlign: 'left', fontWeight: 700, color: C.textSec, fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.3, borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                     <th style={{ width: 28 }} />
@@ -2987,6 +2987,16 @@ export default function ComprasERP() {
                         <td style={{ padding: '9px 12px', minWidth: 140 }}>
                           <div style={{ fontWeight: 700, color: C.text, lineHeight: 1.2 }}>{item.titulo}</div>
                           {item.categoria && <div style={{ fontSize: 10, color: C.textSec, marginTop: 1 }}>{item.categoria}</div>}
+                        </td>
+                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
+                          {item.numero_req
+                            ? <span style={{ fontSize: 11, fontWeight: 700, color: C.blue, background: '#EFF6FF', padding: '2px 7px', borderRadius: 4, border: '1px solid #BFDBFE' }}>{item.numero_req}</span>
+                            : <span style={{ color: C.textSec }}>—</span>}
+                        </td>
+                        <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
+                          {item.numero_os
+                            ? <span style={{ fontSize: 11, fontWeight: 600, color: '#7c3aed', background: '#F5F3FF', padding: '2px 7px', borderRadius: 4, border: '1px solid #C4B5FD' }}>{item.numero_os}</span>
+                            : <span style={{ color: C.textSec }}>—</span>}
                         </td>
                         <td style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>{origemBadge(item)}</td>
                         <td style={{ padding: '9px 12px', color: C.text, whiteSpace: 'nowrap', fontSize: 11 }}>{item.requisitante_nome || '—'}</td>
@@ -3016,8 +3026,17 @@ export default function ComprasERP() {
                             </button>
                           ) : <span style={{ fontSize: 11, color: C.textSec }}>{proxLabel}</span>}
                         </td>
-                        <td style={{ padding: '6px' }}>
-                          <ChevronRightIcon style={{ width: 13, color: C.textSec }} />
+                        <td style={{ padding: '6px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); setEditarItem(item) }}
+                              title="Editar requisição"
+                              style={{ padding: '3px 6px', borderRadius: 5, background: 'rgba(15,118,110,0.08)', border: '1px solid rgba(15,118,110,0.25)', cursor: 'pointer', color: '#0F766E', display: 'flex', alignItems: 'center' }}
+                            >
+                              <PencilSquareIcon style={{ width: 13, height: 13 }} />
+                            </button>
+                            <ChevronRightIcon style={{ width: 13, color: C.textSec }} />
+                          </div>
                         </td>
                       </tr>
                     )
