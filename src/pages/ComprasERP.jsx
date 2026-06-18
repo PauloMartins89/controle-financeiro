@@ -18,7 +18,7 @@ import {
   ExclamationTriangleIcon, ChartBarIcon, MapPinIcon,
   Squares2X2Icon, ListBulletIcon, SignalIcon, StarIcon,
   EnvelopeIcon, ExclamationCircleIcon, ShieldCheckIcon,
-  ChatBubbleLeftEllipsisIcon, DocumentTextIcon,
+  ChatBubbleLeftEllipsisIcon, DocumentTextIcon, PencilSquareIcon,
 } from '@heroicons/react/24/outline'
 import { useNavigate } from 'react-router-dom'
 
@@ -953,6 +953,7 @@ function RadarPanel({ workspaceId, onAdicionarFornecedor }) {
 function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
   const [form, setForm] = useState({
     titulo: '', urgencia: 'media',
+    numero_os: '', numero_req: '',
     fornecedor_sugerido: '', data_necessidade: '', observacoes: '',
   })
   const [itens, setItens] = useState([{ descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
@@ -992,6 +993,8 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
       descricao:        form.observacoes?.trim() || null,
       valor_estimado:   totalItens > 0 ? totalItens : null,
       urgencia:         form.urgencia,
+      numero_os:        form.numero_os?.trim() || null,
+      numero_req:       form.numero_req?.trim() || null,
       fornecedor:       form.fornecedor_sugerido?.trim() || null,
       data_necessidade: form.data_necessidade || null,
       quantidade:       listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
@@ -1016,6 +1019,8 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
       descricao:        form.observacoes?.trim() || null,
       valor_estimado:   totalItens > 0 ? totalItens : null,
       urgencia:         form.urgencia,
+      numero_os:        form.numero_os?.trim() || null,
+      numero_req:       form.numero_req?.trim() || null,
       fornecedor:       form.fornecedor_sugerido?.trim() || null,
       data_necessidade: form.data_necessidade || null,
       quantidade:       `${listaValida.length} item(s)`,
@@ -1049,6 +1054,16 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
           <div>
             <label style={labelSt}>Título da solicitação *</label>
             <input value={form.titulo} onChange={e => F('titulo', e.target.value)} placeholder="Ex: Compras Almoxarifado — Junho" style={inputSt} autoFocus />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelSt}>Nº da Requisição</label>
+              <input value={form.numero_req} onChange={e => F('numero_req', e.target.value)} placeholder="Ex: REQ-2024-001" style={inputSt} />
+            </div>
+            <div>
+              <label style={labelSt}>Nº da Ordem de Serviço</label>
+              <input value={form.numero_os} onChange={e => F('numero_os', e.target.value)} placeholder="Ex: OS-4521" style={inputSt} />
+            </div>
           </div>
 
           {/* Lista de itens */}
@@ -1126,11 +1141,194 @@ function ModalNovaReq({ workspaceId, onClose, onSalvo }) {
   )
 }
 
+// ─── Modal: Editar Requisição (qualquer status) ───────────────────────────────
+function ModalEditarReq({ item, workspaceId, onClose, onSalvo }) {
+  const [form, setForm] = useState({
+    titulo:              item.titulo || '',
+    urgencia:            item.urgencia || 'media',
+    numero_os:           item.numero_os || '',
+    numero_req:          item.numero_req || '',
+    fornecedor_sugerido: item.fornecedor || '',
+    data_necessidade:    item.data_necessidade || '',
+    observacoes:         item.descricao || '',
+  })
+  const [itens, setItens]         = useState([{ descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
+  const [saving, setSaving]       = useState(false)
+  const [loadingItens, setLoadingItens] = useState(true)
+
+  const F = (field, value) => setForm(p => ({ ...p, [field]: value }))
+  const addItem    = () => setItens(p => [...p, { descricao: '', quantidade: '1', unidade: 'un', valor_unitario: '' }])
+  const removeItem = i  => setItens(p => p.length > 1 ? p.filter((_, idx) => idx !== i) : p)
+  const setItem    = (i, k, v) => setItens(p => p.map((it, idx) => idx === i ? { ...it, [k]: v } : it))
+  const totalItens = itens.reduce((acc, it) => {
+    const v = parseFloat(it.valor_unitario || 0) * parseFloat(it.quantidade || 1)
+    return acc + (isNaN(v) ? 0 : v)
+  }, 0)
+
+  useEffect(() => {
+    supabase.from('itens_solicitacao_compra').select('*').eq('solicitacao_id', item.id).order('ordem')
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setItens(data.map(it => ({
+            descricao:      it.descricao || '',
+            quantidade:     String(it.quantidade || 1),
+            unidade:        it.unidade || 'un',
+            valor_unitario: it.valor_unitario ? String(it.valor_unitario) : '',
+          })))
+        }
+        setLoadingItens(false)
+      })
+  }, [item.id])
+
+  async function salvar() {
+    if (!form.titulo.trim()) { toast.error('Informe o título'); return }
+    const listaValida = itens.filter(it => it.descricao.trim())
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('solicitacoes_compra').update({
+        titulo:           form.titulo.trim(),
+        descricao:        form.observacoes?.trim() || null,
+        valor_estimado:   totalItens > 0 ? totalItens : null,
+        urgencia:         form.urgencia,
+        numero_os:        form.numero_os?.trim() || null,
+        numero_req:       form.numero_req?.trim() || null,
+        fornecedor:       form.fornecedor_sugerido?.trim() || null,
+        data_necessidade: form.data_necessidade || null,
+        quantidade:       listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
+        updated_at:       new Date().toISOString(),
+      }).eq('id', item.id)
+      if (error) throw error
+      await supabase.from('itens_solicitacao_compra').delete().eq('solicitacao_id', item.id)
+      if (listaValida.length > 0) {
+        await supabase.from('itens_solicitacao_compra').insert(
+          listaValida.map((it, i) => ({
+            solicitacao_id: item.id,
+            descricao:      it.descricao.trim(),
+            quantidade:     parseFloat(it.quantidade) || 1,
+            unidade:        it.unidade || 'un',
+            valor_unitario: it.valor_unitario ? parseFloat(it.valor_unitario) : null,
+            valor_total:    it.valor_unitario ? parseFloat(it.valor_unitario) * (parseFloat(it.quantidade) || 1) : null,
+            ordem:          i,
+          }))
+        )
+      }
+      toast.success('Requisição atualizada!')
+      onSalvo(); onClose()
+    } catch { toast.error('Erro ao salvar') }
+    setSaving(false)
+  }
+
+  const inputSt = { width: '100%', padding: '8px 12px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.bgCard, color: C.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }
+  const labelSt = { fontSize: 10, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(11,31,58,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: C.bgCard, borderRadius: 12, width: '100%', maxWidth: 560, boxShadow: '0 16px 48px rgba(11,31,58,0.2)', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden' }}>
+        <div style={{ background: '#0F766E', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: 700, letterSpacing: .8, textTransform: 'uppercase' }}>✏️ Editar</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: C.white, marginTop: 2 }}>Editar Requisição</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex' }}>
+            <XMarkIcon style={{ width: 16, height: 16 }} />
+          </button>
+        </div>
+        <div style={{ padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={labelSt}>Título *</label>
+            <input value={form.titulo} onChange={e => F('titulo', e.target.value)} style={inputSt} autoFocus />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelSt}>Nº da Requisição</label>
+              <input value={form.numero_req} onChange={e => F('numero_req', e.target.value)} placeholder="Ex: REQ-2024-001" style={inputSt} />
+            </div>
+            <div>
+              <label style={labelSt}>Nº da Ordem de Serviço</label>
+              <input value={form.numero_os} onChange={e => F('numero_os', e.target.value)} placeholder="Ex: OS-4521" style={inputSt} />
+            </div>
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ ...labelSt, marginBottom: 0 }}>Itens</label>
+              <button type="button" onClick={addItem} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 5, background: 'rgba(59,130,246,0.1)', border: `1px solid ${C.blue}40`, cursor: 'pointer', color: C.blue }}>+ Item</button>
+            </div>
+            {loadingItens ? (
+              <div style={{ fontSize: 12, color: C.textSec, padding: 8 }}>Carregando itens...</div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 56px 46px 88px 22px', gap: 4, marginBottom: 4 }}>
+                  {['Descrição','Qtd','Un.','Vlr unit.',''].map((h, i) => (
+                    <span key={i} style={{ fontSize: 9, color: C.textSec, textTransform: 'uppercase', fontWeight: 700 }}>{h}</span>
+                  ))}
+                </div>
+                {itens.map((it, i) => (
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 56px 46px 88px 22px', gap: 4, marginBottom: 4, alignItems: 'center' }}>
+                    <CatalogoItemInput
+                      value={it.descricao}
+                      onChange={v => setItem(i, 'descricao', v)}
+                      onSelect={s => setItens(p => p.map((it2, idx) => idx === i ? { ...it2, descricao: s.nome, unidade: s.unidade || it2.unidade, valor_unitario: s.valor_estimado ? String(s.valor_estimado) : it2.valor_unitario } : it2))}
+                      workspaceId={workspaceId}
+                      inputSt={inputSt}
+                      onCadastrar={nome => window.open(`/compras/cadastros/catalogo?novo=${encodeURIComponent(nome)}`, '_blank')}
+                    />
+                    <input style={inputSt} value={it.quantidade} onChange={e => setItem(i, 'quantidade', e.target.value)} type="number" min="0.001" step="any" />
+                    <select style={{ ...inputSt, padding: '8px 4px' }} value={it.unidade} onChange={e => setItem(i, 'unidade', e.target.value)}>
+                      {['un','cx','kg','L','m','m²','sc','pc','par','rl'].map(u => <option key={u}>{u}</option>)}
+                    </select>
+                    <input style={inputSt} value={it.valor_unitario} onChange={e => setItem(i, 'valor_unitario', e.target.value)} type="number" step="0.01" placeholder="0,00" />
+                    <button type="button" onClick={() => removeItem(i)} style={{ padding: '2px 5px', borderRadius: 4, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', cursor: 'pointer', color: '#ef4444', fontSize: 14, lineHeight: 1 }}>×</button>
+                  </div>
+                ))}
+                {totalItens > 0 && (
+                  <div style={{ textAlign: 'right', fontSize: 12, fontWeight: 800, color: '#10b981', marginTop: 2 }}>
+                    Total estimado: {totalItens.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelSt}>Urgência</label>
+              <select value={form.urgencia} onChange={e => F('urgencia', e.target.value)} style={{ ...inputSt, appearance: 'none' }}>
+                <option value="baixa">Baixa</option>
+                <option value="media">Média</option>
+                <option value="alta">Alta</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelSt}>Necessidade até</label>
+              <input type="date" value={form.data_necessidade} onChange={e => F('data_necessidade', e.target.value)} style={inputSt} />
+            </div>
+          </div>
+          <div>
+            <label style={labelSt}>Fornecedor Sugerido</label>
+            <input value={form.fornecedor_sugerido} onChange={e => F('fornecedor_sugerido', e.target.value)} placeholder="(opcional)" style={inputSt} />
+          </div>
+          <div>
+            <label style={labelSt}>Observações</label>
+            <textarea value={form.observacoes} onChange={e => F('observacoes', e.target.value)} rows={2} style={{ ...inputSt, resize: 'vertical' }} />
+          </div>
+        </div>
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 6, border: `1px solid ${C.border}`, background: 'transparent', color: C.textSec, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancelar</button>
+          <button onClick={salvar} disabled={saving} style={{ padding: '9px 24px', borderRadius: 6, background: '#0F766E', color: C.white, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 13, opacity: saving ? 0.6 : 1 }}>
+            {saving ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Modal: Continuar Rascunho ────────────────────────────────────────────────
 function ModalContinuarRascunho({ item, workspaceId, onClose, onSalvo }) {
   const [form, setForm] = useState({
     titulo:              item.titulo || '',
     urgencia:            item.urgencia || 'media',
+    numero_os:           item.numero_os || '',
+    numero_req:          item.numero_req || '',
     fornecedor_sugerido: item.fornecedor || '',
     data_necessidade:    item.data_necessidade || '',
     observacoes:         item.descricao || '',
@@ -1170,6 +1368,8 @@ function ModalContinuarRascunho({ item, workspaceId, onClose, onSalvo }) {
       descricao:        form.observacoes?.trim() || null,
       valor_estimado:   totalItens > 0 ? totalItens : null,
       urgencia:         form.urgencia,
+      numero_os:        form.numero_os?.trim() || null,
+      numero_req:       form.numero_req?.trim() || null,
       fornecedor:       form.fornecedor_sugerido?.trim() || null,
       data_necessidade: form.data_necessidade || null,
       quantidade:       listaValida.length > 0 ? `${listaValida.length} item(s)` : null,
@@ -1241,6 +1441,16 @@ function ModalContinuarRascunho({ item, workspaceId, onClose, onSalvo }) {
           <div>
             <label style={labelSt}>Título *</label>
             <input value={form.titulo} onChange={e => F('titulo', e.target.value)} style={inputSt} autoFocus />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelSt}>Nº da Requisição</label>
+              <input value={form.numero_req} onChange={e => F('numero_req', e.target.value)} placeholder="Ex: REQ-2024-001" style={inputSt} />
+            </div>
+            <div>
+              <label style={labelSt}>Nº da Ordem de Serviço</label>
+              <input value={form.numero_os} onChange={e => F('numero_os', e.target.value)} placeholder="Ex: OS-4521" style={inputSt} />
+            </div>
           </div>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -1427,7 +1637,7 @@ function ModalConfigAprovador({ onClose }) {
 }
 
 // ─── Painel Detalhe da requisição selecionada ─────────────────────────────────
-function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
+function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq, onEditar }) {
   const [tabD, setTabD] = useState('detalhe') // detalhe | cotacoes | historico | radar
   const [cotacoes, setCotacoes] = useState([])
   const [eventos, setEventos] = useState([])
@@ -1679,9 +1889,16 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
               <span style={{ fontSize: 10, fontWeight: 700, color: urgColor, background: `${urgColor}33`, padding: '2px 7px', borderRadius: 4 }}>{(item.urgencia || '').toUpperCase()}</span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex', flexShrink: 0 }}>
-            <XMarkIcon style={{ width: 14 }} />
-          </button>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            {onEditar && (
+              <button onClick={() => onEditar(item)} title="Editar requisição" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex' }}>
+                <PencilSquareIcon style={{ width: 14 }} />
+              </button>
+            )}
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, cursor: 'pointer', color: C.white, padding: 6, display: 'flex' }}>
+              <XMarkIcon style={{ width: 14 }} />
+            </button>
+          </div>
         </div>
         {/* tabs */}
         <div style={{ display: 'flex' }}>
@@ -1705,6 +1922,8 @@ function PainelDetalhe({ item, workspaceId, onAcao, onClose, onNovaReq }) {
                   { label: 'Solicitante', value: item.requisitante_nome || '—' },
                   { label: 'Prioridade', value: <span style={{ color: urgColor, fontWeight: 700 }}>{item.urgencia ? item.urgencia.charAt(0).toUpperCase() + item.urgencia.slice(1) : '—'}</span> },
                   { label: 'Prazo necessário', value: item.data_necessidade ? <span style={{ color: new Date(item.data_necessidade) <= new Date() ? C.red : C.text, fontWeight: 700 }}>{fmtDate(item.data_necessidade)}</span> : '—' },
+                  { label: 'Nº Requisição', value: item.numero_req || '—' },
+                  { label: 'Nº OS', value: item.numero_os || '—' },
                 ].map(r => (
                   <div key={r.label}>
                     <div style={{ fontSize: 9, fontWeight: 700, color: C.textSec, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 1 }}>{r.label}</div>
@@ -2335,6 +2554,7 @@ export default function ComprasERP() {
   const [showNovaReq, setShowNovaReq] = useState(false)
   const [showConfigAprovador, setShowConfigAprovador] = useState(false)
   const [rascunhoParaEditar, setRascunhoParaEditar] = useState(null)
+  const [editarItem, setEditarItem] = useState(null)
   const [vencedorErpItem, setVencedorErpItem] = useState(null)
   const [refresh, setRefresh]       = useState(0)
   const [lastUpdate, setLastUpdate] = useState(now)
@@ -2834,7 +3054,7 @@ export default function ComprasERP() {
 
         {/* ── Painel Detalhe ── */}
         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', background: C.bgCard }}>
-          <PainelDetalhe item={selecionado} workspaceId={workspaceId} onAcao={handleAcao} onClose={() => setSelecionado(null)} onNovaReq={() => setShowNovaReq(true)} />
+          <PainelDetalhe item={selecionado} workspaceId={workspaceId} onAcao={handleAcao} onClose={() => setSelecionado(null)} onNovaReq={() => setShowNovaReq(true)} onEditar={it => setEditarItem(it)} />
         </div>
       </div>
 
@@ -2847,6 +3067,14 @@ export default function ComprasERP() {
           workspaceId={workspaceId}
           onClose={() => setRascunhoParaEditar(null)}
           onSalvo={() => { setRascunhoParaEditar(null); setRefresh(p => p + 1) }}
+        />
+      )}
+      {editarItem && (
+        <ModalEditarReq
+          item={editarItem}
+          workspaceId={workspaceId}
+          onClose={() => setEditarItem(null)}
+          onSalvo={() => { setEditarItem(null); setRefresh(p => p + 1) }}
         />
       )}
       {showConfigAprovador && (
