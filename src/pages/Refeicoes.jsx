@@ -568,30 +568,96 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
 }
 
 // --- Todos os Colaboradores (visão completa) ----------------------------------
+const FUNCOES_REFEI = ['Operador', 'Auxiliar', 'Ajudante', 'Tratorista', 'Op. Motosserra', 'Op. Trator', 'Pulverizador', 'Mecânico', 'Motorista', 'Supervisor', 'Outro']
+
 function CrudColaboradores({ workspaceId }) {
-  const [colabs, setColabs] = useState([])
-  const [filtroEq, setFiltroEq] = useState('')
-  const [equipes, setEquipes] = useState([])
+  const [colabs,    setColabs]    = useState([])
+  const [filtroEq,  setFiltroEq]  = useState('')
+  const [equipes,   setEquipes]   = useState([])
+  const [showModal, setShowModal] = useState(false)
+  const [editId,    setEditId]    = useState(null)
+  const [saving,    setSaving]    = useState(false)
+  const [form,      setForm]      = useState({ nome: '', cargo: 'Operador', equipe_id: '', ativo: true })
+
   const load = useCallback(async () => {
     if (!workspaceId) return
-    const [{ data: c }, { data: e }] = await Promise.all([
-      supabase.from('refei_colaboradores').select('*, refei_equipes(nome)').order('nome'),
+    const [{ data: e }] = await Promise.all([
       supabase.from('refei_equipes').select('id,nome').eq('workspace_id', workspaceId).order('nome'),
     ])
-    const eqIds = (e || []).map(eq => eq.id)
-    setColabs((c || []).filter(col => eqIds.includes(col.equipe_id)))
-    setEquipes(e || [])
+    const eqs = e || []
+    setEquipes(eqs)
+    if (eqs.length === 0) { setColabs([]); return }
+    const eqIds = eqs.map(eq => eq.id)
+    const { data: c } = await supabase
+      .from('refei_colaboradores')
+      .select('*, refei_equipes(nome)')
+      .in('equipe_id', eqIds)
+      .order('nome')
+    setColabs(c || [])
   }, [workspaceId])
+
   useEffect(() => { load() }, [load])
+
+  function openNew() {
+    setEditId(null)
+    setForm({ nome: '', cargo: 'Operador', equipe_id: equipes[0]?.id ?? '', ativo: true })
+    setShowModal(true)
+  }
+
+  function openEdit(c) {
+    setEditId(c.id)
+    setForm({ nome: c.nome, cargo: c.cargo || 'Operador', equipe_id: c.equipe_id || '', ativo: c.ativo !== false })
+    setShowModal(true)
+  }
+
+  async function save() {
+    if (!form.nome.trim()) { toast.error('Nome obrigatório'); return }
+    if (!form.equipe_id)   { toast.error('Selecione uma equipe'); return }
+    setSaving(true)
+    const payload = { nome: form.nome, cargo: form.cargo || null, equipe_id: form.equipe_id, ativo: form.ativo }
+    const { error } = editId
+      ? await supabase.from('refei_colaboradores').update(payload).eq('id', editId)
+      : await supabase.from('refei_colaboradores').insert(payload)
+    setSaving(false)
+    if (error) { toast.error(error.message); return }
+    toast.success(editId ? 'Atualizado!' : 'Colaborador cadastrado!')
+    setShowModal(false)
+    load()
+  }
+
+  async function excluir(id, nome) {
+    if (!confirm(`Excluir "${nome}"?`)) return
+    const { error } = await supabase.from('refei_colaboradores').delete().eq('id', id)
+    if (error) toast.error(error.message)
+    else { toast.success('Excluído'); load() }
+  }
+
   const filtered = filtroEq ? colabs.filter(c => c.equipe_id === filtroEq) : colabs
+
   return (
     <div>
-      <div style={{ marginBottom: 12 }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <select className="input" style={{ width: 220, fontSize: 13 }} value={filtroEq} onChange={e => setFiltroEq(e.target.value)}>
           <option value="">Todas as equipes</option>
           {equipes.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
         </select>
+        <div style={{ flex: 1 }} />
+        {equipes.length === 0 && (
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+            Crie uma equipe primeiro para poder adicionar colaboradores
+          </span>
+        )}
+        <button
+          onClick={openNew}
+          disabled={equipes.length === 0}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: equipes.length === 0 ? 'var(--bg-secondary)' : 'var(--accent)', color: equipes.length === 0 ? 'var(--text-secondary)' : '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: equipes.length === 0 ? 'not-allowed' : 'pointer' }}
+        >
+          <PlusIcon style={{ width: 15, height: 15 }} /> Novo Colaborador
+        </button>
       </div>
+
+      {/* Tabela */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
@@ -607,17 +673,63 @@ function CrudColaboradores({ workspaceId }) {
                 <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>{c.nome}</td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{c.cargo || '—'}</td>
                 <td style={{ padding: '10px 12px', color: 'var(--text-secondary)' }}>{c.refei_equipes?.nome || '—'}</td>
-                <td style={{ padding: '10px 12px' }}>{c.ativo !== false ? <span className="badge badge-success" style={{ fontSize: 10 }}>Ativo</span> : <span className="badge badge-danger" style={{ fontSize: 10 }}>Inativo</span>}</td>
-                <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                  <button onClick={async () => { if (!confirm('Excluir colaborador?')) return; await supabase.from('refei_colaboradores').delete().eq('id', c.id); load() }} style={{ background: 'rgba(239,68,68,0.1)', border: 'none', color: '#f87171', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}><TrashIcon style={{ width: 13, height: 13 }} /></button>
+                <td style={{ padding: '10px 12px' }}>
+                  {c.ativo !== false
+                    ? <span className="badge badge-success" style={{ fontSize: 10 }}>Ativo</span>
+                    : <span className="badge badge-danger"  style={{ fontSize: 10 }}>Inativo</span>}
+                </td>
+                <td style={{ padding: '10px 12px', textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                  <button onClick={() => openEdit(c)} style={{ background: 'rgba(99,102,241,0.1)', border: 'none', color: '#6366f1', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}><PencilIcon style={{ width: 13, height: 13 }} /></button>
+                  <button onClick={() => excluir(c.id, c.nome)} style={{ background: 'rgba(239,68,68,0.1)', border: 'none', color: '#f87171', borderRadius: 8, padding: '5px 8px', cursor: 'pointer' }}><TrashIcon style={{ width: 13, height: 13 }} /></button>
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>Nenhum colaborador encontrado.</td></tr>}
+            {filtered.length === 0 && (
+              <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
+                {equipes.length === 0 ? 'Crie equipes em Cadastros › Equipes para depois adicionar colaboradores.' : 'Nenhum colaborador encontrado.'}
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 12 }}>Para adicionar colaboradores, vá em Cadastros ? Equipes e clique no ícone ??.</p>
+
+      {/* Modal */}
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{editId ? 'Editar Colaborador' : 'Novo Colaborador'}</h3>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><XMarkIcon style={{ width: 20, height: 20 }} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Nome *
+                <input className="input" style={{ display: 'block', width: '100%', marginTop: 4 }} value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Cargo / Função
+                  <input className="input" list="cargo-opcoes-refei" style={{ display: 'block', width: '100%', marginTop: 4 }} value={form.cargo} onChange={e => setForm(p => ({ ...p, cargo: e.target.value }))} placeholder="Ex: Operador" />
+                  <datalist id="cargo-opcoes-refei">{FUNCOES_REFEI.map(f => <option key={f} value={f} />)}</datalist>
+                </label>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Equipe *
+                  <select className="input" style={{ display: 'block', width: '100%', marginTop: 4 }} value={form.equipe_id} onChange={e => setForm(p => ({ ...p, equipe_id: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {equipes.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                  </select>
+                </label>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                <input type="checkbox" checked={form.ativo} onChange={e => setForm(p => ({ ...p, ativo: e.target.checked }))} /> Ativo
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+              <button onClick={() => setShowModal(false)} style={{ background: 'var(--bg-secondary)', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--text-primary)' }}>Cancelar</button>
+              <button onClick={save} disabled={saving} style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer' }}>
+                {saving ? 'Salvando...' : (editId ? 'Salvar' : 'Cadastrar')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
