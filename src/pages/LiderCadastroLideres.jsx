@@ -22,10 +22,10 @@ function ModalResetSenha({ perfil, onClose }) {
     if (!novaSenha.trim()) { toast.error('Informe a nova senha'); return }
     setSaving(true)
     const { data: { session } } = await supabase.auth.getSession()
-    const resp = await fetch('/api/lider-admin', {
+    const resp = await fetch('/api/lider-workspace-admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ action: 'resetar-senha', user_id: perfil.user_id, nova_senha: novaSenha.trim() }),
+      body: JSON.stringify({ action: 'resetar-senha', workspace_id: perfil.workspace_id, user_id: perfil.user_id, nova_senha: novaSenha.trim() }),
     })
     const json = await resp.json()
     setSaving(false)
@@ -93,7 +93,7 @@ export default function LiderCadastroLideres() {
   const [showModal,    setShowModal]    = useState(false)
   const [editId,       setEditId]       = useState(null)   // perfil.id
   const [editUserId,   setEditUserId]   = useState(null)   // perfil.user_id
-  const [modalSenha,   setModalSenha]   = useState(null)
+  const [modalSenha,   setModalSenha]   = useState(null) // { perfil, workspace_id }
   const [form,         setForm]         = useState({ matricula: '', nome: '', celular: '', equipe_id: '' })
 
   const load = useCallback(async () => {
@@ -102,7 +102,7 @@ export default function LiderCadastroLideres() {
     const [r1, r2] = await Promise.all([
       supabase
         .from('lider_perfis')
-        .select('id, user_id, matricula, nome, celular, equipe_id, ativo, lider_equipes(nome)')
+        .select('id, user_id, matricula, nome, celular, equipe_id, ativo, workspace_id, lider_equipes(nome)')
         .eq('workspace_id', workspaceId)
         .order('matricula'),
       supabase
@@ -140,7 +140,7 @@ export default function LiderCadastroLideres() {
       if (!form.nome.trim())      { toast.error('Nome obrigatório'); return }
       setSaving(true)
       const { data: { session } } = await supabase.auth.getSession()
-      const resp = await fetch('/api/lider-admin', {
+      const resp = await fetch('/api/lider-workspace-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({
@@ -185,10 +185,10 @@ export default function LiderCadastroLideres() {
   async function excluir(r) {
     if (!window.confirm(`Excluir líder "${r.nome}" (#${r.matricula})? Esta ação não pode ser desfeita.`)) return
     const { data: { session } } = await supabase.auth.getSession()
-    const resp = await fetch('/api/lider-admin', {
+    const resp = await fetch('/api/lider-workspace-admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ action: 'excluir-usuario', user_id: r.user_id }),
+      body: JSON.stringify({ action: 'excluir-usuario', workspace_id: workspaceId, user_id: r.user_id }),
     })
     const json = await resp.json()
     if (json.ok) { toast.success('Excluído'); load() }
