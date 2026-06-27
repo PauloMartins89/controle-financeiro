@@ -193,7 +193,6 @@ async function zapiProgress(phone, prevMsgId, percent, label) {
   const bar = buildProgressBar(percent)
   const text = `${bar}\n${label}`
   if (prevMsgId) {
-    // Tenta editar a mensagem existente
     try {
       const resp = await fetch(
         `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/edit-message`,
@@ -206,17 +205,24 @@ async function zapiProgress(phone, prevMsgId, percent, label) {
           body: JSON.stringify({ phone, messageId: prevMsgId, message: text }),
         }
       )
-      const body = await resp.text().catch(() => '')
-      console.log(`[ocr-boletim] edit-message ${percent}% status=${resp.status} msgId=${prevMsgId} body=${body.slice(0, 200)}`)
-      if (resp.ok) return prevMsgId
-      console.warn(`[ocr-boletim] edit-message falhou ${resp.status}, fazendo resend`)
+      const bodyText = await resp.text().catch(() => '')
+      let bodyObj = {}
+      try { bodyObj = JSON.parse(bodyText) } catch (_) {}
+      // Z-API retorna 200 mesmo quando o endpoint não existe — checa o body
+      if (resp.ok && !bodyObj.error) {
+        console.log(`[ocr-boletim] edit-message OK: ${percent}%`)
+        return prevMsgId
+      }
+      console.warn(`[ocr-boletim] edit-message indisponível (${bodyObj.error || resp.status}), usando delete+resend`)
     } catch (e) {
       console.warn('[ocr-boletim] edit-message erro:', e.message)
     }
+    // Fallback: deleta mensagem antiga e envia nova
+    await zapiDeleteMessage(phone, prevMsgId)
+    await new Promise(r => setTimeout(r, 300))
   }
-  // Fallback: envia nova mensagem se não tiver prevMsgId ou se a edição falhar
   const newMsgId = await zapiSendText(phone, text)
-  console.log(`[ocr-boletim] progresso ${percent}% — nova msg enviada, msgId=${newMsgId}`)
+  console.log(`[ocr-boletim] progresso ${percent}% — msgId=${newMsgId}`)
   return newMsgId
 }
 
@@ -237,11 +243,17 @@ async function zapiEditOrSend(phone, msgId, text) {
           body: JSON.stringify({ phone, messageId: msgId, message: text }),
         }
       )
-      if (resp.ok) return
-      console.warn(`[ocr-boletim] edit final falhou ${resp.status}, enviando nova msg`)
+      const bodyText = await resp.text().catch(() => '')
+      let bodyObj = {}
+      try { bodyObj = JSON.parse(bodyText) } catch (_) {}
+      if (resp.ok && !bodyObj.error) return  // editado com sucesso
+      console.warn(`[ocr-boletim] edit final indisponível (${bodyObj.error || resp.status}), usando delete+resend`)
     } catch (e) {
       console.warn('[ocr-boletim] edit final erro:', e.message)
     }
+    // Fallback: deleta e envia nova
+    await zapiDeleteMessage(phone, msgId)
+    await new Promise(r => setTimeout(r, 300))
   }
   await zapiSendText(phone, text)
 }
