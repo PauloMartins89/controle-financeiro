@@ -455,12 +455,16 @@ function buildResumoOCR(extras, valorCalculado, temPendente, boletimNumero, data
   const statusMsg  = temPendente
     ? '_Alguns campos precisam de revisão. Acesse o sistema para validar._'
     : '_Lançamento gerado automaticamente no sistema._'
+  const barra = temPendente
+    ? '▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░  75%'
+    : '▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ 100%'
 
   const numDM = ex.numero_documento || r.numero_documento || null
   const headerNumDM = numDM ? ` (DM ${numDM})` : ''
 
   return [
     `${statusIcon} *Boletim ${boletimNumero}*${headerNumDM} — ${dataFmt}`,
+    barra,
     '',
     '📋 *Campos lidos pelo OCR:*',
     ...campos,
