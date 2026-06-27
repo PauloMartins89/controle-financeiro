@@ -24,7 +24,7 @@ function formatBRL(v) {
   return 'R$ ' + Math.abs(v).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
-// Garante que campos numéricos da IA nunca chegam como string "null"
+// Garante que campos numÃ©ricos da IA nunca chegam como string "null"
 function safeNum(v) {
   if (v === null || v === undefined || v === '' || v === 'null' || v === 'undefined') return null
   const n = parseFloat(String(v).replace(',', '.'))
@@ -36,7 +36,7 @@ function safeStr(v) {
   return String(v).trim() || null
 }
 
-// -- Cálculo de saldos — sempre no backend, nunca na IA ----------------------
+// -- CÃ¡lculo de saldos Â— sempre no backend, nunca na IA ----------------------
 function calcularSaldos(despesas, pessoas) {
   const balances = {}
   pessoas.forEach(p => { balances[p.id] = 0 })
@@ -57,7 +57,7 @@ function calcularSaldos(despesas, pessoas) {
   }))
 }
 
-// -- IA: apenas interpreta intenção, nunca salva dados ------------------------
+// -- IA: apenas interpreta intenÃ§Ã£o, nunca salva dados ------------------------
 async function parseIntent(text, pessoas, today, historico = []) {
   const nomes = pessoas.map(p => p.nome).join(', ')
   const histMessages = (historico || []).slice(-6).map(m => ({
@@ -69,13 +69,13 @@ async function parseIntent(text, pessoas, today, historico = []) {
     messages: [
       {
         role: 'system',
-        content: `Você é um parser de intenções financeiras. Extraia a intenção e entidades do texto em JSON válido. Retorne APENAS JSON, sem explicação.
+        content: `VocÃª Ã© um parser de intenÃ§Ãµes financeiras. Extraia a intenÃ§Ã£o e entidades do texto em JSON vÃ¡lido. Retorne APENAS JSON, sem explicaÃ§Ã£o.
 
-Pessoas disponíveis: ${nomes || 'nenhuma'}
+Pessoas disponÃ­veis: ${nomes || 'nenhuma'}
 Hoje: ${today}
 
-Intenções:
-- criar_despesa: {"intencao":"criar_despesa","descricao":"...","valor":0.00,"pago_por":"nome","participantes":["nome1","nome2"],"categoria":"Alimentação|Transporte|Moradia|Saúde|Lazer|Educação|Serviços|Vestuário|Outros","data":"YYYY-MM-DD"}
+IntenÃ§Ãµes:
+- criar_despesa: {"intencao":"criar_despesa","descricao":"...","valor":0.00,"pago_por":"nome","participantes":["nome1","nome2"],"categoria":"AlimentaÃ§Ã£o|Transporte|Moradia|SaÃºde|Lazer|EducaÃ§Ã£o|ServiÃ§os|VestuÃ¡rio|Outros","data":"YYYY-MM-DD"}
 - consultar_saldo: {"intencao":"consultar_saldo","pessoa":"nome ou null"}
 - listar_pendencias: {"intencao":"listar_pendencias"}
 - fechar_mes: {"intencao":"fechar_mes","mes":"YYYY-MM"}
@@ -118,8 +118,8 @@ async function sendWA(to, text) {
   return res.ok
 }
 
-// -- Identifica boletim pelo texto do cabeçalho (identificador_visual) --------
-// Faz uma leitura rápida de texto via Groq e compara contra todos os
+// -- Identifica boletim pelo texto do cabeÃ§alho (identificador_visual) --------
+// Faz uma leitura rÃ¡pida de texto via Groq e compara contra todos os
 // identificadores cadastrados em maquinas_boletim_tipos.
 // Retorna o registro do boletim_tipo correspondente, ou null.
 async function identificarBoletimPorImagem(base64, db) {
@@ -133,7 +133,7 @@ async function identificarBoletimPorImagem(base64, db) {
 
   let headerText = ''
   try {
-    // Passa os identificadores direto ao Groq — mais confiável do que extrair texto livre
+    // Passa os identificadores direto ao Groq Â— mais confiÃ¡vel do que extrair texto livre
     const opcoes = tipos.map((t, i) => `${i + 1}. "${t.identificador_visual}"`).join('\n')
     const groqRes = await new Groq({ apiKey: process.env.GROQ_API_KEY }).chat.completions.create({
       model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
@@ -141,7 +141,7 @@ async function identificarBoletimPorImagem(base64, db) {
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
-          { type: 'text', text: `Olhe com atenção esta imagem. Algum dos seguintes identificadores aparece nela (no cabeçalho, logotipo, nome da empresa ou qualquer parte do documento)?\n\n${opcoes}\n\nResponda APENAS com o número do identificador encontrado (ex: "1", "2"), ou "0" se nenhum aparecer. Não explique.` },
+          { type: 'text', text: `Olhe com atenÃ§Ã£o esta imagem. Algum dos seguintes identificadores aparece nela (no cabeÃ§alho, logotipo, nome da empresa ou qualquer parte do documento)?\n\n${opcoes}\n\nResponda APENAS com o nÃºmero do identificador encontrado (ex: "1", "2"), ou "0" se nenhum aparecer. NÃ£o explique.` },
         ],
       }],
       max_tokens: 10,
@@ -164,9 +164,9 @@ async function identificarBoletimPorImagem(base64, db) {
   return null
 }
 
-// -- Monta texto de confirmação de despesa (reutilizado em confirmação e edição)
+// -- Monta texto de confirmaÃ§Ã£o de despesa (reutilizado em confirmaÃ§Ã£o e ediÃ§Ã£o)
 function montarConfirmacao(p) {
-  const n = (v) => v || '—'
+  const n = (v) => v || 'Â—'
   const share = p.participantes_ids?.length > 1
     ? formatBRL(p.valor / p.participantes_ids.length)
     : null
@@ -176,32 +176,32 @@ function montarConfirmacao(p) {
     : ''
 
   const combustivel = p.litros
-    ? `\n? ${p.litros}L × ${p.valor_litro ? formatBRL(p.valor_litro) + '/L' : '—'}`
+    ? `\n? ${p.litros}L Ã— ${p.valor_litro ? formatBRL(p.valor_litro) + '/L' : 'Â—'}`
     : ''
 
   const linhas = [
-    `?? Data: ${p.data || '—'}${p.hora ? ' às ' + p.hora : ''}`,
+    `?? Data: ${p.data || 'Â—'}${p.hora ? ' Ã s ' + p.hora : ''}`,
     `?? Local: ${n(p.descricao)}`,
     `?? Valor: ${formatBRL(p.valor)}`,
     `?? Pagamento: ${n(p.forma_pagamento)}`,
     `??? Categoria: ${p.categoria || 'Outros'}`,
     `?? Produto: ${n(p.produto)}${p.quantidade ? ' (' + p.quantidade + ')' : ''}${combustivel}`,
     `?? CNPJ: ${n(p.cnpj)}`,
-    `?? Endereço: ${n(p.endereco)}`,
+    `?? EndereÃ§o: ${n(p.endereco)}`,
     `?? Telefone: ${n(p.telefone)}`,
-    `?? NF-e: ${p.nfe_url ? p.nfe_url : '—'}`,
+    `?? NF-e: ${p.nfe_url ? p.nfe_url : 'Â—'}`,
     `?? Pago por: ${p.pago_por_nome}`,
   ]
 
   return linhas.join('\n') + `${divisaoStr}\n\nConfirmar?`
 }
 
-// -- Fechar mês com detalhamento por pessoa -----------------------------------
+// -- Fechar mÃªs com detalhamento por pessoa -----------------------------------
 function fecharMes(despesas, pessoas, mes) {
   const doMes = despesas.filter(e => e.data?.slice(0, 7) === mes)
   if (!doMes.length) return null
 
-  // Quanto cada pessoa pagou no mês
+  // Quanto cada pessoa pagou no mÃªs
   const pagouMap = {}
   pessoas.forEach(p => { pagouMap[p.id] = 0 })
   doMes.forEach(e => {
@@ -244,7 +244,7 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body
-    // DEBUG TEMPORÁRIO — loga tipo e campos recebidos do Z-API
+    // DEBUG TEMPORÃRIO Â— loga tipo e campos recebidos do Z-API
     console.log('[whatsapp] body.type=', body?.type, 'fromMe=', body?.fromMe, 'keys=', Object.keys(body || {}).join(','))
     // Z-API: ignora tudo exceto mensagens recebidas de terceiros
     if (body?.fromMe) return res.status(200).end()
@@ -263,17 +263,17 @@ export default async function handler(req, res) {
       image: body.image ? { _url: body.image.imageUrl, _mime: 'image/jpeg', caption: body.image.caption } : undefined,
     }
 
-    // -- Dedup: INSERT como mutex — se já existe, ignora
+    // -- Dedup: INSERT como mutex Â— se jÃ¡ existe, ignora
     const msgId = message.id
     if (msgId) {
       const dbDedup = getDb()
       const { error: dedupErr } = await dbDedup
         .from('mensagens_whatsapp')
         .insert({ telefone: message.from, direcao: 'entrada', conteudo: '__dedup__', message_id: msgId })
-      // error code 23505 = unique violation ? já processado
+      // error code 23505 = unique violation ? jÃ¡ processado
       if (dedupErr) {
         if (dedupErr.code === '23505') return res.status(200).end()
-        // coluna message_id não existe ainda ? continua sem dedup
+        // coluna message_id nÃ£o existe ainda ? continua sem dedup
       }
     }
 
@@ -285,7 +285,7 @@ export default async function handler(req, res) {
     let imagemExtraida = null
     let formularioTransporte = null
 
-    // -- Áudio: transcreve com Whisper ----------------------------------------
+    // -- Ãudio: transcreve com Whisper ----------------------------------------
     if (message.type === 'audio') {
       const audioRes = await fetch(message.audio._url)
       const audioBuffer = await audioRes.arrayBuffer()
@@ -296,7 +296,7 @@ export default async function handler(req, res) {
         language: 'pt',
       })
       text = transcription.text?.trim() || ''
-      textoOriginal = `[áudio] ${text}`
+      textoOriginal = `[Ã¡udio] ${text}`
       if (!text) return res.status(200).end()
 
     // -- Imagem: classifica primeiro, depois extrai ---------------------------
@@ -305,7 +305,7 @@ export default async function handler(req, res) {
       const caption = message.image.caption || ''
 
       // Tenta usar base64 diretamente do payload Z-API (se "Receber Base64" estiver ativado)
-      // Caso contrário, faz fetch com Client-Token (obrigatório na Z-API para download de mídia)
+      // Caso contrÃ¡rio, faz fetch com Client-Token (obrigatÃ³rio na Z-API para download de mÃ­dia)
       let base64 = body.image?.imageBase64 || body.image?.base64 || null
       let imgBuffer = null
 
@@ -315,7 +315,7 @@ export default async function handler(req, res) {
         const imgRes = await fetch(message.image._url, { headers: fetchHeaders })
         if (!imgRes.ok) {
           console.error('[WA] Falha ao baixar imagem:', imgRes.status, message.image._url)
-          await sendWA(from, '? Não consegui baixar a imagem. Tente reenviar ou ative "Receber Base64" no painel Z-API.')
+          await sendWA(from, '? NÃ£o consegui baixar a imagem. Tente reenviar ou ative "Receber Base64" no painel Z-API.')
           return res.status(200).end()
         }
         imgBuffer = await imgRes.arrayBuffer()
@@ -326,9 +326,9 @@ export default async function handler(req, res) {
         imgBuffer = Buffer.from(base64, 'base64').buffer
       }
 
-      // -- Boletim de Máquinas: verifica se é colaborador de campo ------------
-      // NOTA: upload para comprovantes acontece APÓS este bloco (linha ~fim boletim)
-      // Boletins retornam antes de chegar no upload — eliminando duplicata de storage.
+      // -- Boletim de MÃ¡quinas: verifica se Ã© colaborador de campo ------------
+      // NOTA: upload para comprovantes acontece APÃ“S este bloco (linha ~fim boletim)
+      // Boletins retornam antes de chegar no upload Â— eliminando duplicata de storage.
       {
         const dbBol = getDb()
         if (dbBol) {
@@ -348,7 +348,7 @@ export default async function handler(req, res) {
               .eq('ativo', true)
               .limit(1)
               .maybeSingle()
-            console.log(`[whatsapp/boletim] variante "${v}":`, data ? `ENCONTRADO id=${data.id}` : 'não encontrado', error ? `erro: ${error.message}` : '')
+            console.log(`[whatsapp/boletim] variante "${v}":`, data ? `ENCONTRADO id=${data.id}` : 'nÃ£o encontrado', error ? `erro: ${error.message}` : '')
             if (data) { colaboradorBol = data; break }
           }
 
@@ -357,7 +357,7 @@ export default async function handler(req, res) {
             const workspaceId = frente?.workspace_id || colaboradorBol.workspace_id
 
             // boletim_tipo_id: tenta via JOIN primeiro; se null, busca direto na tabela
-            // Prefere tipos com modulo_destino='gerencial' (nulls por último)
+            // Prefere tipos com modulo_destino='gerencial' (nulls por Ãºltimo)
             let boletimTipoId = frente?.maquinas_boletim_tipos?.id || null
             if (!boletimTipoId) {
               const { data: tipos } = await dbBol
@@ -371,12 +371,12 @@ export default async function handler(req, res) {
               console.log('[whatsapp/boletim] boletim_tipo_id via query direta:', boletimTipoId, '| modulo_destino:', tipos?.[0]?.modulo_destino)
             }
 
-            // ACK imediato — não bloqueia o fluxo de upload+OCR
-            sendWA(from, '?? Boletim recebido! Estamos processando. Você será avisado em instantes.')
-
             const numero = `BOL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
 
-            // Inicia upload para storage (não-bloqueante — corre em paralelo com OCR)
+            // ACK imediato â€” nÃ£o bloqueia o fluxo de upload+OCR
+            sendWA(from, `ðŸ“‹ *${numero} recebido!*\n\nEstamos lendo o formulÃ¡rio com IA â€” vocÃª receberÃ¡ um resumo completo assim que o lanÃ§amento for criado.\n\n_Isso costuma levar menos de 30 segundos._ â³`)
+
+            // Inicia upload para storage (nÃ£o-bloqueante Â— corre em paralelo com OCR)
             let imagemUrl = 'pending'
             const uploadPromise = (async () => {
               try {
@@ -397,7 +397,7 @@ export default async function handler(req, res) {
               return 'pending'
             })()
 
-            // Insere boletim com imagem_url temporária (será atualizada após upload)
+            // Insere boletim com imagem_url temporÃ¡ria (serÃ¡ atualizada apÃ³s upload)
             const { data: bolRecord, error: bolErr } = await dbBol
               .from('maquinas_boletins')
               .insert({
@@ -414,19 +414,19 @@ export default async function handler(req, res) {
 
             if (!bolErr && bolRecord?.id) {
               const selfBase = `https://${req.headers.host}`
-              // Dispara OCR com base64 inline (Groq não precisa baixar a imagem da URL)
-              // e aguarda upload em paralelo — ambos correm ao mesmo tempo
+              // Dispara OCR com base64 inline (Groq nÃ£o precisa baixar a imagem da URL)
+              // e aguarda upload em paralelo Â— ambos correm ao mesmo tempo
               const ocrPromise = fetch(`${selfBase}/api/ocr-boletim-maquina`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // imageBase64 evita que o OCR faça download da URL — economiza ~2s
+                // imageBase64 evita que o OCR faÃ§a download da URL Â— economiza ~2s
                 body: JSON.stringify({ boletimId: bolRecord.id, imageBase64: base64 }),
               }).then(r => {
                 if (r.ok) console.log(`[whatsapp/boletim] boletim ${numero} (${bolRecord.id}) processado`)
-                else      console.warn(`[whatsapp/boletim] OCR HTTP ${r.status} — cron fará retry`)
+                else      console.warn(`[whatsapp/boletim] OCR HTTP ${r.status} Â— cron farÃ¡ retry`)
                 return r
               }).catch(e => {
-                console.warn(`[whatsapp/boletim] OCR falhou (cron fará retry): ${e.message}`)
+                console.warn(`[whatsapp/boletim] OCR falhou (cron farÃ¡ retry): ${e.message}`)
               })
 
               // Aguarda upload e atualiza URL no boletim
@@ -437,7 +437,7 @@ export default async function handler(req, res) {
                 }
               })
 
-              // Aguarda OCR completar (para que whatsapp.js não feche antes do resumo ser enviado)
+              // Aguarda OCR completar (para que whatsapp.js nÃ£o feche antes do resumo ser enviado)
               await ocrPromise
             } else if (bolErr) {
               console.error('[whatsapp/boletim] insert error:', bolErr.message)
@@ -447,10 +447,10 @@ export default async function handler(req, res) {
           }
         }
       }
-      // -- fim boletim de máquinas ---------------------------------------------
+      // -- fim boletim de mÃ¡quinas ---------------------------------------------
 
-      // Upload para comprovantes — apenas para mensagens não-boletim (condutor, transporte, etc.)
-      // Boletins já retornaram acima e usam bucket 'maquinas' exclusivamente
+      // Upload para comprovantes Â— apenas para mensagens nÃ£o-boletim (condutor, transporte, etc.)
+      // Boletins jÃ¡ retornaram acima e usam bucket 'maquinas' exclusivamente
       try {
         const db0 = getDb()
         const fileName = `whatsapp/${Date.now()}_${from}.jpg`
@@ -464,7 +464,7 @@ export default async function handler(req, res) {
         }
       } catch (_) {}
 
-      // -- Check de condutor antecipado — se for condutor, pula classificação --
+      // -- Check de condutor antecipado Â— se for condutor, pula classificaÃ§Ã£o --
       const _norm = from.replace(/\D/g, '')
       const _sem55 = _norm.replace(/^55/, '')
       const _com9 = _sem55.length === 10 ? _sem55.slice(0, 2) + '9' + _sem55.slice(2) : _sem55
@@ -483,19 +483,19 @@ export default async function handler(req, res) {
       console.log('[WA] condutor encontrado:', _condutorEncontrado)
 
       if (_condutorEncontrado) {
-        // Condutor cadastrado ? força extração de transporte, pula Passo 1
+        // Condutor cadastrado ? forÃ§a extraÃ§Ã£o de transporte, pula Passo 1
         try {
           formularioTransporte = await runOCR(base64, { forceTransporte: true })
           text = '[imagem-transporte]'
-          textoOriginal = '[formulário: diário do motorista]'
+          textoOriginal = '[formulÃ¡rio: diÃ¡rio do motorista]'
         } catch (errForce) {
           console.error('[WA] runOCR forceTransporte erro:', errForce?.message || errForce)
-          await sendWA(from, '? Não consegui processar a imagem. Tente uma foto mais nítida.')
+          await sendWA(from, '? NÃ£o consegui processar a imagem. Tente uma foto mais nÃ­tida.')
           return res.status(200).end()
         }
 
       } else {
-        // Não é condutor ? PASSO 1: classificação inteligente
+        // NÃ£o Ã© condutor ? PASSO 1: classificaÃ§Ã£o inteligente
         let ocrClassificacao = null
         let ocrFalhou = false
         try {
@@ -506,16 +506,16 @@ export default async function handler(req, res) {
         }
 
         if (ocrFalhou) {
-          await sendWA(from, '? Não consegui processar a imagem agora. Tente novamente em alguns instantes.')
+          await sendWA(from, '? NÃ£o consegui processar a imagem agora. Tente novamente em alguns instantes.')
           return res.status(200).end()
         }
 
         if (ocrClassificacao?.tipo_formulario === 'transporte') {
           formularioTransporte = ocrClassificacao
           text = '[imagem-transporte]'
-          textoOriginal = '[formulário: diário do motorista]'
+          textoOriginal = '[formulÃ¡rio: diÃ¡rio do motorista]'
         } else {
-          // -- PASSO 2: comprovante/despesa — OCR rico com NF-e, CNPJ, litros --
+          // -- PASSO 2: comprovante/despesa Â— OCR rico com NF-e, CNPJ, litros --
         const visionResult = await groq.chat.completions.create({
           model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
           messages: [{
@@ -523,31 +523,31 @@ export default async function handler(req, res) {
             content: [
               {
                 type: 'text',
-                text: `Analise esta imagem de nota fiscal, cupom, comprovante ou recibo — incluindo recibos manuais, manuscritos, cupons não fiscais e comprovantes de pagamento. Extraia as informações e retorne APENAS JSON válido, sem markdown, sem explicação:
+                text: `Analise esta imagem de nota fiscal, cupom, comprovante ou recibo Â— incluindo recibos manuais, manuscritos, cupons nÃ£o fiscais e comprovantes de pagamento. Extraia as informaÃ§Ãµes e retorne APENAS JSON vÃ¡lido, sem markdown, sem explicaÃ§Ã£o:
 {
-  "estabelecimento": "nome do estabelecimento ou prestador de serviço",
-  "endereco": "endereço completo ou null",
+  "estabelecimento": "nome do estabelecimento ou prestador de serviÃ§o",
+  "endereco": "endereÃ§o completo ou null",
   "telefone": "telefone(s) ou null",
-  "cnpj": "XX.XXX.XXX/XXXX-XX ou null (pode ser CPF se for pessoa física)",
-  "produto": "produto ou descrição do serviço principal ou null",
+  "cnpj": "XX.XXX.XXX/XXXX-XX ou null (pode ser CPF se for pessoa fÃ­sica)",
+  "produto": "produto ou descriÃ§Ã£o do serviÃ§o principal ou null",
   "quantidade": "quantidade com unidade ou null (ex: 3 unidades, 40,52 litros)",
   "litros": null,
   "valor_litro": null,
   "valor": 0.00,
   "data": "YYYY-MM-DD ou null",
   "hora": "HH:MM ou null",
-  "forma_pagamento": "pix|crédito|débito|dinheiro ou null",
-  "nfe_url": "URL da consulta NF-e ou chave de acesso 44 dígitos ou null",
-  "categoria": "Alimentação|Transporte|Moradia|Saúde|Lazer|Educação|Serviços|Vestuário|Outros"
+  "forma_pagamento": "pix|crÃ©dito|dÃ©bito|dinheiro ou null",
+  "nfe_url": "URL da consulta NF-e ou chave de acesso 44 dÃ­gitos ou null",
+  "categoria": "AlimentaÃ§Ã£o|Transporte|Moradia|SaÃºde|Lazer|EducaÃ§Ã£o|ServiÃ§os|VestuÃ¡rio|Outros"
 }
 Regras importantes:
-- Recibos manuais, manuscritos e cupons não eletrônicos são válidos — extraia o máximo possível
-- Se o CNPJ/CPF estiver ilegível ou ausente, coloque null
-- litros e valor_litro: preencher SOMENTE se for posto de combustível (números, nunca string)
-- Para campos não encontrados use sempre JSON null (nunca a string "null")
-- nfe_url: somente se houver URL ou chave NF-e real; caso contrário null
+- Recibos manuais, manuscritos e cupons nÃ£o eletrÃ´nicos sÃ£o vÃ¡lidos Â— extraia o mÃ¡ximo possÃ­vel
+- Se o CNPJ/CPF estiver ilegÃ­vel ou ausente, coloque null
+- litros e valor_litro: preencher SOMENTE se for posto de combustÃ­vel (nÃºmeros, nunca string)
+- Para campos nÃ£o encontrados use sempre JSON null (nunca a string "null")
+- nfe_url: somente se houver URL ou chave NF-e real; caso contrÃ¡rio null
 - Datas em outros formatos (DD/MM/AAAA) converter para YYYY-MM-DD
-Se não for absolutamente nenhum tipo de comprovante financeiro, retorne {"erro":"não é comprovante"}.
+Se nÃ£o for absolutamente nenhum tipo de comprovante financeiro, retorne {"erro":"nÃ£o Ã© comprovante"}.
 ${caption ? `Contexto adicional: "${caption}"` : ''}`
               },
               { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
@@ -563,7 +563,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         try { extracted = JSON.parse(matchJson?.[0] || '{}') } catch { extracted = { erro: 'parse' } }
 
         if (extracted.erro) {
-          await sendWA(from, 'Não reconheci um comprovante nessa imagem. ??\nTente uma foto mais nítida ou me diga o valor manualmente.')
+          await sendWA(from, 'NÃ£o reconheci um comprovante nessa imagem. ??\nTente uma foto mais nÃ­tida ou me diga o valor manualmente.')
           return res.status(200).end()
         }
 
@@ -585,14 +585,14 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         }
 
         if (!imagemExtraida.estabelecimento && !imagemExtraida.valor) {
-          await sendWA(from, 'Não consegui identificar estabelecimento nem valor. ??\nTente uma foto mais nítida ou me diga manualmente.')
+          await sendWA(from, 'NÃ£o consegui identificar estabelecimento nem valor. ??\nTente uma foto mais nÃ­tida ou me diga manualmente.')
           return res.status(200).end()
         }
 
         text = '[imagem]'
         textoOriginal = `[imagem${caption ? ': ' + caption : ''}]`
-        } // fecha else (Passo 2: não é transporte)
-        } // fecha else (não é condutor)
+        } // fecha else (Passo 2: nÃ£o Ã© transporte)
+        } // fecha else (nÃ£o Ã© condutor)
 
     } else {
       text = message.text.body.trim()
@@ -601,7 +601,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
     const db = getDb()
 
-    // -- Relatório via WA — grupo restrito, antes de qualquer outro fluxo -----
+    // -- RelatÃ³rio via WA Â— grupo restrito, antes de qualquer outro fluxo -----
     if ((message.type === 'text' || message.type === 'audio') && text) {
       try {
         const relatorioProcesado = await handleRelatorioWA(text, from, db)
@@ -612,7 +612,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       }
     }
 
-    // -- Log: atualiza o registro dedup com o conteúdo real -------------------
+    // -- Log: atualiza o registro dedup com o conteÃºdo real -------------------
     if (msgId) {
       db.from('mensagens_whatsapp').update({ conteudo: textoOriginal || text }).eq('message_id', msgId).then(() => {})
     } else {
@@ -620,10 +620,10 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
     }
 
     // -- Canal / auto-registro -------------------------------------------------
-    // Busca canal ativo OU inativo (para não bloquear quem foi auto-criado sem ativo=true)
-    // Tenta match exato primeiro, depois variações com/sem 55
+    // Busca canal ativo OU inativo (para nÃ£o bloquear quem foi auto-criado sem ativo=true)
+    // Tenta match exato primeiro, depois variaÃ§Ãµes com/sem 55
     const fromNorm = from.replace(/\D/g, '')
-    // Gera variantes: com/sem 55, com/sem o dígito 9 após o DDD (padrão BR)
+    // Gera variantes: com/sem 55, com/sem o dÃ­gito 9 apÃ³s o DDD (padrÃ£o BR)
     const sem55 = fromNorm.replace(/^55/, '')                       // ex: 6792844450
     const com9  = sem55.length === 10 ? sem55.slice(0,2) + '9' + sem55.slice(2) : sem55  // 67992844450
     const sem9  = sem55.length === 11 && sem55[2] === '9' ? sem55.slice(0,2) + sem55.slice(3) : sem55 // 6792844450
@@ -637,7 +637,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       sem9,
     ])]
 
-    // -- Agenda: roteamento inteligente (áudio/texto de gestores) ------------
+    // -- Agenda: roteamento inteligente (Ã¡udio/texto de gestores) ------------
     if (message.type === 'audio' || message.type === 'text') {
       try {
         const destino = await rotearMensagem(body, from, fromVariants, db)
@@ -676,7 +676,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
     }
 
     if (!canal) {
-      // -- Antes de rejeitar: verifica se é líder de refeição -----------------
+      // -- Antes de rejeitar: verifica se Ã© lÃ­der de refeiÃ§Ã£o -----------------
       let equipeRef = null
       for (const v of fromVariants) {
         const { data } = await db.from('refei_equipes')
@@ -692,11 +692,11 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           .limit(1).maybeSingle()
         if (solRef && ['rascunho', 'reprovado'].includes(solRef.status)) {
           const avisoRep = solRef.status === 'reprovado' ? '\n\n?? Pedido anterior reprovado. Corrija e reenvie.' : ''
-          await sendWA(from, `??? *Pedido de Refeição — ${equipeRef.nome}*${avisoRep}\n\nAcesse o formulário:\n${APP_URL}/refeicao/${solRef.token_lider}`)
+          await sendWA(from, `??? *Pedido de RefeiÃ§Ã£o Â— ${equipeRef.nome}*${avisoRep}\n\nAcesse o formulÃ¡rio:\n${APP_URL}/refeicao/${solRef.token_lider}`)
         } else if (solRef?.status === 'pendente') {
-          await sendWA(from, `? Seu pedido *${solRef.numero_pedido}* já foi enviado e aguarda aprovação do supervisor.`)
+          await sendWA(from, `? Seu pedido *${solRef.numero_pedido}* jÃ¡ foi enviado e aguarda aprovaÃ§Ã£o do supervisor.`)
         } else {
-          // Nenhum pedido ativo — cria novo rascunho automaticamente
+          // Nenhum pedido ativo Â— cria novo rascunho automaticamente
           const { data: novo } = await db.from('refei_solicitacoes').insert({
             workspace_id:        equipeRef.workspace_id,
             owner_id:            equipeRef.owner_id,
@@ -707,7 +707,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             status:              'rascunho',
           }).select('token_lider').single()
           if (novo?.token_lider) {
-            await sendWA(from, `??? *Pedido de Refeição — ${equipeRef.nome}*\n\nAcesse o formulário para preencher e enviar:\n${APP_URL}/refeicao/${novo.token_lider}`)
+            await sendWA(from, `??? *Pedido de RefeiÃ§Ã£o Â— ${equipeRef.nome}*\n\nAcesse o formulÃ¡rio para preencher e enviar:\n${APP_URL}/refeicao/${novo.token_lider}`)
           } else {
             await sendWA(from, `?? Erro ao criar pedido. Contate o administrador.`)
           }
@@ -715,7 +715,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         return res.status(200).end()
       }
 
-      // -- Verifica se é telefone de restaurante de refeições ----------------
+      // -- Verifica se Ã© telefone de restaurante de refeiÃ§Ãµes ----------------
       let restFound = null
       for (const v of fromVariants) {
         const { data: rData } = await db.from('refei_restaurantes')
@@ -723,7 +723,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         if (rData) { restFound = rData; break }
       }
       if (restFound) {
-        // Restaurante respondeu uma mensagem — busca o pedido mais recente enviado
+        // Restaurante respondeu uma mensagem Â— busca o pedido mais recente enviado
         const { data: solRest } = await db.from('refei_solicitacoes')
           .select('token_restaurante, numero_pedido, status')
           .eq('restaurante_id', restFound.id)
@@ -732,26 +732,26 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           .limit(1).maybeSingle()
         if (solRest?.token_restaurante) {
           const linkRest = `${APP_URL}/rc/${solRest.token_restaurante}`
-          await sendWA(from, `? Olá, *${restFound.nome}*! Para confirmar ou ver os detalhes do pedido *${solRest.numero_pedido}*, acesse:\n${linkRest}`)
+          await sendWA(from, `? OlÃ¡, *${restFound.nome}*! Para confirmar ou ver os detalhes do pedido *${solRest.numero_pedido}*, acesse:\n${linkRest}`)
         } else {
-          await sendWA(from, `? Olá, *${restFound.nome}*! Nenhum pedido ativo no momento. Aguarde o envio da próxima solicitação.`)
+          await sendWA(from, `? OlÃ¡, *${restFound.nome}*! Nenhum pedido ativo no momento. Aguarde o envio da prÃ³xima solicitaÃ§Ã£o.`)
         }
         return res.status(200).end()
       }
       // ---------------------------------------------------------------------
 
-      // Se é formulário de transporte (Diário do Motorista), processa mesmo sem canal
-      // O bloco de transporte usa cadastros_condutores para o workspace — não depende de canal
+      // Se Ã© formulÃ¡rio de transporte (DiÃ¡rio do Motorista), processa mesmo sem canal
+      // O bloco de transporte usa cadastros_condutores para o workspace Â— nÃ£o depende de canal
       if (formularioTransporte) {
         canal = { id: null, sessao_pendente: null, pessoa_id: null }
       } else {
-        await sendWA(from, `Olá! ?? Seu número não está vinculado ao SmartPro.\n\nAcesse *${APP_URL}* ? Admin para cadastrar.`)
+        await sendWA(from, `OlÃ¡! ?? Seu nÃºmero nÃ£o estÃ¡ vinculado ao SmartPro.\n\nAcesse *${APP_URL}* ? Admin para cadastrar.`)
         return res.status(200).end()
       }
     }
 
     // owner_id real: busca da pessoa vinculada ao canal (fonte de verdade)
-    // Assim despesas sempre vão para a conta correta, mesmo que canal.owner_id esteja errado
+    // Assim despesas sempre vÃ£o para a conta correta, mesmo que canal.owner_id esteja errado
     let ownerId = canal.owner_id || null
     if (canal.pessoa_id) {
       const { data: pessoaCanal } = await db.from('pessoas').select('owner_id').eq('id', canal.pessoa_id).single()
@@ -764,7 +764,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       }
     }
 
-    // -- Carrega dados (cálculos sempre no backend) ----------------------------
+    // -- Carrega dados (cÃ¡lculos sempre no backend) ----------------------------
     const pessoasQuery = db.from('pessoas').select('id, nome, apelido')
     if (ownerId) pessoasQuery.eq('owner_id', ownerId)
     const despesasQuery = db.from('despesas').select('id, descricao, valor, data, categoria, status, pago_por, participantes, parcelas')
@@ -782,15 +782,15 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
     }
 
     const l = text.toLowerCase().trim()
-    // lNorm: remove pontuação final (Whisper transcreve "Sim." "Ok!" etc.)
-    const lNorm = l.replace(/[^a-záéíóúàãõç\d\s]/gi, '').trim()
+    // lNorm: remove pontuaÃ§Ã£o final (Whisper transcreve "Sim." "Ok!" etc.)
+    const lNorm = l.replace(/[^a-zÃ¡Ã©Ã­Ã³ÃºÃ Ã£ÃµÃ§\d\s]/gi, '').trim()
     let reply = ''
 
     // ------------------------------------------------------------------------
-    // FORMULÁRIO DE TRANSPORTE — tem prioridade absoluta, ignora sessão ativa
+    // FORMULÃRIO DE TRANSPORTE Â— tem prioridade absoluta, ignora sessÃ£o ativa
     // ------------------------------------------------------------------------
     if (formularioTransporte) {
-      // Limpa sessão residual para não interferir
+      // Limpa sessÃ£o residual para nÃ£o interferir
       if (canal.sessao_pendente) {
         await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
       }
@@ -830,7 +830,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         wsId = waConf.workspace_id
         wsUserId = waConf.user_id || ownerId
       } else if (ownerId) {
-        // workspaces não tem owner_id — usa workspace_members para achar o workspace do usuário
+        // workspaces nÃ£o tem owner_id Â— usa workspace_members para achar o workspace do usuÃ¡rio
         const { data: mem } = await db.from('workspace_members')
           .select('workspace_id')
           .eq('user_id', ownerId)
@@ -852,12 +852,12 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
       if (wsId) {
         const descricaoTransporte = [
-          f.numero_diario ? `Nº ${f.numero_diario}` : null,
+          f.numero_diario ? `NÂº ${f.numero_diario}` : null,
           f.empresa || null,
           (f.local_origem && f.local_destino) ? `${f.local_origem} ? ${f.local_destino}` : null,
         ].filter(Boolean).join(' | ')
 
-        // Usa nome do cadastro como fallback para condutor se OCR não encontrou
+        // Usa nome do cadastro como fallback para condutor se OCR nÃ£o encontrou
         const condutorFinal = f.condutor || f.motorista || nomeMotorista || null
         const dadosExtras = {
           ...f,
@@ -870,7 +870,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           workspace_id: wsId,
           user_id:      wsUserId,
           tipo:         'receita',
-          descricao:    descricaoTransporte || 'Diário do Motorista',
+          descricao:    descricaoTransporte || 'DiÃ¡rio do Motorista',
           valor:        valorFinal,
           data:         f.data || today,
           categoria:    'Transporte',
@@ -889,12 +889,12 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             lancamento_id: inserted.id,
             tipo:          'criado',
             status_para:   'rascunho',
-            descricao:     'Recebido via WhatsApp — aguardando envio para aprovação.',
+            descricao:     'Recebido via WhatsApp Â— aguardando envio para aprovaÃ§Ã£o.',
             usuario_nome:  from || null,
           }).then(() => {}).catch(() => {})
         }
 
-        // Monta resumo de KM para confirmação
+        // Monta resumo de KM para confirmaÃ§Ã£o
         const kmRows = (f.km_rows || []).filter(r => r.total && String(r.total).trim() !== '')
         const parseKm = v => { const n = parseFloat(String(v || '').replace(/[^\d.,]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
         const kmAsf = kmRows.filter(r => r.tipo === 'ASFALTO').reduce((s, r) => s + parseKm(r.total), 0)
@@ -907,21 +907,21 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           const linhas = [
             `? *Imagem processada!*`,
             ``,
-            `?? Nº ${f.numero_diario || '—'} | ${f.empresa || '—'}`,
+            `?? NÂº ${f.numero_diario || 'Â—'} | ${f.empresa || 'Â—'}`,
             `?? Valor: ${fmtVal}`,
             kmTotal > 0 ? `?? KM: ${kmTotal.toLocaleString('pt-BR')} (ASF: ${kmAsf.toLocaleString('pt-BR')} / TER: ${kmTer.toLocaleString('pt-BR')})` : null,
-            `?? Placa: ${f.placa || '—'}`,
+            `?? Placa: ${f.placa || 'Â—'}`,
             ``,
-            `_Pendente de aprovação_`,
+            `_Pendente de aprovaÃ§Ã£o_`,
           ].filter(v => v !== null)
           reply = linhas.join('\n')
         }
       } else {
-        reply = `? *Diário do Motorista reconhecido!*\n\n?? Valor: ${fmtVal}\n?? ${f.empresa || '—'}\n\n?? Seu número não está configurado. Acesse *Lançamentos ? WhatsApp* para ativar o registro automático.`
+        reply = `? *DiÃ¡rio do Motorista reconhecido!*\n\n?? Valor: ${fmtVal}\n?? ${f.empresa || 'Â—'}\n\n?? Seu nÃºmero nÃ£o estÃ¡ configurado. Acesse *LanÃ§amentos ? WhatsApp* para ativar o registro automÃ¡tico.`
       }
 
     // ------------------------------------------------------------------------
-    // ESTADO: aguardando_complemento — preenche campo faltante da imagem
+    // ESTADO: aguardando_complemento Â— preenche campo faltante da imagem
     // ------------------------------------------------------------------------
     } else if (canal.sessao_pendente?.estado === 'aguardando_complemento') {
       const sess = canal.sessao_pendente
@@ -930,7 +930,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       if (sess.campo_pendente === 'valor') {
         const novoValor = parseFloat(text.replace(/[^\d.,]/g, '').replace(',', '.'))
         if (!novoValor || novoValor <= 0) {
-          reply = 'Valor inválido. Tente novamente, ex: _78,59_'
+          reply = 'Valor invÃ¡lido. Tente novamente, ex: _78,59_'
         } else {
           dados.valor = novoValor
         }
@@ -965,9 +965,9 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             hora: dados.hora,
             nfe_url: dados.nfe_url,
             pago_por_id: canal.pessoa_id,
-            pago_por_nome: pagador?.nome || 'você',
+            pago_por_nome: pagador?.nome || 'vocÃª',
             participantes_ids: [canal.pessoa_id],
-            participantes_nomes: [pagador?.nome || 'você'],
+            participantes_nomes: [pagador?.nome || 'vocÃª'],
             comprovante_url: sess.comprovante_url,
           }
           await db.from('canais_mensagem').update({ sessao_pendente: rascunho }).eq('id', canal.id)
@@ -976,7 +976,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       }
 
     // ------------------------------------------------------------------------
-    // ESTADO: aguardando_confirmacao — só aceita sim/editar/cancelar
+    // ESTADO: aguardando_confirmacao Â— sÃ³ aceita sim/editar/cancelar
     // ------------------------------------------------------------------------
     } else if (canal.sessao_pendente?.estado === 'aguardando_confirmacao') {
       const p = canal.sessao_pendente
@@ -1017,7 +1017,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         else console.log('[WA] despesa inserida id:', inserted?.id)
         reply = error ? '? Erro ao salvar. Tente novamente.' : `? *${p.descricao}* ${formatBRL(p.valor)} registrado!`
 
-      } else if (/^(n(ão|ao)?|cancelar?|cancela)$/i.test(lNorm)) {
+      } else if (/^(n(Ã£o|ao)?|cancelar?|cancela)$/i.test(lNorm)) {
         await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
         reply = 'Cancelado. ??'
 
@@ -1025,7 +1025,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       } else if (/^editar\s+valor\s+/i.test(lNorm)) {
         const novoValor = parseFloat(lNorm.replace(/[^\d.,]/g, '').replace(',', '.'))
         if (!novoValor || novoValor <= 0) {
-          reply = 'Valor inválido. Ex: _editar valor 190_'
+          reply = 'Valor invÃ¡lido. Ex: _editar valor 190_'
         } else {
           const novoP = { ...p, valor: novoValor }
           await db.from('canais_mensagem').update({ sessao_pendente: novoP }).eq('id', canal.id)
@@ -1037,7 +1037,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         const nomesRaw = lNorm.replace(/^editar\s+pessoa\s+/i, '').split(/\s+e\s+|\s*,\s*/i)
         const novos = nomesRaw.map(n => findPessoa(n.trim())).filter(Boolean)
         if (!novos.length) {
-          reply = `Não encontrei essas pessoas. Verifique os nomes em ${APP_URL}`
+          reply = `NÃ£o encontrei essas pessoas. Verifique os nomes em ${APP_URL}`
         } else {
           const novoP = {
             ...p,
@@ -1050,7 +1050,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
       // editar categoria X
       } else if (/^editar\s+categoria\s+/i.test(lNorm)) {
-        const cats = ['Alimentação','Transporte','Moradia','Saúde','Lazer','Educação','Serviços','Vestuário','Outros']
+        const cats = ['AlimentaÃ§Ã£o','Transporte','Moradia','SaÃºde','Lazer','EducaÃ§Ã£o','ServiÃ§os','VestuÃ¡rio','Outros']
         const novaStr = text.replace(/^editar\s+categoria\s+/i, '').trim()
         const novaCat = cats.find(c => c.toLowerCase().startsWith(novaStr.toLowerCase())) || 'Outros'
         const novoP = { ...p, categoria: novaCat }
@@ -1058,22 +1058,22 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         reply = montarConfirmacao(novoP)
 
       } else {
-        reply = 'Aguardando confirmação. Responda *sim* ou *cancelar*.'
+        reply = 'Aguardando confirmaÃ§Ã£o. Responda *sim* ou *cancelar*.'
       }
 
     // ------------------------------------------------------------------------
-    // ESTADO: normal — parse de intenção via IA
+    // ESTADO: normal Â— parse de intenÃ§Ã£o via IA
     // ------------------------------------------------------------------------
     } else {
-      // Limpa qualquer sessão residual
+      // Limpa qualquer sessÃ£o residual
       if (canal.sessao_pendente) {
         await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
       }
 
       // ------------------------------------------------------------------------
-      // MÓDULO REFEIÇÕES — Líder solicita via WA
+      // MÃ“DULO REFEIÃ‡Ã•ES Â— LÃ­der solicita via WA
       // ------------------------------------------------------------------------
-      if (/pedido.*(refei[çc][ãa]|almo[çc]o|caf[eé])|refei[çc][ãa]o|marmita|solicita.*comi/i.test(text)) {
+      if (/pedido.*(refei[Ã§c][Ã£a]|almo[Ã§c]o|caf[eÃ©])|refei[Ã§c][Ã£a]o|marmita|solicita.*comi/i.test(text)) {
         let equipe = null
         for (const v of fromVariants) {
           const { data } = await db.from('refei_equipes')
@@ -1100,10 +1100,10 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             tokenLider = novo?.token_lider
           }
           const base = APP_URL
-          await sendWA(from, `??? *Solicitação de Refeição*\n\nClique para fazer seu pedido:\n${base}/refeicao/${tokenLider}\n\n_Após enviar, aguarde aprovação do supervisor._`)
+          await sendWA(from, `??? *SolicitaÃ§Ã£o de RefeiÃ§Ã£o*\n\nClique para fazer seu pedido:\n${base}/refeicao/${tokenLider}\n\n_ApÃ³s enviar, aguarde aprovaÃ§Ã£o do supervisor._`)
           return res.status(200).end()
         }
-        // Se não encontrou equipe para este telefone, cai para fluxo normal
+        // Se nÃ£o encontrou equipe para este telefone, cai para fluxo normal
       }
 
       if (imagemExtraida) {
@@ -1145,9 +1145,9 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             hora: imagemExtraida.hora,
             nfe_url: imagemExtraida.nfe_url,
             pago_por_id: canal.pessoa_id,
-            pago_por_nome: pagador?.nome || 'você',
+            pago_por_nome: pagador?.nome || 'vocÃª',
             participantes_ids: [canal.pessoa_id],
-            participantes_nomes: [pagador?.nome || 'você'],
+            participantes_nomes: [pagador?.nome || 'vocÃª'],
             comprovante_url: comprovanteUrl,
           }
           await db.from('canais_mensagem').update({ sessao_pendente: rascunho }).eq('id', canal.id)
@@ -1157,15 +1157,15 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
       const intent = await parseIntent(text, todasPessoas, today, canal.historico)
 
-      // -- criar_despesa: modo rascunho obrigatório -------------------------
+      // -- criar_despesa: modo rascunho obrigatÃ³rio -------------------------
       if (intent.intencao === 'criar_despesa') {
         if (!intent.descricao || !intent.valor) {
-          reply = 'Não entendi o valor. Ex: _"Paguei R$ 80 no mercado, dividir com Camila"_'
+          reply = 'NÃ£o entendi o valor. Ex: _"Paguei R$ 80 no mercado, dividir com Camila"_'
         } else {
-          const pagador = findPessoa(intent.pago_por) || { id: canal.pessoa_id, nome: 'você' }
+          const pagador = findPessoa(intent.pago_por) || { id: canal.pessoa_id, nome: 'vocÃª' }
           const parts = (intent.participantes || []).map(n => findPessoa(n)).filter(Boolean)
           const participantesIds = parts.length > 0 ? parts.map(p => p.id) : [canal.pessoa_id]
-          const participantesNomes = parts.length > 0 ? parts.map(p => p.nome) : ['você']
+          const participantesNomes = parts.length > 0 ? parts.map(p => p.nome) : ['vocÃª']
 
           const rascunho = {
             estado: 'aguardando_confirmacao',
@@ -1190,18 +1190,18 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         if (intent.pessoa) {
           const s = saldos.find(s => s.nome.toLowerCase().includes(intent.pessoa.toLowerCase()))
           reply = !s
-            ? `Não encontrei "${intent.pessoa}".`
+            ? `NÃ£o encontrei "${intent.pessoa}".`
             : s.saldo > 0 ? `${s.nome} te deve ${formatBRL(s.saldo)}.`
-            : s.saldo < 0 ? `Você deve ${formatBRL(Math.abs(s.saldo))} para ${s.nome}.`
-            : `${s.nome} está quite. ?`
+            : s.saldo < 0 ? `VocÃª deve ${formatBRL(Math.abs(s.saldo))} para ${s.nome}.`
+            : `${s.nome} estÃ¡ quite. ?`
         } else {
           const pendentes = saldos.filter(s => Math.abs(s.saldo) > 0.01)
           reply = pendentes.length === 0
-            ? '? Todos os saldos estão quitados!'
+            ? '? Todos os saldos estÃ£o quitados!'
             : '*Saldos pendentes:*\n' + pendentes.map(s =>
                 s.saldo > 0
                   ? `${s.nome} te deve ${formatBRL(s.saldo)}`
-                  : `Você deve ${formatBRL(Math.abs(s.saldo))} a ${s.nome}`
+                  : `VocÃª deve ${formatBRL(Math.abs(s.saldo))} a ${s.nome}`
               ).join('\n')
         }
 
@@ -1211,8 +1211,8 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         if (!pendentes.length) {
           reply = '? Nenhuma despesa pendente!'
         } else {
-          reply = '*Pendências:*\n' + pendentes.slice(0, 5).map(e =>
-            `• ${e.descricao} — ${formatBRL(e.valor)}`
+          reply = '*PendÃªncias:*\n' + pendentes.slice(0, 5).map(e =>
+            `Â• ${e.descricao} Â— ${formatBRL(e.valor)}`
           ).join('\n')
           if (pendentes.length > 5) reply += `\n_...e mais ${pendentes.length - 5}. Veja em ${APP_URL}_`
         }
@@ -1223,12 +1223,12 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         const resultado = fecharMes(todasDespesas, todasPessoas, mes)
         reply = resultado || `Nenhuma despesa encontrada para ${mes}.`
 
-      // -- marcar_como_pago: nunca sobrescreve sem confirmação --------------
+      // -- marcar_como_pago: nunca sobrescreve sem confirmaÃ§Ã£o --------------
       } else if (intent.intencao === 'marcar_como_pago') {
         const busca = (intent.descricao || '').toLowerCase()
         const d = todasDespesas.find(e => e.status === 'pendente' && e.descricao.toLowerCase().includes(busca))
         if (!d) {
-          reply = `Não encontrei despesa pendente com "${intent.descricao}".`
+          reply = `NÃ£o encontrei despesa pendente com "${intent.descricao}".`
         } else {
           const rascunho = {
             estado: 'aguardando_confirmacao',
@@ -1243,13 +1243,13 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
       // -- desconhecido -----------------------------------------------------
       } else {
-        reply = 'Posso te ajudar com:\n• _"Paguei 80 no uber"_ — registrar gasto\n• _"Quanto devo?"_ — ver saldos\n• _"Lista pendências"_ — despesas em aberto\n• _"Fechar meu mês"_ — resumo do mês\n• _"Marcar mercado como pago"_'
+        reply = 'Posso te ajudar com:\nÂ• _"Paguei 80 no uber"_ Â— registrar gasto\nÂ• _"Quanto devo?"_ Â— ver saldos\nÂ• _"Lista pendÃªncias"_ Â— despesas em aberto\nÂ• _"Fechar meu mÃªs"_ Â— resumo do mÃªs\nÂ• _"Marcar mercado como pago"_'
       }
 
       } // fim else imagemExtraida
     }
 
-    // -- Confirma marcar_como_pago quando está na sessão -------------------
+    // -- Confirma marcar_como_pago quando estÃ¡ na sessÃ£o -------------------
     // (resolvido dentro do bloco aguardando_confirmacao, mas precisa checar intencao)
     if (canal.sessao_pendente?.estado === 'aguardando_confirmacao' &&
         canal.sessao_pendente?.intencao === 'marcar_como_pago' &&
@@ -1268,7 +1268,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         conteudo: reply,
       }).then(() => {})
 
-      // Histórico: últimas 10 trocas
+      // HistÃ³rico: Ãºltimas 10 trocas
       const novoHistorico = [
         ...(canal.historico || []),
         { role: 'user', content: textoOriginal || text },
