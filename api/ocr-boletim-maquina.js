@@ -181,7 +181,7 @@ async function zapiDeleteMessage(phone, messageId) {
 }
 
 function buildProgressBar(percent) {
-  const total = 15
+  const total = 10
   const filled = Math.round((percent / 100) * total)
   return '🟩'.repeat(filled) + '⬜'.repeat(total - filled) + `  ${percent}%`
 }
@@ -210,9 +210,15 @@ async function zapiProgress(phone, prevMsgId, percent, label) {
       let bodyObj = {}
       try { bodyObj = JSON.parse(bodyText) } catch (_) {}
       if (resp.ok && (bodyObj.messageId || bodyObj.zaapId) && !bodyObj.error) {
-        const updatedId = bodyObj.messageId || prevMsgId
-        console.log(`[ocr-boletim] edit OK: ${percent}% — msgId=${updatedId}`)
-        return updatedId
+        const newId = bodyObj.messageId || bodyObj.zaapId
+        // Z-API pode criar nova mensagem em vez de editar (IDs diferentes)
+        if (newId !== prevMsgId) {
+          await zapiDeleteMessage(phone, prevMsgId)
+          console.log(`[ocr-boletim] edit criou nova msg ${percent}% — deletando antiga e mantendo nova msgId=${newId}`)
+        } else {
+          console.log(`[ocr-boletim] edit in-place OK: ${percent}% — msgId=${newId}`)
+        }
+        return newId
       }
       console.warn(`[ocr-boletim] edit falhou (${bodyObj.error || resp.status}), usando delete+resend`)
     } catch (e) {
@@ -247,7 +253,11 @@ async function zapiEditOrSend(phone, msgId, text) {
       const bodyText = await resp.text().catch(() => '')
       let bodyObj = {}
       try { bodyObj = JSON.parse(bodyText) } catch (_) {}
-      if (resp.ok && (bodyObj.messageId || bodyObj.zaapId) && !bodyObj.error) return  // editado com sucesso
+      if (resp.ok && (bodyObj.messageId || bodyObj.zaapId) && !bodyObj.error) {
+        const newId = bodyObj.messageId || bodyObj.zaapId
+        if (newId !== msgId) await zapiDeleteMessage(phone, msgId)  // criou nova msg, deleta a antiga
+        return
+      }
       console.warn(`[ocr-boletim] edit final falhou (${bodyObj.error || resp.status}), usando delete+resend`)
     } catch (e) {
       console.warn('[ocr-boletim] edit final erro:', e.message)
@@ -559,8 +569,8 @@ function buildResumoOCR(extras, valorCalculado, temPendente, boletimNumero, data
     ? '_Alguns campos precisam de revisão. Acesse o sistema para validar._'
     : '_Lançamento gerado automaticamente no sistema._'
   const barra = temPendente
-    ? '🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨⬜⬜⬜⬜  75%'
-    : '🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100%'
+    ? '🟨🟨🟨🟨🟨🟨🟨🟨⬜⬜  75%'
+    : '🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100%'
 
   const numDM = ex.numero_documento || r.numero_documento || null
   const headerNumDM = numDM ? ` (DM ${numDM})` : ''
