@@ -210,6 +210,37 @@ async function zapiEditOrSend(phone, msgId, text) {
   await zapiSendText(phone, text)
 }
 
+// Inicia ticker de progresso contínuo: incrementa 10% a cada 3,5s enquanto o OCR processa
+// Retorna { stop() } — stop() interrompe o ticker, aguarda o último tick e devolve o msgId atual
+function zapiStartTicker(phone, initialMsgId, { stepPercent = 10, intervalMs = 3500, maxPercent = 90 } = {}) {
+  if (!phone || !zapiInstanceId || !zapiToken) return { stop: async () => initialMsgId }
+  let currentMsgId = initialMsgId
+  let currentPercent = 0
+  let stopped = false
+  let chain = Promise.resolve()
+  const labelFor = (p) =>
+    p <= 30 ? '⏳ _Analisando imagem..._'
+    : p <= 60 ? '🤖 _IA processando formulário..._'
+    : '💾 _Finalizando lançamento..._'
+  const intervalId = setInterval(() => {
+    const next = Math.min(currentPercent + stepPercent, maxPercent)
+    if (stopped || next === currentPercent) return
+    currentPercent = next
+    chain = chain.then(async () => {
+      if (stopped) return
+      currentMsgId = await zapiProgress(phone, currentMsgId, currentPercent, labelFor(currentPercent))
+    }).catch(e => console.warn('[ticker] erro tick:', e.message))
+  }, intervalMs)
+  return {
+    stop: async () => {
+      stopped = true
+      clearInterval(intervalId)
+      await chain  // aguarda tick em curso terminar
+      return currentMsgId
+    },
+  }
+}
+
 // Normaliza texto para lookup de alias (trim + upper + colapsa espa├ºos)
 function normalizeAlias(s) {
   return (s || '').trim().toUpperCase().replace(/\s+/g, ' ')
@@ -768,9 +799,15 @@ async function processarBoletim(boletimId, imageBase64 = null, { waProgressMsgId
       // imageBase64 fornecido via POST body → usa direto (sem download da URL, economiza ~2s)
       // Caso contrário, passa URL pública (Groq faz o download)
       const ocrInput = imageBase64 || bol.imagem_url || ''
-      progressMsgId = await zapiProgress(waPhone, progressMsgId, 50, '🤖 _IA lendo o formulário..._')
-      const ocrResult      = await runOCR(ocrInput, { template: tmpl })
-      progressMsgId = await zapiProgress(waPhone, progressMsgId, 75, '💾 _Salvando lançamento..._')
+      const ticker = zapiStartTicker(waPhone, progressMsgId)
+      let ocrResult
+      try {
+        ocrResult = await runOCR(ocrInput, { template: tmpl })
+        progressMsgId = await ticker.stop()
+      } catch (ocrErr) {
+        progressMsgId = await ticker.stop()
+        throw ocrErr
+      }
       const tipoForm       = ocrResult.tipo_formulario || tmpl.tipo_base || 'formulario'
       const dataBoletimTmpl = ocrResult.data || new Date().toISOString().slice(0, 10)
 
@@ -973,16 +1010,23 @@ Retorne APENAS o JSON, sem comentários.`
         ],
       },
     ]
-    progressMsgId = await zapiProgress(waPhone, progressMsgId, 50, '🤖 _IA lendo o formulário..._')
-    ocrRaw = await callGroq(groqApiKey, imageMessages)
-    progressMsgId = await zapiProgress(waPhone, progressMsgId, 75, '💾 _Salvando lançamento..._')
-  } catch (e) {
-    console.error('[ocr-boletim] groq error:', e.message)
-    await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
-    if (waPhone) {
-      await zapiEditOrSend(waPhone, progressMsgId, `⚠️ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
+    const ticker = zapiStartTicker(waPhone, progressMsgId)
+    try {
+      ocrRaw = await callGroq(groqApiKey, imageMessages)
+      progressMsgId = await ticker.stop()
+    } catch (e) {
+      progressMsgId = await ticker.stop()
+      console.error('[ocr-boletim] groq error:', e.message)
+      await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
+      if (waPhone) {
+        await zapiEditOrSend(waPhone, progressMsgId, `⚠️ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
+      }
+      return
     }
-    return
+  } catch (e) {
+    // erro na montagem das imageMessages (não deve ocorrer normalmente)
+    console.error('[ocr-boletim] erro inesperado:', e.message)
+    throw e
   }
 
   // Salva o OCR bruto
