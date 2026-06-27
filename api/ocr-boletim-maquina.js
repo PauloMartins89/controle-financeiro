@@ -181,9 +181,9 @@ async function zapiDeleteMessage(phone, messageId) {
 }
 
 function buildProgressBar(percent) {
-  const total = 20
+  const total = 15
   const filled = Math.round((percent / 100) * total)
-  return '▓'.repeat(filled) + '░'.repeat(total - filled) + `  ${percent}%`
+  return '🟩'.repeat(filled) + '⬜'.repeat(total - filled) + `  ${percent}%`
 }
 
 // Edita a mensagem de progresso existente no lugar (sem delete+resend)
@@ -558,8 +558,8 @@ function buildResumoOCR(extras, valorCalculado, temPendente, boletimNumero, data
     ? '_Alguns campos precisam de revisão. Acesse o sistema para validar._'
     : '_Lançamento gerado automaticamente no sistema._'
   const barra = temPendente
-    ? '▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░  75%'
-    : '▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ 100%'
+    ? '🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨🟨⬜⬜⬜⬜  75%'
+    : '🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100%'
 
   const numDM = ex.numero_documento || r.numero_documento || null
   const headerNumDM = numDM ? ` (DM ${numDM})` : ''
