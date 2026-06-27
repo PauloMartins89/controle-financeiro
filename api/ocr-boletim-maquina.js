@@ -186,85 +186,26 @@ function buildProgressBar(percent) {
   return '🟩'.repeat(filled) + '⬜'.repeat(total - filled) + `  ${percent}%`
 }
 
-// Edita a mensagem de progresso existente no lugar (sem delete+resend)
-// Retorna o mesmo messageId (a mensagem é a mesma, só o conteúdo muda)
+// Atualiza o progresso: deleta a mensagem anterior e envia nova
+// Garante exatamente 1 mensagem de progresso visível a qualquer momento
 async function zapiProgress(phone, prevMsgId, percent, label) {
   if (!phone || !zapiInstanceId || !zapiToken) return prevMsgId
-  const bar = buildProgressBar(percent)
-  const text = `${bar}\n${label}`
-  // Edita a mensagem existente via send-text + editMessageId (endpoint correto Z-API)
+  const text = `${buildProgressBar(percent)}\n${label}`
   if (prevMsgId) {
-    try {
-      const resp = await fetch(
-        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
-          },
-          body: JSON.stringify({ phone, message: text, editMessageId: prevMsgId }),
-        }
-      )
-      const bodyText = await resp.text().catch(() => '')
-      let bodyObj = {}
-      try { bodyObj = JSON.parse(bodyText) } catch (_) {}
-      if (resp.ok && (bodyObj.messageId || bodyObj.zaapId) && !bodyObj.error) {
-        const newId = bodyObj.messageId || bodyObj.zaapId
-        // Z-API pode criar nova mensagem em vez de editar (IDs diferentes)
-        if (newId !== prevMsgId) {
-          await zapiDeleteMessage(phone, prevMsgId)
-          console.log(`[ocr-boletim] edit criou nova msg ${percent}% — deletando antiga e mantendo nova msgId=${newId}`)
-        } else {
-          console.log(`[ocr-boletim] edit in-place OK: ${percent}% — msgId=${newId}`)
-        }
-        return newId
-      }
-      console.warn(`[ocr-boletim] edit falhou (${bodyObj.error || resp.status}), usando delete+resend`)
-    } catch (e) {
-      console.warn('[ocr-boletim] edit erro:', e.message)
-    }
-    // Fallback: deleta mensagem antiga e envia nova
     await zapiDeleteMessage(phone, prevMsgId)
-    await new Promise(r => setTimeout(r, 300))
+    await new Promise(r => setTimeout(r, 200))
   }
   const newMsgId = await zapiSendText(phone, text)
   console.log(`[ocr-boletim] progresso ${percent}% — msgId=${newMsgId}`)
   return newMsgId
 }
 
-// Edita a mensagem de progresso com o texto final do resultado (sem barra)
-// Fallback: envia nova mensagem se edição falhar
+// Envia o resultado final deletando a barra de progresso
 async function zapiEditOrSend(phone, msgId, text) {
   if (!phone) return
   if (msgId && zapiInstanceId && zapiToken) {
-    try {
-      const resp = await fetch(
-        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
-          },
-          body: JSON.stringify({ phone, message: text, editMessageId: msgId }),
-        }
-      )
-      const bodyText = await resp.text().catch(() => '')
-      let bodyObj = {}
-      try { bodyObj = JSON.parse(bodyText) } catch (_) {}
-      if (resp.ok && (bodyObj.messageId || bodyObj.zaapId) && !bodyObj.error) {
-        const newId = bodyObj.messageId || bodyObj.zaapId
-        if (newId !== msgId) await zapiDeleteMessage(phone, msgId)  // criou nova msg, deleta a antiga
-        return
-      }
-      console.warn(`[ocr-boletim] edit final falhou (${bodyObj.error || resp.status}), usando delete+resend`)
-    } catch (e) {
-      console.warn('[ocr-boletim] edit final erro:', e.message)
-    }
-    // Fallback: deleta e envia nova
     await zapiDeleteMessage(phone, msgId)
-    await new Promise(r => setTimeout(r, 300))
+    await new Promise(r => setTimeout(r, 200))
   }
   await zapiSendText(phone, text)
 }
