@@ -206,10 +206,9 @@ async function zapiProgress(phone, prevMsgId, percent, label) {
           body: JSON.stringify({ phone, messageId: prevMsgId, message: text }),
         }
       )
-      if (resp.ok) {
-        console.log(`[ocr-boletim] progresso atualizado: ${percent}%`)
-        return prevMsgId  // mesmo messageId — a msg foi editada no lugar
-      }
+      const body = await resp.text().catch(() => '')
+      console.log(`[ocr-boletim] edit-message ${percent}% status=${resp.status} msgId=${prevMsgId} body=${body.slice(0, 200)}`)
+      if (resp.ok) return prevMsgId
       console.warn(`[ocr-boletim] edit-message falhou ${resp.status}, fazendo resend`)
     } catch (e) {
       console.warn('[ocr-boletim] edit-message erro:', e.message)
@@ -217,6 +216,7 @@ async function zapiProgress(phone, prevMsgId, percent, label) {
   }
   // Fallback: envia nova mensagem se não tiver prevMsgId ou se a edição falhar
   const newMsgId = await zapiSendText(phone, text)
+  console.log(`[ocr-boletim] progresso ${percent}% — nova msg enviada, msgId=${newMsgId}`)
   return newMsgId
 }
 

@@ -377,6 +377,7 @@ export default async function handler(req, res) {
 
             // ACK imediato — não bloqueia o fluxo de upload+OCR
             const { messageId: progressMsgId } = await sendWA(from, `📋 *${numero} recebido!*\n\n░░░░░░░░░░░░░░░░░░░░  0%\n⏳ _Lendo o formulário com IA..._\n\nVocê receberá um resumo completo assim que o lançamento for criado.`)
+            console.log(`[whatsapp/boletim] ACK enviado, progressMsgId=${progressMsgId}`)
 
             // Inicia upload para storage (não-bloqueante  corre em paralelo com OCR)
             let imagemUrl = 'pending'
