@@ -180,6 +180,12 @@ async function zapiDeleteMessage(phone, messageId) {
   }
 }
 
+function buildProgressBar(percent) {
+  const total = 20
+  const filled = Math.round((percent / 100) * total)
+  return '▓'.repeat(filled) + '░'.repeat(total - filled) + `  ${percent}%`
+}
+
 // Edita a mensagem de progresso existente no lugar (sem delete+resend)
 // Retorna o mesmo messageId (a mensagem é a mesma, só o conteúdo muda)
 async function zapiProgress(phone, prevMsgId, percent, label) {
