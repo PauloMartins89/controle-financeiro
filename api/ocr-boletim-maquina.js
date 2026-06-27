@@ -164,17 +164,20 @@ async function zapiSendText(phone, message) {
 async function zapiDeleteMessage(phone, messageId) {
   if (!zapiInstanceId || !zapiToken || !phone || !messageId) return
   try {
-    await fetch(
-      `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/messages`,
+    const params = new URLSearchParams({ messageId, phone, owner: 'true' })
+    const resp = await fetch(
+      `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/messages?${params}`,
       {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
           ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
         },
-        body: JSON.stringify({ phone, messageId, owner: true }),
       }
     )
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '')
+      console.warn(`[ocr-boletim] zapiDeleteMessage ${resp.status}:`, body.slice(0, 200))
+    }
   } catch (e) {
     console.error('[ocr-boletim] zapiDeleteMessage error:', e.message)
   }
