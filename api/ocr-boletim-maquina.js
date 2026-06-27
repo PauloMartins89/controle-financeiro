@@ -192,30 +192,31 @@ async function zapiProgress(phone, prevMsgId, percent, label) {
   if (!phone || !zapiInstanceId || !zapiToken) return prevMsgId
   const bar = buildProgressBar(percent)
   const text = `${bar}\n${label}`
+  // Edita a mensagem existente via send-text + editMessageId (endpoint correto Z-API)
   if (prevMsgId) {
     try {
       const resp = await fetch(
-        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/edit-message`,
+        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
           },
-          body: JSON.stringify({ phone, messageId: prevMsgId, message: text }),
+          body: JSON.stringify({ phone, message: text, editMessageId: prevMsgId }),
         }
       )
       const bodyText = await resp.text().catch(() => '')
       let bodyObj = {}
       try { bodyObj = JSON.parse(bodyText) } catch (_) {}
-      // Z-API retorna 200 mesmo quando o endpoint não existe — checa o body
-      if (resp.ok && !bodyObj.error) {
-        console.log(`[ocr-boletim] edit-message OK: ${percent}%`)
-        return prevMsgId
+      if (resp.ok && (bodyObj.messageId || bodyObj.zaapId) && !bodyObj.error) {
+        const updatedId = bodyObj.messageId || prevMsgId
+        console.log(`[ocr-boletim] edit OK: ${percent}% — msgId=${updatedId}`)
+        return updatedId
       }
-      console.warn(`[ocr-boletim] edit-message indisponível (${bodyObj.error || resp.status}), usando delete+resend`)
+      console.warn(`[ocr-boletim] edit falhou (${bodyObj.error || resp.status}), usando delete+resend`)
     } catch (e) {
-      console.warn('[ocr-boletim] edit-message erro:', e.message)
+      console.warn('[ocr-boletim] edit erro:', e.message)
     }
     // Fallback: deleta mensagem antiga e envia nova
     await zapiDeleteMessage(phone, prevMsgId)
@@ -233,21 +234,21 @@ async function zapiEditOrSend(phone, msgId, text) {
   if (msgId && zapiInstanceId && zapiToken) {
     try {
       const resp = await fetch(
-        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/edit-message`,
+        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
           },
-          body: JSON.stringify({ phone, messageId: msgId, message: text }),
+          body: JSON.stringify({ phone, message: text, editMessageId: msgId }),
         }
       )
       const bodyText = await resp.text().catch(() => '')
       let bodyObj = {}
       try { bodyObj = JSON.parse(bodyText) } catch (_) {}
-      if (resp.ok && !bodyObj.error) return  // editado com sucesso
-      console.warn(`[ocr-boletim] edit final indisponível (${bodyObj.error || resp.status}), usando delete+resend`)
+      if (resp.ok && (bodyObj.messageId || bodyObj.zaapId) && !bodyObj.error) return  // editado com sucesso
+      console.warn(`[ocr-boletim] edit final falhou (${bodyObj.error || resp.status}), usando delete+resend`)
     } catch (e) {
       console.warn('[ocr-boletim] edit final erro:', e.message)
     }
