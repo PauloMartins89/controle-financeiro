@@ -189,35 +189,57 @@ function buildProgressBar(percent) {
   return '🟩'.repeat(filled) + '⬜'.repeat(total - filled) + `  ${percent}%`
 }
 
-// Atualiza o progresso: deleta a mensagem anterior e envia nova
-// Garante exatamente 1 mensagem de progresso visível a qualquer momento
-async function zapiProgress(phone, prevMsgId, percent, label) {
-  if (!phone || !zapiInstanceId || !zapiToken) return prevMsgId
-  const text = `${buildProgressBar(percent)}\n${label}`
-  if (prevMsgId) {
-    await zapiDeleteMessage(phone, prevMsgId)
-    await new Promise(r => setTimeout(r, 200))
+// Edita a mensagem ORIGINAL in-place via editMessageId (sem delete, sem nova mensagem)
+// Sempre usa o ID ORIGINAL — nunca o ID retornado de uma edição anterior
+async function zapiEditInPlace(phone, originalMsgId, text) {
+  if (!phone || !originalMsgId || !zapiInstanceId || !zapiToken) return false
+  try {
+    const resp = await fetch(
+      `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+        },
+        body: JSON.stringify({ phone, message: text, editMessageId: originalMsgId }),
+      }
+    )
+    const bodyText = await resp.text().catch(() => '')
+    let bodyObj = {}
+    try { bodyObj = JSON.parse(bodyText) } catch (_) {}
+    if (resp.ok && !bodyObj.error) {
+      console.log(`[ocr-boletim] editInPlace OK msgId=${originalMsgId}`)
+      return true
+    }
+    console.warn(`[ocr-boletim] editInPlace falhou (${bodyObj.error || resp.status}):`, bodyText.slice(0, 200))
+    return false
+  } catch (e) {
+    console.warn('[ocr-boletim] editInPlace erro:', e.message)
+    return false
   }
-  const newMsgId = await zapiSendText(phone, text)
-  console.log(`[ocr-boletim] progresso ${percent}% — msgId=${newMsgId}`)
-  return newMsgId
 }
 
-// Envia o resultado final deletando a barra de progresso
+// Envia o resultado final editando a mensagem original in-place
+// Fallback: delete + resend se a edição falhar
 async function zapiEditOrSend(phone, msgId, text) {
   if (!phone) return
-  if (msgId && zapiInstanceId && zapiToken) {
-    await zapiDeleteMessage(phone, msgId)
-    await new Promise(r => setTimeout(r, 200))
+  const edited = await zapiEditInPlace(phone, msgId, text)
+  if (!edited) {
+    // Fallback: delete + resend
+    if (msgId && zapiInstanceId && zapiToken) {
+      await zapiDeleteMessage(phone, msgId)
+      await new Promise(r => setTimeout(r, 200))
+    }
+    await zapiSendText(phone, text)
   }
-  await zapiSendText(phone, text)
 }
 
-// Inicia ticker de progresso contínuo: incrementa 10% a cada 3,5s enquanto o OCR processa
-// Retorna { stop() } — stop() interrompe o ticker, aguarda o último tick e devolve o msgId atual
+// Ticker: avança a barra editando SEMPRE a mesma mensagem original (sem delete+resend)
+// originalMsgId nunca muda — cada tick edita a mesma bolha no WhatsApp
 function zapiStartTicker(phone, initialMsgId, { stepPercent = 10, intervalMs = 3500, maxPercent = 90 } = {}) {
   if (!phone || !zapiInstanceId || !zapiToken) return { stop: async () => initialMsgId }
-  let currentMsgId = initialMsgId
+  const originalMsgId = initialMsgId  // ID fixo — nunca muda
   let currentPercent = 0
   let stopped = false
   let chain = Promise.resolve()
@@ -231,7 +253,8 @@ function zapiStartTicker(phone, initialMsgId, { stepPercent = 10, intervalMs = 3
     currentPercent = next
     chain = chain.then(async () => {
       if (stopped) return
-      currentMsgId = await zapiProgress(phone, currentMsgId, currentPercent, labelFor(currentPercent))
+      const text = `${buildProgressBar(currentPercent)}\n${labelFor(currentPercent)}`
+      await zapiEditInPlace(phone, originalMsgId, text)
     }).catch(e => console.warn('[ticker] erro tick:', e.message))
   }, intervalMs)
   return {
@@ -239,7 +262,7 @@ function zapiStartTicker(phone, initialMsgId, { stepPercent = 10, intervalMs = 3
       stopped = true
       clearInterval(intervalId)
       await chain  // aguarda tick em curso terminar
-      return currentMsgId
+      return originalMsgId  // retorna sempre o ID original
     },
   }
 }
