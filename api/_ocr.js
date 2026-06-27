@@ -1,10 +1,10 @@
-﻿import Groq from 'groq-sdk'
+import Groq from 'groq-sdk'
 
-// Módulo compartilhado de OCR — usado por ocr-formulario.js e webhook-whatsapp.js
-// Arquivos prefixados com _ não são expostos como rotas no Vercel
+// M�dulo compartilhado de OCR � usado por ocr-formulario.js e webhook-whatsapp.js
+// Arquivos prefixados com _ n�o s�o expostos como rotas no Vercel
 
 // Wrapper com retry/backoff exponencial para chamadas Groq.
-// Trata 429 (rate limit) e 5xx (erros transitórios) — outros erros não fazem retry.
+// Trata 429 (rate limit) e 5xx (erros transit�rios) � outros erros n�o fazem retry.
 async function groqWithRetry(groq, params, maxAttempts = 3) {
   let lastErr
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -24,15 +24,15 @@ async function groqWithRetry(groq, params, maxAttempts = 3) {
   throw lastErr
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers para extração com template
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
+// Helpers para extra��o com template
+// -----------------------------------------------------------------------------
 
-// Normaliza datas nos formatos DD/MM/YY, DD/MM/YYYY, DD-MM-YYYY → YYYY-MM-DD
+// Normaliza datas nos formatos DD/MM/YY, DD/MM/YYYY, DD-MM-YYYY ? YYYY-MM-DD
 export function normalizarData(raw, hoje) {
   if (!raw || typeof raw !== 'string') return hoje
   const s = raw.trim()
-  // já está em YYYY-MM-DD
+  // j� est� em YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
   // DD/MM/YY ou DD/MM/YYYY ou DD-MM-YYYY
   const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/)
@@ -46,11 +46,11 @@ export function normalizarData(raw, hoje) {
   return hoje
 }
 
-// Feriados nacionais fixos (MM-DD) e móveis calculados para um dado ano
+// Feriados nacionais fixos (MM-DD) e m�veis calculados para um dado ano
 function feriadosDoAno(ano) {
   // Fixos
   const fixos = ['01-01','04-21','05-01','09-07','10-12','11-02','11-15','12-25']
-  // Páscoa (algoritmo de Meeus/Jones/Butcher)
+  // P�scoa (algoritmo de Meeus/Jones/Butcher)
   const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100
   const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25)
   const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30
@@ -61,10 +61,10 @@ function feriadosDoAno(ano) {
   const dia = ((h + l - 7 * mm + 114) % 31) + 1
   const pascoa = new Date(ano, mes - 1, dia)
   const moveis = [
-    new Date(pascoa.getTime() - 47 * 86400000), // carnaval (2ª)
-    new Date(pascoa.getTime() - 48 * 86400000), // carnaval (terça)
+    new Date(pascoa.getTime() - 47 * 86400000), // carnaval (2�)
+    new Date(pascoa.getTime() - 48 * 86400000), // carnaval (ter�a)
     new Date(pascoa.getTime() - 2  * 86400000), // sexta-feira santa
-    pascoa,                                       // páscoa
+    pascoa,                                       // p�scoa
     new Date(pascoa.getTime() + 60 * 86400000),  // corpus christi
   ].map(dt => `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`)
   return new Set([...fixos, ...moveis])
@@ -103,10 +103,10 @@ export function classificarHoras(dataStr, inicioStr, fimStr) {
       // Determina o dia real (pode ser o seguinte se start >= 1440)
       const diasOffset = Math.floor(start / 1440)
       const dtReal = new Date(ano, mes - 1, diaNum + diasOffset)
-      const dow    = dtReal.getDay()               // 0=Dom, 6=Sáb
+      const dow    = dtReal.getDay()               // 0=Dom, 6=S�b
       const mmdd   = `${String(dtReal.getMonth()+1).padStart(2,'0')}-${String(dtReal.getDate()).padStart(2,'0')}`
       const minDoDia = start % 1440
-      const isDiurno  = minDoDia >= 420 && minDoDia < 1320  // 07:00–22:00
+      const isDiurno  = minDoDia >= 420 && minDoDia < 1320  // 07:00�22:00
       const isFds     = dow === 0 || dow === 6
       const isFeriado = feriados.has(mmdd)
 
@@ -127,16 +127,16 @@ export function classificarHoras(dataStr, inicioStr, fimStr) {
   } catch { return zero }
 }
 
-// Constrói bloco de hints baseado nos campos do template
+// Constr�i bloco de hints baseado nos campos do template
 function buildTemplateHints(campos) {
   if (!campos || campos.length === 0) return ''
   const lines = campos
     .filter(c => c.ocr_hint || c.label)
-    .map(c => `  - "${c.key}": ${c.ocr_hint || c.label}${c.required ? ' (OBRIGATÓRIO)' : ''}`)
+    .map(c => `  - "${c.key}": ${c.ocr_hint || c.label}${c.required ? ' (OBRIGAT�RIO)' : ''}`)
   return lines.join('\n')
 }
 
-// Constrói o JSON skeleton para o prompt de extração com template
+// Constr�i o JSON skeleton para o prompt de extra��o com template
 function buildTemplateJsonSkeleton(campos, hoje) {
   const entries = campos.map(c => {
     let valor = '""'
@@ -149,44 +149,44 @@ function buildTemplateJsonSkeleton(campos, hoje) {
   return `{\n${entries.join(',\n')}\n}`
 }
 
-// Determina tipo base do formulário a partir do template
+// Determina tipo base do formul�rio a partir do template
 function tipoBaseToFormType(tipo_base) {
   if (!tipo_base) return null
   if (tipo_base === 'transporte') return 'transporte'
   if (tipo_base === 'diario')     return 'diario'
   if (tipo_base === 'despesa')    return 'padrao'
-  return null  // 'custom' → classificação automática
+  return null  // 'custom' ? classifica��o autom�tica
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// runOCR — ponto de entrada principal
+// -----------------------------------------------------------------------------
+// runOCR � ponto de entrada principal
 // template: objeto form_template { tipo_base, campos, nome } ou null
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 export async function runOCR(imageBase64, { forceTransporte = false, template = null } = {}) {
   const hoje = new Date().toISOString().slice(0, 10)
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-  // Aceita URL pública diretamente (evita download+base64 desnecessários) ou string base64
+  // Aceita URL p�blica diretamente (evita download+base64 desnecess�rios) ou string base64
   const imgUrl = (imageBase64 && imageBase64.startsWith('http'))
     ? imageBase64
     : `data:image/jpeg;base64,${imageBase64}`
 
-  // ── Se template com campos definidos → extração dinâmica ────────────────────
+  // -- Se template com campos definidos ? extra��o din�mica --------------------
   if (template && Array.isArray(template.campos) && template.campos.length > 0) {
     return await runOCRComTemplate(groq, imgUrl, template, hoje)
   }
 
-  // ── PASSO 1: Classificação rápida — pulada se forceTransporte=true ───────────
+  // -- PASSO 1: Classifica��o r�pida � pulada se forceTransporte=true -----------
   let isTransporte = forceTransporte
   if (!forceTransporte) {
     const classifyRes = await groqWithRetry(groq, {
-      model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+      model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [{
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: imgUrl } },
           {
             type: 'text',
-            text: `Analise esta imagem. Ela é um formulário "DIÁRIO DO MOTORISTA"?\nIndícios: tabela com colunas KM/ASFALTO/TERRA, campo PLACA, campo CONDUTOR, logotipo Casagrande, título "DIÁRIO DO MOTORISTA".\nResponda SOMENTE uma palavra: transporte (se for diário do motorista) ou padrao (qualquer outra coisa).`,
+            text: `Analise esta imagem. Ela � um formul�rio "DI�RIO DO MOTORISTA"?\nInd�cios: tabela com colunas KM/ASFALTO/TERRA, campo PLACA, campo CONDUTOR, logotipo Casagrande, t�tulo "DI�RIO DO MOTORISTA".\nResponda SOMENTE uma palavra: transporte (se for di�rio do motorista) ou padrao (qualquer outra coisa).`,
           },
         ],
       }],
@@ -194,21 +194,21 @@ export async function runOCR(imageBase64, { forceTransporte = false, template = 
       temperature: 0,
     })
     const tipoRaw = classifyRes.choices[0]?.message?.content?.trim().toLowerCase() || ''
-    // Aceita qualquer resposta que contenha "transporte" — protege contra verbosidade do modelo
+    // Aceita qualquer resposta que contenha "transporte" � protege contra verbosidade do modelo
     isTransporte = tipoRaw.includes('transporte')
   }
 
-  // ── PASSO 2A: Extração completa do diário ────────────────────────────────────
+  // -- PASSO 2A: Extra��o completa do di�rio ------------------------------------
   if (isTransporte) {
     const extractRes = await groqWithRetry(groq, {
-      model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+      model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [{
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: imgUrl } },
           {
             type: 'text',
-            text: `Este é um formulário DIÁRIO DO MOTORISTA (Casagrande Transportes). Extraia todos os dados e retorne APENAS este JSON (sem texto adicional):\n{\n  "tipo_formulario": "transporte",\n  "numero_diario": "<número do formulário — campo Nº no canto superior direito>",\n  "data": "<YYYY-MM-DD — campo DATA no topo, use ${hoje} se ilegível>",\n  "empresa": "<nome da empresa — campo EMPRESA>",\n  "setor": "<setor — campo SETOR ou ''>",\n  "solicitante": "<nome do solicitante — campo SOLICITANTE ou ''>",\n  "cc": "<centro de custo — campo CC ou ''>",\n  "local_origem": "<local de origem — campo LOCAL ORIGEM>",\n  "local_destino": "<local de destino — campo LOCAL DESTINO>",\n  "equipamento": "<equipamento — campo EQUIPAMENTO ou ''>",\n  "cliente": "<cliente ou ''>",\n  "tipo_atendimento": "<PLATAFORMA|PRANCHA|BASCULANTE|outro ou ''>",\n  "modulo": "<módulo ou ''>",\n  "condutor": "<nome do motorista — campo abaixo de Assinatura Motorista ou ''>",\n  "tipo_material": "<tipo de material ou ''>",\n  "km_inicial": "<hodômetro inicial ou ''>",\n  "km_final": "<hodômetro final ou ''>",\n  "viagens": 1,\n  "placa": "<placa — campo PLACA>",\n  "veiculo": "<modelo/tipo — campo VEÍCULO ou ''>",\n  "km_rows": [\n    { "tipo": "ASFALTO", "saida": "<KM saída linha 1 ou ''>", "entrada": "<KM entrada linha 1 ou ''>", "total": "<TOTAL/KM linha 1 ou ''>" },\n    { "tipo": "TERRA",   "saida": "<KM saída linha 2 ou ''>", "entrada": "<KM entrada linha 2 ou ''>", "total": "<TOTAL/KM linha 2 ou ''>" },\n    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },\n    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" },\n    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },\n    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" },\n    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },\n    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" }\n  ],\n  "horas_1": "<horas linha HORAS 1 ou ''>",\n  "horas_1_desc": "",\n  "horas_2": "<horas linha HORAS 2 ou ''>",\n  "horas_2_desc": "",\n  "diarias": "<valor diárias ou ''>",\n  "horas_espera": 0,\n  "valor_unit_espera": 0,\n  "horas_trabalhadas": 0,\n  "valor_unit_horas": 0,\n  "km_projeto": 0,\n  "valor_unit_km_projeto": 0,\n  "km_deslocamento": 0,\n  "valor_unit_km_deslocamento": 0,\n  "pedagio": 0,\n  "escolta": 0,\n  "nota_fiscal": "",\n  "cte_inicial": "",\n  "valor_cte": 0,\n  "cte_complementar": "",\n  "valor_cte_complementar": 0,\n  "valor_total": <número decimal — campo VALOR R$ ex: 5950.00>,\n  "observacao": "<campo OBSERVAÇÃO ou ''>"\n}`,
+            text: `Este � um formul�rio DI�RIO DO MOTORISTA (Casagrande Transportes). Extraia todos os dados e retorne APENAS este JSON (sem texto adicional):\n{\n  "tipo_formulario": "transporte",\n  "numero_diario": "<n�mero do formul�rio � campo N� no canto superior direito>",\n  "data": "<YYYY-MM-DD � campo DATA no topo, use ${hoje} se ileg�vel>",\n  "empresa": "<nome da empresa � campo EMPRESA>",\n  "setor": "<setor � campo SETOR ou ''>",\n  "solicitante": "<nome do solicitante � campo SOLICITANTE ou ''>",\n  "cc": "<centro de custo � campo CC ou ''>",\n  "local_origem": "<local de origem � campo LOCAL ORIGEM>",\n  "local_destino": "<local de destino � campo LOCAL DESTINO>",\n  "equipamento": "<equipamento � campo EQUIPAMENTO ou ''>",\n  "cliente": "<cliente ou ''>",\n  "tipo_atendimento": "<PLATAFORMA|PRANCHA|BASCULANTE|outro ou ''>",\n  "modulo": "<m�dulo ou ''>",\n  "condutor": "<nome do motorista � campo abaixo de Assinatura Motorista ou ''>",\n  "tipo_material": "<tipo de material ou ''>",\n  "km_inicial": "<hod�metro inicial ou ''>",\n  "km_final": "<hod�metro final ou ''>",\n  "viagens": 1,\n  "placa": "<placa � campo PLACA>",\n  "veiculo": "<modelo/tipo � campo VE�CULO ou ''>",\n  "km_rows": [\n    { "tipo": "ASFALTO", "saida": "<KM sa�da linha 1 ou ''>", "entrada": "<KM entrada linha 1 ou ''>", "total": "<TOTAL/KM linha 1 ou ''>" },\n    { "tipo": "TERRA",   "saida": "<KM sa�da linha 2 ou ''>", "entrada": "<KM entrada linha 2 ou ''>", "total": "<TOTAL/KM linha 2 ou ''>" },\n    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },\n    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" },\n    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },\n    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" },\n    { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },\n    { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" }\n  ],\n  "horas_1": "<horas linha HORAS 1 ou ''>",\n  "horas_1_desc": "",\n  "horas_2": "<horas linha HORAS 2 ou ''>",\n  "horas_2_desc": "",\n  "diarias": "<valor di�rias ou ''>",\n  "horas_espera": 0,\n  "valor_unit_espera": 0,\n  "horas_trabalhadas": 0,\n  "valor_unit_horas": 0,\n  "km_projeto": 0,\n  "valor_unit_km_projeto": 0,\n  "km_deslocamento": 0,\n  "valor_unit_km_deslocamento": 0,\n  "pedagio": 0,\n  "escolta": 0,\n  "nota_fiscal": "",\n  "cte_inicial": "",\n  "valor_cte": 0,\n  "cte_complementar": "",\n  "valor_cte_complementar": 0,\n  "valor_total": <n�mero decimal � campo VALOR R$ ex: 5950.00>,\n  "observacao": "<campo OBSERVA��O ou ''>"\n}`,
           },
         ],
       }],
@@ -234,16 +234,16 @@ export async function runOCR(imageBase64, { forceTransporte = false, template = 
     return json
   }
 
-  // ── PASSO 2B: Extração de despesa padrão ────────────────────────────────────
+  // -- PASSO 2B: Extra��o de despesa padr�o ------------------------------------
   const extractRes = await groqWithRetry(groq, {
-    model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+    model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
     messages: [{
       role: 'user',
       content: [
         { type: 'image_url', image_url: { url: imgUrl } },
         {
           type: 'text',
-          text: `Extraia os dados deste documento financeiro e retorne APENAS JSON:\n{\n  "tipo_formulario": "padrao",\n  "tipo": "despesa",\n  "valor": <número>,\n  "descricao": "<descrição, máx 80 chars>",\n  "data": "<YYYY-MM-DD>",\n  "categoria": "<Alimentação|Transporte|Saúde|Serviços|Material|Equipamento|Viagem|Comunicação|Manutenção|Outros>",\n  "centro_custo": "",\n  "observacoes": ""\n}`,
+          text: `Extraia os dados deste documento financeiro e retorne APENAS JSON:\n{\n  "tipo_formulario": "padrao",\n  "tipo": "despesa",\n  "valor": <n�mero>,\n  "descricao": "<descri��o, m�x 80 chars>",\n  "data": "<YYYY-MM-DD>",\n  "categoria": "<Alimenta��o|Transporte|Sa�de|Servi�os|Material|Equipamento|Viagem|Comunica��o|Manuten��o|Outros>",\n  "centro_custo": "",\n  "observacoes": ""\n}`,
         },
       ],
     }],
@@ -265,27 +265,27 @@ export async function runOCR(imageBase64, { forceTransporte = false, template = 
   return json
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// runOCRComTemplate — extração dinâmica guiada pelos campos do form_template
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
+// runOCRComTemplate � extra��o din�mica guiada pelos campos do form_template
+// -----------------------------------------------------------------------------
 async function runOCRComTemplate(groq, imgUrl, template, hoje) {
   const campos = template.campos || []
   const tipoBase = template.tipo_base || 'custom'
-  const nomeTemplate = template.nome || 'Formulário personalizado'
+  const nomeTemplate = template.nome || 'Formul�rio personalizado'
 
-  // Determina se é formulário de transporte (km_rows estruturado)
+  // Determina se � formul�rio de transporte (km_rows estruturado)
   const isTransporte = tipoBase === 'transporte'
   const isKmForm = isTransporte || campos.some(c => c.key === 'km_rows' || c.key === 'km_asfalto' || c.key === 'km_terra')
 
-  // Campos fixos sempre presentes para formulários de transporte (estrutura obrigatória para o sistema)
+  // Campos fixos sempre presentes para formul�rios de transporte (estrutura obrigat�ria para o sistema)
   const camposTransporte = isTransporte ? [
-    { key: 'numero_diario', label: 'Número do Formulário', ocr_hint: 'número Nº no canto superior direito do formulário', required: true },
-    { key: 'data',          label: 'Data',                 ocr_hint: `data no topo do formulário, formato YYYY-MM-DD, use ${hoje} se ilegível`, required: true },
+    { key: 'numero_diario', label: 'N�mero do Formul�rio', ocr_hint: 'n�mero N� no canto superior direito do formul�rio', required: true },
+    { key: 'data',          label: 'Data',                 ocr_hint: `data no topo do formul�rio, formato YYYY-MM-DD, use ${hoje} se ileg�vel`, required: true },
     { key: 'empresa',       label: 'Empresa/Cliente',      ocr_hint: 'nome da empresa no campo EMPRESA', required: true },
     { key: 'local_origem',  label: 'Local Origem',         ocr_hint: 'local no campo LOCAL ORIGEM' },
     { key: 'local_destino', label: 'Local Destino',        ocr_hint: 'local no campo LOCAL DESTINO' },
-    { key: 'placa',         label: 'Placa',                ocr_hint: 'placa do veículo — campo PLACA' },
-    { key: 'valor_total',   label: 'Valor Total',          ocr_hint: 'valor monetário no campo VALOR R$ (número decimal, ex: 5950.00)', required: true },
+    { key: 'placa',         label: 'Placa',                ocr_hint: 'placa do ve�culo � campo PLACA' },
+    { key: 'valor_total',   label: 'Valor Total',          ocr_hint: 'valor monet�rio no campo VALOR R$ (n�mero decimal, ex: 5950.00)', required: true },
   ] : []
 
   // Mescla campos fixos (sem duplicar) com campos do template
@@ -296,9 +296,9 @@ async function runOCRComTemplate(groq, imgUrl, template, hoje) {
   // Gera hints para o prompt
   const hints = buildTemplateHints(todosCampos)
 
-  // Para transporte, adiciona instrução especial para km_rows
+  // Para transporte, adiciona instru��o especial para km_rows
   const kmRowsInstr = isKmForm && !campos.some(c => c.key === 'km_rows')
-    ? `\n  "km_rows": array de objetos com a tabela KM/HORAS do formulário. Cada linha tem: { "tipo": "ASFALTO" ou "TERRA", "saida": "<KM saída ou ''>", "entrada": "<KM entrada ou ''>", "total": "<TOTAL/KM ou ''>" }. Extraia TODAS as 8 linhas (4 ASFALTO + 4 TERRA alternadas).`
+    ? `\n  "km_rows": array de objetos com a tabela KM/HORAS do formul�rio. Cada linha tem: { "tipo": "ASFALTO" ou "TERRA", "saida": "<KM sa�da ou ''>", "entrada": "<KM entrada ou ''>", "total": "<TOTAL/KM ou ''>" }. Extraia TODAS as 8 linhas (4 ASFALTO + 4 TERRA alternadas).`
     : ''
 
   // Skeleton JSON com todos os campos
@@ -307,7 +307,7 @@ async function runOCRComTemplate(groq, imgUrl, template, hoje) {
     ? skeleton.replace(/\n\}$/, `,\n  "km_rows": []\n}`)
     : skeleton
 
-  const prompt = `Este é um formulário físico: "${nomeTemplate}".
+  const prompt = `Este � um formul�rio f�sico: "${nomeTemplate}".
 
 Extraia os seguintes campos e retorne APENAS o JSON abaixo preenchido (sem texto adicional):
 
@@ -318,7 +318,7 @@ JSON a retornar (preencha os valores):
 ${skeletonComKm}`
 
   const extractRes = await groqWithRetry(groq, {
-    model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+    model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
     messages: [{
       role: 'user',
       content: [
@@ -333,7 +333,7 @@ ${skeletonComKm}`
   const raw     = extractRes.choices[0]?.message?.content?.trim() || ''
   const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim()
   const m       = cleaned.match(/\{[\s\S]*\}/)
-  if (!m) throw new Error(`runOCRComTemplate: JSON não encontrado. raw=${raw.slice(0, 200)}`)
+  if (!m) throw new Error(`runOCRComTemplate: JSON n�o encontrado. raw=${raw.slice(0, 200)}`)
 
   const json = JSON.parse(m[0])
 
@@ -352,20 +352,20 @@ ${skeletonComKm}`
     }
   }
 
-  // Adiciona tipo do formulário para que o webhook saiba como processar
+  // Adiciona tipo do formul�rio para que o webhook saiba como processar
   json.tipo_formulario      = tipoBase  // 'diario', 'transporte', 'despesa', etc.
   json._template_id         = template.id   || null
   json._template_nome       = nomeTemplate
 
-  // ── Pós-processamento para templates RDO (tipo_base = 'rdo') ──────────────
+  // -- P�s-processamento para templates RDO (tipo_base = 'rdo') --------------
   if (tipoBase === 'rdo') {
     const hoje = new Date().toISOString().slice(0, 10)
 
-    // 1. Normaliza data DD/MM/YY → YYYY-MM-DD
+    // 1. Normaliza data DD/MM/YY ? YYYY-MM-DD
     if (json.data) json.data = normalizarData(json.data, hoje)
 
-    // 2. Calcula classificação de horas se tiver início + fim
-    // Sempre sobrescreve com os valores calculados — o OCR não sabe dividir diurno/noturno
+    // 2. Calcula classifica��o de horas se tiver in�cio + fim
+    // Sempre sobrescreve com os valores calculados � o OCR n�o sabe dividir diurno/noturno
     if (json.jornada_inicio && json.jornada_fim && json.data) {
       const horas = classificarHoras(json.data, json.jornada_inicio, json.jornada_fim)
       json.horas_diurnas      = String(horas.horas_diurnas)
@@ -382,44 +382,44 @@ ${skeletonComKm}`
   return json
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// runOCRDiarioMotorista — extração hardcoded para o formulário DM Casagrande
+// -----------------------------------------------------------------------------
+// runOCRDiarioMotorista � extra��o hardcoded para o formul�rio DM Casagrande
 // Usa novo schema de chaves: numero_dm, cliente, origem, destino,
 // km_ast, km_ter, km_total, condutor, placa, data_boletim, total_geral
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 export async function runOCRDiarioMotorista(imageBase64) {
   const hoje = new Date().toISOString().slice(0, 10)
   const groq  = new Groq({ apiKey: process.env.GROQ_API_KEY })
   const imgUrl = `data:image/jpeg;base64,${imageBase64}`
 
   const extractRes = await groqWithRetry(groq, {
-    model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+    model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
     messages: [{
       role: 'user',
       content: [
         { type: 'image_url', image_url: { url: imgUrl } },
         {
           type: 'text',
-          text: `Este é um formulário DIÁRIO DO MOTORISTA (Casagrande Transportes).
-Extraia os dados e retorne APENAS este JSON (sem texto adicional, sem cerca de código):
+          text: `Este � um formul�rio DI�RIO DO MOTORISTA (Casagrande Transportes).
+Extraia os dados e retorne APENAS este JSON (sem texto adicional, sem cerca de c�digo):
 {
   "tipo_formulario": "transporte",
-  "numero_dm": "<número Nº no canto superior — ex: '1234'>",
-  "data": "<data do dia — YYYY-MM-DD, use ${hoje} se ilegível>",
-  "data_boletim": "<data impressa no boletim — YYYY-MM-DD, igual a data se não houver campo separado>",
-  "cliente": "<nome da empresa/cliente — campo EMPRESA ou CLIENTE>",
-  "condutor": "<nome do motorista — campo CONDUTOR ou assinatura>",
-  "placa": "<placa do veículo — campo PLACA>",
-  "origem": "<local de origem — campo LOCAL ORIGEM ou ORIGEM>",
-  "destino": "<local de destino — campo LOCAL DESTINO ou DESTINO>",
-  "km_ast": <total KM ASFALTO como número decimal, 0 se nenhum>,
-  "km_ter": <total KM TERRA como número decimal, 0 se nenhum>,
-  "km_total": <soma km_ast + km_ter como número decimal>,
-  "total_geral": <valor monetário total — campo VALOR R$ como número decimal, ex: 5950.00>,
-  "observacao": "<observações — campo OBSERVAÇÃO ou ''>",
+  "numero_dm": "<n�mero N� no canto superior � ex: '1234'>",
+  "data": "<data do dia � YYYY-MM-DD, use ${hoje} se ileg�vel>",
+  "data_boletim": "<data impressa no boletim � YYYY-MM-DD, igual a data se n�o houver campo separado>",
+  "cliente": "<nome da empresa/cliente � campo EMPRESA ou CLIENTE>",
+  "condutor": "<nome do motorista � campo CONDUTOR ou assinatura>",
+  "placa": "<placa do ve�culo � campo PLACA>",
+  "origem": "<local de origem � campo LOCAL ORIGEM ou ORIGEM>",
+  "destino": "<local de destino � campo LOCAL DESTINO ou DESTINO>",
+  "km_ast": <total KM ASFALTO como n�mero decimal, 0 se nenhum>,
+  "km_ter": <total KM TERRA como n�mero decimal, 0 se nenhum>,
+  "km_total": <soma km_ast + km_ter como n�mero decimal>,
+  "total_geral": <valor monet�rio total � campo VALOR R$ como n�mero decimal, ex: 5950.00>,
+  "observacao": "<observa��es � campo OBSERVA��O ou ''>",
   "km_rows": [
-    { "tipo": "ASFALTO", "saida": "<KM saída ou ''>", "entrada": "<KM entrada ou ''>", "total": "<TOTAL ou ''>" },
-    { "tipo": "TERRA",   "saida": "<KM saída ou ''>", "entrada": "<KM entrada ou ''>", "total": "<TOTAL ou ''>" },
+    { "tipo": "ASFALTO", "saida": "<KM sa�da ou ''>", "entrada": "<KM entrada ou ''>", "total": "<TOTAL ou ''>" },
+    { "tipo": "TERRA",   "saida": "<KM sa�da ou ''>", "entrada": "<KM entrada ou ''>", "total": "<TOTAL ou ''>" },
     { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },
     { "tipo": "TERRA",   "saida": "", "entrada": "", "total": "" },
     { "tipo": "ASFALTO", "saida": "", "entrada": "", "total": "" },
@@ -438,11 +438,11 @@ Extraia os dados e retorne APENAS este JSON (sem texto adicional, sem cerca de c
   const raw     = extractRes.choices[0]?.message?.content?.trim() || ''
   const cleaned = raw.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim()
   const m       = cleaned.match(/\{[\s\S]*\}/)
-  if (!m) throw new Error(`runOCRDiarioMotorista: JSON não encontrado. raw=${raw.slice(0, 200)}`)
+  if (!m) throw new Error(`runOCRDiarioMotorista: JSON n�o encontrado. raw=${raw.slice(0, 200)}`)
 
   const json = JSON.parse(m[0])
 
-  // Normaliza campos numéricos
+  // Normaliza campos num�ricos
   for (const k of ['km_ast', 'km_ter', 'km_total', 'total_geral']) {
     if (typeof json[k] === 'string') {
       json[k] = parseFloat(json[k].replace(/[^\d,.]/g, '').replace(',', '.')) || 0

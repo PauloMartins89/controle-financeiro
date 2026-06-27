@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
     const response = await groq.chat.completions.create({
-      model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+      model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [{
         role: 'user',
         content: [

@@ -74,7 +74,7 @@ async function callGroq(apiKey, messages) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+        model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
         max_tokens: 4096,
         response_format: { type: 'json_object' },
         messages,

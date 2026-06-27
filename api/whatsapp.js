@@ -1,4 +1,4 @@
-﻿import Groq from 'groq-sdk'
+import Groq from 'groq-sdk'
 import { createClient } from '@supabase/supabase-js'
 import { runOCR } from './_ocr.js'
 import ws from 'ws'
@@ -24,7 +24,7 @@ function formatBRL(v) {
   return 'R$ ' + Math.abs(v).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
-// Garante que campos numéricos da IA nunca chegam como string "null"
+// Garante que campos num�ricos da IA nunca chegam como string "null"
 function safeNum(v) {
   if (v === null || v === undefined || v === '' || v === 'null' || v === 'undefined') return null
   const n = parseFloat(String(v).replace(',', '.'))
@@ -36,7 +36,7 @@ function safeStr(v) {
   return String(v).trim() || null
 }
 
-// ── Cálculo de saldos — sempre no backend, nunca na IA ──────────────────────
+// -- C�lculo de saldos � sempre no backend, nunca na IA ----------------------
 function calcularSaldos(despesas, pessoas) {
   const balances = {}
   pessoas.forEach(p => { balances[p.id] = 0 })
@@ -57,7 +57,7 @@ function calcularSaldos(despesas, pessoas) {
   }))
 }
 
-// ── IA: apenas interpreta intenção, nunca salva dados ────────────────────────
+// -- IA: apenas interpreta inten��o, nunca salva dados ------------------------
 async function parseIntent(text, pessoas, today, historico = []) {
   const nomes = pessoas.map(p => p.nome).join(', ')
   const histMessages = (historico || []).slice(-6).map(m => ({
@@ -69,13 +69,13 @@ async function parseIntent(text, pessoas, today, historico = []) {
     messages: [
       {
         role: 'system',
-        content: `Você é um parser de intenções financeiras. Extraia a intenção e entidades do texto em JSON válido. Retorne APENAS JSON, sem explicação.
+        content: `Voc� � um parser de inten��es financeiras. Extraia a inten��o e entidades do texto em JSON v�lido. Retorne APENAS JSON, sem explica��o.
 
-Pessoas disponíveis: ${nomes || 'nenhuma'}
+Pessoas dispon�veis: ${nomes || 'nenhuma'}
 Hoje: ${today}
 
-Intenções:
-- criar_despesa: {"intencao":"criar_despesa","descricao":"...","valor":0.00,"pago_por":"nome","participantes":["nome1","nome2"],"categoria":"Alimentação|Transporte|Moradia|Saúde|Lazer|Educação|Serviços|Vestuário|Outros","data":"YYYY-MM-DD"}
+Inten��es:
+- criar_despesa: {"intencao":"criar_despesa","descricao":"...","valor":0.00,"pago_por":"nome","participantes":["nome1","nome2"],"categoria":"Alimenta��o|Transporte|Moradia|Sa�de|Lazer|Educa��o|Servi�os|Vestu�rio|Outros","data":"YYYY-MM-DD"}
 - consultar_saldo: {"intencao":"consultar_saldo","pessoa":"nome ou null"}
 - listar_pendencias: {"intencao":"listar_pendencias"}
 - fechar_mes: {"intencao":"fechar_mes","mes":"YYYY-MM"}
@@ -118,8 +118,8 @@ async function sendWA(to, text) {
   return res.ok
 }
 
-// ── Identifica boletim pelo texto do cabeçalho (identificador_visual) ────────
-// Faz uma leitura rápida de texto via Groq e compara contra todos os
+// -- Identifica boletim pelo texto do cabe�alho (identificador_visual) --------
+// Faz uma leitura r�pida de texto via Groq e compara contra todos os
 // identificadores cadastrados em maquinas_boletim_tipos.
 // Retorna o registro do boletim_tipo correspondente, ou null.
 async function identificarBoletimPorImagem(base64, db) {
@@ -133,15 +133,15 @@ async function identificarBoletimPorImagem(base64, db) {
 
   let headerText = ''
   try {
-    // Passa os identificadores direto ao Groq — mais confiável do que extrair texto livre
+    // Passa os identificadores direto ao Groq � mais confi�vel do que extrair texto livre
     const opcoes = tipos.map((t, i) => `${i + 1}. "${t.identificador_visual}"`).join('\n')
     const groqRes = await new Groq({ apiKey: process.env.GROQ_API_KEY }).chat.completions.create({
-      model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+      model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [{
         role: 'user',
         content: [
           { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
-          { type: 'text', text: `Olhe com atenção esta imagem. Algum dos seguintes identificadores aparece nela (no cabeçalho, logotipo, nome da empresa ou qualquer parte do documento)?\n\n${opcoes}\n\nResponda APENAS com o número do identificador encontrado (ex: "1", "2"), ou "0" se nenhum aparecer. Não explique.` },
+          { type: 'text', text: `Olhe com aten��o esta imagem. Algum dos seguintes identificadores aparece nela (no cabe�alho, logotipo, nome da empresa ou qualquer parte do documento)?\n\n${opcoes}\n\nResponda APENAS com o n�mero do identificador encontrado (ex: "1", "2"), ou "0" se nenhum aparecer. N�o explique.` },
         ],
       }],
       max_tokens: 10,
@@ -164,9 +164,9 @@ async function identificarBoletimPorImagem(base64, db) {
   return null
 }
 
-// ── Monta texto de confirmação de despesa (reutilizado em confirmação e edição)
+// -- Monta texto de confirma��o de despesa (reutilizado em confirma��o e edi��o)
 function montarConfirmacao(p) {
-  const n = (v) => v || '—'
+  const n = (v) => v || '�'
   const share = p.participantes_ids?.length > 1
     ? formatBRL(p.valor / p.participantes_ids.length)
     : null
@@ -176,32 +176,32 @@ function montarConfirmacao(p) {
     : ''
 
   const combustivel = p.litros
-    ? `\n⛽ ${p.litros}L × ${p.valor_litro ? formatBRL(p.valor_litro) + '/L' : '—'}`
+    ? `\n? ${p.litros}L � ${p.valor_litro ? formatBRL(p.valor_litro) + '/L' : '�'}`
     : ''
 
   const linhas = [
-    `📅 Data: ${p.data || '—'}${p.hora ? ' às ' + p.hora : ''}`,
-    `🏢 Local: ${n(p.descricao)}`,
-    `💰 Valor: ${formatBRL(p.valor)}`,
-    `💳 Pagamento: ${n(p.forma_pagamento)}`,
-    `🏷️ Categoria: ${p.categoria || 'Outros'}`,
-    `🛒 Produto: ${n(p.produto)}${p.quantidade ? ' (' + p.quantidade + ')' : ''}${combustivel}`,
-    `🏢 CNPJ: ${n(p.cnpj)}`,
-    `📍 Endereço: ${n(p.endereco)}`,
-    `📞 Telefone: ${n(p.telefone)}`,
-    `🔗 NF-e: ${p.nfe_url ? p.nfe_url : '—'}`,
-    `👤 Pago por: ${p.pago_por_nome}`,
+    `?? Data: ${p.data || '�'}${p.hora ? ' �s ' + p.hora : ''}`,
+    `?? Local: ${n(p.descricao)}`,
+    `?? Valor: ${formatBRL(p.valor)}`,
+    `?? Pagamento: ${n(p.forma_pagamento)}`,
+    `??? Categoria: ${p.categoria || 'Outros'}`,
+    `?? Produto: ${n(p.produto)}${p.quantidade ? ' (' + p.quantidade + ')' : ''}${combustivel}`,
+    `?? CNPJ: ${n(p.cnpj)}`,
+    `?? Endere�o: ${n(p.endereco)}`,
+    `?? Telefone: ${n(p.telefone)}`,
+    `?? NF-e: ${p.nfe_url ? p.nfe_url : '�'}`,
+    `?? Pago por: ${p.pago_por_nome}`,
   ]
 
   return linhas.join('\n') + `${divisaoStr}\n\nConfirmar?`
 }
 
-// ── Fechar mês com detalhamento por pessoa ───────────────────────────────────
+// -- Fechar m�s com detalhamento por pessoa -----------------------------------
 function fecharMes(despesas, pessoas, mes) {
   const doMes = despesas.filter(e => e.data?.slice(0, 7) === mes)
   if (!doMes.length) return null
 
-  // Quanto cada pessoa pagou no mês
+  // Quanto cada pessoa pagou no m�s
   const pagouMap = {}
   pessoas.forEach(p => { pagouMap[p.id] = 0 })
   doMes.forEach(e => {
@@ -231,7 +231,7 @@ function fecharMes(despesas, pessoas, mes) {
         : `${s.nome} deve ${formatBRL(Math.abs(s.saldo))}`
     ).join('\n')
   } else {
-    texto += '\n\n✅ Todos quitados!'
+    texto += '\n\n? Todos quitados!'
   }
 
   return texto
@@ -244,7 +244,7 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body
-    // DEBUG TEMPORÁRIO — loga tipo e campos recebidos do Z-API
+    // DEBUG TEMPOR�RIO � loga tipo e campos recebidos do Z-API
     console.log('[whatsapp] body.type=', body?.type, 'fromMe=', body?.fromMe, 'keys=', Object.keys(body || {}).join(','))
     // Z-API: ignora tudo exceto mensagens recebidas de terceiros
     if (body?.fromMe) return res.status(200).end()
@@ -263,17 +263,17 @@ export default async function handler(req, res) {
       image: body.image ? { _url: body.image.imageUrl, _mime: 'image/jpeg', caption: body.image.caption } : undefined,
     }
 
-    // ── Dedup: INSERT como mutex — se já existe, ignora
+    // -- Dedup: INSERT como mutex � se j� existe, ignora
     const msgId = message.id
     if (msgId) {
       const dbDedup = getDb()
       const { error: dedupErr } = await dbDedup
         .from('mensagens_whatsapp')
         .insert({ telefone: message.from, direcao: 'entrada', conteudo: '__dedup__', message_id: msgId })
-      // error code 23505 = unique violation → já processado
+      // error code 23505 = unique violation ? j� processado
       if (dedupErr) {
         if (dedupErr.code === '23505') return res.status(200).end()
-        // coluna message_id não existe ainda → continua sem dedup
+        // coluna message_id n�o existe ainda ? continua sem dedup
       }
     }
 
@@ -285,7 +285,7 @@ export default async function handler(req, res) {
     let imagemExtraida = null
     let formularioTransporte = null
 
-    // ── Áudio: transcreve com Whisper ────────────────────────────────────────
+    // -- �udio: transcreve com Whisper ----------------------------------------
     if (message.type === 'audio') {
       const audioRes = await fetch(message.audio._url)
       const audioBuffer = await audioRes.arrayBuffer()
@@ -296,16 +296,16 @@ export default async function handler(req, res) {
         language: 'pt',
       })
       text = transcription.text?.trim() || ''
-      textoOriginal = `[áudio] ${text}`
+      textoOriginal = `[�udio] ${text}`
       if (!text) return res.status(200).end()
 
-    // ── Imagem: classifica primeiro, depois extrai ───────────────────────────
+    // -- Imagem: classifica primeiro, depois extrai ---------------------------
     } else if (message.type === 'image') {
       const mimeType = message.image._mime
       const caption = message.image.caption || ''
 
       // Tenta usar base64 diretamente do payload Z-API (se "Receber Base64" estiver ativado)
-      // Caso contrário, faz fetch com Client-Token (obrigatório na Z-API para download de mídia)
+      // Caso contr�rio, faz fetch com Client-Token (obrigat�rio na Z-API para download de m�dia)
       let base64 = body.image?.imageBase64 || body.image?.base64 || null
       let imgBuffer = null
 
@@ -315,7 +315,7 @@ export default async function handler(req, res) {
         const imgRes = await fetch(message.image._url, { headers: fetchHeaders })
         if (!imgRes.ok) {
           console.error('[WA] Falha ao baixar imagem:', imgRes.status, message.image._url)
-          await sendWA(from, '❌ Não consegui baixar a imagem. Tente reenviar ou ative "Receber Base64" no painel Z-API.')
+          await sendWA(from, '? N�o consegui baixar a imagem. Tente reenviar ou ative "Receber Base64" no painel Z-API.')
           return res.status(200).end()
         }
         imgBuffer = await imgRes.arrayBuffer()
@@ -326,9 +326,9 @@ export default async function handler(req, res) {
         imgBuffer = Buffer.from(base64, 'base64').buffer
       }
 
-      // ── Boletim de Máquinas: verifica se é colaborador de campo ────────────
-      // NOTA: upload para comprovantes acontece APÓS este bloco (linha ~fim boletim)
-      // Boletins retornam antes de chegar no upload — eliminando duplicata de storage.
+      // -- Boletim de M�quinas: verifica se � colaborador de campo ------------
+      // NOTA: upload para comprovantes acontece AP�S este bloco (linha ~fim boletim)
+      // Boletins retornam antes de chegar no upload � eliminando duplicata de storage.
       {
         const dbBol = getDb()
         if (dbBol) {
@@ -348,7 +348,7 @@ export default async function handler(req, res) {
               .eq('ativo', true)
               .limit(1)
               .maybeSingle()
-            console.log(`[whatsapp/boletim] variante "${v}":`, data ? `ENCONTRADO id=${data.id}` : 'não encontrado', error ? `erro: ${error.message}` : '')
+            console.log(`[whatsapp/boletim] variante "${v}":`, data ? `ENCONTRADO id=${data.id}` : 'n�o encontrado', error ? `erro: ${error.message}` : '')
             if (data) { colaboradorBol = data; break }
           }
 
@@ -357,7 +357,7 @@ export default async function handler(req, res) {
             const workspaceId = frente?.workspace_id || colaboradorBol.workspace_id
 
             // boletim_tipo_id: tenta via JOIN primeiro; se null, busca direto na tabela
-            // Prefere tipos com modulo_destino='gerencial' (nulls por último)
+            // Prefere tipos com modulo_destino='gerencial' (nulls por �ltimo)
             let boletimTipoId = frente?.maquinas_boletim_tipos?.id || null
             if (!boletimTipoId) {
               const { data: tipos } = await dbBol
@@ -371,12 +371,12 @@ export default async function handler(req, res) {
               console.log('[whatsapp/boletim] boletim_tipo_id via query direta:', boletimTipoId, '| modulo_destino:', tipos?.[0]?.modulo_destino)
             }
 
-            // ACK imediato — não bloqueia o fluxo de upload+OCR
-            sendWA(from, '📋 Boletim recebido! Estamos processando. Você será avisado em instantes.')
+            // ACK imediato � n�o bloqueia o fluxo de upload+OCR
+            sendWA(from, '?? Boletim recebido! Estamos processando. Voc� ser� avisado em instantes.')
 
             const numero = `BOL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
 
-            // Inicia upload para storage (não-bloqueante — corre em paralelo com OCR)
+            // Inicia upload para storage (n�o-bloqueante � corre em paralelo com OCR)
             let imagemUrl = 'pending'
             const uploadPromise = (async () => {
               try {
@@ -397,7 +397,7 @@ export default async function handler(req, res) {
               return 'pending'
             })()
 
-            // Insere boletim com imagem_url temporária (será atualizada após upload)
+            // Insere boletim com imagem_url tempor�ria (ser� atualizada ap�s upload)
             const { data: bolRecord, error: bolErr } = await dbBol
               .from('maquinas_boletins')
               .insert({
@@ -414,19 +414,19 @@ export default async function handler(req, res) {
 
             if (!bolErr && bolRecord?.id) {
               const selfBase = `https://${req.headers.host}`
-              // Dispara OCR com base64 inline (Groq não precisa baixar a imagem da URL)
-              // e aguarda upload em paralelo — ambos correm ao mesmo tempo
+              // Dispara OCR com base64 inline (Groq n�o precisa baixar a imagem da URL)
+              // e aguarda upload em paralelo � ambos correm ao mesmo tempo
               const ocrPromise = fetch(`${selfBase}/api/ocr-boletim-maquina`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // imageBase64 evita que o OCR faça download da URL — economiza ~2s
+                // imageBase64 evita que o OCR fa�a download da URL � economiza ~2s
                 body: JSON.stringify({ boletimId: bolRecord.id, imageBase64: base64 }),
               }).then(r => {
                 if (r.ok) console.log(`[whatsapp/boletim] boletim ${numero} (${bolRecord.id}) processado`)
-                else      console.warn(`[whatsapp/boletim] OCR HTTP ${r.status} — cron fará retry`)
+                else      console.warn(`[whatsapp/boletim] OCR HTTP ${r.status} � cron far� retry`)
                 return r
               }).catch(e => {
-                console.warn(`[whatsapp/boletim] OCR falhou (cron fará retry): ${e.message}`)
+                console.warn(`[whatsapp/boletim] OCR falhou (cron far� retry): ${e.message}`)
               })
 
               // Aguarda upload e atualiza URL no boletim
@@ -437,7 +437,7 @@ export default async function handler(req, res) {
                 }
               })
 
-              // Aguarda OCR completar (para que whatsapp.js não feche antes do resumo ser enviado)
+              // Aguarda OCR completar (para que whatsapp.js n�o feche antes do resumo ser enviado)
               await ocrPromise
             } else if (bolErr) {
               console.error('[whatsapp/boletim] insert error:', bolErr.message)
@@ -447,10 +447,10 @@ export default async function handler(req, res) {
           }
         }
       }
-      // ── fim boletim de máquinas ─────────────────────────────────────────────
+      // -- fim boletim de m�quinas ---------------------------------------------
 
-      // Upload para comprovantes — apenas para mensagens não-boletim (condutor, transporte, etc.)
-      // Boletins já retornaram acima e usam bucket 'maquinas' exclusivamente
+      // Upload para comprovantes � apenas para mensagens n�o-boletim (condutor, transporte, etc.)
+      // Boletins j� retornaram acima e usam bucket 'maquinas' exclusivamente
       try {
         const db0 = getDb()
         const fileName = `whatsapp/${Date.now()}_${from}.jpg`
@@ -464,7 +464,7 @@ export default async function handler(req, res) {
         }
       } catch (_) {}
 
-      // ── Check de condutor antecipado — se for condutor, pula classificação ──
+      // -- Check de condutor antecipado � se for condutor, pula classifica��o --
       const _norm = from.replace(/\D/g, '')
       const _sem55 = _norm.replace(/^55/, '')
       const _com9 = _sem55.length === 10 ? _sem55.slice(0, 2) + '9' + _sem55.slice(2) : _sem55
@@ -483,19 +483,19 @@ export default async function handler(req, res) {
       console.log('[WA] condutor encontrado:', _condutorEncontrado)
 
       if (_condutorEncontrado) {
-        // Condutor cadastrado → força extração de transporte, pula Passo 1
+        // Condutor cadastrado ? for�a extra��o de transporte, pula Passo 1
         try {
           formularioTransporte = await runOCR(base64, { forceTransporte: true })
           text = '[imagem-transporte]'
-          textoOriginal = '[formulário: diário do motorista]'
+          textoOriginal = '[formul�rio: di�rio do motorista]'
         } catch (errForce) {
           console.error('[WA] runOCR forceTransporte erro:', errForce?.message || errForce)
-          await sendWA(from, '❌ Não consegui processar a imagem. Tente uma foto mais nítida.')
+          await sendWA(from, '? N�o consegui processar a imagem. Tente uma foto mais n�tida.')
           return res.status(200).end()
         }
 
       } else {
-        // Não é condutor → PASSO 1: classificação inteligente
+        // N�o � condutor ? PASSO 1: classifica��o inteligente
         let ocrClassificacao = null
         let ocrFalhou = false
         try {
@@ -506,48 +506,48 @@ export default async function handler(req, res) {
         }
 
         if (ocrFalhou) {
-          await sendWA(from, '❌ Não consegui processar a imagem agora. Tente novamente em alguns instantes.')
+          await sendWA(from, '? N�o consegui processar a imagem agora. Tente novamente em alguns instantes.')
           return res.status(200).end()
         }
 
         if (ocrClassificacao?.tipo_formulario === 'transporte') {
           formularioTransporte = ocrClassificacao
           text = '[imagem-transporte]'
-          textoOriginal = '[formulário: diário do motorista]'
+          textoOriginal = '[formul�rio: di�rio do motorista]'
         } else {
-          // ── PASSO 2: comprovante/despesa — OCR rico com NF-e, CNPJ, litros ──
+          // -- PASSO 2: comprovante/despesa � OCR rico com NF-e, CNPJ, litros --
         const visionResult = await groq.chat.completions.create({
-          model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
+          model: process.env.GROQ_VISION_MODEL || 'meta-llama/llama-4-scout-17b-16e-instruct',
           messages: [{
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Analise esta imagem de nota fiscal, cupom, comprovante ou recibo — incluindo recibos manuais, manuscritos, cupons não fiscais e comprovantes de pagamento. Extraia as informações e retorne APENAS JSON válido, sem markdown, sem explicação:
+                text: `Analise esta imagem de nota fiscal, cupom, comprovante ou recibo � incluindo recibos manuais, manuscritos, cupons n�o fiscais e comprovantes de pagamento. Extraia as informa��es e retorne APENAS JSON v�lido, sem markdown, sem explica��o:
 {
-  "estabelecimento": "nome do estabelecimento ou prestador de serviço",
-  "endereco": "endereço completo ou null",
+  "estabelecimento": "nome do estabelecimento ou prestador de servi�o",
+  "endereco": "endere�o completo ou null",
   "telefone": "telefone(s) ou null",
-  "cnpj": "XX.XXX.XXX/XXXX-XX ou null (pode ser CPF se for pessoa física)",
-  "produto": "produto ou descrição do serviço principal ou null",
+  "cnpj": "XX.XXX.XXX/XXXX-XX ou null (pode ser CPF se for pessoa f�sica)",
+  "produto": "produto ou descri��o do servi�o principal ou null",
   "quantidade": "quantidade com unidade ou null (ex: 3 unidades, 40,52 litros)",
   "litros": null,
   "valor_litro": null,
   "valor": 0.00,
   "data": "YYYY-MM-DD ou null",
   "hora": "HH:MM ou null",
-  "forma_pagamento": "pix|crédito|débito|dinheiro ou null",
-  "nfe_url": "URL da consulta NF-e ou chave de acesso 44 dígitos ou null",
-  "categoria": "Alimentação|Transporte|Moradia|Saúde|Lazer|Educação|Serviços|Vestuário|Outros"
+  "forma_pagamento": "pix|cr�dito|d�bito|dinheiro ou null",
+  "nfe_url": "URL da consulta NF-e ou chave de acesso 44 d�gitos ou null",
+  "categoria": "Alimenta��o|Transporte|Moradia|Sa�de|Lazer|Educa��o|Servi�os|Vestu�rio|Outros"
 }
 Regras importantes:
-- Recibos manuais, manuscritos e cupons não eletrônicos são válidos — extraia o máximo possível
-- Se o CNPJ/CPF estiver ilegível ou ausente, coloque null
-- litros e valor_litro: preencher SOMENTE se for posto de combustível (números, nunca string)
-- Para campos não encontrados use sempre JSON null (nunca a string "null")
-- nfe_url: somente se houver URL ou chave NF-e real; caso contrário null
+- Recibos manuais, manuscritos e cupons n�o eletr�nicos s�o v�lidos � extraia o m�ximo poss�vel
+- Se o CNPJ/CPF estiver ileg�vel ou ausente, coloque null
+- litros e valor_litro: preencher SOMENTE se for posto de combust�vel (n�meros, nunca string)
+- Para campos n�o encontrados use sempre JSON null (nunca a string "null")
+- nfe_url: somente se houver URL ou chave NF-e real; caso contr�rio null
 - Datas em outros formatos (DD/MM/AAAA) converter para YYYY-MM-DD
-Se não for absolutamente nenhum tipo de comprovante financeiro, retorne {"erro":"não é comprovante"}.
+Se n�o for absolutamente nenhum tipo de comprovante financeiro, retorne {"erro":"n�o � comprovante"}.
 ${caption ? `Contexto adicional: "${caption}"` : ''}`
               },
               { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } }
@@ -563,7 +563,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         try { extracted = JSON.parse(matchJson?.[0] || '{}') } catch { extracted = { erro: 'parse' } }
 
         if (extracted.erro) {
-          await sendWA(from, 'Não reconheci um comprovante nessa imagem. 🤔\nTente uma foto mais nítida ou me diga o valor manualmente.')
+          await sendWA(from, 'N�o reconheci um comprovante nessa imagem. ??\nTente uma foto mais n�tida ou me diga o valor manualmente.')
           return res.status(200).end()
         }
 
@@ -585,14 +585,14 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         }
 
         if (!imagemExtraida.estabelecimento && !imagemExtraida.valor) {
-          await sendWA(from, 'Não consegui identificar estabelecimento nem valor. 🤔\nTente uma foto mais nítida ou me diga manualmente.')
+          await sendWA(from, 'N�o consegui identificar estabelecimento nem valor. ??\nTente uma foto mais n�tida ou me diga manualmente.')
           return res.status(200).end()
         }
 
         text = '[imagem]'
         textoOriginal = `[imagem${caption ? ': ' + caption : ''}]`
-        } // fecha else (Passo 2: não é transporte)
-        } // fecha else (não é condutor)
+        } // fecha else (Passo 2: n�o � transporte)
+        } // fecha else (n�o � condutor)
 
     } else {
       text = message.text.body.trim()
@@ -601,7 +601,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
     const db = getDb()
 
-    // ── Relatório via WA — grupo restrito, antes de qualquer outro fluxo ─────
+    // -- Relat�rio via WA � grupo restrito, antes de qualquer outro fluxo -----
     if ((message.type === 'text' || message.type === 'audio') && text) {
       try {
         const relatorioProcesado = await handleRelatorioWA(text, from, db)
@@ -612,18 +612,18 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       }
     }
 
-    // ── Log: atualiza o registro dedup com o conteúdo real ───────────────────
+    // -- Log: atualiza o registro dedup com o conte�do real -------------------
     if (msgId) {
       db.from('mensagens_whatsapp').update({ conteudo: textoOriginal || text }).eq('message_id', msgId).then(() => {})
     } else {
       db.from('mensagens_whatsapp').insert({ telefone: from, direcao: 'entrada', conteudo: textoOriginal || text }).then(() => {})
     }
 
-    // ── Canal / auto-registro ─────────────────────────────────────────────────
-    // Busca canal ativo OU inativo (para não bloquear quem foi auto-criado sem ativo=true)
-    // Tenta match exato primeiro, depois variações com/sem 55
+    // -- Canal / auto-registro -------------------------------------------------
+    // Busca canal ativo OU inativo (para n�o bloquear quem foi auto-criado sem ativo=true)
+    // Tenta match exato primeiro, depois varia��es com/sem 55
     const fromNorm = from.replace(/\D/g, '')
-    // Gera variantes: com/sem 55, com/sem o dígito 9 após o DDD (padrão BR)
+    // Gera variantes: com/sem 55, com/sem o d�gito 9 ap�s o DDD (padr�o BR)
     const sem55 = fromNorm.replace(/^55/, '')                       // ex: 6792844450
     const com9  = sem55.length === 10 ? sem55.slice(0,2) + '9' + sem55.slice(2) : sem55  // 67992844450
     const sem9  = sem55.length === 11 && sem55[2] === '9' ? sem55.slice(0,2) + sem55.slice(3) : sem55 // 6792844450
@@ -637,7 +637,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       sem9,
     ])]
 
-    // ── Agenda: roteamento inteligente (áudio/texto de gestores) ────────────
+    // -- Agenda: roteamento inteligente (�udio/texto de gestores) ------------
     if (message.type === 'audio' || message.type === 'text') {
       try {
         const destino = await rotearMensagem(body, from, fromVariants, db)
@@ -676,7 +676,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
     }
 
     if (!canal) {
-      // ── Antes de rejeitar: verifica se é líder de refeição ─────────────────
+      // -- Antes de rejeitar: verifica se � l�der de refei��o -----------------
       let equipeRef = null
       for (const v of fromVariants) {
         const { data } = await db.from('refei_equipes')
@@ -691,12 +691,12 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           .order('criado_em', { ascending: false })
           .limit(1).maybeSingle()
         if (solRef && ['rascunho', 'reprovado'].includes(solRef.status)) {
-          const avisoRep = solRef.status === 'reprovado' ? '\n\n⚠️ Pedido anterior reprovado. Corrija e reenvie.' : ''
-          await sendWA(from, `🍽️ *Pedido de Refeição — ${equipeRef.nome}*${avisoRep}\n\nAcesse o formulário:\n${APP_URL}/refeicao/${solRef.token_lider}`)
+          const avisoRep = solRef.status === 'reprovado' ? '\n\n?? Pedido anterior reprovado. Corrija e reenvie.' : ''
+          await sendWA(from, `??? *Pedido de Refei��o � ${equipeRef.nome}*${avisoRep}\n\nAcesse o formul�rio:\n${APP_URL}/refeicao/${solRef.token_lider}`)
         } else if (solRef?.status === 'pendente') {
-          await sendWA(from, `⏳ Seu pedido *${solRef.numero_pedido}* já foi enviado e aguarda aprovação do supervisor.`)
+          await sendWA(from, `? Seu pedido *${solRef.numero_pedido}* j� foi enviado e aguarda aprova��o do supervisor.`)
         } else {
-          // Nenhum pedido ativo — cria novo rascunho automaticamente
+          // Nenhum pedido ativo � cria novo rascunho automaticamente
           const { data: novo } = await db.from('refei_solicitacoes').insert({
             workspace_id:        equipeRef.workspace_id,
             owner_id:            equipeRef.owner_id,
@@ -707,15 +707,15 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             status:              'rascunho',
           }).select('token_lider').single()
           if (novo?.token_lider) {
-            await sendWA(from, `🍽️ *Pedido de Refeição — ${equipeRef.nome}*\n\nAcesse o formulário para preencher e enviar:\n${APP_URL}/refeicao/${novo.token_lider}`)
+            await sendWA(from, `??? *Pedido de Refei��o � ${equipeRef.nome}*\n\nAcesse o formul�rio para preencher e enviar:\n${APP_URL}/refeicao/${novo.token_lider}`)
           } else {
-            await sendWA(from, `⚠️ Erro ao criar pedido. Contate o administrador.`)
+            await sendWA(from, `?? Erro ao criar pedido. Contate o administrador.`)
           }
         }
         return res.status(200).end()
       }
 
-      // ── Verifica se é telefone de restaurante de refeições ────────────────
+      // -- Verifica se � telefone de restaurante de refei��es ----------------
       let restFound = null
       for (const v of fromVariants) {
         const { data: rData } = await db.from('refei_restaurantes')
@@ -723,7 +723,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         if (rData) { restFound = rData; break }
       }
       if (restFound) {
-        // Restaurante respondeu uma mensagem — busca o pedido mais recente enviado
+        // Restaurante respondeu uma mensagem � busca o pedido mais recente enviado
         const { data: solRest } = await db.from('refei_solicitacoes')
           .select('token_restaurante, numero_pedido, status')
           .eq('restaurante_id', restFound.id)
@@ -732,26 +732,26 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           .limit(1).maybeSingle()
         if (solRest?.token_restaurante) {
           const linkRest = `${APP_URL}/rc/${solRest.token_restaurante}`
-          await sendWA(from, `✅ Olá, *${restFound.nome}*! Para confirmar ou ver os detalhes do pedido *${solRest.numero_pedido}*, acesse:\n${linkRest}`)
+          await sendWA(from, `? Ol�, *${restFound.nome}*! Para confirmar ou ver os detalhes do pedido *${solRest.numero_pedido}*, acesse:\n${linkRest}`)
         } else {
-          await sendWA(from, `✅ Olá, *${restFound.nome}*! Nenhum pedido ativo no momento. Aguarde o envio da próxima solicitação.`)
+          await sendWA(from, `? Ol�, *${restFound.nome}*! Nenhum pedido ativo no momento. Aguarde o envio da pr�xima solicita��o.`)
         }
         return res.status(200).end()
       }
-      // ─────────────────────────────────────────────────────────────────────
+      // ---------------------------------------------------------------------
 
-      // Se é formulário de transporte (Diário do Motorista), processa mesmo sem canal
-      // O bloco de transporte usa cadastros_condutores para o workspace — não depende de canal
+      // Se � formul�rio de transporte (Di�rio do Motorista), processa mesmo sem canal
+      // O bloco de transporte usa cadastros_condutores para o workspace � n�o depende de canal
       if (formularioTransporte) {
         canal = { id: null, sessao_pendente: null, pessoa_id: null }
       } else {
-        await sendWA(from, `Olá! 👋 Seu número não está vinculado ao SmartPro.\n\nAcesse *${APP_URL}* → Admin para cadastrar.`)
+        await sendWA(from, `Ol�! ?? Seu n�mero n�o est� vinculado ao SmartPro.\n\nAcesse *${APP_URL}* ? Admin para cadastrar.`)
         return res.status(200).end()
       }
     }
 
     // owner_id real: busca da pessoa vinculada ao canal (fonte de verdade)
-    // Assim despesas sempre vão para a conta correta, mesmo que canal.owner_id esteja errado
+    // Assim despesas sempre v�o para a conta correta, mesmo que canal.owner_id esteja errado
     let ownerId = canal.owner_id || null
     if (canal.pessoa_id) {
       const { data: pessoaCanal } = await db.from('pessoas').select('owner_id').eq('id', canal.pessoa_id).single()
@@ -764,7 +764,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       }
     }
 
-    // ── Carrega dados (cálculos sempre no backend) ────────────────────────────
+    // -- Carrega dados (c�lculos sempre no backend) ----------------------------
     const pessoasQuery = db.from('pessoas').select('id, nome, apelido')
     if (ownerId) pessoasQuery.eq('owner_id', ownerId)
     const despesasQuery = db.from('despesas').select('id, descricao, valor, data, categoria, status, pago_por, participantes, parcelas')
@@ -782,15 +782,15 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
     }
 
     const l = text.toLowerCase().trim()
-    // lNorm: remove pontuação final (Whisper transcreve "Sim." "Ok!" etc.)
-    const lNorm = l.replace(/[^a-záéíóúàãõç\d\s]/gi, '').trim()
+    // lNorm: remove pontua��o final (Whisper transcreve "Sim." "Ok!" etc.)
+    const lNorm = l.replace(/[^a-z���������\d\s]/gi, '').trim()
     let reply = ''
 
-    // ════════════════════════════════════════════════════════════════════════
-    // FORMULÁRIO DE TRANSPORTE — tem prioridade absoluta, ignora sessão ativa
-    // ════════════════════════════════════════════════════════════════════════
+    // ------------------------------------------------------------------------
+    // FORMUL�RIO DE TRANSPORTE � tem prioridade absoluta, ignora sess�o ativa
+    // ------------------------------------------------------------------------
     if (formularioTransporte) {
-      // Limpa sessão residual para não interferir
+      // Limpa sess�o residual para n�o interferir
       if (canal.sessao_pendente) {
         await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
       }
@@ -806,7 +806,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       let nomeMotorista = null
       let waConf = null
       for (const v of fromVariants) {
-        // 1️⃣ Tenta cadastros_condutores
+        // 1?? Tenta cadastros_condutores
         const { data: condutor } = await db.from('cadastros_condutores')
           .select('workspace_id, owner_id, nome')
           .eq('telefone', v)
@@ -818,7 +818,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           nomeMotorista = condutor.nome
           break
         }
-        // 2️⃣ Fallback: whatsapp_config
+        // 2?? Fallback: whatsapp_config
         const { data } = await db.from('whatsapp_config')
           .select('workspace_id, user_id, nome_motorista')
           .eq('phone_number', v)
@@ -830,7 +830,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         wsId = waConf.workspace_id
         wsUserId = waConf.user_id || ownerId
       } else if (ownerId) {
-        // workspaces não tem owner_id — usa workspace_members para achar o workspace do usuário
+        // workspaces n�o tem owner_id � usa workspace_members para achar o workspace do usu�rio
         const { data: mem } = await db.from('workspace_members')
           .select('workspace_id')
           .eq('user_id', ownerId)
@@ -852,12 +852,12 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
       if (wsId) {
         const descricaoTransporte = [
-          f.numero_diario ? `Nº ${f.numero_diario}` : null,
+          f.numero_diario ? `N� ${f.numero_diario}` : null,
           f.empresa || null,
-          (f.local_origem && f.local_destino) ? `${f.local_origem} → ${f.local_destino}` : null,
+          (f.local_origem && f.local_destino) ? `${f.local_origem} ? ${f.local_destino}` : null,
         ].filter(Boolean).join(' | ')
 
-        // Usa nome do cadastro como fallback para condutor se OCR não encontrou
+        // Usa nome do cadastro como fallback para condutor se OCR n�o encontrou
         const condutorFinal = f.condutor || f.motorista || nomeMotorista || null
         const dadosExtras = {
           ...f,
@@ -870,7 +870,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           workspace_id: wsId,
           user_id:      wsUserId,
           tipo:         'receita',
-          descricao:    descricaoTransporte || 'Diário do Motorista',
+          descricao:    descricaoTransporte || 'Di�rio do Motorista',
           valor:        valorFinal,
           data:         f.data || today,
           categoria:    'Transporte',
@@ -889,12 +889,12 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             lancamento_id: inserted.id,
             tipo:          'criado',
             status_para:   'rascunho',
-            descricao:     'Recebido via WhatsApp — aguardando envio para aprovação.',
+            descricao:     'Recebido via WhatsApp � aguardando envio para aprova��o.',
             usuario_nome:  from || null,
           }).then(() => {}).catch(() => {})
         }
 
-        // Monta resumo de KM para confirmação
+        // Monta resumo de KM para confirma��o
         const kmRows = (f.km_rows || []).filter(r => r.total && String(r.total).trim() !== '')
         const parseKm = v => { const n = parseFloat(String(v || '').replace(/[^\d.,]/g, '').replace(',', '.')); return isNaN(n) ? 0 : n }
         const kmAsf = kmRows.filter(r => r.tipo === 'ASFALTO').reduce((s, r) => s + parseKm(r.total), 0)
@@ -902,27 +902,27 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         const kmTotal = kmAsf + kmTer
 
         if (dbErr) {
-          reply = `❌ Erro ao salvar. Contate o administrador.`
+          reply = `? Erro ao salvar. Contate o administrador.`
         } else {
           const linhas = [
-            `✅ *Imagem processada!*`,
+            `? *Imagem processada!*`,
             ``,
-            `📋 Nº ${f.numero_diario || '—'} | ${f.empresa || '—'}`,
-            `💰 Valor: ${fmtVal}`,
-            kmTotal > 0 ? `📏 KM: ${kmTotal.toLocaleString('pt-BR')} (ASF: ${kmAsf.toLocaleString('pt-BR')} / TER: ${kmTer.toLocaleString('pt-BR')})` : null,
-            `🚗 Placa: ${f.placa || '—'}`,
+            `?? N� ${f.numero_diario || '�'} | ${f.empresa || '�'}`,
+            `?? Valor: ${fmtVal}`,
+            kmTotal > 0 ? `?? KM: ${kmTotal.toLocaleString('pt-BR')} (ASF: ${kmAsf.toLocaleString('pt-BR')} / TER: ${kmTer.toLocaleString('pt-BR')})` : null,
+            `?? Placa: ${f.placa || '�'}`,
             ``,
-            `_Pendente de aprovação_`,
+            `_Pendente de aprova��o_`,
           ].filter(v => v !== null)
           reply = linhas.join('\n')
         }
       } else {
-        reply = `✅ *Diário do Motorista reconhecido!*\n\n💰 Valor: ${fmtVal}\n🏢 ${f.empresa || '—'}\n\n⚠️ Seu número não está configurado. Acesse *Lançamentos → WhatsApp* para ativar o registro automático.`
+        reply = `? *Di�rio do Motorista reconhecido!*\n\n?? Valor: ${fmtVal}\n?? ${f.empresa || '�'}\n\n?? Seu n�mero n�o est� configurado. Acesse *Lan�amentos ? WhatsApp* para ativar o registro autom�tico.`
       }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // ESTADO: aguardando_complemento — preenche campo faltante da imagem
-    // ════════════════════════════════════════════════════════════════════════
+    // ------------------------------------------------------------------------
+    // ESTADO: aguardando_complemento � preenche campo faltante da imagem
+    // ------------------------------------------------------------------------
     } else if (canal.sessao_pendente?.estado === 'aguardando_complemento') {
       const sess = canal.sessao_pendente
       const dados = { ...sess.dados_extraidos }
@@ -930,7 +930,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       if (sess.campo_pendente === 'valor') {
         const novoValor = parseFloat(text.replace(/[^\d.,]/g, '').replace(',', '.'))
         if (!novoValor || novoValor <= 0) {
-          reply = 'Valor inválido. Tente novamente, ex: _78,59_'
+          reply = 'Valor inv�lido. Tente novamente, ex: _78,59_'
         } else {
           dados.valor = novoValor
         }
@@ -965,9 +965,9 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             hora: dados.hora,
             nfe_url: dados.nfe_url,
             pago_por_id: canal.pessoa_id,
-            pago_por_nome: pagador?.nome || 'você',
+            pago_por_nome: pagador?.nome || 'voc�',
             participantes_ids: [canal.pessoa_id],
-            participantes_nomes: [pagador?.nome || 'você'],
+            participantes_nomes: [pagador?.nome || 'voc�'],
             comprovante_url: sess.comprovante_url,
           }
           await db.from('canais_mensagem').update({ sessao_pendente: rascunho }).eq('id', canal.id)
@@ -975,13 +975,13 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         }
       }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // ESTADO: aguardando_confirmacao — só aceita sim/editar/cancelar
-    // ════════════════════════════════════════════════════════════════════════
+    // ------------------------------------------------------------------------
+    // ESTADO: aguardando_confirmacao � s� aceita sim/editar/cancelar
+    // ------------------------------------------------------------------------
     } else if (canal.sessao_pendente?.estado === 'aguardando_confirmacao') {
       const p = canal.sessao_pendente
 
-      // sim → salva despesa
+      // sim ? salva despesa
       if (/^(sim|s|ok|pode|confirma|confirmar)$/i.test(lNorm)) {
         await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
 
@@ -1015,17 +1015,17 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         const { data: inserted, error } = await db.from('despesas').insert(insertPayload).select().single()
         if (error) console.error('[WA] insert despesa error:', JSON.stringify(error))
         else console.log('[WA] despesa inserida id:', inserted?.id)
-        reply = error ? '❌ Erro ao salvar. Tente novamente.' : `✅ *${p.descricao}* ${formatBRL(p.valor)} registrado!`
+        reply = error ? '? Erro ao salvar. Tente novamente.' : `? *${p.descricao}* ${formatBRL(p.valor)} registrado!`
 
-      } else if (/^(n(ão|ao)?|cancelar?|cancela)$/i.test(lNorm)) {
+      } else if (/^(n(�o|ao)?|cancelar?|cancela)$/i.test(lNorm)) {
         await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
-        reply = 'Cancelado. 👍'
+        reply = 'Cancelado. ??'
 
       // editar valor X
       } else if (/^editar\s+valor\s+/i.test(lNorm)) {
         const novoValor = parseFloat(lNorm.replace(/[^\d.,]/g, '').replace(',', '.'))
         if (!novoValor || novoValor <= 0) {
-          reply = 'Valor inválido. Ex: _editar valor 190_'
+          reply = 'Valor inv�lido. Ex: _editar valor 190_'
         } else {
           const novoP = { ...p, valor: novoValor }
           await db.from('canais_mensagem').update({ sessao_pendente: novoP }).eq('id', canal.id)
@@ -1037,7 +1037,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         const nomesRaw = lNorm.replace(/^editar\s+pessoa\s+/i, '').split(/\s+e\s+|\s*,\s*/i)
         const novos = nomesRaw.map(n => findPessoa(n.trim())).filter(Boolean)
         if (!novos.length) {
-          reply = `Não encontrei essas pessoas. Verifique os nomes em ${APP_URL}`
+          reply = `N�o encontrei essas pessoas. Verifique os nomes em ${APP_URL}`
         } else {
           const novoP = {
             ...p,
@@ -1050,7 +1050,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
       // editar categoria X
       } else if (/^editar\s+categoria\s+/i.test(lNorm)) {
-        const cats = ['Alimentação','Transporte','Moradia','Saúde','Lazer','Educação','Serviços','Vestuário','Outros']
+        const cats = ['Alimenta��o','Transporte','Moradia','Sa�de','Lazer','Educa��o','Servi�os','Vestu�rio','Outros']
         const novaStr = text.replace(/^editar\s+categoria\s+/i, '').trim()
         const novaCat = cats.find(c => c.toLowerCase().startsWith(novaStr.toLowerCase())) || 'Outros'
         const novoP = { ...p, categoria: novaCat }
@@ -1058,22 +1058,22 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         reply = montarConfirmacao(novoP)
 
       } else {
-        reply = 'Aguardando confirmação. Responda *sim* ou *cancelar*.'
+        reply = 'Aguardando confirma��o. Responda *sim* ou *cancelar*.'
       }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // ESTADO: normal — parse de intenção via IA
-    // ════════════════════════════════════════════════════════════════════════
+    // ------------------------------------------------------------------------
+    // ESTADO: normal � parse de inten��o via IA
+    // ------------------------------------------------------------------------
     } else {
-      // Limpa qualquer sessão residual
+      // Limpa qualquer sess�o residual
       if (canal.sessao_pendente) {
         await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
       }
 
-      // ════════════════════════════════════════════════════════════════════════
-      // MÓDULO REFEIÇÕES — Líder solicita via WA
-      // ════════════════════════════════════════════════════════════════════════
-      if (/pedido.*(refei[çc][ãa]|almo[çc]o|caf[eé])|refei[çc][ãa]o|marmita|solicita.*comi/i.test(text)) {
+      // ------------------------------------------------------------------------
+      // M�DULO REFEI��ES � L�der solicita via WA
+      // ------------------------------------------------------------------------
+      if (/pedido.*(refei[�c][�a]|almo[�c]o|caf[e�])|refei[�c][�a]o|marmita|solicita.*comi/i.test(text)) {
         let equipe = null
         for (const v of fromVariants) {
           const { data } = await db.from('refei_equipes')
@@ -1100,20 +1100,20 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             tokenLider = novo?.token_lider
           }
           const base = APP_URL
-          await sendWA(from, `🍽️ *Solicitação de Refeição*\n\nClique para fazer seu pedido:\n${base}/refeicao/${tokenLider}\n\n_Após enviar, aguarde aprovação do supervisor._`)
+          await sendWA(from, `??? *Solicita��o de Refei��o*\n\nClique para fazer seu pedido:\n${base}/refeicao/${tokenLider}\n\n_Ap�s enviar, aguarde aprova��o do supervisor._`)
           return res.status(200).end()
         }
-        // Se não encontrou equipe para este telefone, cai para fluxo normal
+        // Se n�o encontrou equipe para este telefone, cai para fluxo normal
       }
 
       if (imagemExtraida) {
         const campoFaltante = !imagemExtraida.valor ? 'valor' : !imagemExtraida.estabelecimento ? 'estabelecimento' : null
         if (campoFaltante) {
           const partes = []
-          if (imagemExtraida.estabelecimento) partes.push(`📍 *${imagemExtraida.estabelecimento}*`)
-          if (imagemExtraida.valor) partes.push(`💰 ${formatBRL(imagemExtraida.valor)}`)
-          if (imagemExtraida.forma_pagamento) partes.push(`💳 ${imagemExtraida.forma_pagamento}`)
-          if (imagemExtraida.data && imagemExtraida.data !== today) partes.push(`📅 ${imagemExtraida.data.split('-').reverse().join('/')}`)
+          if (imagemExtraida.estabelecimento) partes.push(`?? *${imagemExtraida.estabelecimento}*`)
+          if (imagemExtraida.valor) partes.push(`?? ${formatBRL(imagemExtraida.valor)}`)
+          if (imagemExtraida.forma_pagamento) partes.push(`?? ${imagemExtraida.forma_pagamento}`)
+          if (imagemExtraida.data && imagemExtraida.data !== today) partes.push(`?? ${imagemExtraida.data.split('-').reverse().join('/')}`)
           const resumo = partes.join('\n')
           const pergunta = campoFaltante === 'valor'
             ? `${resumo}\n\nQual foi o *valor total*? (ex: 78,59)`.trimStart()
@@ -1145,9 +1145,9 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
             hora: imagemExtraida.hora,
             nfe_url: imagemExtraida.nfe_url,
             pago_por_id: canal.pessoa_id,
-            pago_por_nome: pagador?.nome || 'você',
+            pago_por_nome: pagador?.nome || 'voc�',
             participantes_ids: [canal.pessoa_id],
-            participantes_nomes: [pagador?.nome || 'você'],
+            participantes_nomes: [pagador?.nome || 'voc�'],
             comprovante_url: comprovanteUrl,
           }
           await db.from('canais_mensagem').update({ sessao_pendente: rascunho }).eq('id', canal.id)
@@ -1157,15 +1157,15 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
 
       const intent = await parseIntent(text, todasPessoas, today, canal.historico)
 
-      // ── criar_despesa: modo rascunho obrigatório ─────────────────────────
+      // -- criar_despesa: modo rascunho obrigat�rio -------------------------
       if (intent.intencao === 'criar_despesa') {
         if (!intent.descricao || !intent.valor) {
-          reply = 'Não entendi o valor. Ex: _"Paguei R$ 80 no mercado, dividir com Camila"_'
+          reply = 'N�o entendi o valor. Ex: _"Paguei R$ 80 no mercado, dividir com Camila"_'
         } else {
-          const pagador = findPessoa(intent.pago_por) || { id: canal.pessoa_id, nome: 'você' }
+          const pagador = findPessoa(intent.pago_por) || { id: canal.pessoa_id, nome: 'voc�' }
           const parts = (intent.participantes || []).map(n => findPessoa(n)).filter(Boolean)
           const participantesIds = parts.length > 0 ? parts.map(p => p.id) : [canal.pessoa_id]
-          const participantesNomes = parts.length > 0 ? parts.map(p => p.nome) : ['você']
+          const participantesNomes = parts.length > 0 ? parts.map(p => p.nome) : ['voc�']
 
           const rascunho = {
             estado: 'aguardando_confirmacao',
@@ -1184,51 +1184,51 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           reply = montarConfirmacao(rascunho)
         }
 
-      // ── consultar_saldo ──────────────────────────────────────────────────
+      // -- consultar_saldo --------------------------------------------------
       } else if (intent.intencao === 'consultar_saldo') {
         const saldos = calcularSaldos(todasDespesas, todasPessoas)
         if (intent.pessoa) {
           const s = saldos.find(s => s.nome.toLowerCase().includes(intent.pessoa.toLowerCase()))
           reply = !s
-            ? `Não encontrei "${intent.pessoa}".`
+            ? `N�o encontrei "${intent.pessoa}".`
             : s.saldo > 0 ? `${s.nome} te deve ${formatBRL(s.saldo)}.`
-            : s.saldo < 0 ? `Você deve ${formatBRL(Math.abs(s.saldo))} para ${s.nome}.`
-            : `${s.nome} está quite. ✅`
+            : s.saldo < 0 ? `Voc� deve ${formatBRL(Math.abs(s.saldo))} para ${s.nome}.`
+            : `${s.nome} est� quite. ?`
         } else {
           const pendentes = saldos.filter(s => Math.abs(s.saldo) > 0.01)
           reply = pendentes.length === 0
-            ? '✅ Todos os saldos estão quitados!'
+            ? '? Todos os saldos est�o quitados!'
             : '*Saldos pendentes:*\n' + pendentes.map(s =>
                 s.saldo > 0
                   ? `${s.nome} te deve ${formatBRL(s.saldo)}`
-                  : `Você deve ${formatBRL(Math.abs(s.saldo))} a ${s.nome}`
+                  : `Voc� deve ${formatBRL(Math.abs(s.saldo))} a ${s.nome}`
               ).join('\n')
         }
 
-      // ── listar_pendencias ────────────────────────────────────────────────
+      // -- listar_pendencias ------------------------------------------------
       } else if (intent.intencao === 'listar_pendencias') {
         const pendentes = todasDespesas.filter(e => e.status === 'pendente')
         if (!pendentes.length) {
-          reply = '✅ Nenhuma despesa pendente!'
+          reply = '? Nenhuma despesa pendente!'
         } else {
-          reply = '*Pendências:*\n' + pendentes.slice(0, 5).map(e =>
-            `• ${e.descricao} — ${formatBRL(e.valor)}`
+          reply = '*Pend�ncias:*\n' + pendentes.slice(0, 5).map(e =>
+            `� ${e.descricao} � ${formatBRL(e.valor)}`
           ).join('\n')
           if (pendentes.length > 5) reply += `\n_...e mais ${pendentes.length - 5}. Veja em ${APP_URL}_`
         }
 
-      // ── fechar_mes: detalhamento completo ───────────────────────────────
+      // -- fechar_mes: detalhamento completo -------------------------------
       } else if (intent.intencao === 'fechar_mes') {
         const mes = intent.mes || today.slice(0, 7)
         const resultado = fecharMes(todasDespesas, todasPessoas, mes)
         reply = resultado || `Nenhuma despesa encontrada para ${mes}.`
 
-      // ── marcar_como_pago: nunca sobrescreve sem confirmação ──────────────
+      // -- marcar_como_pago: nunca sobrescreve sem confirma��o --------------
       } else if (intent.intencao === 'marcar_como_pago') {
         const busca = (intent.descricao || '').toLowerCase()
         const d = todasDespesas.find(e => e.status === 'pendente' && e.descricao.toLowerCase().includes(busca))
         if (!d) {
-          reply = `Não encontrei despesa pendente com "${intent.descricao}".`
+          reply = `N�o encontrei despesa pendente com "${intent.descricao}".`
         } else {
           const rascunho = {
             estado: 'aguardando_confirmacao',
@@ -1241,15 +1241,15 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
           reply = `Marcar *"${d.descricao}"* (${formatBRL(d.valor)}) como pago?\nResponda *sim* ou *cancelar*.`
         }
 
-      // ── desconhecido ─────────────────────────────────────────────────────
+      // -- desconhecido -----------------------------------------------------
       } else {
-        reply = 'Posso te ajudar com:\n• _"Paguei 80 no uber"_ — registrar gasto\n• _"Quanto devo?"_ — ver saldos\n• _"Lista pendências"_ — despesas em aberto\n• _"Fechar meu mês"_ — resumo do mês\n• _"Marcar mercado como pago"_'
+        reply = 'Posso te ajudar com:\n� _"Paguei 80 no uber"_ � registrar gasto\n� _"Quanto devo?"_ � ver saldos\n� _"Lista pend�ncias"_ � despesas em aberto\n� _"Fechar meu m�s"_ � resumo do m�s\n� _"Marcar mercado como pago"_'
       }
 
       } // fim else imagemExtraida
     }
 
-    // ── Confirma marcar_como_pago quando está na sessão ───────────────────
+    // -- Confirma marcar_como_pago quando est� na sess�o -------------------
     // (resolvido dentro do bloco aguardando_confirmacao, mas precisa checar intencao)
     if (canal.sessao_pendente?.estado === 'aguardando_confirmacao' &&
         canal.sessao_pendente?.intencao === 'marcar_como_pago' &&
@@ -1257,7 +1257,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
       const p = canal.sessao_pendente
       await db.from('canais_mensagem').update({ sessao_pendente: null }).eq('id', canal.id)
       await db.from('despesas').update({ status: 'pago' }).eq('id', p.despesa_id)
-      reply = `✅ "${p.descricao}" marcada como paga.`
+      reply = `? "${p.descricao}" marcada como paga.`
     }
 
     if (reply) {
@@ -1268,7 +1268,7 @@ ${caption ? `Contexto adicional: "${caption}"` : ''}`
         conteudo: reply,
       }).then(() => {})
 
-      // Histórico: últimas 10 trocas
+      // Hist�rico: �ltimas 10 trocas
       const novoHistorico = [
         ...(canal.historico || []),
         { role: 'user', content: textoOriginal || text },
