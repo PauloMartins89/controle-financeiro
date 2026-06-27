@@ -180,20 +180,64 @@ async function zapiDeleteMessage(phone, messageId) {
   }
 }
 
-// Atualiza barra de progresso: deleta mensagem anterior e envia nova
-// Retorna o messageId da nova mensagem (para poder deletar na próxima etapa)
-function buildProgressBar(percent) {
-  const total = 20
-  const filled = Math.round((percent / 100) * total)
-  return '▓'.repeat(filled) + '░'.repeat(total - filled) + `  ${percent}%`
+// Edita a mensagem de progresso existente no lugar (sem delete+resend)
+// Retorna o mesmo messageId (a mensagem é a mesma, só o conteúdo muda)
+async function zapiProgress(phone, prevMsgId, percent, label) {
+  if (!phone || !zapiInstanceId || !zapiToken) return prevMsgId
+  const bar = buildProgressBar(percent)
+  const text = `${bar}\n${label}`
+  if (prevMsgId) {
+    // Tenta editar a mensagem existente
+    try {
+      const resp = await fetch(
+        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/edit-message`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+          },
+          body: JSON.stringify({ phone, messageId: prevMsgId, message: text }),
+        }
+      )
+      if (resp.ok) {
+        console.log(`[ocr-boletim] progresso atualizado: ${percent}%`)
+        return prevMsgId  // mesmo messageId — a msg foi editada no lugar
+      }
+      console.warn(`[ocr-boletim] edit-message falhou ${resp.status}, fazendo resend`)
+    } catch (e) {
+      console.warn('[ocr-boletim] edit-message erro:', e.message)
+    }
+  }
+  // Fallback: envia nova mensagem se não tiver prevMsgId ou se a edição falhar
+  const newMsgId = await zapiSendText(phone, text)
+  return newMsgId
 }
 
-async function zapiProgress(phone, prevMsgId, percent, label) {
-  if (!phone) return prevMsgId
-  await zapiDeleteMessage(phone, prevMsgId)
-  if (prevMsgId) await new Promise(r => setTimeout(r, 250))
-  const newMsgId = await zapiSendText(phone, `${buildProgressBar(percent)}\n${label}`)
-  return newMsgId
+// Edita a mensagem de progresso com o texto final do resultado (sem barra)
+// Fallback: envia nova mensagem se edição falhar
+async function zapiEditOrSend(phone, msgId, text) {
+  if (!phone) return
+  if (msgId && zapiInstanceId && zapiToken) {
+    try {
+      const resp = await fetch(
+        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/edit-message`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+          },
+          body: JSON.stringify({ phone, messageId: msgId, message: text }),
+        }
+      )
+      if (resp.ok) return
+      console.warn(`[ocr-boletim] edit final falhou ${resp.status}, enviando nova msg`)
+    } catch (e) {
+      console.warn('[ocr-boletim] edit final erro:', e.message)
+    }
+  }
+  await zapiSendText(phone, text)
 }
 
 // Normaliza texto para lookup de alias (trim + upper + colapsa espa├ºos)
@@ -862,11 +906,9 @@ async function processarBoletim(boletimId, imageBase64 = null, { waProgressMsgId
           horasInfo || null,
           d.observacoes ? `📝 Obs: ${d.observacoes}` : null,
         ].filter(Boolean).join('\n')
-        await zapiDeleteMessage(waPhone, progressMsgId)
-        await zapiSendText(waPhone, msgRdo)
+          await zapiEditOrSend(waPhone, progressMsgId, msgRdo)
       } else if (waPhone) {
-        await zapiDeleteMessage(waPhone, progressMsgId)
-        await zapiSendText(waPhone, `${buildProgressBar(100)}\n✅ *${tmpl.nome}* registrado!\n📅 Data: ${dataBoletimTmpl}`)
+        await zapiEditOrSend(waPhone, progressMsgId, `${buildProgressBar(100)}\n✅ *${tmpl.nome}* registrado!\n📅 Data: ${dataBoletimTmpl}`)
       }
 
       return ocrResult
@@ -968,8 +1010,7 @@ Retorne APENAS o JSON, sem comentários.`
     console.error('[ocr-boletim] groq error:', e.message)
     await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
     if (waPhone) {
-      await zapiDeleteMessage(waPhone, progressMsgId)
-      await zapiSendText(waPhone, `⚠️ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
+      await zapiEditOrSend(waPhone, progressMsgId, `⚠️ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
     }
     return
   }
@@ -1146,8 +1187,7 @@ Retorne APENAS o JSON, sem comentários.`
 
     if (waPhone) {
       const resumo = buildResumoOCR(extrasGerencial, valorCalculado, temPendente, bol.numero, dataBoletim)
-      await zapiDeleteMessage(waPhone, progressMsgId)
-      await zapiSendText(waPhone, resumo)
+      await zapiEditOrSend(waPhone, progressMsgId, resumo)
     }
 
   } else if (!temPendente) {
@@ -1204,8 +1244,7 @@ Retorne APENAS o JSON, sem comentários.`
     if (waPhone) {
       const extrasMaq = { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) }
       const resumo = buildResumoOCR(extrasMaq, null, false, bol.numero, dataBoletim)
-      await zapiDeleteMessage(waPhone, progressMsgId)
-      await zapiSendText(waPhone, resumo)
+      await zapiEditOrSend(waPhone, progressMsgId, resumo)
     }
   } else {
     // ÔöÇÔöÇ Fluxo M├íquinas ÔÇö campos pendentes ÔåÆ revis├úo do admin ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
@@ -1217,8 +1256,7 @@ Retorne APENAS o JSON, sem comentários.`
     if (waPhone) {
       const extrasPend = { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) }
       const resumo = buildResumoOCR(extrasPend, null, true, bol.numero, dataBoletim)
-      await zapiDeleteMessage(waPhone, progressMsgId)
-      await zapiSendText(waPhone, resumo)
+      await zapiEditOrSend(waPhone, progressMsgId, resumo)
     }
 
     console.log(`[ocr-boletim] boletim ${bol.numero} (${boletimId}) aguarda revis├úo admin ÔÇö ${registrosCampos.filter(c => c.status_match !== 'ok' && c.status_match !== 'ignorado').length} campo(s) pendente(s)`)
