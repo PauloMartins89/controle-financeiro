@@ -71,7 +71,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${groqApiKey}`,
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
         max_tokens: 4096,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },

@@ -179,7 +179,7 @@ export async function runOCR(imageBase64, { forceTransporte = false, template = 
   let isTransporte = forceTransporte
   if (!forceTransporte) {
     const classifyRes = await groqWithRetry(groq, {
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
       messages: [{
         role: 'user',
         content: [
@@ -201,7 +201,7 @@ export async function runOCR(imageBase64, { forceTransporte = false, template = 
   // ── PASSO 2A: Extração completa do diário ────────────────────────────────────
   if (isTransporte) {
     const extractRes = await groqWithRetry(groq, {
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
       messages: [{
         role: 'user',
         content: [
@@ -236,7 +236,7 @@ export async function runOCR(imageBase64, { forceTransporte = false, template = 
 
   // ── PASSO 2B: Extração de despesa padrão ────────────────────────────────────
   const extractRes = await groqWithRetry(groq, {
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
     messages: [{
       role: 'user',
       content: [
@@ -318,7 +318,7 @@ JSON a retornar (preencha os valores):
 ${skeletonComKm}`
 
   const extractRes = await groqWithRetry(groq, {
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
     messages: [{
       role: 'user',
       content: [
@@ -393,7 +393,7 @@ export async function runOCRDiarioMotorista(imageBase64) {
   const imgUrl = `data:image/jpeg;base64,${imageBase64}`
 
   const extractRes = await groqWithRetry(groq, {
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
     messages: [{
       role: 'user',
       content: [

@@ -65,7 +65,7 @@ async function parseIntent(text, pessoas, today, historico = []) {
     content: m.content,
   }))
   const completion = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
+    model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
     messages: [
       {
         role: 'system',
@@ -136,7 +136,7 @@ async function identificarBoletimPorImagem(base64, db) {
     // Passa os identificadores direto ao Groq — mais confiável do que extrair texto livre
     const opcoes = tipos.map((t, i) => `${i + 1}. "${t.identificador_visual}"`).join('\n')
     const groqRes = await new Groq({ apiKey: process.env.GROQ_API_KEY }).chat.completions.create({
-      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+      model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
       messages: [{
         role: 'user',
         content: [
@@ -517,7 +517,7 @@ export default async function handler(req, res) {
         } else {
           // ── PASSO 2: comprovante/despesa — OCR rico com NF-e, CNPJ, litros ──
         const visionResult = await groq.chat.completions.create({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: process.env.GROQ_VISION_MODEL || 'openai/gpt-oss-120b',
           messages: [{
             role: 'user',
             content: [

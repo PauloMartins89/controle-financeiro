@@ -17,7 +17,7 @@ import Groq from 'groq-sdk'
 async function classificarIntent(texto) {
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
   const completion = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
+    model: process.env.GROQ_TEXT_MODEL || 'openai/gpt-oss-20b',
     temperature: 0,
     max_tokens: 10,
     messages: [
