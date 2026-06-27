@@ -114,8 +114,10 @@ async function sendWA(to, text) {
         conteudo: `[ERRO Z-API ${res.status}] ${errBody.slice(0, 500)}`
       }).then(() => {})
     } catch (_) {}
+    return { ok: false, messageId: null }
   }
-  return res.ok
+  const data = await res.json().catch(() => ({}))
+  return { ok: true, messageId: data.messageId || data.zaapId || null }
 }
 
 // -- Identifica boletim pelo texto do cabeçalho (identificador_visual) --------
@@ -374,7 +376,7 @@ export default async function handler(req, res) {
             const numero = `BOL-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`
 
             // ACK imediato — não bloqueia o fluxo de upload+OCR
-            sendWA(from, `📋 *${numero} recebido!*\n\n░░░░░░░░░░░░░░░░░░░░  0%\n⏳ _Lendo o formulário com IA..._\n\nVocê receberá um resumo completo assim que o lançamento for criado.`)
+            const { messageId: progressMsgId } = await sendWA(from, `📋 *${numero} recebido!*\n\n░░░░░░░░░░░░░░░░░░░░  0%\n⏳ _Lendo o formulário com IA..._\n\nVocê receberá um resumo completo assim que o lançamento for criado.`)
 
             // Inicia upload para storage (não-bloqueante  corre em paralelo com OCR)
             let imagemUrl = 'pending'
@@ -420,7 +422,7 @@ export default async function handler(req, res) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 // imageBase64 evita que o OCR faça download da URL  economiza ~2s
-                body: JSON.stringify({ boletimId: bolRecord.id, imageBase64: base64 }),
+                body: JSON.stringify({ boletimId: bolRecord.id, imageBase64: base64, waProgressMsgId: progressMsgId }),
               }).then(r => {
                 if (r.ok) console.log(`[whatsapp/boletim] boletim ${numero} (${bolRecord.id}) processado`)
                 else      console.warn(`[whatsapp/boletim] OCR HTTP ${r.status}  cron fará retry`)

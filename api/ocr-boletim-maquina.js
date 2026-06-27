@@ -138,9 +138,9 @@ function getSupabase() {
 }
 
 async function zapiSendText(phone, message) {
-  if (!zapiInstanceId || !zapiToken || !phone) return
+  if (!zapiInstanceId || !zapiToken || !phone) return null
   try {
-    await fetch(
+    const resp = await fetch(
       `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
       {
         method:  'POST',
@@ -151,9 +151,49 @@ async function zapiSendText(phone, message) {
         body: JSON.stringify({ phone, message }),
       }
     )
+    if (!resp.ok) return null
+    const data = await resp.json().catch(() => ({}))
+    return data.messageId || data.zaapId || null
   } catch (e) {
     console.error('[ocr-boletim] zapiSendText error:', e.message)
+    return null
   }
+}
+
+// Deleta a mensagem de progresso anterior (fire-and-forget, sem bloquear)
+async function zapiDeleteMessage(phone, messageId) {
+  if (!zapiInstanceId || !zapiToken || !phone || !messageId) return
+  try {
+    await fetch(
+      `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/messages`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+        },
+        body: JSON.stringify({ phone, messageId, owner: true }),
+      }
+    )
+  } catch (e) {
+    console.error('[ocr-boletim] zapiDeleteMessage error:', e.message)
+  }
+}
+
+// Atualiza barra de progresso: deleta mensagem anterior e envia nova
+// Retorna o messageId da nova mensagem (para poder deletar na próxima etapa)
+function buildProgressBar(percent) {
+  const total = 20
+  const filled = Math.round((percent / 100) * total)
+  return '▓'.repeat(filled) + '░'.repeat(total - filled) + `  ${percent}%`
+}
+
+async function zapiProgress(phone, prevMsgId, percent, label) {
+  if (!phone) return prevMsgId
+  await zapiDeleteMessage(phone, prevMsgId)
+  if (prevMsgId) await new Promise(r => setTimeout(r, 250))
+  const newMsgId = await zapiSendText(phone, `${buildProgressBar(percent)}\n${label}`)
+  return newMsgId
 }
 
 // Normaliza texto para lookup de alias (trim + upper + colapsa espa├ºos)
@@ -662,7 +702,7 @@ async function checkDuplicata(supabase, workspaceId, newLancId, extras) {
   console.log(`[ocr-boletim] Nº doc ${numDoc} repetido mas dados diferentes — registrado normalmente`)
 }
 
-async function processarBoletim(boletimId, imageBase64 = null) {
+async function processarBoletim(boletimId, imageBase64 = null, { waProgressMsgId = null } = {}) {
   const supabase = getSupabase()
   if (!supabase) throw new Error('supabase n├úo configurado')
   if (!groqApiKey) throw new Error('GROQ_API_KEY não configurada no servidor')
@@ -684,6 +724,7 @@ async function processarBoletim(boletimId, imageBase64 = null) {
   let   boletimTipo   = bol.maquinas_boletim_tipos
   const workspaceId   = bol.workspace_id
   const waPhone       = bol.wa_from
+  let   progressMsgId = waProgressMsgId   // rastreia a mensagem de progresso atual
 
   // Fallback: se o join PostgREST n├úo trouxe o tipo, busca separadamente
   if (!boletimTipo && bol.boletim_tipo_id) {
@@ -713,7 +754,9 @@ async function processarBoletim(boletimId, imageBase64 = null) {
       // imageBase64 fornecido via POST body → usa direto (sem download da URL, economiza ~2s)
       // Caso contrário, passa URL pública (Groq faz o download)
       const ocrInput = imageBase64 || bol.imagem_url || ''
+      progressMsgId = await zapiProgress(waPhone, progressMsgId, 50, '🤖 _IA lendo o formulário..._')
       const ocrResult      = await runOCR(ocrInput, { template: tmpl })
+      progressMsgId = await zapiProgress(waPhone, progressMsgId, 75, '💾 _Salvando lançamento..._')
       const tipoForm       = ocrResult.tipo_formulario || tmpl.tipo_base || 'formulario'
       const dataBoletimTmpl = ocrResult.data || new Date().toISOString().slice(0, 10)
 
@@ -810,6 +853,7 @@ async function processarBoletim(boletimId, imageBase64 = null) {
           d.h_feriado_noturnas ? `🎉 Feriado N: ${d.h_feriado_noturnas}h` : null,
         ].filter(Boolean).join('\n')
         const msgRdo = [
+          `${buildProgressBar(100)}`,
           `✅ *RDO registrado!*`,
           `📋 Nº: ${d.numero_rdo || d.numero_documento || '—'}`,
           `🏢 Empresa: ${d.empresa || '—'}`,
@@ -818,9 +862,11 @@ async function processarBoletim(boletimId, imageBase64 = null) {
           horasInfo || null,
           d.observacoes ? `📝 Obs: ${d.observacoes}` : null,
         ].filter(Boolean).join('\n')
+        await zapiDeleteMessage(waPhone, progressMsgId)
         await zapiSendText(waPhone, msgRdo)
       } else if (waPhone) {
-        await zapiSendText(waPhone, `✅ *${tmpl.nome}* registrado!\n📅 Data: ${dataBoletimTmpl}`)
+        await zapiDeleteMessage(waPhone, progressMsgId)
+        await zapiSendText(waPhone, `${buildProgressBar(100)}\n✅ *${tmpl.nome}* registrado!\n📅 Data: ${dataBoletimTmpl}`)
       }
 
       return ocrResult
@@ -915,11 +961,16 @@ Retorne APENAS o JSON, sem comentários.`
         ],
       },
     ]
+    progressMsgId = await zapiProgress(waPhone, progressMsgId, 50, '🤖 _IA lendo o formulário..._')
     ocrRaw = await callGroq(groqApiKey, imageMessages)
+    progressMsgId = await zapiProgress(waPhone, progressMsgId, 75, '💾 _Salvando lançamento..._')
   } catch (e) {
     console.error('[ocr-boletim] groq error:', e.message)
     await supabase.from('maquinas_boletins').update({ status: 'erro', ocr_raw: { erro: e.message } }).eq('id', boletimId)
-    if (waPhone) await zapiSendText(waPhone, `⚠️ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
+    if (waPhone) {
+      await zapiDeleteMessage(waPhone, progressMsgId)
+      await zapiSendText(waPhone, `⚠️ Erro ao processar o boletim *${bol.numero}*. Contate o supervisor.`)
+    }
     return
   }
 
@@ -1095,6 +1146,7 @@ Retorne APENAS o JSON, sem comentários.`
 
     if (waPhone) {
       const resumo = buildResumoOCR(extrasGerencial, valorCalculado, temPendente, bol.numero, dataBoletim)
+      await zapiDeleteMessage(waPhone, progressMsgId)
       await zapiSendText(waPhone, resumo)
     }
 
@@ -1152,6 +1204,7 @@ Retorne APENAS o JSON, sem comentários.`
     if (waPhone) {
       const extrasMaq = { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) }
       const resumo = buildResumoOCR(extrasMaq, null, false, bol.numero, dataBoletim)
+      await zapiDeleteMessage(waPhone, progressMsgId)
       await zapiSendText(waPhone, resumo)
     }
   } else {
@@ -1164,6 +1217,7 @@ Retorne APENAS o JSON, sem comentários.`
     if (waPhone) {
       const extrasPend = { boletim_id: boletimId, ocr: ocrRaw, ...mapOcrToExtras(ocrRaw, dataBoletim) }
       const resumo = buildResumoOCR(extrasPend, null, true, bol.numero, dataBoletim)
+      await zapiDeleteMessage(waPhone, progressMsgId)
       await zapiSendText(waPhone, resumo)
     }
 
@@ -1177,12 +1231,12 @@ Retorne APENAS o JSON, sem comentários.`
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { boletimId, imageBase64 } = req.body || {}
+  const { boletimId, imageBase64, waProgressMsgId } = req.body || {}
   if (!boletimId) return res.status(400).json({ error: 'boletimId obrigatório' })
 
   // Processa antes de responder — Vercel encerra a função logo após res.json(),
   // portanto NÃO é seguro deixar processarBoletim em background pós-resposta.
-  await processarBoletim(boletimId, imageBase64 || null).catch(e =>
+  await processarBoletim(boletimId, imageBase64 || null, { waProgressMsgId: waProgressMsgId || null }).catch(e =>
     console.error('[ocr-boletim-maquina] processarBoletim error:', e.message)
   )
   res.status(200).json({ ok: true, boletimId })
