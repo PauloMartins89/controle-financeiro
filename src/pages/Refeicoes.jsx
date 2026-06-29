@@ -82,12 +82,135 @@ function Modal({ title, onClose, children, maxWidth = 560 }) {
   )
 }
 
+// --- CSV helpers --------------------------------------------------------------
+function downloadCSV(filename, rows) {
+  const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
+function parseCSVText(text) {
+  const lines = text.replace(/\r/g, '').trim().split('\n').filter(l => l.trim())
+  if (lines.length < 2) return []
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
+  return lines.slice(1).map(line => {
+    const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+    const row = {}
+    headers.forEach((h, i) => { row[h] = vals[i] ?? '' })
+    return row
+  }).filter(r => Object.values(r).some(v => v))
+}
+
+function ImportCSVModal({ title, colunas, onImport, onClose }) {
+  const [preview, setPreview] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const [errors, setErrors] = useState([])
+  const maxPreviewCols = 4
+
+  function handleTemplate() {
+    downloadCSV(
+      `template-${title.toLowerCase().replace(/\s+/g, '-')}.csv`,
+      [colunas.map(c => c.key), colunas.map(c => c.exemplo ?? '')]
+    )
+  }
+
+  async function handleFile(e) {
+    const f = e.target.files[0]
+    if (!f) return
+    const text = await f.text()
+    setPreview(parseCSVText(text))
+    setErrors([])
+  }
+
+  async function handleImport() {
+    if (!preview?.length) return
+    setImporting(true)
+    const errs = await onImport(preview)
+    setImporting(false)
+    if (errs?.length) setErrors(errs)
+    else onClose()
+  }
+
+  const previewCols = colunas.slice(0, maxPreviewCols)
+
+  return (
+    <Modal title={`Importar ${title}`} onClose={onClose} maxWidth={700}>
+      <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Como importar:</strong> baixe o template → preencha as linhas → salve como CSV → faça o upload abaixo.
+        </div>
+        <button onClick={handleTemplate} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          <ArrowDownTrayIcon style={{ width: 14, height: 14 }} /> Template CSV
+        </button>
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <label style={lbl}>Arquivo CSV</label>
+        <input type="file" accept=".csv,.txt" onChange={handleFile}
+          style={{ display: 'block', width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-secondary)', fontSize: 13, color: 'var(--text-primary)', cursor: 'pointer' }} />
+      </div>
+      {preview && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
+            {preview.length} registro(s) encontrado(s) — prévia (máx. 3 linhas):
+          </div>
+          <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-secondary)' }}>
+                  {previewCols.map(c => <th key={c.key} style={{ padding: '7px 10px', textAlign: 'left', fontWeight: 700, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{c.key}</th>)}
+                  {colunas.length > maxPreviewCols && <th style={{ padding: '7px 10px', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}>+{colunas.length - maxPreviewCols}</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {preview.slice(0, 3).map((row, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                    {previewCols.map(c => <td key={c.key} style={{ padding: '6px 10px', color: 'var(--text-primary)' }}>{row[c.key] || '—'}</td>)}
+                    {colunas.length > maxPreviewCols && <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>…</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {errors.length > 0 && (
+        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#f87171', marginBottom: 6 }}>Erros encontrados:</div>
+          {errors.slice(0, 5).map((e, i) => <div key={i} style={{ fontSize: 11, color: '#fca5a5' }}>Linha {e.linha}: {e.msg}</div>)}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <button onClick={onClose} className="btn-ghost" style={{ fontSize: 13, padding: '8px 16px' }}>Cancelar</button>
+        <button onClick={handleImport} disabled={!preview?.length || importing}
+          className="btn-primary" style={{ fontSize: 13, padding: '8px 16px', opacity: !preview?.length ? 0.5 : 1 }}>
+          {importing ? 'Importando…' : `Importar ${preview?.length || 0} registro(s)`}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
 // --- CRUD Restaurantes --------------------------------------------------------
+const COLS_RESTAURANTES = [
+  { key: 'nome',           exemplo: 'Restaurante ABC' },
+  { key: 'cnpj',           exemplo: '00.000.000/0001-00' },
+  { key: 'numero_pedido',  exemplo: '1234' },
+  { key: 'valor_refeicao', exemplo: '25.90' },
+  { key: 'valor_cafe',     exemplo: '8.50' },
+  { key: 'telefone_wa',    exemplo: '5511999998888' },
+  { key: 'ativo',          exemplo: 'SIM' },
+]
+
 function CrudRestaurantes({ workspaceId, ownerId }) {
-  const [rows, setRows]   = useState([])
-  const [modal, setModal] = useState(null)
-  const [form, setForm]   = useState({})
-  const [saving, setSaving] = useState(false)
+  const [rows, setRows]         = useState([])
+  const [modal, setModal]       = useState(null)
+  const [form, setForm]         = useState({})
+  const [saving, setSaving]     = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   const load = useCallback(async () => {
     if (!workspaceId) return
@@ -120,11 +243,27 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
     load()
   }
 
+  async function onImport(rows) {
+    const erros = []
+    const payloads = rows.map((r, i) => {
+      if (!r.nome?.trim()) { erros.push({ linha: i + 2, msg: 'Nome obrigatório' }); return null }
+      return { nome: r.nome.trim(), cnpj: r.cnpj || null, numero_pedido: r.numero_pedido || null, valor_refeicao: parseFloat((r.valor_refeicao || '0').replace(',', '.')) || 0, valor_cafe: parseFloat((r.valor_cafe || '0').replace(',', '.')) || 0, telefone_wa: r.telefone_wa || null, ativo: (r.ativo || 'SIM').toUpperCase() !== 'NAO', workspace_id: workspaceId, owner_id: ownerId }
+    }).filter(Boolean)
+    if (erros.length) return erros
+    const { error } = await supabase.from('refei_restaurantes').insert(payloads)
+    if (error) return [{ linha: 0, msg: error.message }]
+    toast.success(`${payloads.length} restaurante(s) importado(s)!`)
+    load()
+  }
+
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Importar
+        </button>
         <button onClick={openNew} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px' }}>
           <PlusIcon style={{ width: 15, height: 15 }} /> Novo
         </button>
@@ -146,6 +285,7 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
           </div>
         </div>
       ))}
+      {showImport && <ImportCSVModal title="Restaurantes" colunas={COLS_RESTAURANTES} onImport={onImport} onClose={() => setShowImport(false)} />}
       {modal && (
         <Modal title={modal.mode === 'new' ? 'Novo Restaurante' : 'Editar Restaurante'} onClose={() => setModal(null)}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -178,11 +318,22 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
 }
 
 // --- CRUD Equipes -------------------------------------------------------------
+const COLS_EQUIPES = [
+  { key: 'nome',                  exemplo: 'Equipe Alpha' },
+  { key: 'cdc',                   exemplo: 'CDC-07' },
+  { key: 'lider_nome',            exemplo: 'João Silva' },
+  { key: 'lider_telefone',        exemplo: '5567999998888' },
+  { key: 'supervisor_nome',       exemplo: 'Carlos Lima' },
+  { key: 'supervisor_telefone',   exemplo: '5567999997777' },
+  { key: 'ativo',                 exemplo: 'SIM' },
+]
+
 function CrudEquipes({ workspaceId, ownerId }) {
   const [rows, setRows]           = useState([])
   const [modal, setModal]         = useState(null)
   const [form, setForm]           = useState({})
   const [saving, setSaving]       = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [colabEquipe, setColabEquipe] = useState(null)
   const [colabs, setColabs]       = useState([])
   const [colabForm, setColabForm] = useState({})
@@ -243,11 +394,27 @@ function CrudEquipes({ workspaceId, ownerId }) {
     loadColabs(colabEquipe)
   }
 
+  async function onImport(rows) {
+    const erros = []
+    const payloads = rows.map((r, i) => {
+      if (!r.nome?.trim()) { erros.push({ linha: i + 2, msg: 'Nome obrigatório' }); return null }
+      return { nome: r.nome.trim(), cdc: r.cdc || null, lider_nome: r.lider_nome || null, lider_telefone: r.lider_telefone || null, supervisor_nome: r.supervisor_nome || null, supervisor_telefone: r.supervisor_telefone || null, ativo: (r.ativo || 'SIM').toUpperCase() !== 'NAO', workspace_id: workspaceId, owner_id: ownerId }
+    }).filter(Boolean)
+    if (erros.length) return erros
+    const { error } = await supabase.from('refei_equipes').insert(payloads)
+    if (error) return [{ linha: 0, msg: error.message }]
+    toast.success(`${payloads.length} equipe(s) importada(s)!`)
+    load()
+  }
+
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Importar
+        </button>
         <button onClick={() => { setForm({ ativo: true }); setModal({ mode: 'new' }) }} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px' }}>
           <PlusIcon style={{ width: 15, height: 15 }} /> Nova Equipe
         </button>
@@ -283,6 +450,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
         </div>
       ))}
 
+      {showImport && <ImportCSVModal title="Equipes" colunas={COLS_EQUIPES} onImport={onImport} onClose={() => setShowImport(false)} />}
       {/* Modal equipe */}
       {modal && (
         <Modal title={modal.mode === 'new' ? 'Nova Equipe' : 'Editar Equipe'} onClose={() => setModal(null)}>
@@ -335,11 +503,18 @@ function CrudEquipes({ workspaceId, ownerId }) {
 }
 
 // --- CRUD Centros de Custo ----------------------------------------------------
+const COLS_CDC = [
+  { key: 'nome',   exemplo: 'Produção Norte' },
+  { key: 'codigo', exemplo: 'CDC-07' },
+  { key: 'ativo',  exemplo: 'SIM' },
+]
+
 function CrudCDC({ workspaceId, ownerId }) {
-  const [rows, setRows] = useState([])
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState({})
-  const [saving, setSaving] = useState(false)
+  const [rows, setRows]             = useState([])
+  const [modal, setModal]           = useState(null)
+  const [form, setForm]             = useState({})
+  const [saving, setSaving]         = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const load = useCallback(async () => {
     if (!workspaceId) return
     const { data } = await supabase.from('refei_centros_custo').select('*').eq('workspace_id', workspaceId).order('nome')
@@ -360,13 +535,31 @@ function CrudCDC({ workspaceId, ownerId }) {
     }
     setSaving(false)
   }
+
+  async function onImport(rows) {
+    const erros = []
+    const payloads = rows.map((r, i) => {
+      if (!r.nome?.trim()) { erros.push({ linha: i + 2, msg: 'Nome obrigatório' }); return null }
+      return { nome: r.nome.trim(), codigo: r.codigo || null, ativo: (r.ativo || 'SIM').toUpperCase() !== 'NAO', workspace_id: workspaceId, owner_id: ownerId }
+    }).filter(Boolean)
+    if (erros.length) return erros
+    const { error } = await supabase.from('refei_centros_custo').insert(payloads)
+    if (error) return [{ linha: 0, msg: error.message }]
+    toast.success(`${payloads.length} centro(s) de custo importado(s)!`)
+    load()
+  }
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Importar
+        </button>
         <button onClick={() => { setForm({ ativo: true }); setModal({ mode: 'new' }) }} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px' }}>
           <PlusIcon style={{ width: 15, height: 15 }} /> Novo
         </button>
       </div>
+      {showImport && <ImportCSVModal title="Centros de Custo" colunas={COLS_CDC} onImport={onImport} onClose={() => setShowImport(false)} />}
       {rows.length === 0 && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 24, fontSize: 13 }}>Nenhum centro de custo cadastrado.</p>}
       {rows.map(r => (
         <div key={r.id} className="card" style={{ padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -406,11 +599,17 @@ function CrudCDC({ workspaceId, ownerId }) {
 }
 
 // --- CRUD Regionais -----------------------------------------------------------
+const COLS_REGIONAIS = [
+  { key: 'nome',  exemplo: 'Regional Sul' },
+  { key: 'ativo', exemplo: 'SIM' },
+]
+
 function CrudRegionais({ workspaceId, ownerId }) {
-  const [rows, setRows] = useState([])
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState({})
-  const [saving, setSaving] = useState(false)
+  const [rows, setRows]             = useState([])
+  const [modal, setModal]           = useState(null)
+  const [form, setForm]             = useState({})
+  const [saving, setSaving]         = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const load = useCallback(async () => {
     if (!workspaceId) return
     const { data } = await supabase.from('refei_regionais').select('*').eq('workspace_id', workspaceId).order('nome')
@@ -431,13 +630,31 @@ function CrudRegionais({ workspaceId, ownerId }) {
     }
     setSaving(false)
   }
+
+  async function onImport(rows) {
+    const erros = []
+    const payloads = rows.map((r, i) => {
+      if (!r.nome?.trim()) { erros.push({ linha: i + 2, msg: 'Nome obrigatório' }); return null }
+      return { nome: r.nome.trim(), ativo: (r.ativo || 'SIM').toUpperCase() !== 'NAO', workspace_id: workspaceId, owner_id: ownerId }
+    }).filter(Boolean)
+    if (erros.length) return erros
+    const { error } = await supabase.from('refei_regionais').insert(payloads)
+    if (error) return [{ linha: 0, msg: error.message }]
+    toast.success(`${payloads.length} regional(is) importada(s)!`)
+    load()
+  }
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Importar
+        </button>
         <button onClick={() => { setForm({ ativo: true }); setModal({ mode: 'new' }) }} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px' }}>
           <PlusIcon style={{ width: 15, height: 15 }} /> Nova Regional
         </button>
       </div>
+      {showImport && <ImportCSVModal title="Regionais" colunas={COLS_REGIONAIS} onImport={onImport} onClose={() => setShowImport(false)} />}
       {rows.length === 0 && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 24, fontSize: 13 }}>Nenhuma regional cadastrada.</p>}
       {rows.map(r => (
         <div key={r.id} className="card" style={{ padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -471,12 +688,22 @@ function CrudRegionais({ workspaceId, ownerId }) {
 }
 
 // --- CRUD Tabela de Preços ----------------------------------------------------
+const COLS_TABELA_PRECOS = [
+  { key: 'restaurante_nome',  exemplo: 'Restaurante ABC' },
+  { key: 'vigencia_inicio',   exemplo: '2026-01-01' },
+  { key: 'vigencia_fim',      exemplo: '2026-12-31' },
+  { key: 'valor_refeicao',    exemplo: '25.90' },
+  { key: 'valor_cafe',        exemplo: '8.50' },
+  { key: 'ativo',             exemplo: 'SIM' },
+]
+
 function CrudTabelaPrecos({ workspaceId, ownerId }) {
-  const [rows, setRows] = useState([])
-  const [rests, setRests] = useState([])
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState({})
-  const [saving, setSaving] = useState(false)
+  const [rows, setRows]             = useState([])
+  const [rests, setRests]           = useState([])
+  const [modal, setModal]           = useState(null)
+  const [form, setForm]             = useState({})
+  const [saving, setSaving]         = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const load = useCallback(async () => {
     if (!workspaceId) return
     const [{ data: tp }, { data: rs }] = await Promise.all([
@@ -501,13 +728,34 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
     }
     setSaving(false)
   }
+
+  async function onImport(csvRows) {
+    const erros = []
+    const restsMap = Object.fromEntries(rests.map(r => [r.nome.trim().toLowerCase(), r.id]))
+    const payloads = csvRows.map((r, i) => {
+      if (!r.restaurante_nome?.trim()) { erros.push({ linha: i + 2, msg: 'restaurante_nome obrigatório' }); return null }
+      const restId = restsMap[r.restaurante_nome.trim().toLowerCase()]
+      if (!restId) { erros.push({ linha: i + 2, msg: `Restaurante não encontrado: "${r.restaurante_nome}"` }); return null }
+      return { restaurante_id: restId, vigencia_inicio: r.vigencia_inicio || null, vigencia_fim: r.vigencia_fim || null, valor_refeicao: parseFloat((r.valor_refeicao || '0').replace(',', '.')) || 0, valor_cafe: parseFloat((r.valor_cafe || '0').replace(',', '.')) || 0, ativo: (r.ativo || 'SIM').toUpperCase() !== 'NAO', workspace_id: workspaceId, owner_id: ownerId }
+    }).filter(Boolean)
+    if (erros.length) return erros
+    const { error } = await supabase.from('refei_tabela_precos').insert(payloads)
+    if (error) return [{ linha: 0, msg: error.message }]
+    toast.success(`${payloads.length} registro(s) de preço importado(s)!`)
+    load()
+  }
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button onClick={() => setShowImport(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Importar
+        </button>
         <button onClick={() => { setForm({ ativo: true }); setModal({ mode: 'new' }) }} className="btn-primary" style={{ fontSize: 13, padding: '7px 14px' }}>
           <PlusIcon style={{ width: 15, height: 15 }} /> Nova Vigência
         </button>
       </div>
+      {showImport && <ImportCSVModal title="Tabela de Preços" colunas={COLS_TABELA_PRECOS} onImport={onImport} onClose={() => setShowImport(false)} />}
       {rows.length === 0 && <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: 24, fontSize: 13 }}>Nenhuma tabela de preços cadastrada.</p>}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -569,15 +817,22 @@ function CrudTabelaPrecos({ workspaceId, ownerId }) {
 
 // --- Todos os Colaboradores (visão completa) ----------------------------------
 const FUNCOES_REFEI = ['Operador', 'Auxiliar', 'Ajudante', 'Tratorista', 'Op. Motosserra', 'Op. Trator', 'Pulverizador', 'Mecânico', 'Motorista', 'Supervisor', 'Outro']
+const COLS_COLABORADORES = [
+  { key: 'nome',       exemplo: 'João da Silva' },
+  { key: 'cargo',      exemplo: 'Operador' },
+  { key: 'equipe',     exemplo: 'Equipe Alpha' },
+  { key: 'ativo',      exemplo: 'SIM' },
+]
 
 function CrudColaboradores({ workspaceId }) {
-  const [colabs,    setColabs]    = useState([])
-  const [filtroEq,  setFiltroEq]  = useState('')
-  const [equipes,   setEquipes]   = useState([])
-  const [showModal, setShowModal] = useState(false)
-  const [editId,    setEditId]    = useState(null)
-  const [saving,    setSaving]    = useState(false)
-  const [form,      setForm]      = useState({ nome: '', cargo: 'Operador', equipe_id: '', ativo: true })
+  const [colabs,      setColabs]      = useState([])
+  const [filtroEq,    setFiltroEq]    = useState('')
+  const [equipes,     setEquipes]     = useState([])
+  const [showModal,   setShowModal]   = useState(false)
+  const [editId,      setEditId]      = useState(null)
+  const [saving,      setSaving]      = useState(false)
+  const [showImport,  setShowImport]  = useState(false)
+  const [form,        setForm]        = useState({ nome: '', cargo: 'Operador', equipe_id: '', ativo: true })
 
   const load = useCallback(async () => {
     if (!workspaceId) return
@@ -632,6 +887,22 @@ function CrudColaboradores({ workspaceId }) {
     else { toast.success('Excluído'); load() }
   }
 
+  async function onImport(rows) {
+    const erros = []
+    const eqMap = Object.fromEntries(equipes.map(e => [e.nome.trim().toLowerCase(), e.id]))
+    const payloads = rows.map((r, i) => {
+      if (!r.nome?.trim()) { erros.push({ linha: i + 2, msg: 'Nome obrigatório' }); return null }
+      const eqId = eqMap[r.equipe?.trim().toLowerCase()]
+      if (!eqId) { erros.push({ linha: i + 2, msg: `Equipe não encontrada: "${r.equipe}"` }); return null }
+      return { nome: r.nome.trim(), cargo: r.cargo || null, equipe_id: eqId, ativo: (r.ativo || 'SIM').toUpperCase() !== 'NAO' }
+    }).filter(Boolean)
+    if (erros.length) return erros
+    const { error } = await supabase.from('refei_colaboradores').insert(payloads)
+    if (error) return [{ linha: 0, msg: error.message }]
+    toast.success(`${payloads.length} colaborador(es) importado(s)!`)
+    load()
+  }
+
   const filtered = filtroEq ? colabs.filter(c => c.equipe_id === filtroEq) : colabs
 
   return (
@@ -648,6 +919,9 @@ function CrudColaboradores({ workspaceId }) {
             Crie uma equipe primeiro para poder adicionar colaboradores
           </span>
         )}
+        <button onClick={() => setShowImport(true)} disabled={equipes.length === 0} style={{ display: 'flex', alignItems: 'center', gap: 6, background: equipes.length === 0 ? 'var(--bg-secondary)' : 'rgba(16,185,129,0.1)', border: `1px solid ${equipes.length === 0 ? 'var(--border)' : 'rgba(16,185,129,0.25)'}`, color: equipes.length === 0 ? 'var(--text-secondary)' : '#10b981', borderRadius: 8, padding: '7px 12px', fontSize: 12, fontWeight: 700, cursor: equipes.length === 0 ? 'not-allowed' : 'pointer' }}>
+          <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> Importar
+        </button>
         <button
           onClick={openNew}
           disabled={equipes.length === 0}
@@ -656,6 +930,8 @@ function CrudColaboradores({ workspaceId }) {
           <PlusIcon style={{ width: 15, height: 15 }} /> Novo Colaborador
         </button>
       </div>
+
+      {showImport && <ImportCSVModal title="Colaboradores" colunas={COLS_COLABORADORES} onImport={onImport} onClose={() => setShowImport(false)} />}
 
       {/* Tabela */}
       <div style={{ overflowX: 'auto' }}>
