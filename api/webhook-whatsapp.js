@@ -244,10 +244,10 @@ export default async function handler(req, res) {
     const msgType   = (body.type || '').toLowerCase()
     const fromMe    = body.fromMe === true
 
-    // Mensagens de grupo: redireciona para o motor de chamados (fire-and-forget)
-    // O bot NÃO responde no grupo — apenas lê e processa internamente.
+    // Mensagens de grupo: redireciona para o motor de chamados
+    // Vercel encerra o processo após a resposta, então usamos await antes do retorno.
     if (body.isGroupMsg) {
-      processarMensagemGrupo(body).catch(e =>
+      await processarMensagemGrupo(body).catch(e =>
         console.error('[webhook-whatsapp] processarMensagemGrupo:', e?.message)
       )
       return res.status(200).json({ ok: true, grupo: true })
