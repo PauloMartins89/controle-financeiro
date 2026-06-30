@@ -166,45 +166,42 @@ ALTER TABLE solicitacoes_atendimento  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE logs_classificacao_ia     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notificacoes_tecnicos     ENABLE ROW LEVEL SECURITY;
 
--- Policies: service_role bypassa RLS; usuários autenticados veem só seu workspace
+-- Policies: DROP primeiro para ser idempotente
+DROP POLICY IF EXISTS "tecnicos_workspace"  ON tecnicos;
+DROP POLICY IF EXISTS "grupos_workspace"    ON whatsapp_grupos;
+DROP POLICY IF EXISTS "mensagens_workspace" ON mensagens_whatsapp_grupos;
+DROP POLICY IF EXISTS "sat_workspace"       ON solicitacoes_atendimento;
+DROP POLICY IF EXISTS "logs_workspace"      ON logs_classificacao_ia;
+DROP POLICY IF EXISTS "notif_workspace"     ON notificacoes_tecnicos;
+
 CREATE POLICY "tecnicos_workspace" ON tecnicos
-  FOR ALL TO authenticated USING (
-    owner_id = auth.uid() OR workspace_id IN (
-      SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid() AND ativo = true
-    )
-  );
+  FOR ALL TO authenticated USING (owner_id = auth.uid());
 
 CREATE POLICY "grupos_workspace" ON whatsapp_grupos
-  FOR ALL TO authenticated USING (
-    owner_id = auth.uid() OR workspace_id IN (
-      SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid() AND ativo = true
-    )
-  );
+  FOR ALL TO authenticated USING (owner_id = auth.uid());
 
 CREATE POLICY "mensagens_workspace" ON mensagens_whatsapp_grupos
   FOR ALL TO authenticated USING (
     workspace_id IN (
-      SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid() AND ativo = true
+      SELECT DISTINCT workspace_id FROM whatsapp_grupos WHERE owner_id = auth.uid()
     )
   );
 
 CREATE POLICY "sat_workspace" ON solicitacoes_atendimento
   FOR ALL TO authenticated USING (
     workspace_id IN (
-      SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid() AND ativo = true
+      SELECT DISTINCT workspace_id FROM whatsapp_grupos WHERE owner_id = auth.uid()
     )
   );
 
 CREATE POLICY "logs_workspace" ON logs_classificacao_ia
   FOR ALL TO authenticated USING (
     workspace_id IN (
-      SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid() AND ativo = true
+      SELECT DISTINCT workspace_id FROM whatsapp_grupos WHERE owner_id = auth.uid()
     )
   );
 
 CREATE POLICY "notif_workspace" ON notificacoes_tecnicos
   FOR ALL TO authenticated USING (
-    tecnico_id IN (SELECT id FROM tecnicos WHERE workspace_id IN (
-      SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid() AND ativo = true
-    ))
+    tecnico_id IN (SELECT id FROM tecnicos WHERE owner_id = auth.uid())
   );
