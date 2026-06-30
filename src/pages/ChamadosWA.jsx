@@ -609,6 +609,52 @@ function SecaoTecnicos({ workspaceId, ownerId }) {
   )
 }
 
+// ── Capturador de JIDs descobertos ───────────────────────────────────────────
+function JidsDescobertos({ onSelect }) {
+  const [jids, setJids]       = useState([])
+  const [loading, setLoading] = useState(false)
+  const [erro, setErro]       = useState(null)
+
+  async function buscar() {
+    setLoading(true); setErro(null)
+    try {
+      const r = await fetch('/api/chamados-setup?action=jids-descobertos')
+      const d = await r.json()
+      setJids(d.jids || [])
+      if (!d.jids?.length) setErro('Nenhum JID capturado ainda. Envie uma mensagem no grupo e clique novamente.')
+    } catch { setErro('Erro ao buscar JIDs') }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{ background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', flex: 1 }}>📡 Capturar JID automaticamente</span>
+        <button onClick={buscar} disabled={loading}
+          style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer' }}>
+          {loading ? '…' : '🔍 Buscar'}
+        </button>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: jids.length ? 8 : 0 }}>
+        Envie qualquer mensagem no grupo WA → clique Buscar → selecione o JID capturado
+      </div>
+      {erro && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>{erro}</div>}
+      {jids.map(j => (
+        <div key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, background: 'var(--bg-card)', borderRadius: 7, padding: '6px 10px', border: '1px solid var(--border)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{j.jid}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{j.remetente} · {j.msg?.slice(0, 50)}</div>
+          </div>
+          <button onClick={() => onSelect(j.jid)}
+            style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: 'rgba(16,185,129,.12)', color: '#10b981', border: '1px solid rgba(16,185,129,.25)', cursor: 'pointer', flexShrink: 0 }}>
+            Usar
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Grupos ────────────────────────────────────────────────────────────────────
 function SecaoGrupos({ workspaceId, ownerId }) {
   const [rows, setRows]       = useState([])
@@ -685,12 +731,14 @@ function SecaoGrupos({ workspaceId, ownerId }) {
       </div>
       {modal && (
         <Modal title={modal.mode === 'new' ? 'Novo Grupo Monitorado' : 'Editar Grupo'} onClose={() => setModal(null)} maxWidth={580}>
+          {/* Banner de JIDs descobertos */}
+          <JidsDescobertos onSelect={jid => f('zapi_group_id', jid)} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Nome do Grupo *</label><input style={inp} value={form.nome_grupo || ''} onChange={e => f('nome_grupo', e.target.value)} placeholder="Suporte Suzano MS" /></div>
             <div style={{ gridColumn: '1/-1' }}>
               <label style={lbl}>ID do Grupo Z-API *</label>
               <input style={inp} value={form.zapi_group_id || ''} onChange={e => f('zapi_group_id', e.target.value)} placeholder="5567999990000-1234567890@g.us" />
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>Campo "phone" no payload do webhook quando a mensagem vem de um grupo</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>Campo "phone" no payload do webhook. Mande uma msg no grupo e clique em "Capturar JID" acima.</div>
             </div>
             <div><label style={lbl}>Cliente</label><input style={inp} value={form.cliente || ''} onChange={e => f('cliente', e.target.value)} /></div>
             <div><label style={lbl}>Região</label><input style={inp} value={form.regiao || ''} onChange={e => f('regiao', e.target.value)} /></div>

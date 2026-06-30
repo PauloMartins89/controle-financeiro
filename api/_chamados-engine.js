@@ -84,8 +84,18 @@ export async function processarMensagemGrupo(body) {
     .maybeSingle()
 
   if (!grupo) {
-    // Grupo não cadastrado — salva mensagem mas não processa
+    // Grupo não cadastrado — salva JID no log para facilitar cadastro
     console.log(`[_chamados-engine] Grupo não monitorado: ${groupJid}`)
+    // Salva como log de descoberta para exibir no frontend
+    await supabase.from('logs_classificacao_ia').insert({
+      workspace_id: null,
+      grupo_id:     null,
+      confianca:    0,
+      virou_chamado: false,
+      eh_triagem:   false,
+      motivo:       `GRUPO_NAO_CADASTRADO | JID: ${groupJid} | Nome remetente: ${remetenteNome}`,
+      resultado:    { jid: groupJid, remetente: remetenteNome, msg: msgText.slice(0, 200) },
+    }).catch(() => {})
     return
   }
 
