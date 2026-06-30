@@ -87,15 +87,17 @@ export async function processarMensagemGrupo(body) {
     // Grupo não cadastrado — salva JID no log para facilitar cadastro
     console.log(`[_chamados-engine] Grupo não monitorado: ${groupJid}`)
     // Salva como log de descoberta para exibir no frontend
-    await supabase.from('logs_classificacao_ia').insert({
-      workspace_id: null,
-      grupo_id:     null,
-      confianca:    0,
-      virou_chamado: false,
-      eh_triagem:   false,
-      motivo:       `GRUPO_NAO_CADASTRADO | JID: ${groupJid} | Nome remetente: ${remetenteNome}`,
-      resultado:    { jid: groupJid, remetente: remetenteNome, msg: msgText.slice(0, 200) },
-    }).catch(() => {})
+    try {
+      await supabase.from('logs_classificacao_ia').insert({
+        workspace_id: null,
+        grupo_id:     null,
+        confianca:    0,
+        virou_chamado: false,
+        eh_triagem:   false,
+        motivo:       `GRUPO_NAO_CADASTRADO | JID: ${groupJid} | Nome remetente: ${remetenteNome}`,
+        resultado:    { jid: groupJid, remetente: remetenteNome, msg: msgText.slice(0, 200) },
+      })
+    } catch (_e) {}
     return
   }
 
@@ -153,18 +155,20 @@ export async function processarMensagemGrupo(body) {
   const ehTriagem    = ehChamado && confianca >= CONF_TRIAGEM && confianca < CONF_CHAMADO
 
   // ── Registra log da IA ───────────────────────────────────────────────────────
-  await supabase.from('logs_classificacao_ia').insert({
-    workspace_id:    grupo.workspace_id,
-    mensagem_id:     msgSalva.id,
-    grupo_id:        grupo.id,
-    resultado:       resultado,
-    confianca:       confianca,
-    motivo:          resultado?.motivo || null,
-    payload_entrada: resultado?.payloadEntrada || null,
-    payload_saida:   resultado?.payloadSaida || null,
-    virou_chamado:   virouChamado,
-    eh_triagem:      ehTriagem,
-  }).catch(e => console.error('[_chamados-engine] log IA:', e?.message))
+  try {
+    await supabase.from('logs_classificacao_ia').insert({
+      workspace_id:    grupo.workspace_id,
+      mensagem_id:     msgSalva.id,
+      grupo_id:        grupo.id,
+      resultado:       resultado,
+      confianca:       confianca,
+      motivo:          resultado?.motivo || null,
+      payload_entrada: resultado?.payloadEntrada || null,
+      payload_saida:   resultado?.payloadSaida || null,
+      virou_chamado:   virouChamado,
+      eh_triagem:      ehTriagem,
+    })
+  } catch (e) { console.error('[_chamados-engine] log IA:', e?.message) }
 
   // Abaixo do limiar de triagem → encerra sem criar chamado
   if (!ehChamado || confianca < CONF_TRIAGEM) {
@@ -196,10 +200,13 @@ export async function processarMensagemGrupo(body) {
   }
 
   // ── Gera código SAT ──────────────────────────────────────────────────────────
-  const { data: codigoRow } = await supabase
-    .rpc('next_sat_codigo')
-    .single()
-    .catch(() => ({ data: `SAT-${Date.now()}` }))
+  let codigoRow
+  try {
+    const { data } = await supabase.rpc('next_sat_codigo').single()
+    codigoRow = data
+  } catch (_e) {
+    codigoRow = `SAT-${Date.now()}`
+  }
 
   const codigo = codigoRow || `SAT-${Date.now()}`
 
