@@ -111,6 +111,7 @@ async function processRefeiApproval(supabase, tokenCompact, acao, fromPhone) {
     ator:           fromPhone,
     ator_tipo:      'supervisor',
   }).catch(e => console.error('[webhook-whatsapp] logEvento error:', e?.message))
+  if (acao === 'aprovado') {
     // Usa o fluxo automático: notifica restaurante e avança status
     const { data: itens } = await supabase.from('refei_itens').select('*').eq('solicitacao_id', sol.id)
     // Chama o endpoint interno de aprovação para reutilizar triggerRestauranteFlow
