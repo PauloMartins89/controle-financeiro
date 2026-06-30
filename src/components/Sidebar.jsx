@@ -156,6 +156,17 @@ const navGroups = [
     ],
   },
   {
+    title: 'Chamados WA',
+    items: [
+      { to: '/chamados-wa',              icon: ChartBarIcon,              label: 'Dashboard',      moduleKey: 'chamados-wa' },
+      { to: '/chamados-wa/solicitacoes', icon: ClipboardDocumentListIcon, label: 'Solicitações',   moduleKey: 'chamados-wa' },
+      { to: '/chamados-wa/triagem',      icon: ExclamationTriangleIcon,   label: 'Triagem',        moduleKey: 'chamados-wa' },
+      { to: '/chamados-wa/tecnicos',     icon: UsersIcon,                 label: 'Técnicos',       moduleKey: 'chamados-wa' },
+      { to: '/chamados-wa/grupos',       icon: ChatBubbleLeftRightIcon,   label: 'Grupos WA',      moduleKey: 'chamados-wa' },
+      { to: '/chamados-wa/logs',         icon: BoltIcon,                  label: 'Logs IA',        moduleKey: 'chamados-wa' },
+    ],
+  },
+  {
     title: 'Máquinas',
     items: [
       { to: '/mapa-maquina',            icon: TableCellsIcon,           label: 'Mapa de Apontamento',     moduleKey: 'maquinas' },

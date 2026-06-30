@@ -3,6 +3,7 @@ import ws from 'ws'
 import { runOCR } from './_ocr.js'
 import { rotearMensagem } from './_wa-router.js'
 import { handleAgendaWA } from './_agenda-wa.js'
+import { processarMensagemGrupo } from './_chamados-engine.js'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Webhook Z-API — recebe mensagem do WhatsApp
@@ -242,8 +243,17 @@ export default async function handler(req, res) {
     const msgType   = (body.type || '').toLowerCase()
     const fromMe    = body.fromMe === true
 
-    // Ignora mensagens enviadas pelo próprio bot ou de grupos
-    if (fromMe || body.isGroupMsg) return res.status(200).json({ ignored: true })
+    // Mensagens de grupo: redireciona para o motor de chamados (fire-and-forget)
+    // O bot NÃO responde no grupo — apenas lê e processa internamente.
+    if (body.isGroupMsg) {
+      processarMensagemGrupo(body).catch(e =>
+        console.error('[webhook-whatsapp] processarMensagemGrupo:', e?.message)
+      )
+      return res.status(200).json({ ok: true, grupo: true })
+    }
+
+    // Ignora mensagens enviadas pelo próprio bot (individuais)
+    if (fromMe) return res.status(200).json({ ignored: true })
 
     // ── Variantes do número (com/sem 55, com/sem dígito 9) ─────────────────
     const fromNorm = (fromPhone || '').replace(/\D/g, '')

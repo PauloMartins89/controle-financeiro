@@ -70,6 +70,7 @@ import LiderTurnos from './pages/LiderTurnos'
 import LiderApontamentos from './pages/LiderApontamentos'
 import ManutencaoDashboard from './pages/ManutencaoDashboard'
 import ManutencaoOS from './pages/ManutencaoOS'
+import ChamadosWA from './pages/ChamadosWA'
 import ManutencaoPreventiva from './pages/ManutencaoPreventiva'
 import ManutencaoEquipamentos from './pages/ManutencaoEquipamentos'
 import ManutencaoAPIPlanos from './pages/ManutencaoAPIPlanos'
@@ -680,6 +681,12 @@ export default function App() {
                   <Route path="/manutencao/cadastros/tecnicos" element={<ManutencaoEquipamentos />} />
                   <Route path="/manutencao/api-planos" element={<ManutencaoAPIPlanos />} />
                   <Route path="/manutencao/planos-pfd" element={<ManutencaoPlanosPFD />} />
+                  <Route path="/chamados-wa" element={<ChamadosWA />} />
+                  <Route path="/chamados-wa/solicitacoes" element={<ChamadosWA />} />
+                  <Route path="/chamados-wa/triagem" element={<ChamadosWA />} />
+                  <Route path="/chamados-wa/tecnicos" element={<ChamadosWA />} />
+                  <Route path="/chamados-wa/grupos" element={<ChamadosWA />} />
+                  <Route path="/chamados-wa/logs" element={<ChamadosWA />} />
                   <Route path="/agenda-servicos" element={<AgendaServicos />} />
                   <Route path="/agenda-servicos/erp" element={<AgendaServicosERP />} />
                   <Route path="/mapa-maquina" element={<MapaApontamentoMaquina />} />
