@@ -36,10 +36,7 @@ function getSupabase() {
 
 // Envia mensagem de texto via Z-API
 async function zapiSendText(phone, message) {
-  if (!zapiInstanceId || !zapiToken) {
-    console.error('[zapiSendText] ZAPI_INSTANCE_ID ou ZAPI_TOKEN não configurado')
-    return false
-  }
+  if (!zapiInstanceId || !zapiToken || !phone) return null
   try {
     const res = await fetch(
       `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
@@ -55,13 +52,38 @@ async function zapiSendText(phone, message) {
     if (!res.ok) {
       const err = await res.text().catch(() => '')
       console.error(`[zapiSendText] falhou ${res.status} para ${phone}:`, err)
-      return false
+      return null
     }
-    return true
+    const data = await res.json().catch(() => ({}))
+    return data.messageId || data.zaapId || null
   } catch (e) {
     console.error('[zapiSendText] exceção:', e?.message)
-    return false
+    return null
   }
+}
+
+function buildProgressBar(percent) {
+  const filled = Math.round((percent / 100) * 10)
+  return '🟩'.repeat(filled) + '⬜'.repeat(10 - filled) + `  ${percent}%`
+}
+
+async function zapiEditInPlace(phone, originalMsgId, text) {
+  if (!phone || !originalMsgId || !zapiInstanceId || !zapiToken) return false
+  try {
+    const res = await fetch(
+      `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/send-text`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+        },
+        body: JSON.stringify({ phone, message: text, editMessageId: originalMsgId }),
+      }
+    )
+    const bodyObj = await res.json().catch(() => ({}))
+    return res.ok && !bodyObj.error
+  } catch { return false }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -490,9 +512,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ error: 'no_image_data' })
     }
 
-    // Confirma recebimento imediatamente
+    // Confirma recebimento imediatamente e captura ID para editar in-place depois
+    let progressMsgId = null
     if (fromPhone) {
-      await zapiSendText(fromPhone, '⏳ Recebi a foto! Estou analisando o formulário com IA...')
+      progressMsgId = await zapiSendText(fromPhone, `${buildProgressBar(0)}\n⏳ Recebi a foto! Analisando o formulário com IA...`)
     }
 
     // Supabase — precisa antes do OCR para buscar template do workspace
@@ -601,27 +624,24 @@ export default async function handler(req, res) {
       const fmtVal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorFinal)
       // Mensagem enriquecida para RDO Birigui
       if (d.tipo_formulario === 'rdo' || d._template_nome?.includes('Relatório Diário')) {
-        const totalH = d.jornada_total_horas || '—'
-        const locais = d.locais_servico ? `\n📍 *Locais:* ${d.locais_servico}` : ''
-        const hDiur  = d.horas_diurnas   ? `\n☀️ *H Diurnas:* ${d.horas_diurnas}h` : ''
-        const hNot   = d.horas_noturnas  ? `\n🌙 *H Noturnas:* ${d.horas_noturnas}h` : ''
-        const hFds   = (parseFloat(d.h_fds_diurnas)||0) + (parseFloat(d.h_fds_noturnas)||0)
-        const hFer   = (parseFloat(d.h_feriado_diurnas)||0) + (parseFloat(d.h_feriado_noturnas)||0)
+        const horasInfo = [
+          d.horas_diurnas      ? `🌤️ Diurnas: ${d.horas_diurnas}h`           : null,
+          d.horas_noturnas     ? `🌙 Noturnas: ${d.horas_noturnas}h`          : null,
+          d.h_fds_diurnas      ? `🗓️ FDS Diurnas: ${d.h_fds_diurnas}h`       : null,
+          d.h_fds_noturnas     ? `🗓️ FDS Noturnas: ${d.h_fds_noturnas}h`     : null,
+          d.h_feriado_diurnas  ? `🎉 Feriado D: ${d.h_feriado_diurnas}h`     : null,
+          d.h_feriado_noturnas ? `🎉 Feriado N: ${d.h_feriado_noturnas}h`    : null,
+        ].filter(Boolean).join('\n')
         confirmMsg = [
-          `✅ *RDO registrado com sucesso!*`,
-          ``,
-          `📋 *Nº:* ${d.numero_rdo || d.numero_documento || '—'}`,
-          `📅 *Data:* ${d.data || '—'}`,
-          `🏢 *Empresa:* ${d.empresa || '—'}`,
-          `🔧 *Equipamento:* ${d.equipamento || '—'}`,
-          `⏱️ *Jornada:* ${d.jornada_inicio || '—'} → ${d.jornada_fim || '—'} (${totalH}h)`,
-          hDiur, hNot,
-          hFds > 0 ? `\n📅 *H FDS:* ${hFds}h` : '',
-          hFer > 0 ? `\n🎉 *H Feriado:* ${hFer}h` : '',
-          locais,
-          ``,
-          `_Status: Pendente de aprovação_`,
-        ].filter(l => l !== '').join('\n')
+          `${buildProgressBar(100)}`,
+          `✅ *RDO registrado!*`,
+          `📋 Nº: ${d.numero_rdo || d.numero_documento || '—'}`,
+          `🏢 Empresa: ${d.empresa || '—'}`,
+          `📅 Data: ${d.data || '—'}`,
+          `⏰ Jornada: ${d.jornada_inicio || '?'} → ${d.jornada_fim || '?'} (${d.jornada_total_horas || '?'}h)`,
+          horasInfo || null,
+          d.observacoes ? `📝 Obs: ${d.observacoes}` : null,
+        ].filter(Boolean).join('\n')
       } else {
         confirmMsg = [
           `✅ *Lançamento registrado!*`,
@@ -634,7 +654,13 @@ export default async function handler(req, res) {
       }
     }
 
-    await zapiSendText(fromPhone, confirmMsg)
+    // Edita a mensagem de progresso in-place; se falhar, envia nova mensagem
+    if (progressMsgId) {
+      const edited = await zapiEditInPlace(fromPhone, progressMsgId, confirmMsg)
+      if (!edited) await zapiSendText(fromPhone, confirmMsg)
+    } else if (fromPhone) {
+      await zapiSendText(fromPhone, confirmMsg)
+    }
 
     return res.status(200).json({ ok: true, descricao, valor: valorFinal })
   } catch (e) {
