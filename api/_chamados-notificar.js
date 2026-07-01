@@ -92,22 +92,24 @@ export async function notificarTecnico(supabase, sat, tecnico, grupoNome) {
   }
 
   // Registra na tabela de notificações
-  await supabase.from('notificacoes_tecnicos').insert({
+  const { error: notifErr } = await supabase.from('notificacoes_tecnicos').insert({
     solicitacao_id:   sat.id,
     tecnico_id:       tecnico.id,
     whatsapp_destino: tecnico.whatsapp,
     mensagem_enviada: mensagem,
     status_envio:     statusEnvio,
     resposta_api:     respostaApi,
-  }).catch(e => console.error('[_chamados-notificar] insert notif:', e?.message))
+  })
+  if (notifErr) console.error('[_chamados-notificar] insert notif:', notifErr.message)
 
   // Atualiza solicitação
   if (statusEnvio === 'enviado') {
-    await supabase.from('solicitacoes_atendimento').update({
+    const { error: updErr } = await supabase.from('solicitacoes_atendimento').update({
       enviado_tecnico:    true,
       data_envio_tecnico: new Date().toISOString(),
       status:             'enviada_tecnico',
-    }).eq('id', sat.id).catch(e => console.error('[_chamados-notificar] update sat:', e?.message))
+    }).eq('id', sat.id)
+    if (updErr) console.error('[_chamados-notificar] update sat:', updErr.message)
   }
 
   return { ok: statusEnvio === 'enviado', mensagem, respostaApi }
