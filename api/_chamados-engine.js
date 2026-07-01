@@ -192,13 +192,16 @@ export async function processarMensagemGrupo(body) {
 
   // ── Busca SATs já abertos no período (dedup por equipamento) ─────────────────
   const trintaMin = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-  const { data: satsRecentes } = await supabase
+  const { data: satsRecentesDb } = await supabase
     .from('solicitacoes_atendimento')
     .select('id, codigo, equipamento')
     .eq('grupo_id', grupo.id)
     .eq('solicitante_whatsapp', remetenteWa)
     .gte('created_at', trintaMin)
     .not('status', 'in', '(descartada,erro_classificacao)')
+
+  // Lista mutável para rastrear SATs criados no loop (dedup entre itens do mesmo período)
+  const satsList = Array.isArray(satsRecentesDb) ? [...satsRecentesDb] : []
 
   // ── Cria um SAT para cada chamado distinto identificado ──────────────────────
   let criouAlgum = false
@@ -209,12 +212,12 @@ export async function processarMensagemGrupo(body) {
     const virouChamado = item.confianca >= CONF_CHAMADO
     const novoEquip    = (item.equipamento || item.veiculo_ou_maquina || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
-    // Dedup: mesmo equipamento já tem SAT aberto no período?
-    const satDuplicado = (satsRecentes || []).find(s => {
+    // Dedup: mesmo equipamento (match exato normalizado) já tem SAT no período?
+    // Usa apenas igualdade estrita para evitar falsos positivos entre códigos similares
+    // (ex: f-tpx0221 vs f-tpx0222 são equipamentos DIFERENTES e devem gerar SATs distintos)
+    const satDuplicado = satsList.find(s => {
       const existeEquip = (s.equipamento || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-      if (novoEquip && existeEquip) {
-        return novoEquip === existeEquip || novoEquip.includes(existeEquip) || existeEquip.includes(novoEquip)
-      }
+      if (novoEquip && existeEquip) return novoEquip === existeEquip
       if (!novoEquip && !existeEquip) return true
       return false
     })
@@ -265,8 +268,8 @@ export async function processarMensagemGrupo(body) {
     }
 
     criouAlgum = true
-    // Adiciona SAT criado à lista de recentes para dedup dos próximos itens do loop
-    satsRecentes.push({ id: sat.id, codigo: sat.codigo, equipamento: sat.equipamento })
+    // Registra no satsList para dedup dos próximos itens do loop
+    satsList.push({ id: sat.id, codigo: sat.codigo, equipamento: sat.equipamento })
 
     if (virouChamado && grupo.tecnicos) {
       await notificarTecnico(supabase, sat, grupo.tecnicos, grupo.nome_grupo)
