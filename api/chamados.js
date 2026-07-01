@@ -79,7 +79,7 @@ export default async function handler(req, res) {
 
     // ── PUT /api/chamados?id=xxx  – atualiza campos ──────────────────────────
     if (req.method === 'PUT' && id) {
-      const allowed = ['status','prioridade','categoria','resumo_ia','tecnico_id']
+      const allowed = ['status','prioridade','categoria','resumo_ia','tecnico_id','equipamento']
       const update  = {}
       for (const k of allowed) {
         if (req.body[k] !== undefined) update[k] = req.body[k]
