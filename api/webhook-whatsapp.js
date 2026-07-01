@@ -394,8 +394,8 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── Líder de refeição: reenviar link do formulário ─────────────────────
-    if (fromPhone) {
+    // ── Líder de refeição: reenviar link do formulário (somente texto, nunca imagem) ─
+    if (fromPhone && msgType !== 'image') {
       const supabaseRef = getSupabase()
       if (supabaseRef) {
         let equipe = null
