@@ -8,7 +8,8 @@ import {
   ArrowPathIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon,
   ChatBubbleLeftRightIcon, UserGroupIcon, UserIcon, ChartBarIcon,
   BellAlertIcon, CpuChipIcon, SignalIcon, PaperAirplaneIcon,
-  ChevronRightIcon, EyeIcon, ArrowLeftIcon,
+  ChevronRightIcon, EyeIcon, ArrowLeftIcon, TableCellsIcon,
+  ArrowDownTrayIcon, FunnelIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -125,6 +126,7 @@ const NAV_ITEMS = [
   { key: 'dashboard',    icon: ChartBarIcon,            label: 'Dashboard',    path: '/chamados-wa' },
   { key: 'solicitacoes', icon: ClipboardWAIcon,         label: 'Solicitações', path: '/chamados-wa/solicitacoes' },
   { key: 'triagem',      icon: ExclamationTriangleIcon, label: 'Triagem',      path: '/chamados-wa/triagem', badgeKey: 'emTriagem' },
+  { key: 'relatorio',    icon: TableCellsIcon,          label: 'Relatório',    path: '/chamados-wa/relatorio' },
   { key: 'tecnicos',     icon: UserIcon,                label: 'Técnicos',     path: '/chamados-wa/tecnicos' },
   { key: 'grupos',       icon: UserGroupIcon,           label: 'Grupos WA',    path: '/chamados-wa/grupos' },
   { key: 'logs',         icon: CpuChipIcon,             label: 'Logs IA',      path: '/chamados-wa/logs' },
@@ -847,6 +849,259 @@ function SecaoLogs({ workspaceId }) {
   )
 }
 
+// ── SLA helpers ──────────────────────────────────────────────────────────────
+function calcSLA(abertura, fechamento) {
+  const fim   = fechamento ? new Date(fechamento) : new Date()
+  const ms    = fim - new Date(abertura)
+  const mins  = Math.floor(ms / 60000)
+  const horas = Math.floor(mins / 60)
+  const dias  = Math.floor(horas / 24)
+  if (dias > 0)       return { texto: `${dias}d ${horas % 24}h`, horas, aberto: !fechamento }
+  if (horas > 0)      return { texto: `${horas}h ${mins % 60}m`, horas, aberto: !fechamento }
+  return { texto: `${mins}m`, horas: mins / 60, aberto: !fechamento }
+}
+function slaCor(horas, aberto) {
+  if (aberto) return horas > 24 ? '#ef4444' : horas > 4 ? '#f59e0b' : '#6366f1'
+  return horas <= 4 ? '#10b981' : horas <= 24 ? '#f59e0b' : '#ef4444'
+}
+function slaBadge(horas, aberto, texto) {
+  const cor = slaCor(horas, aberto)
+  const bg  = cor + '18'
+  const label = aberto ? `⏳ ${texto}` : `✓ ${texto}`
+  return <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, color: cor, background: bg, whiteSpace: 'nowrap' }}>{label}</span>
+}
+
+// ── Exportação CSV ────────────────────────────────────────────────────────────
+function exportCSV(rows) {
+  const cols = [
+    ['Código',       r => r.codigo],
+    ['Status',       r => STATUS_CFG[r.status]?.label || r.status],
+    ['Prioridade',   r => r.prioridade],
+    ['Categoria',    r => r.categoria || ''],
+    ['Grupo',        r => r.grupo?.nome_grupo || ''],
+    ['Equipamento',  r => r.equipamento || ''],
+    ['Solicitante',  r => r.solicitante_nome || ''],
+    ['Técnico',      r => r.tecnico?.nome || ''],
+    ['Resumo',       r => (r.resumo_ia || r.mensagem_original || '').replace(/["\n]/g, ' ')],
+    ['Abertura',     r => r.created_at ? new Date(r.created_at).toLocaleString('pt-BR') : ''],
+    ['Fechamento',   r => r.data_finalizacao ? new Date(r.data_finalizacao).toLocaleString('pt-BR') : ''],
+    ['Tempo (h)',    r => r.data_finalizacao ? calcSLA(r.created_at, r.data_finalizacao).horas.toFixed(1) : ''],
+    ['Resolução',    r => (r.resolucao_descricao || '').replace(/["\n]/g, ' ')],
+  ]
+  const header = cols.map(([h]) => `"${h}"`).join(';')
+  const body   = rows.map(r => cols.map(([, fn]) => `"${fn(r)}"`).join(';')).join('\n')
+  const blob   = new Blob([`\uFEFF${header}\n${body}`], { type: 'text/csv;charset=utf-8;' })
+  const url    = URL.createObjectURL(blob)
+  const a      = document.createElement('a')
+  a.href = url; a.download = `chamados-${new Date().toISOString().slice(0,10)}.csv`; a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ── Seção Relatório ───────────────────────────────────────────────────────────
+function SecaoRelatorio({ workspaceId }) {
+  const [rows, setRows]       = useState([])
+  const [loading, setLoading] = useState(true)
+  const [tecnicos, setTecnicos] = useState([])
+  const [grupos, setGrupos]   = useState([])
+  const [sort, setSort]       = useState({ col: 'created_at', dir: 'desc' })
+  const [filtros, setFiltros] = useState({
+    busca: '', status: '', tecnico_id: '', grupo_id: '', prioridade: '',
+    de: '', ate: '',
+  })
+
+  async function load() {
+    setLoading(true)
+    const [{ data: sats }, { data: tecs }, { data: grps }] = await Promise.all([
+      supabase
+        .from('solicitacoes_atendimento')
+        .select('*, grupo:whatsapp_grupos(id,nome_grupo), tecnico:tecnicos(id,nome)')
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: false })
+        .limit(2000),
+      supabase.from('tecnicos').select('id,nome').eq('workspace_id', workspaceId).eq('ativo', true),
+      supabase.from('whatsapp_grupos').select('id,nome_grupo').eq('workspace_id', workspaceId).eq('ativo', true),
+    ])
+    setRows(sats || []); setTecnicos(tecs || []); setGrupos(grps || [])
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [])
+
+  const setF = (k, v) => setFiltros(p => ({ ...p, [k]: v }))
+
+  // Aplicar filtros
+  const filtrados = rows.filter(r => {
+    if (filtros.status     && r.status      !== filtros.status)     return false
+    if (filtros.tecnico_id && r.tecnico_id  !== filtros.tecnico_id) return false
+    if (filtros.grupo_id   && r.grupo_id    !== filtros.grupo_id)   return false
+    if (filtros.prioridade && r.prioridade  !== filtros.prioridade) return false
+    if (filtros.de  && new Date(r.created_at) < new Date(filtros.de))  return false
+    if (filtros.ate && new Date(r.created_at) > new Date(filtros.ate + 'T23:59:59')) return false
+    if (filtros.busca) {
+      const b = filtros.busca.toLowerCase()
+      return r.codigo?.toLowerCase().includes(b)
+          || r.solicitante_nome?.toLowerCase().includes(b)
+          || r.resumo_ia?.toLowerCase().includes(b)
+          || r.equipamento?.toLowerCase().includes(b)
+          || r.grupo?.nome_grupo?.toLowerCase().includes(b)
+    }
+    return true
+  })
+
+  // Ordenar
+  const ordenados = [...filtrados].sort((a, b) => {
+    const mult = sort.dir === 'asc' ? 1 : -1
+    const va   = a[sort.col] ?? ''
+    const vb   = b[sort.col] ?? ''
+    return va < vb ? -mult : va > vb ? mult : 0
+  })
+
+  // KPIs derivados
+  const concluidas  = filtrados.filter(r => r.status === 'concluida')
+  const comTempo    = concluidas.filter(r => r.data_finalizacao)
+  const tempos      = comTempo.map(r => calcSLA(r.created_at, r.data_finalizacao).horas)
+  const mediaHoras  = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : 0
+  const dentroPrazo = comTempo.filter(r => calcSLA(r.created_at, r.data_finalizacao).horas <= 4).length
+  const emAberto    = filtrados.filter(r => !['concluida','descartada'].includes(r.status))
+  const vencidos    = emAberto.filter(r => calcSLA(r.created_at, null).horas > 24)
+
+  const pctResolvidos = filtrados.length ? Math.round(concluidas.length / filtrados.length * 100) : 0
+  const pctSLA        = comTempo.length  ? Math.round(dentroPrazo / comTempo.length * 100) : 0
+
+  function thSort(col) {
+    return () => setSort(s => ({ col, dir: s.col === col && s.dir === 'desc' ? 'asc' : 'desc' }))
+  }
+  function thArrow(col) {
+    if (sort.col !== col) return ''
+    return sort.dir === 'asc' ? ' ▲' : ' ▼'
+  }
+
+  const thStyle = (col) => ({
+    padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700,
+    color: sort.col === col ? '#6366f1' : 'var(--text-secondary)',
+    textTransform: 'uppercase', letterSpacing: .4, borderBottom: '1px solid var(--border)',
+    whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
+    background: 'var(--bg-secondary)',
+  })
+  const tdStyle = { padding: '8px 10px', fontSize: 12, borderBottom: '1px solid var(--border)', verticalAlign: 'middle' }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', gap: 0 }}>
+
+      {/* KPI summary bar */}
+      <div style={{ display: 'flex', gap: 8, padding: '10px 0 12px', flexShrink: 0, flexWrap: 'wrap' }}>
+        {[
+          { label: 'Total no período', value: filtrados.length,            color: '#6366f1' },
+          { label: '% Resolvidos',     value: `${pctResolvidos}%`,         color: '#10b981' },
+          { label: 'Tempo médio',      value: mediaHoras > 0 ? (mediaHoras < 1 ? `${Math.round(mediaHoras*60)}m` : `${mediaHoras.toFixed(1)}h`) : '—', color: '#8b5cf6' },
+          { label: 'Dentro do SLA',   value: comTempo.length ? `${pctSLA}%` : '—', color: '#0ea5e9', sub: '< 4h' },
+          { label: 'Em aberto',        value: emAberto.length,             color: '#f59e0b' },
+          { label: '> 24h em aberto',  value: vencidos.length,             color: vencidos.length > 0 ? '#ef4444' : '#94a3b8' },
+        ].map(k => (
+          <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 10, padding: '9px 14px', border: `1px solid ${k.color}22`, borderTop: `3px solid ${k.color}`, flexShrink: 0 }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 2 }}>{k.label}{k.sub ? <span style={{ color: k.color, marginLeft: 4 }}>{k.sub}</span> : null}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{loading ? '…' : k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px', alignItems: 'center' }}>
+        <FunnelIcon style={{ width: 13, height: 13, color: 'var(--text-secondary)', flexShrink: 0 }} />
+        <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 120 }}>
+          <MagnifyingGlassIcon style={{ width: 11, height: 11, position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+          <input style={{ ...inp, paddingLeft: 24, fontSize: 12, width: '100%' }} placeholder="Buscar…" value={filtros.busca} onChange={e => setF('busca', e.target.value)} />
+        </div>
+        <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.status} onChange={e => setF('status', e.target.value)}>
+          <option value="">Todos status</option>
+          {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.tecnico_id} onChange={e => setF('tecnico_id', e.target.value)}>
+          <option value="">Todos técnicos</option>
+          {tecnicos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+        </select>
+        <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.grupo_id} onChange={e => setF('grupo_id', e.target.value)}>
+          <option value="">Todos grupos</option>
+          {grupos.map(g => <option key={g.id} value={g.id}>{g.nome_grupo}</option>)}
+        </select>
+        <select style={{ ...inp, fontSize: 12, flex: '0 0 100px' }} value={filtros.prioridade} onChange={e => setF('prioridade', e.target.value)}>
+          <option value="">Prioridade</option>
+          {Object.entries(PRIOR_CFG).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+        </select>
+        <input type="date" style={{ ...inp, fontSize: 12, flex: '0 0 126px' }} value={filtros.de}  onChange={e => setF('de',  e.target.value)} title="De" />
+        <input type="date" style={{ ...inp, fontSize: 12, flex: '0 0 126px' }} value={filtros.ate} onChange={e => setF('ate', e.target.value)} title="Até" />
+        <button onClick={() => setFiltros({ busca:'', status:'', tecnico_id:'', grupo_id:'', prioridade:'', de:'', ate:'' })}
+          style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>Limpar</button>
+        <button onClick={() => exportCSV(ordenados)}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: 'none', background: '#10b981', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+          <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> CSV
+        </button>
+        <button onClick={load} style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', flexShrink: 0 }}>
+          <ArrowPathIcon style={{ width: 13, height: 13 }} />
+        </button>
+      </div>
+
+      {/* Contador */}
+      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 6, flexShrink: 0 }}>
+        {loading ? 'Carregando…' : `${ordenados.length} registro(s)`}
+      </div>
+
+      {/* Tabela */}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 900 }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+            <tr>
+              <th style={thStyle('codigo')}      onClick={thSort('codigo')}      >Código{thArrow('codigo')}</th>
+              <th style={thStyle('status')}      onClick={thSort('status')}      >Status{thArrow('status')}</th>
+              <th style={thStyle('prioridade')}  onClick={thSort('prioridade')}  >Prior.{thArrow('prioridade')}</th>
+              <th style={thStyle('grupo_id')}    onClick={thSort('grupo_id')}    >Grupo{thArrow('grupo_id')}</th>
+              <th style={thStyle('equipamento')} onClick={thSort('equipamento')} >Equip.{thArrow('equipamento')}</th>
+              <th style={thStyle('solicitante_nome')} onClick={thSort('solicitante_nome')}>Solicitante{thArrow('solicitante_nome')}</th>
+              <th style={thStyle('tecnico_id')}  onClick={thSort('tecnico_id')}  >Técnico{thArrow('tecnico_id')}</th>
+              <th style={thStyle('resumo_ia')}                                   >Resumo</th>
+              <th style={thStyle('created_at')}  onClick={thSort('created_at')}  >Abertura{thArrow('created_at')}</th>
+              <th style={thStyle('data_finalizacao')} onClick={thSort('data_finalizacao')}>Fechamento{thArrow('data_finalizacao')}</th>
+              <th style={{ ...thStyle('_sla'), textAlign: 'center' }}            >SLA</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Carregando…</td></tr>
+            )}
+            {!loading && ordenados.length === 0 && (
+              <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum chamado no período.</td></tr>
+            )}
+            {ordenados.map((r, i) => {
+              const sla  = calcSLA(r.created_at, r.data_finalizacao)
+              const cor  = slaCor(sla.horas, sla.aberto)
+              const sc   = STATUS_CFG[r.status] || { label: r.status, color: '#94a3b8', bg: 'rgba(148,163,184,.12)' }
+              const pc   = PRIOR_CFG[r.prioridade]
+              return (
+                <tr key={r.id} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)', transition: 'background .1s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,.05)'}
+                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)'}>
+                  <td style={tdStyle}><span style={{ fontWeight: 800, color: '#6366f1', fontSize: 11 }}>{r.codigo}</span></td>
+                  <td style={tdStyle}><span style={{ padding: '2px 7px', borderRadius: 12, fontSize: 10, fontWeight: 700, background: sc.bg, color: sc.color, whiteSpace: 'nowrap' }}>{sc.label}</span></td>
+                  <td style={tdStyle}>{pc ? <span style={{ fontSize: 11, fontWeight: 700, color: pc.color }}>{pc.emoji}</span> : '—'}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.grupo?.nome_grupo || '—'}</td>
+                  <td style={{ ...tdStyle, color: '#8b5cf6', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.equipamento || <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>—</span>}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.solicitante_nome || '—'}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.tecnico?.nome || <span style={{ color: '#ef4444', fontSize: 11 }}>⚠ N/A</span>}</td>
+                  <td style={{ ...tdStyle, color: 'var(--text-secondary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.resumo_ia || r.mensagem_original}>
+                    {r.resumo_ia || r.mensagem_original || '—'}
+                  </td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{fmtDT(r.created_at)}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{r.data_finalizacao ? fmtDT(r.data_finalizacao) : <span style={{ color: '#f59e0b' }}>Em aberto</span>}</td>
+                  <td style={{ ...tdStyle, textAlign: 'center' }}>{slaBadge(sla.horas, sla.aberto, sla.texto)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ERP Shell — componente raiz
 // ─────────────────────────────────────────────────────────────────────────────
@@ -864,6 +1119,7 @@ export default function ChamadosWA() {
   else if (path.includes('/grupos'))       secao = 'grupos'
   else if (path.includes('/triagem'))      secao = 'triagem'
   else if (path.includes('/logs'))         secao = 'logs'
+  else if (path.includes('/relatorio'))    secao = 'relatorio'
   else if (path.includes('/solicitacoes')) secao = 'solicitacoes'
 
   const loadKpis = useCallback(async () => {
@@ -911,10 +1167,11 @@ export default function ChamadosWA() {
           </div>
 
           {/* Section */}
-          <div style={{ flex: 1, overflow: ['solicitacoes','triagem','tecnicos','grupos','logs'].includes(secao) ? 'hidden' : 'auto', padding: secao === 'solicitacoes' ? 0 : '14px 18px' }}>
+          <div style={{ flex: 1, overflow: ['solicitacoes','triagem','tecnicos','grupos','logs','relatorio'].includes(secao) ? 'hidden' : 'auto', padding: ['solicitacoes','relatorio'].includes(secao) ? 0 : '14px 18px' }}>
             {secao === 'dashboard'    && <SecaoDashboard workspaceId={workspaceId} kpis={kpis} navigate={navigate} />}
             {secao === 'solicitacoes' && <SecaoSolicitacoes workspaceId={workspaceId} />}
             {secao === 'triagem'      && <SecaoTriagem workspaceId={workspaceId} onKpisInvalidate={loadKpis} />}
+            {secao === 'relatorio'    && <div style={{ padding: '12px 18px 0', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}><SecaoRelatorio workspaceId={workspaceId} /></div>}
             {secao === 'tecnicos'     && <SecaoTecnicos workspaceId={workspaceId} ownerId={ownerId} />}
             {secao === 'grupos'       && <SecaoGrupos workspaceId={workspaceId} ownerId={ownerId} />}
             {secao === 'logs'         && <SecaoLogs workspaceId={workspaceId} />}
