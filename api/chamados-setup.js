@@ -192,9 +192,11 @@ export default async function handler(req, res) {
     if (!grupo?.id) return res.status(400).json({ error: 'Grupo não encontrado' })
 
     // Chama o engine simulando um webhook reprocessado
+    // Nota: zapi_message_id tem constraint UNIQUE na tabela; nunca reutilizamos o ID original
+    // para não causar conflito 23505. Geramos sempre um ID temporário de reprocessamento.
     const { processarMensagemGrupo } = await import('./_chamados-engine.js')
     await processarMensagemGrupo({
-      messageId:        msg.zapi_message_id || `reprocess-${Date.now()}`,
+      messageId:        `reprocess-${mensagem_id.slice(0, 8)}-${Date.now()}`,
       phone:            grupo.zapi_group_id,
       participantPhone: msg.remetente_whatsapp,
       participantName:  msg.remetente_nome,
