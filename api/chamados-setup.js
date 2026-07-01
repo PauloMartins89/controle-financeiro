@@ -128,6 +128,17 @@ export default async function handler(req, res) {
       .select('equipamento, data_finalizacao, resolucao_descricao')
       .limit(1)
 
+    // Mensagens recentes (com filtro opcional por remetente)
+    const remetente = req.query.remetente || null
+    let msgsQuery = supabase
+      .from('mensagens_whatsapp_grupos')
+      .select('id, remetente_nome, remetente_whatsapp, mensagem, tipo_mensagem, data_mensagem, grupo:whatsapp_grupos(nome_grupo)')
+      .order('data_mensagem', { ascending: false })
+      .limit(20)
+    if (workspace_id) msgsQuery = msgsQuery.eq('workspace_id', workspace_id)
+    if (remetente)    msgsQuery = msgsQuery.ilike('remetente_nome', `%${remetente}%`)
+    const { data: msgs } = await msgsQuery
+
     return res.json({
       ok: true,
       colunas_novas_ok: !colErr,
@@ -150,6 +161,14 @@ export default async function handler(req, res) {
         solicitante: s.solicitante_nome,
         motivo:     s.motivo_classificacao?.slice(0, 80),
         quando:     s.created_at,
+      })),
+      mensagens_recentes: (msgs || []).map(m => ({
+        grupo:      m.grupo?.nome_grupo || '—',
+        remetente:  m.remetente_nome,
+        whatsapp:   m.remetente_whatsapp,
+        mensagem:   m.mensagem,
+        tipo:       m.tipo_mensagem,
+        quando:     m.data_mensagem,
       })),
     })
   }
