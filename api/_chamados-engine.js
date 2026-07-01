@@ -86,10 +86,17 @@ export async function processarMensagemGrupo(body) {
   if (!grupo) {
     // Grupo não cadastrado — salva JID no log para facilitar cadastro
     console.log(`[_chamados-engine] Grupo não monitorado: ${groupJid}`)
+    // Tenta encontrar workspace_id mesmo sem grupo ativo (ex: grupo inativo ou recém-cadastrado)
+    let discoveryWsId = null
+    try {
+      const { data: grupoInativo } = await supabase
+        .from('whatsapp_grupos').select('workspace_id').eq('zapi_group_id', groupJid).maybeSingle()
+      discoveryWsId = grupoInativo?.workspace_id || null
+    } catch (_e) {}
     // Salva como log de descoberta para exibir no frontend
     try {
       await supabase.from('logs_classificacao_ia').insert({
-        workspace_id: null,
+        workspace_id: discoveryWsId,
         grupo_id:     null,
         confianca:    0,
         virou_chamado: false,
