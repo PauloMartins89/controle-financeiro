@@ -23,7 +23,7 @@ Retorne SOMENTE um JSON válido, sem texto extra:
   "motivo": "motivo da classificação em 1 frase"
 }
 
-Categorias: telemetria, rastreador, aplicativo, sistema, instalacao, manutencao, sensor, equipamento, comunicacao, outros
+Categorias: telemetria, rastreador, aplicativo, sistema, instalacao, manutencao, sensor, equipamento, comunicacao, mobilizacao, desmobilizacao, outros
 
 Prioridades:
 - critica: sistema totalmente parado, impossível operar, perda de dados críticos
@@ -32,12 +32,16 @@ Prioridades:
 - baixa: dúvida, ajuste de configuração, melhoria
 
 ━━━ É CHAMADO (eh_chamado: true) ━━━
-Apenas quando há um PROBLEMA TÉCNICO ATIVO e ATUAL em equipamento ou sistema:
+Quando há um PROBLEMA TÉCNICO ATIVO, ATUAL ou uma INTERVENÇÃO TÉCNICA DE CAMPO necessária:
 ✓ Falha, erro ou mau funcionamento em rastreador, sensor, telemetria, aplicativo de campo
 ✓ Equipamento não liga, não comunica, não lê, trava, apresenta erro operacional
 ✓ Solicitação explícita de visita técnica para resolver problema específico e atual
 ✓ Sensor com defeito, perda de sinal, dados incorretos, timeout de comunicação em campo
 ✓ Descrição clara no formato: equipamento X apresenta problema Y, necessita atendimento
+✓ Solicitação de MOBILIZAÇÃO: instalação de rastreador/equipamento em máquina ou veículo
+✓ Solicitação de DESMOBILIZAÇÃO: retirada de rastreador/equipamento de máquina ou veículo
+✓ Solicitação de MANUTENÇÃO CORRETIVA ou PREVENTIVA em equipamento de campo (troca de peça, conversor, cabo, suporte, sensor)
+✓ Visita técnica agendada para campo com equipamento e local especificados
 
 ━━━ NÃO É CHAMADO (eh_chamado: false) ━━━
 ✗ Saudações, confirmações, agradecimentos, respostas curtas ("bom dia", "ok", "entendido", "certo", "entrei")
@@ -52,7 +56,7 @@ Apenas quando há um PROBLEMA TÉCNICO ATIVO e ATUAL em equipamento ou sistema:
 ✗ Mensagens que descrevem o que SERÁ feito (previsão, planejamento), não problema atual
 ✗ Discussões técnicas genéricas sem equipamento específico com falha ativa
 
-REGRA PRINCIPAL: Para ser chamado, a mensagem DEVE descrever um problema técnico ATIVO em equipamento ou sistema ESPECÍFICO que requer intervenção técnica AGORA.
+REGRA PRINCIPAL: Para ser chamado, a mensagem DEVE descrever um problema técnico ATIVO, uma intervenção de campo necessária (mobilização/desmobilização/manutenção), ou uma solicitação de atendimento técnico com equipamento e local identificados.
 Em caso de dúvida, prefira eh_chamado: false com confiança alta (≥ 0.90).
 Falso positivo (abrir SAT indevido) é mais prejudicial que falso negativo.
 Confiança entre 0.00 e 1.00.`
