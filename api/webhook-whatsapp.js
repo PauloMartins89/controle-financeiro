@@ -453,6 +453,7 @@ export default async function handler(req, res) {
 
     // Só processa se for imagem
     if (msgType !== 'image') {
+      console.log(`[webhook-wa] tipo ignorado: ${msgType} | phone: ${fromPhone}`)
       if (fromPhone) {
         await zapiSendText(
           fromPhone,
@@ -462,8 +463,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ ignored: true, reason: 'not_image' })
     }
 
-    // Obtém base64 da imagem
+    // Obtém base64 ou URL da imagem (Z-API pode enviar base64 ou imageUrl/url)
     const imageBase64 = body.image?.base64 || body.imageBase64
+      || body.image?.imageUrl || body.image?.url || body.image?.mediaUrl
+      || body.imageUrl || body.mediaUrl
+    console.log(`[webhook-wa] image fields: base64=${!!(body.image?.base64)}, imageUrl=${body.image?.imageUrl || body.image?.url || '—'}`)
     if (!imageBase64) {
       if (fromPhone) await zapiSendText(fromPhone, '⚠️ Não consegui ler a imagem. Tente enviar novamente.')
       return res.status(200).json({ error: 'no_image_data' })
