@@ -134,12 +134,16 @@ export async function processarMensagemGrupo(body) {
   }
 
   // ── Agrupa mensagens recentes do mesmo remetente (janela de contexto) ───────
+  // Filtra apenas processada=false para não misturar mensagens de SATs anteriores já resolvidos.
+  // Mensagens classificadas como "não chamado" ficam processada=false e acumulam contexto.
+  // Quando um SAT é criado, TODAS as mensagens do contexto são marcadas como processada=true.
   const janelaStart = new Date(Date.now() - JANELA_MIN * 60 * 1000).toISOString()
   const { data: msgRecentes } = await supabase
     .from('mensagens_whatsapp_grupos')
-    .select('mensagem, data_mensagem')
+    .select('id, mensagem, data_mensagem')
     .eq('grupo_id', grupo.id)
     .eq('remetente_whatsapp', remetenteWa)
+    .eq('processada', false)
     .gte('data_mensagem', janelaStart)
     .order('data_mensagem', { ascending: true })
 
@@ -183,10 +187,9 @@ export async function processarMensagemGrupo(body) {
   if (!ehChamado || confianca < CONF_TRIAGEM) {
     // Verifica se é mensagem de fechamento (ex: "trator X consertado")
     await tentarFecharChamado(supabase, msgText, remetenteNome, grupo)
-    await supabase
-      .from('mensagens_whatsapp_grupos')
-      .update({ processada: true })
-      .eq('id', msgSalva.id)
+    // Não marca como processada: mensagens ficam disponíveis para acumular contexto
+    // com mensagens seguintes do mesmo remetente (janela de 5 min).
+    // São excluídas automaticamente quando o intervalo JANELA_MIN expira.
     return
   }
 
@@ -282,11 +285,13 @@ export async function processarMensagemGrupo(body) {
     await notificarTecnico(supabase, sat, grupo.tecnicos, grupo.nome_grupo)
   }
 
-  // Marca mensagem como processada
-  await supabase
-    .from('mensagens_whatsapp_grupos')
-    .update({ processada: true })
-    .eq('id', msgSalva.id)
+  // Marca TODAS as mensagens do contexto como processadas para não poluir
+  // a janela de contexto de solicitações futuras do mesmo remetente.
+  const ctxIds = (msgRecentes || []).map(m => m.id).filter(Boolean)
+  if (ctxIds.length > 0) {
+    await supabase.from('mensagens_whatsapp_grupos').update({ processada: true }).in('id', ctxIds)
+  }
+  await supabase.from('mensagens_whatsapp_grupos').update({ processada: true }).eq('id', msgSalva.id)
 }
 
 /**
