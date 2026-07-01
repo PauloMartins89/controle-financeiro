@@ -281,11 +281,13 @@ export default async function handler(req, res) {
     const isAudioMsg   = !!(body.audio || body.ptt)
     const isTextMsg    = !!(body.text || body.body) && !isImageMsg && !isAudioMsg
     const msgType      = (body.type || '').toLowerCase()
-    console.log(`[webhook-wa] RECV phone=${fromPhone} type=${body.type} isImage=${isImageMsg} isAudio=${isAudioMsg} isText=${isTextMsg} isGroup=${body.isGroupMsg} fromMe=${fromMe}`)
+    // Detecta mensagem de grupo por isGroupMsg, isGroup, ou JID terminando em @g.us
+    const isGroupMessage = !!(body.isGroupMsg || body.isGroup || (fromPhone || '').endsWith('@g.us'))
+    console.log(`[webhook-wa] RECV phone=${fromPhone} type=${body.type} isImage=${isImageMsg} isAudio=${isAudioMsg} isText=${isTextMsg} isGroup=${isGroupMessage}(raw:${body.isGroupMsg}/${body.isGroup}) fromMe=${fromMe}`)
 
     // Mensagens de grupo: redireciona para o motor de chamados
     // Vercel encerra o processo após a resposta, então usamos await antes do retorno.
-    if (body.isGroupMsg) {
+    if (isGroupMessage) {
       await processarMensagemGrupo(body).catch(e =>
         console.error('[webhook-whatsapp] processarMensagemGrupo:', e?.message)
       )
