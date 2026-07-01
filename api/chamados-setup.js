@@ -195,20 +195,84 @@ export default async function handler(req, res) {
     // Nota: zapi_message_id tem constraint UNIQUE na tabela; nunca reutilizamos o ID original
     // para não causar conflito 23505. Geramos sempre um ID temporário de reprocessamento.
     const { processarMensagemGrupo } = await import('./_chamados-engine.js')
-    await processarMensagemGrupo({
-      messageId:        `reprocess-${mensagem_id.slice(0, 8)}-${Date.now()}`,
-      phone:            grupo.zapi_group_id,
-      participantPhone: msg.remetente_whatsapp,
-      participantName:  msg.remetente_nome,
-      text:             { message: msg.mensagem },
-      type:             msg.tipo_mensagem || 'text',
-      moments:          msg.data_mensagem ? Math.floor(new Date(msg.data_mensagem).getTime() / 1000) : undefined,
-      isGroup:          true,
-      _reprocessado:    true,
-    })
+    let engineError = null
+    try {
+      await processarMensagemGrupo({
+        messageId:        `reprocess-${mensagem_id.slice(0, 8)}-${Date.now()}`,
+        phone:            grupo.zapi_group_id,
+        participantPhone: msg.remetente_whatsapp,
+        participantName:  msg.remetente_nome,
+        text:             { message: msg.mensagem },
+        type:             msg.tipo_mensagem || 'text',
+        moments:          msg.data_mensagem ? Math.floor(new Date(msg.data_mensagem).getTime() / 1000) : undefined,
+        isGroup:          true,
+        _reprocessado:    true,
+      })
+    } catch (e) {
+      engineError = e?.message || String(e)
+    }
 
-    return res.json({ ok: true, mensagem_id, grupo: grupo.nome_grupo, remetente: msg.remetente_nome })
+    return res.json({ ok: !engineError, mensagem_id, grupo: grupo.nome_grupo, remetente: msg.remetente_nome, engineError })
+  }
+
+  // ── Criar SAT manual (para retroativos) ─────────────────────────────────────
+  if (action === 'criar-sat-manual' && req.method === 'POST') {
+    const { mensagem_id } = req.body || {}
+    if (!mensagem_id) return res.status(400).json({ error: 'mensagem_id obrigatório' })
+
+    const { data: msg } = await supabase
+      .from('mensagens_whatsapp_grupos')
+      .select('*, grupo:whatsapp_grupos(*, tecnicos!tecnico_id(*))')
+      .eq('id', mensagem_id)
+      .single()
+
+    if (!msg) return res.status(404).json({ error: 'Mensagem não encontrada' })
+    const grupo = msg.grupo
+    if (!grupo?.id) return res.status(400).json({ error: 'Grupo não encontrado' })
+
+    // Verifica se já existe SAT criado manualmente para o mesmo remetente/mensagem (últimas 2h)
+    const duasHoras = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    const { data: existente } = await supabase
+      .from('solicitacoes_atendimento')
+      .select('id, codigo')
+      .eq('grupo_id', grupo.id)
+      .eq('solicitante_whatsapp', msg.remetente_whatsapp)
+      .ilike('mensagem_original', `%${msg.mensagem.slice(0, 50).replace(/%/g, '\\%')}%`)
+      .gte('created_at', duasHoras)
+      .maybeSingle()
+    if (existente) return res.json({ ok: true, codigo: existente.codigo, criado: false, msg: 'SAT já existe para esta mensagem' })
+
+    // Gera código SAT
+    let codigo
+    const { data: codigoData } = await supabase.rpc('next_sat_codigo')
+    codigo = typeof codigoData === 'string' ? codigoData
+           : codigoData?.next_sat_codigo    ? String(codigoData.next_sat_codigo)
+           : `SAT-${Date.now()}`
+
+    const { data: sat, error: errSat } = await supabase
+      .from('solicitacoes_atendimento')
+      .insert({
+        workspace_id:         grupo.workspace_id,
+        codigo,
+        grupo_id:             grupo.id,
+        tecnico_id:           grupo.tecnico_id,
+        solicitante_nome:     msg.remetente_nome,
+        solicitante_whatsapp: msg.remetente_whatsapp,
+        mensagem_original:    msg.mensagem,
+        resumo_ia:            'SAT criado manualmente via reprocessamento',
+        confianca_ia:         0.98,
+        motivo_classificacao: 'Criado manualmente: mensagem bloqueada por anti-duplicata',
+        status:               'aberta',
+        prioridade:           'media',
+      })
+      .select()
+      .single()
+
+    if (errSat) return res.status(500).json({ error: errSat.message })
+
+    return res.json({ ok: true, codigo: sat.codigo, criado: true, sat_id: sat.id })
   }
 
   return res.status(400).json({ error: 'action inválida' })
 }
+
