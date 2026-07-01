@@ -21,8 +21,8 @@ const supabaseUrl        = process.env.SUPABASE_URL       || process.env.VITE_SU
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
 
 // Thresholds de confiança
-const CONF_CHAMADO  = 0.85  // ≥ 85%: abre chamado automaticamente
-const CONF_TRIAGEM  = 0.65  // ≥ 65%: cria pré-solicitação para triagem
+const CONF_CHAMADO  = 0.90  // ≥ 90%: abre chamado automaticamente
+const CONF_TRIAGEM  = 0.72  // ≥ 72%: cria pré-solicitação para triagem humana
 
 // Janela de contexto: mensagens do mesmo remetente nos últimos N minutos
 const JANELA_MIN = 5

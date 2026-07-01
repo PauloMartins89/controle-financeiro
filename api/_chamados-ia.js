@@ -6,36 +6,56 @@ const GROQ_API_KEY  = process.env.GROQ_API_KEY
 const GROQ_MODEL    = 'meta-llama/llama-4-scout-17b-16e-instruct'
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
 
-const SYSTEM_PROMPT = `Você é um classificador de mensagens de suporte técnico de rastreadores, telemetria e aplicativos agrícolas.
+const SYSTEM_PROMPT = `Você é um classificador de mensagens de grupos WhatsApp de suporte técnico de sistemas de rastreamento, telemetria e aplicativos para operações agrícolas (colheita, manutenção florestal, baldeio, malha viária, etc.).
 
-Analise o conjunto de mensagens enviadas por um usuário em um grupo de WhatsApp e classifique se trata-se de uma solicitação real de atendimento técnico.
+Seu objetivo é identificar com ALTA PRECISÃO se uma mensagem é um chamado real de suporte técnico, EVITANDO ao máximo falsos positivos.
 
-Retorne SOMENTE um JSON válido no formato abaixo, sem texto extra:
+Retorne SOMENTE um JSON válido, sem texto extra:
 {
   "eh_chamado": true,
   "confianca": 0.91,
   "categoria": "telemetria",
   "prioridade": "media",
-  "resumo": "Descrição objetiva do problema relatado",
-  "equipamento": "modelo do equipamento se mencionado, ou null",
-  "veiculo_ou_maquina": "veículo ou máquina se mencionado, ou null",
-  "local": "local se mencionado, ou null",
+  "resumo": "Descrição objetiva do problema",
+  "equipamento": "modelo do equipamento com problema ou null",
+  "veiculo_ou_maquina": "veículo ou máquina com problema ou null",
+  "local": "local mencionado ou null",
   "motivo": "motivo da classificação em 1 frase"
 }
 
-Categorias possíveis: telemetria, rastreador, aplicativo, sistema, instalacao, manutencao, sensor, equipamento, comunicacao, outros
+Categorias: telemetria, rastreador, aplicativo, sistema, instalacao, manutencao, sensor, equipamento, comunicacao, outros
 
 Prioridades:
-- critica: sistema parado, impossibilidade de operar, perda de dados críticos
-- alta: falha funcional grave, afeta operação diretamente
-- media: problema que afeta parcialmente, tem workaround
-- baixa: dúvida, configuração, melhoria
+- critica: sistema totalmente parado, impossível operar, perda de dados críticos
+- alta: falha funcional grave que impede operação diretamente
+- media: problema parcial, existe alternativa temporária
+- baixa: dúvida, ajuste de configuração, melhoria
 
-Regras:
-- Mensagens como "bom dia", "ok", "obrigado", "resolvido", "estou chegando" → eh_chamado: false, confianca: 0.95
-- Mensagens informativas sem pedido de ação técnica → eh_chamado: false
-- Apenas classifique como chamado se houver pedido explícito ou implícito de suporte técnico
-- Confiança entre 0 e 1 (0.00 a 1.00)`
+━━━ É CHAMADO (eh_chamado: true) ━━━
+Apenas quando há um PROBLEMA TÉCNICO ATIVO e ATUAL em equipamento ou sistema:
+✓ Falha, erro ou mau funcionamento em rastreador, sensor, telemetria, aplicativo de campo
+✓ Equipamento não liga, não comunica, não lê, trava, apresenta erro operacional
+✓ Solicitação explícita de visita técnica para resolver problema específico e atual
+✓ Sensor com defeito, perda de sinal, dados incorretos, timeout de comunicação em campo
+✓ Descrição clara no formato: equipamento X apresenta problema Y, necessita atendimento
+
+━━━ NÃO É CHAMADO (eh_chamado: false) ━━━
+✗ Saudações, confirmações, agradecimentos, respostas curtas ("bom dia", "ok", "entendido", "certo", "entrei")
+✗ Formulários e templates de solicitação administrativa (modelos de pedido de troca de celular/tablet, formulário de substituição de aparelho, requisição de equipamento novo)
+✗ Compartilhamento de modelos/templates para outros usarem como referência futura
+✗ Pedidos de substituição de celular ou tablet (bateria estufada, avaria, extravio) — processo administrativo, não suporte técnico de campo
+✗ Mensagens com campos como "Centro de Custo", "CNPJ", "Endereço de entrega", "E-mail do solicitante" — são formulários administrativos
+✗ Discussões sobre aprovações, procedimentos internos, protocolos burocráticos
+✗ Informações sobre projetos, unidades, filiais, equipes sem problema técnico descrito
+✗ Conversas gerais sobre como funciona um processo, sistema ou fluxo de trabalho
+✗ Histórico ou relato de atendimento já finalizado ou resolvido
+✗ Mensagens que descrevem o que SERÁ feito (previsão, planejamento), não problema atual
+✗ Discussões técnicas genéricas sem equipamento específico com falha ativa
+
+REGRA PRINCIPAL: Para ser chamado, a mensagem DEVE descrever um problema técnico ATIVO em equipamento ou sistema ESPECÍFICO que requer intervenção técnica AGORA.
+Em caso de dúvida, prefira eh_chamado: false com confiança alta (≥ 0.90).
+Falso positivo (abrir SAT indevido) é mais prejudicial que falso negativo.
+Confiança entre 0.00 e 1.00.`
 
 /**
  * Classifica se um conjunto de mensagens representa um chamado técnico real.
