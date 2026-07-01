@@ -196,7 +196,7 @@ export async function processarMensagemGrupo(body) {
     .eq('grupo_id', grupo.id)
     .eq('solicitante_whatsapp', remetenteWa)
     .gte('created_at', trintaMin)
-    .not('status', 'in', '("descartada","erro_classificacao")')
+    .not('status', 'in', '(descartada,erro_classificacao)')
     .maybeSingle()
 
   if (satRecente) {
@@ -209,15 +209,18 @@ export async function processarMensagemGrupo(body) {
   }
 
   // ── Gera código SAT ──────────────────────────────────────────────────────────
-  let codigoRow
+  let codigo
   try {
-    const { data } = await supabase.rpc('next_sat_codigo').single()
-    codigoRow = data
+    const { data: codigoData, error: rpcErr } = await supabase.rpc('next_sat_codigo')
+    if (rpcErr) throw rpcErr
+    // RPC retorna scalar string; protege contra retorno em formato objeto
+    codigo = typeof codigoData === 'string' ? codigoData
+           : codigoData?.next_sat_codigo    ? String(codigoData.next_sat_codigo)
+           : null
   } catch (_e) {
-    codigoRow = `SAT-${Date.now()}`
+    console.error('[_chamados-engine] next_sat_codigo falhou:', _e?.message)
   }
-
-  const codigo = codigoRow || `SAT-${Date.now()}`
+  if (!codigo) codigo = `SAT-${Date.now()}`
 
   // ── Cria solicitação ─────────────────────────────────────────────────────────
   const statusInicial = virouChamado ? 'aberta' : 'triagem'
@@ -243,7 +246,18 @@ export async function processarMensagemGrupo(body) {
     .single()
 
   if (errSat) {
-    console.error('[_chamados-engine] Erro ao criar SAT:', errSat.message)
+    console.error('[_chamados-engine] Erro ao criar SAT:', errSat.message, '| codigo:', codigo)
+    // Atualiza log com o erro para diagnóstico no frontend
+    try {
+      await supabase
+        .from('logs_classificacao_ia')
+        .update({ motivo: `ERRO_INSERT_SAT: ${errSat.message}` })
+        .eq('mensagem_id', msgSalva.id)
+    } catch (_e) {}
+    await supabase
+      .from('mensagens_whatsapp_grupos')
+      .update({ processada: true })
+      .eq('id', msgSalva.id)
     return
   }
 

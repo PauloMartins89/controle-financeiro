@@ -100,5 +100,59 @@ export default async function handler(req, res) {
     return res.json({ ok: true, grupo: data })
   }
 
+  // ── Diagnóstico: logs recentes com status de criação de SAT ───────────────
+  if (action === 'diagnostico') {
+    const workspace_id = req.query.workspace_id || null
+
+    // Logs recentes
+    let logsQuery = supabase
+      .from('logs_classificacao_ia')
+      .select('id, workspace_id, grupo_id, confianca, virou_chamado, eh_triagem, motivo, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20)
+    if (workspace_id) logsQuery = logsQuery.eq('workspace_id', workspace_id)
+    const { data: logs } = await logsQuery
+
+    // SATs recentes
+    let satsQuery = supabase
+      .from('solicitacoes_atendimento')
+      .select('id, codigo, status, confianca_ia, motivo_classificacao, equipamento, solicitante_nome, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20)
+    if (workspace_id) satsQuery = satsQuery.eq('workspace_id', workspace_id)
+    const { data: sats } = await satsQuery
+
+    // Verifica se colunas novas existem (tenta ler equipamento)
+    const { error: colErr } = await supabase
+      .from('solicitacoes_atendimento')
+      .select('equipamento, data_finalizacao, resolucao_descricao')
+      .limit(1)
+
+    return res.json({
+      ok: true,
+      colunas_novas_ok: !colErr,
+      colunas_erro: colErr?.message || null,
+      logs_recentes: (logs || []).map(l => ({
+        id:            l.id.slice(0, 8),
+        workspace_id:  l.workspace_id?.slice(0, 8),
+        grupo_id:      l.grupo_id?.slice(0, 8),
+        confianca:     l.confianca,
+        virou_chamado: l.virou_chamado,
+        eh_triagem:    l.eh_triagem,
+        motivo:        l.motivo?.slice(0, 120),
+        quando:        l.created_at,
+      })),
+      sats_recentes: (sats || []).map(s => ({
+        codigo:     s.codigo,
+        status:     s.status,
+        confianca:  s.confianca_ia,
+        equipamento: s.equipamento,
+        solicitante: s.solicitante_nome,
+        motivo:     s.motivo_classificacao?.slice(0, 80),
+        quando:     s.created_at,
+      })),
+    })
+  }
+
   return res.status(400).json({ error: 'action inválida' })
 }
