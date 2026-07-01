@@ -8,20 +8,27 @@ const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
 
 const SYSTEM_PROMPT = `Você é um classificador de mensagens de grupos WhatsApp de suporte técnico de sistemas de rastreamento, telemetria e aplicativos para operações agrícolas (colheita, manutenção florestal, baldeio, malha viária, etc.).
 
-Seu objetivo é identificar com ALTA PRECISÃO se uma mensagem é um chamado real de suporte técnico, EVITANDO ao máximo falsos positivos.
+OBJETIVO: Analisar o conjunto completo de mensagens do período e identificar TODOS os chamados técnicos distintos presentes.
+Cada equipamento diferente, cada serviço em local diferente = chamado separado.
 
 Retorne SOMENTE um JSON válido, sem texto extra:
 {
-  "eh_chamado": true,
-  "confianca": 0.91,
-  "categoria": "telemetria",
-  "prioridade": "media",
-  "resumo": "Descrição objetiva do problema",
-  "equipamento": "modelo do equipamento com problema ou null",
-  "veiculo_ou_maquina": "veículo ou máquina com problema ou null",
-  "local": "local mencionado ou null",
-  "motivo": "motivo da classificação em 1 frase"
+  "chamados": [
+    {
+      "eh_chamado": true,
+      "confianca": 0.95,
+      "categoria": "manutencao",
+      "prioridade": "media",
+      "resumo": "Descrição objetiva do problema ou serviço",
+      "equipamento": "código ou modelo do equipamento ou null",
+      "veiculo_ou_maquina": "veículo ou máquina ou null",
+      "local": "fazenda/local mencionado ou null",
+      "motivo": "motivo da classificação em 1 frase"
+    }
+  ]
 }
+
+Se não houver nenhum chamado técnico, retorne: { "chamados": [] }
 
 Categorias: telemetria, rastreador, aplicativo, sistema, instalacao, manutencao, sensor, equipamento, comunicacao, mobilizacao, desmobilizacao, outros
 
@@ -32,45 +39,40 @@ Prioridades:
 - baixa: dúvida, ajuste de configuração, melhoria
 
 ━━━ É CHAMADO (eh_chamado: true) ━━━
-Quando há um PROBLEMA TÉCNICO ATIVO, ATUAL ou uma INTERVENÇÃO TÉCNICA DE CAMPO necessária:
+Quando há um PROBLEMA TÉCNICO ATIVO, ATUAL ou INTERVENÇÃO TÉCNICA DE CAMPO necessária:
 ✓ Falha, erro ou mau funcionamento em rastreador, sensor, telemetria, aplicativo de campo
 ✓ Equipamento não liga, não comunica, não lê, trava, apresenta erro operacional
-✓ Solicitação explícita de visita técnica para resolver problema específico e atual
-✓ Sensor com defeito, perda de sinal, dados incorretos, timeout de comunicação em campo
-✓ Descrição clara no formato: equipamento X apresenta problema Y, necessita atendimento
-✓ Solicitação de MOBILIZAÇÃO: instalação de rastreador/equipamento em máquina ou veículo
-✓ Solicitação de DESMOBILIZAÇÃO: retirada de rastreador/equipamento de máquina ou veículo
-✓ Solicitação de MANUTENÇÃO CORRETIVA ou PREVENTIVA em equipamento de campo (troca de peça, conversor, cabo, suporte, sensor)
+✓ Solicitação de MOBILIZAÇÃO (instalação de rastreador/equipamento em máquina ou veículo)
+✓ Solicitação de DESMOBILIZAÇÃO (retirada de rastreador/equipamento de máquina ou veículo)
+✓ MANUTENÇÃO CORRETIVA ou PREVENTIVA em equipamento de campo (troca de peça, conversor, cabo, suporte, sensor)
 ✓ Visita técnica agendada para campo com equipamento e local especificados
+✓ Sensor com defeito, perda de sinal, dados incorretos, timeout de comunicação em campo
 
 ━━━ NÃO É CHAMADO (eh_chamado: false) ━━━
-✗ Saudações, confirmações, agradecimentos, respostas curtas ("bom dia", "ok", "entendido", "certo", "entrei")
-✗ Formulários e templates de solicitação administrativa (modelos de pedido de troca de celular/tablet, formulário de substituição de aparelho, requisição de equipamento novo)
-✗ Compartilhamento de modelos/templates para outros usarem como referência futura
-✗ Pedidos de substituição de celular ou tablet (bateria estufada, avaria, extravio) — processo administrativo, não suporte técnico de campo
-✗ Mensagens com campos como "Centro de Custo", "CNPJ", "Endereço de entrega", "E-mail do solicitante" — são formulários administrativos
+✗ Saudações, confirmações, agradecimentos, respostas curtas ("bom dia", "ok", "entendido", "certo")
+✗ Formulários administrativos de troca de celular/tablet (bateria estufada, avaria, extravio)
+✗ Mensagens com campos como "Centro de Custo", "CNPJ", "Endereço de entrega" — formulários admin
 ✗ Discussões sobre aprovações, procedimentos internos, protocolos burocráticos
-✗ Informações sobre projetos, unidades, filiais, equipes sem problema técnico descrito
-✗ Conversas gerais sobre como funciona um processo, sistema ou fluxo de trabalho
-✗ Histórico ou relato de atendimento já finalizado ou resolvido
-✗ Mensagens que descrevem o que SERÁ feito (previsão, planejamento), não problema atual
-✗ Discussões técnicas genéricas sem equipamento específico com falha ativa
+✗ Conversas gerais sem equipamento de campo específico com necessidade de atendimento
+✗ Histórico ou relato de atendimento já finalizado
 
-REGRA PRINCIPAL: Para ser chamado, a mensagem DEVE descrever um problema técnico ATIVO, uma intervenção de campo necessária (mobilização/desmobilização/manutenção), ou uma solicitação de atendimento técnico com equipamento e local identificados.
-Em caso de dúvida, prefira eh_chamado: false com confiança alta (≥ 0.90).
-Falso positivo (abrir SAT indevido) é mais prejudicial que falso negativo.
-Confiança entre 0.00 e 1.00.`
+REGRAS DE IDENTIFICAÇÃO MÚLTIPLA:
+- Se o remetente mencionar 2 equipamentos diferentes → gere 2 itens no array
+- Se mencionar 3 equipamentos → gere 3 itens
+- Cada item deve ter o campo "equipamento" preenchido com o identificador específico
+- Contexto compartilhado (local, tipo de serviço) pode ser atribuído a todos os itens relevantes
+- Prefira eh_chamado: false com confiança ≥ 0.90 em caso de dúvida`
 
 /**
- * Classifica se um conjunto de mensagens representa um chamado técnico real.
- * @param {string[]} mensagens - Textos das mensagens (contexto agrupado)
+ * Classifica um conjunto de mensagens e retorna TODOS os chamados distintos encontrados.
+ * @param {string[]} mensagens - Textos das mensagens (contexto agrupado do período)
  * @param {object}  contexto   - { grupoNome, nomeRemetente }
- * @returns {object} resultado JSON da IA ou objeto de erro
+ * @returns {{ chamados: object[], payloadEntrada, payloadSaida }} lista de chamados identificados
  */
 export async function classificarChamado(mensagens, contexto = {}) {
   if (!GROQ_API_KEY) {
     console.error('[_chamados-ia] GROQ_API_KEY não configurada')
-    return { erro: 'GROQ_API_KEY não configurada' }
+    return { chamados: [], erro: 'GROQ_API_KEY não configurada' }
   }
 
   const texto = mensagens
@@ -79,10 +81,10 @@ export async function classificarChamado(mensagens, contexto = {}) {
 
   const userPrompt = `Grupo: ${contexto.grupoNome || 'desconhecido'}
 Remetente: ${contexto.nomeRemetente || 'desconhecido'}
-Mensagens enviadas:
+Mensagens do período:
 ${texto}
 
-Classifique se este conjunto de mensagens representa um chamado de suporte técnico.`
+Identifique TODOS os chamados técnicos distintos presentes nestas mensagens. Um chamado por equipamento/serviço.`
 
   const payloadEntrada = { mensagens, contexto }
 
@@ -100,7 +102,7 @@ Classifique se este conjunto de mensagens representa um chamado de suporte técn
           { role: 'user',   content: userPrompt },
         ],
         temperature: 0.1,
-        max_tokens:  512,
+        max_tokens:  1024,
         response_format: { type: 'json_object' },
       }),
     })
@@ -108,29 +110,39 @@ Classifique se este conjunto de mensagens representa um chamado de suporte técn
     if (!resp.ok) {
       const errBody = await resp.text().catch(() => '')
       console.error('[_chamados-ia] Groq erro HTTP', resp.status, errBody)
-      return { erro: `Groq HTTP ${resp.status}`, payloadEntrada }
+      return { chamados: [], erro: `Groq HTTP ${resp.status}`, payloadEntrada }
     }
 
-    const data  = await resp.json()
-    const raw   = data.choices?.[0]?.message?.content || '{}'
+    const data = await resp.json()
+    const raw  = data.choices?.[0]?.message?.content || '{}'
 
     let resultado
     try {
       resultado = typeof raw === 'string' ? JSON.parse(raw) : raw
     } catch {
       console.error('[_chamados-ia] JSON inválido da IA:', raw)
-      return { erro: 'JSON inválido da IA', raw, payloadEntrada }
+      return { chamados: [], erro: 'JSON inválido da IA', raw, payloadEntrada }
     }
 
-    // Normaliza confiança: garante número 0-1
-    if (resultado.confianca !== undefined) {
-      resultado.confianca = Math.max(0, Math.min(1, Number(resultado.confianca) || 0))
+    // Normaliza: suporta tanto { chamados: [...] } quanto o formato antigo { eh_chamado: ... }
+    let chamados = []
+    if (Array.isArray(resultado.chamados)) {
+      chamados = resultado.chamados
+    } else if (resultado.eh_chamado !== undefined) {
+      // Backward compat: formato legado de item único
+      chamados = [resultado]
     }
 
-    return { ...resultado, payloadEntrada, payloadSaida: data }
+    // Normaliza confiança de cada item
+    chamados = chamados.map(c => ({
+      ...c,
+      confianca: Math.max(0, Math.min(1, Number(c.confianca) || 0)),
+    }))
+
+    return { chamados, payloadEntrada, payloadSaida: data }
   } catch (e) {
     console.error('[_chamados-ia] exceção:', e?.message)
-    return { erro: e?.message, payloadEntrada }
+    return { chamados: [], erro: e?.message, payloadEntrada }
   }
 }
 

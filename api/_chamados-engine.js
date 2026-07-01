@@ -150,54 +150,48 @@ export async function processarMensagemGrupo(body) {
   const mensagensContexto = (msgRecentes || []).map(m => m.mensagem).filter(Boolean)
   if (!mensagensContexto.includes(msgText)) mensagensContexto.push(msgText)
 
-  // ── Classifica com IA ────────────────────────────────────────────────────────
+  // ── Classifica com IA → retorna array de chamados distintos ─────────────────
   let resultado
   try {
     resultado = await classificarChamado(mensagensContexto, {
-      grupoNome:    grupo.nome_grupo,
+      grupoNome:     grupo.nome_grupo,
       nomeRemetente: remetenteNome,
     })
   } catch (e) {
     console.error('[_chamados-engine] Erro IA:', e?.message)
-    resultado = { erro: e?.message }
+    resultado = { chamados: [], erro: e?.message }
   }
 
-  const confianca    = resultado?.confianca || 0
-  const ehChamado    = resultado?.eh_chamado === true
-  const virouChamado = ehChamado && confianca >= CONF_CHAMADO
-  const ehTriagem    = ehChamado && confianca >= CONF_TRIAGEM && confianca < CONF_CHAMADO
+  const chamados     = resultado?.chamados || []
+  const temChamado   = chamados.some(c => c.eh_chamado && c.confianca >= CONF_TRIAGEM)
+  const maxConfianca = chamados.length ? Math.max(...chamados.map(c => c.confianca || 0)) : 0
 
-  // ── Registra log da IA ───────────────────────────────────────────────────────
+  // ── Registra log da IA (um log por processamento de período) ─────────────────
   try {
     await supabase.from('logs_classificacao_ia').insert({
       workspace_id:    grupo.workspace_id,
       mensagem_id:     msgSalva.id,
       grupo_id:        grupo.id,
       resultado:       resultado,
-      confianca:       confianca,
-      motivo:          resultado?.motivo || null,
+      confianca:       maxConfianca,
+      motivo:          chamados.length
+                         ? chamados.map(c => c.motivo).filter(Boolean).join(' | ')
+                         : 'Nenhum chamado identificado no período',
       payload_entrada: resultado?.payloadEntrada || null,
-      payload_saida:   resultado?.payloadSaida || null,
-      virou_chamado:   virouChamado,
-      eh_triagem:      ehTriagem,
+      payload_saida:   resultado?.payloadSaida   || null,
+      virou_chamado:   chamados.some(c => c.eh_chamado && c.confianca >= CONF_CHAMADO),
+      eh_triagem:      chamados.some(c => c.eh_chamado && c.confianca >= CONF_TRIAGEM && c.confianca < CONF_CHAMADO),
     })
   } catch (e) { console.error('[_chamados-engine] log IA:', e?.message) }
 
-  // Abaixo do limiar de triagem → tenta detectar resolução de chamado aberto
-  if (!ehChamado || confianca < CONF_TRIAGEM) {
-    // Verifica se é mensagem de fechamento (ex: "trator X consertado")
+  // Nenhum chamado → tenta detectar resolução e mantém mensagens no pool de contexto
+  if (!temChamado) {
     await tentarFecharChamado(supabase, msgText, remetenteNome, grupo)
-    // Não marca como processada: mensagens ficam disponíveis para acumular contexto
-    // com mensagens seguintes do mesmo remetente (janela de 5 min).
-    // São excluídas automaticamente quando o intervalo JANELA_MIN expira.
     return
   }
 
-  // ── Verifica duplicidade inteligente (mesmo remetente + mesmo equipamento) ──
-  // Permite múltiplos SATs simultâneos se forem equipamentos diferentes
+  // ── Busca SATs já abertos no período (dedup por equipamento) ─────────────────
   const trintaMin = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-  const novoEquip = (resultado?.equipamento || resultado?.veiculo_ou_maquina || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-
   const { data: satsRecentes } = await supabase
     .from('solicitacoes_atendimento')
     .select('id, codigo, equipamento')
@@ -206,87 +200,81 @@ export async function processarMensagemGrupo(body) {
     .gte('created_at', trintaMin)
     .not('status', 'in', '(descartada,erro_classificacao)')
 
-  const satRecente = (satsRecentes || []).find(s => {
-    const existeEquip = (s.equipamento || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-    // Ambos identificaram um equipamento → só bloqueia se for o mesmo
-    if (novoEquip && existeEquip) {
-      return novoEquip === existeEquip || novoEquip.includes(existeEquip) || existeEquip.includes(novoEquip)
-    }
-    // Nenhum tem equipamento → mesmo chamado genérico, bloqueia
-    if (!novoEquip && !existeEquip) return true
-    // Um tem equipamento e outro não → chamados diferentes, permite
-    return false
-  })
+  // ── Cria um SAT para cada chamado distinto identificado ──────────────────────
+  let criouAlgum = false
 
-  if (satRecente) {
-    console.log(`[_chamados-engine] Duplicata bloqueada: ${satRecente.codigo} (equip: ${satRecente.equipamento || 'genérico'})`)
-    await supabase
-      .from('mensagens_whatsapp_grupos')
-      .update({ processada: true })
-      .eq('id', msgSalva.id)
-    return
-  }
+  for (const item of chamados) {
+    if (!item.eh_chamado || item.confianca < CONF_TRIAGEM) continue
 
-  // ── Gera código SAT ──────────────────────────────────────────────────────────
-  let codigo
-  try {
-    const { data: codigoData, error: rpcErr } = await supabase.rpc('next_sat_codigo')
-    if (rpcErr) throw rpcErr
-    // RPC retorna scalar string; protege contra retorno em formato objeto
-    codigo = typeof codigoData === 'string' ? codigoData
-           : codigoData?.next_sat_codigo    ? String(codigoData.next_sat_codigo)
-           : null
-  } catch (_e) {
-    console.error('[_chamados-engine] next_sat_codigo falhou:', _e?.message)
-  }
-  if (!codigo) codigo = `SAT-${Date.now()}`
+    const virouChamado = item.confianca >= CONF_CHAMADO
+    const novoEquip    = (item.equipamento || item.veiculo_ou_maquina || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
-  // ── Cria solicitação ─────────────────────────────────────────────────────────
-  const statusInicial = virouChamado ? 'aberta' : 'triagem'
-  const { data: sat, error: errSat } = await supabase
-    .from('solicitacoes_atendimento')
-    .insert({
-      workspace_id:         grupo.workspace_id,
-      codigo,
-      grupo_id:             grupo.id,
-      tecnico_id:           grupo.tecnico_id,
-      solicitante_nome:     remetenteNome,
-      solicitante_whatsapp: remetenteWa,
-      mensagem_original:    mensagensContexto.join('\n---\n'),
-      resumo_ia:            resultado?.resumo || null,
-      categoria:            resultado?.categoria || 'outros',
-      prioridade:           resultado?.prioridade || 'media',
-      status:               statusInicial,
-      confianca_ia:         confianca,
-      motivo_classificacao: resultado?.motivo || null,
-      equipamento:          resultado?.equipamento || resultado?.veiculo_ou_maquina || null,
+    // Dedup: mesmo equipamento já tem SAT aberto no período?
+    const satDuplicado = (satsRecentes || []).find(s => {
+      const existeEquip = (s.equipamento || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+      if (novoEquip && existeEquip) {
+        return novoEquip === existeEquip || novoEquip.includes(existeEquip) || existeEquip.includes(novoEquip)
+      }
+      if (!novoEquip && !existeEquip) return true
+      return false
     })
-    .select()
-    .single()
 
-  if (errSat) {
-    console.error('[_chamados-engine] Erro ao criar SAT:', errSat.message, '| codigo:', codigo)
-    // Atualiza log com o erro para diagnóstico no frontend
+    if (satDuplicado) {
+      console.log(`[_chamados-engine] Duplicata ignorada: ${satDuplicado.codigo} (equip: ${satDuplicado.equipamento || 'genérico'})`)
+      continue
+    }
+
+    // Gera código SAT
+    let codigo
     try {
-      await supabase
-        .from('logs_classificacao_ia')
-        .update({ motivo: `ERRO_INSERT_SAT: ${errSat.message}` })
-        .eq('mensagem_id', msgSalva.id)
-    } catch (_e) {}
-    await supabase
-      .from('mensagens_whatsapp_grupos')
-      .update({ processada: true })
-      .eq('id', msgSalva.id)
-    return
+      const { data: codigoData, error: rpcErr } = await supabase.rpc('next_sat_codigo')
+      if (rpcErr) throw rpcErr
+      codigo = typeof codigoData === 'string' ? codigoData
+             : codigoData?.next_sat_codigo    ? String(codigoData.next_sat_codigo)
+             : null
+    } catch (_e) {
+      console.error('[_chamados-engine] next_sat_codigo falhou:', _e?.message)
+    }
+    if (!codigo) codigo = `SAT-${Date.now()}`
+
+    // Cria SAT
+    const { data: sat, error: errSat } = await supabase
+      .from('solicitacoes_atendimento')
+      .insert({
+        workspace_id:         grupo.workspace_id,
+        codigo,
+        grupo_id:             grupo.id,
+        tecnico_id:           grupo.tecnico_id,
+        solicitante_nome:     remetenteNome,
+        solicitante_whatsapp: remetenteWa,
+        mensagem_original:    mensagensContexto.join('\n---\n'),
+        resumo_ia:            item.resumo || null,
+        categoria:            item.categoria || 'outros',
+        prioridade:           item.prioridade || 'media',
+        status:               virouChamado ? 'aberta' : 'triagem',
+        confianca_ia:         item.confianca,
+        motivo_classificacao: item.motivo || null,
+        equipamento:          item.equipamento || item.veiculo_ou_maquina || null,
+      })
+      .select()
+      .single()
+
+    if (errSat) {
+      console.error('[_chamados-engine] Erro ao criar SAT:', errSat.message, '| codigo:', codigo)
+      continue
+    }
+
+    criouAlgum = true
+    // Adiciona SAT criado à lista de recentes para dedup dos próximos itens do loop
+    satsRecentes.push({ id: sat.id, codigo: sat.codigo, equipamento: sat.equipamento })
+
+    if (virouChamado && grupo.tecnicos) {
+      await notificarTecnico(supabase, sat, grupo.tecnicos, grupo.nome_grupo)
+    }
   }
 
-  // ── Notifica técnico (apenas chamados confirmados, não triagem) ───────────────
-  if (virouChamado && grupo.tecnicos) {
-    await notificarTecnico(supabase, sat, grupo.tecnicos, grupo.nome_grupo)
-  }
-
-  // Marca TODAS as mensagens do contexto como processadas para não poluir
-  // a janela de contexto de solicitações futuras do mesmo remetente.
+  // Marca TODAS as mensagens do contexto como processadas (independente de criou SAT ou não)
+  // para não poluir a janela de contexto de solicitações futuras do mesmo remetente.
   const ctxIds = (msgRecentes || []).map(m => m.id).filter(Boolean)
   if (ctxIds.length > 0) {
     await supabase.from('mensagens_whatsapp_grupos').update({ processada: true }).in('id', ctxIds)
