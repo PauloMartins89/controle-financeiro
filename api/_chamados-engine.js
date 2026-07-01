@@ -14,7 +14,7 @@
 
 import { createClient }     from '@supabase/supabase-js'
 import ws                   from 'ws'
-import { classificarChamado } from './_chamados-ia.js'
+import { classificarChamado, detectarResolucao } from './_chamados-ia.js'
 import { notificarTecnico }   from './_chamados-notificar.js'
 
 const supabaseUrl        = process.env.SUPABASE_URL       || process.env.VITE_SUPABASE_URL
@@ -177,8 +177,10 @@ export async function processarMensagemGrupo(body) {
     })
   } catch (e) { console.error('[_chamados-engine] log IA:', e?.message) }
 
-  // Abaixo do limiar de triagem → encerra sem criar chamado
+  // Abaixo do limiar de triagem → tenta detectar resolução de chamado aberto
   if (!ehChamado || confianca < CONF_TRIAGEM) {
+    // Verifica se é mensagem de fechamento (ex: "trator X consertado")
+    await tentarFecharChamado(supabase, msgText, remetenteNome, grupo)
     await supabase
       .from('mensagens_whatsapp_grupos')
       .update({ processada: true })
@@ -235,6 +237,7 @@ export async function processarMensagemGrupo(body) {
       status:               statusInicial,
       confianca_ia:         confianca,
       motivo_classificacao: resultado?.motivo || null,
+      equipamento:          resultado?.equipamento || resultado?.veiculo_ou_maquina || null,
     })
     .select()
     .single()
@@ -254,4 +257,60 @@ export async function processarMensagemGrupo(body) {
     .from('mensagens_whatsapp_grupos')
     .update({ processada: true })
     .eq('id', msgSalva.id)
+}
+
+/**
+ * Tenta detectar mensagem de resolução e fechar SATs abertos correspondentes.
+ */
+async function tentarFecharChamado(supabase, msgText, remetenteNome, grupo) {
+  try {
+    const resolucao = await detectarResolucao(msgText, {
+      grupoNome:     grupo.nome_grupo,
+      nomeRemetente: remetenteNome,
+    })
+
+    if (!resolucao?.eh_resolucao || resolucao.confianca < 0.75) return
+
+    const equipamento = resolucao.equipamento
+    console.log(`[_chamados-engine] Resolução detectada: equipamento="${equipamento}" confianca=${resolucao.confianca}`)
+
+    // Busca SATs abertos no grupo (com ou sem equipamento específico)
+    const query = supabase
+      .from('solicitacoes_atendimento')
+      .select('id, codigo, equipamento, status')
+      .eq('grupo_id', grupo.id)
+      .in('status', ['aberta', 'enviada_tecnico', 'em_atendimento', 'triagem'])
+      .order('created_at', { ascending: false })
+
+    const { data: satsAbertos } = await query
+    if (!satsAbertos?.length) return
+
+    // Encontra o SAT mais compatível pelo equipamento
+    let satAlvo = null
+    if (equipamento) {
+      const eqNorm = equipamento.toLowerCase().replace(/[^a-z0-9]/g, '')
+      satAlvo = satsAbertos.find(s => {
+        if (!s.equipamento) return false
+        const sNorm = s.equipamento.toLowerCase().replace(/[^a-z0-9]/g, '')
+        return sNorm.includes(eqNorm) || eqNorm.includes(sNorm)
+      })
+    }
+    // Fallback: fecha o SAT mais recente do grupo
+    if (!satAlvo) satAlvo = satsAbertos[0]
+    if (!satAlvo) return
+
+    await supabase
+      .from('solicitacoes_atendimento')
+      .update({
+        status:               'concluida',
+        data_finalizacao:     new Date().toISOString(),
+        resolucao_descricao:  resolucao.resolucao_descricao || msgText.slice(0, 300),
+        updated_at:           new Date().toISOString(),
+      })
+      .eq('id', satAlvo.id)
+
+    console.log(`[_chamados-engine] SAT ${satAlvo.codigo} fechado por resolução: "${resolucao.resolucao_descricao}"`)
+  } catch (e) {
+    console.error('[_chamados-engine] tentarFecharChamado:', e?.message)
+  }
 }

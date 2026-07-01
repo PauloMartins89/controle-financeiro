@@ -109,3 +109,86 @@ Classifique se este conjunto de mensagens representa um chamado de suporte técn
     return { erro: e?.message, payloadEntrada }
   }
 }
+
+// ── Prompt de detecção de resolução ───────────────────────────────────────────
+const RESOLUCAO_PROMPT = `Você analisa mensagens de WhatsApp de grupos de suporte técnico de rastreadores e telemetria agrícola.
+
+Detecte se a mensagem indica que um chamado foi RESOLVIDO, FINALIZADO ou CONCLUÍDO.
+
+Retorne SOMENTE um JSON válido, sem texto extra:
+{
+  "eh_resolucao": true,
+  "confianca": 0.95,
+  "equipamento": "identificador do equipamento mencionado (placa, código, modelo) ou null",
+  "resolucao_descricao": "o que foi feito/resolvido em 1-2 frases",
+  "motivo": "motivo da classificação"
+}
+
+Exemplos de mensagens de RESOLUÇÃO (eh_resolucao: true):
+- "trator F-TPX-256 consertado"
+- "equipamento 354 ok, troca feita"
+- "finalizado, sensor substituído no veículo BZX-123"
+- "SAT-000001 resolvido"
+- "ONTEM FOI REALIZADO A MANUTENCAO DO TRATOR F-TPX-256 SUBSTITUIDO O CONVERSOR USB"
+- "resolvido o problema do rastreador da maquina 7"
+
+Exemplos que NÃO são resolução (eh_resolucao: false):
+- "bom dia, tudo bem?"
+- "vou ver amanhã"
+- "preciso de ajuda com o equipamento 354"
+- "estou chegando"
+- "ok"
+
+Se mencionar mais de um equipamento, retorne o primeiro identificado.`
+
+/**
+ * Detecta se uma mensagem indica resolução/fechamento de chamado.
+ * @param {string} mensagem - Texto da mensagem
+ * @param {object} contexto - { grupoNome, nomeRemetente }
+ * @returns {object} { eh_resolucao, confianca, equipamento, resolucao_descricao, motivo }
+ */
+export async function detectarResolucao(mensagem, contexto = {}) {
+  if (!GROQ_API_KEY) return { eh_resolucao: false, confianca: 0 }
+
+  const userPrompt = `Grupo: ${contexto.grupoNome || 'desconhecido'}
+Remetente: ${contexto.nomeRemetente || 'desconhecido'}
+Mensagem: "${mensagem}"
+
+Esta mensagem indica que um chamado técnico foi resolvido/finalizado?`
+
+  try {
+    const resp = await fetch(GROQ_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: 'system', content: RESOLUCAO_PROMPT },
+          { role: 'user',   content: userPrompt },
+        ],
+        temperature: 0.1,
+        max_tokens:  256,
+        response_format: { type: 'json_object' },
+      }),
+    })
+
+    if (!resp.ok) return { eh_resolucao: false, confianca: 0 }
+
+    const data = await resp.json()
+    const raw  = data.choices?.[0]?.message?.content || '{}'
+    let resultado
+    try { resultado = typeof raw === 'string' ? JSON.parse(raw) : raw }
+    catch { return { eh_resolucao: false, confianca: 0 } }
+
+    if (resultado.confianca !== undefined) {
+      resultado.confianca = Math.max(0, Math.min(1, Number(resultado.confianca) || 0))
+    }
+    return resultado
+  } catch (e) {
+    console.error('[_chamados-ia] detectarResolucao exceção:', e?.message)
+    return { eh_resolucao: false, confianca: 0 }
+  }
+}

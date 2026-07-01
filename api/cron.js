@@ -518,6 +518,94 @@ async function handleStorageLimpeza(db, res) {
   return res.status(200).json({ removidos, total: candidatos.length, orfaos: orphanPaths.length })
 }
 
+// ── Handler: digest de chamados pendentes (7h diário) ───────────────────────
+// Envia via Z-API a cada técnico a lista de SATs abertos (não concluídos)
+async function handleChamados7h(db, res) {
+  const STATUS_ABERTOS = ['aberta', 'enviada_tecnico', 'em_atendimento', 'triagem']
+
+  // Busca SATs abertos junto com dados do grupo e técnico
+  const { data: sats, error } = await db
+    .from('solicitacoes_atendimento')
+    .select(`
+      id, codigo, resumo_ia, categoria, prioridade, status, equipamento, created_at,
+      grupo_id,
+      whatsapp_grupos!inner(nome_grupo, workspace_id, tecnico_id),
+      tecnicos!inner(id, nome, whatsapp)
+    `)
+    .in('status', STATUS_ABERTOS)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[cron:chamados-7h] erro ao buscar SATs:', error.message)
+    return res.status(500).json({ error: error.message })
+  }
+
+  if (!sats?.length) return res.status(200).json({ sent: 0, pendentes: 0 })
+
+  // Agrupa por técnico
+  const porTecnico = {}
+  for (const sat of sats) {
+    const tec = sat.tecnicos
+    if (!tec?.id || !tec?.whatsapp) continue
+    if (!porTecnico[tec.id]) porTecnico[tec.id] = { tecnico: tec, sats: [] }
+    porTecnico[tec.id].sats.push(sat)
+  }
+
+  const PRIORIDADE_EMOJI = { critica: '🔴', alta: '🟠', media: '🟡', baixa: '🟢' }
+  const STATUS_LABEL = {
+    aberta: 'Aberta',
+    enviada_tecnico: 'Enviada',
+    em_atendimento: 'Em atendimento',
+    triagem: 'Triagem',
+  }
+
+  let sent = 0
+  for (const { tecnico, sats: satsTec } of Object.values(porTecnico)) {
+    const linhas = [
+      `📋 *Chamados Pendentes — ${new Date().toLocaleDateString('pt-BR')}*`,
+      `Bom dia, *${tecnico.nome}*! Você tem *${satsTec.length}* chamado(s) pendente(s):`,
+      ``,
+      ...satsTec.map((s, i) => {
+        const emoji  = PRIORIDADE_EMOJI[s.prioridade] || '⚪'
+        const status = STATUS_LABEL[s.status] || s.status
+        const equip  = s.equipamento ? ` · 🚜 ${s.equipamento}` : ''
+        const grupo  = s.whatsapp_grupos?.nome_grupo || '—'
+        const resumo = s.resumo_ia ? `\n   _${s.resumo_ia.slice(0, 120)}_` : ''
+        return `${i + 1}. ${emoji} *${s.codigo}* [${status}]\n   📍 ${grupo}${equip}${resumo}`
+      }),
+      ``,
+      `_Responda no grupo correspondente para fechar o chamado._`,
+    ]
+
+    const phone = String(tecnico.whatsapp).replace(/\D/g, '')
+    if (!phone) continue
+
+    try {
+      const r = await fetch(
+        `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}),
+          },
+          body: JSON.stringify({ phone, message: linhas.join('\n') }),
+        }
+      )
+      if (r.ok) {
+        sent++
+        console.log(`[cron:chamados-7h] ✓ enviado para ${tecnico.nome} (${satsTec.length} SATs)`)
+      } else {
+        console.error(`[cron:chamados-7h] HTTP ${r.status} para tecnico ${tecnico.id}`)
+      }
+    } catch (err) {
+      console.error(`[cron:chamados-7h] exception para tecnico ${tecnico.id}:`, err.message)
+    }
+  }
+
+  return res.status(200).json({ sent, pendentes: sats.length, tecnicos: Object.keys(porTecnico).length })
+}
+
 // ── Entry point ──────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   const isVercelCron = req.headers['user-agent']?.startsWith('vercel-cron')
@@ -538,5 +626,6 @@ export default async function handler(req, res) {
   if (type === 'flow-tokens-limpeza')    return handleFlowTokensLimpeza(db, res)
   if (type === 'os-preventivas')         return handleOsPreventivas(db, res)
   if (type === 'storage-limpeza')        return handleStorageLimpeza(db, res)
-  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-fila | boletins-retry | dds-abertos | cotacoes-expiradas | flow-tokens-limpeza | os-preventivas | storage-limpeza' })
+  if (type === 'chamados-7h')            return handleChamados7h(db, res)
+  return res.status(400).json({ error: 'type param required: lembretes | relatorio | refeicoes-pendentes | refeicoes-validacao | boletins-fila | boletins-retry | dds-abertos | cotacoes-expiradas | flow-tokens-limpeza | os-preventivas | storage-limpeza | chamados-7h' })
 }
