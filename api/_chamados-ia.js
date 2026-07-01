@@ -42,19 +42,20 @@ Prioridades:
 Quando há um PROBLEMA TÉCNICO ATIVO, ATUAL ou INTERVENÇÃO TÉCNICA DE CAMPO necessária:
 ✓ Falha, erro ou mau funcionamento em rastreador, sensor, telemetria, aplicativo de campo
 ✓ Equipamento não liga, não comunica, não lê, trava, apresenta erro operacional
-✓ Solicitação de MOBILIZAÇÃO (instalação de rastreador/equipamento em máquina ou veículo)
-✓ Solicitação de DESMOBILIZAÇÃO (retirada de rastreador/equipamento de máquina ou veículo)
+✓ MOBILIZAÇÃO: instalação física de rastreador/dispositivo em máquina ou veículo de campo → É CHAMADO TÉCNICO, não processo administrativo
+✓ DESMOBILIZAÇÃO: retirada física de rastreador/dispositivo de máquina ou veículo de campo → É CHAMADO TÉCNICO, não processo administrativo
 ✓ MANUTENÇÃO CORRETIVA ou PREVENTIVA em equipamento de campo (troca de peça, conversor, cabo, suporte, sensor)
 ✓ Visita técnica agendada para campo com equipamento e local especificados
 ✓ Sensor com defeito, perda de sinal, dados incorretos, timeout de comunicação em campo
 
 ━━━ NÃO É CHAMADO (eh_chamado: false) ━━━
 ✗ Saudações, confirmações, agradecimentos, respostas curtas ("bom dia", "ok", "entendido", "certo")
-✗ Formulários administrativos de troca de celular/tablet (bateria estufada, avaria, extravio)
+✗ Formulários administrativos de troca de celular/tablet (bateria estufada, avaria, extravio) — isso é RH/TI, não campo
 ✗ Mensagens com campos como "Centro de Custo", "CNPJ", "Endereço de entrega" — formulários admin
-✗ Discussões sobre aprovações, procedimentos internos, protocolos burocráticos
-✗ Conversas gerais sem equipamento de campo específico com necessidade de atendimento
+✗ Discussões sobre aprovações de compra, procedimentos burocráticos, protocolos internos de escritório
+✗ Conversas gerais sem equipamento de campo específico com necessidade de atendimento presencial
 ✗ Histórico ou relato de atendimento já finalizado
+✗ ATENÇÃO: desmobilização e mobilização de equipamentos de campo NÃO são processos administrativos — são intervenções técnicas presenciais que DEVEM ser classificadas como chamado
 
 REGRAS DE IDENTIFICAÇÃO MÚLTIPLA:
 - Se o remetente mencionar 2 equipamentos diferentes → gere 2 itens no array
