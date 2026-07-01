@@ -197,27 +197,40 @@ async function processRefeiValidacao(supabase, solId, resultado, fromPhone) {
 }
 
 // Busca workspace configurado para um número de telefone
+// Aceita múltiplos formatos: com/sem 55, com/sem dígito 9
 async function getWorkspaceForPhone(supabase, phone) {
-  // 1️⃣ Busca em cadastros_condutores (fonte principal)
-  const { data: condutor } = await supabase
-    .from('cadastros_condutores')
-    .select('workspace_id, owner_id, nome')
-    .eq('telefone', phone)
-    .eq('ativo', true)
-    .limit(1)
-    .maybeSingle()
-  if (condutor?.workspace_id) {
-    return { workspace_id: condutor.workspace_id, user_id: condutor.owner_id, nome_motorista: condutor.nome }
+  const norm  = (phone || '').replace(/\D/g, '')
+  const sem55 = norm.replace(/^55/, '')
+  const com9  = sem55.length === 10 ? sem55.slice(0,2) + '9' + sem55.slice(2) : sem55
+  const sem9  = sem55.length === 11 && sem55[2] === '9' ? sem55.slice(0,2) + sem55.slice(3) : sem55
+  const variants = [...new Set([norm, sem55, '55'+sem55, '55'+com9, com9, '55'+sem9, sem9].filter(Boolean))]
+
+  // 1️⃣ Busca em cadastros_condutores (fonte principal) — tenta todas as variantes
+  for (const v of variants) {
+    const { data: condutor } = await supabase
+      .from('cadastros_condutores')
+      .select('workspace_id, owner_id, nome')
+      .eq('telefone', v)
+      .eq('ativo', true)
+      .limit(1)
+      .maybeSingle()
+    if (condutor?.workspace_id) {
+      return { workspace_id: condutor.workspace_id, user_id: condutor.owner_id, nome_motorista: condutor.nome }
+    }
   }
   // 2️⃣ Fallback: whatsapp_config (compatibilidade retroativa)
-  const { data } = await supabase
-    .from('whatsapp_config')
-    .select('workspace_id, user_id, nome_motorista')
-    .eq('phone_number', phone)
-    .eq('ativo', true)
-    .limit(1)
-    .maybeSingle()
-  return data || null
+  for (const v of variants) {
+    const { data } = await supabase
+      .from('whatsapp_config')
+      .select('workspace_id, user_id, nome_motorista')
+      .eq('phone_number', v)
+      .eq('ativo', true)
+      .limit(1)
+      .maybeSingle()
+    if (data) return data
+  }
+  console.log(`[webhook-wa] phone_not_configured: ${norm} (variantes: ${variants.join(',')})`)
+  return null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
