@@ -143,32 +143,35 @@ export default async function handler(req, res) {
       const hojeISO = hoje.toISOString()
 
       const [
-        { data: total },
-        { data: abertasHoje },
-        { data: emTriagem },
-        { data: enviadasTecnico },
-        { data: descartadas },
+        { count: total },
+        { count: abertasHoje },
+        { count: emTriagem },
+        { count: enviadasTecnico },
+        { count: descartadas },
         { data: logsHoje },
         { data: ultimos },
+        { count: totalGrupos },
       ] = await Promise.all([
-        supabase.from('solicitacoes_atendimento').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
-        supabase.from('solicitacoes_atendimento').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId).gte('created_at', hojeISO).neq('status', 'descartada'),
-        supabase.from('solicitacoes_atendimento').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'triagem'),
-        supabase.from('solicitacoes_atendimento').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'enviada_tecnico'),
-        supabase.from('solicitacoes_atendimento').select('id', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'descartada'),
+        supabase.from('solicitacoes_atendimento').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId),
+        supabase.from('solicitacoes_atendimento').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).gte('created_at', hojeISO).neq('status', 'descartada'),
+        supabase.from('solicitacoes_atendimento').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'triagem'),
+        supabase.from('solicitacoes_atendimento').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'enviada_tecnico'),
+        supabase.from('solicitacoes_atendimento').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'descartada'),
         supabase.from('logs_classificacao_ia').select('confianca').eq('workspace_id', workspaceId).gte('created_at', hojeISO),
         supabase.from('solicitacoes_atendimento').select('*, grupo:whatsapp_grupos(nome_grupo), tecnico:tecnicos(nome)').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(8),
+        supabase.from('whatsapp_grupos').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('ativo', true),
       ])
 
       const confias = (logsHoje || []).map(l => l.confianca).filter(c => c > 0)
       const mediaConfianca = confias.length ? confias.reduce((a, b) => a + b, 0) / confias.length : 0
 
       return res.json({
-        total:          total?.length ?? 0,
-        abertasHoje:    abertasHoje?.length ?? 0,
-        emTriagem:      emTriagem?.length ?? 0,
-        enviadasTecnico: enviadasTecnico?.length ?? 0,
-        descartadas:    descartadas?.length ?? 0,
+        total:           total          ?? 0,
+        abertasHoje:     abertasHoje    ?? 0,
+        emTriagem:       emTriagem      ?? 0,
+        enviadasTecnico: enviadasTecnico ?? 0,
+        descartadas:     descartadas    ?? 0,
+        totalGrupos:     totalGrupos    ?? 0,
         mediaConfianca: Math.round(mediaConfianca * 100),
         ultimos:        ultimos || [],
       })

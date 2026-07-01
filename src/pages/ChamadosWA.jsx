@@ -318,7 +318,7 @@ function SecaoSolicitacoes({ workspaceId }) {
                   {CAT_EMOJI[row.categoria] || '📋'} {row.grupo?.nome_grupo || '—'} · {row.solicitante_nome || '—'}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>
-                  {row.resumo_ia || row.mensagem_original || '—'}
+                  {row.equipamento ? <span style={{ color: '#8b5cf6', fontWeight: 700, marginRight: 6 }}>⚙ {row.equipamento}</span> : null}{row.resumo_ia || row.mensagem_original || '—'}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <PriorDot p={row.prioridade} />
@@ -355,6 +355,8 @@ function SecaoSolicitacoes({ workspaceId }) {
                 { label: 'Solicitante', value: `${selected.solicitante_nome || '—'}${selected.solicitante_whatsapp ? ` · ${selected.solicitante_whatsapp}` : ''}` },
                 { label: 'Técnico',     value: selected.tecnico?.nome || '⚠ Não vinculado', vColor: !selected.tecnico ? '#ef4444' : undefined },
                 { label: 'Categoria',   value: `${CAT_EMOJI[selected.categoria] || ''} ${selected.categoria || '—'}` },
+                ...(selected.equipamento ? [{ label: 'Equipamento', value: `⚙ ${selected.equipamento}`, vColor: '#8b5cf6' }] : []),
+                ...(selected.data_finalizacao ? [{ label: 'Finalizado em', value: fmtDT(selected.data_finalizacao) }] : []),
               ].map(f => (
                 <div key={f.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 11px', border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 3 }}>{f.label}</div>
@@ -382,6 +384,15 @@ function SecaoSolicitacoes({ workspaceId }) {
             {selected.motivo_classificacao && (
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', paddingLeft: 10, borderLeft: '3px solid var(--border)' }}>
                 Motivo IA: {selected.motivo_classificacao}
+              </div>
+            )}
+
+            {/* Resolução (SATs concluídos) */}
+            {selected.status === 'concluida' && selected.resolucao_descricao && (
+              <div style={{ background: 'rgba(16,185,129,.07)', border: '1px solid rgba(16,185,129,.2)', borderRadius: 10, padding: '11px 14px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>✅ Resolução registrada</div>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6 }}>{selected.resolucao_descricao}</div>
+                {selected.data_finalizacao && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>Finalizado em {fmtDT2(selected.data_finalizacao)}</div>}
               </div>
             )}
 
