@@ -163,6 +163,7 @@ export default async function handler(req, res) {
         quando:     s.created_at,
       })),
       mensagens_recentes: (msgs || []).map(m => ({
+        id:         m.id,
         grupo:      m.grupo?.nome_grupo || '—',
         remetente:  m.remetente_nome,
         whatsapp:   m.remetente_whatsapp,
@@ -171,6 +172,40 @@ export default async function handler(req, res) {
         quando:     m.data_mensagem,
       })),
     })
+  }
+
+  // ── Reprocessar mensagem bloqueada → força criação de SAT ────────────────
+  if (action === 'reprocessar-mensagem' && req.method === 'POST') {
+    const { mensagem_id } = req.body || {}
+    if (!mensagem_id) return res.status(400).json({ error: 'mensagem_id obrigatório' })
+
+    // Busca a mensagem original
+    const { data: msg, error: errMsg } = await supabase
+      .from('mensagens_whatsapp_grupos')
+      .select('*, grupo:whatsapp_grupos(*, tecnicos!tecnico_id(*))')
+      .eq('id', mensagem_id)
+      .single()
+
+    if (errMsg || !msg) return res.status(404).json({ error: 'Mensagem não encontrada' })
+
+    const grupo = msg.grupo
+    if (!grupo?.id) return res.status(400).json({ error: 'Grupo não encontrado' })
+
+    // Chama o engine simulando um webhook reprocessado
+    const { processarMensagemGrupo } = await import('./_chamados-engine.js')
+    await processarMensagemGrupo({
+      messageId:        msg.zapi_message_id || `reprocess-${Date.now()}`,
+      phone:            grupo.zapi_group_id,
+      participantPhone: msg.remetente_whatsapp,
+      participantName:  msg.remetente_nome,
+      text:             { message: msg.mensagem },
+      type:             msg.tipo_mensagem || 'text',
+      moments:          msg.data_mensagem ? Math.floor(new Date(msg.data_mensagem).getTime() / 1000) : undefined,
+      isGroup:          true,
+      _reprocessado:    true,
+    })
+
+    return res.json({ ok: true, mensagem_id, grupo: grupo.nome_grupo, remetente: msg.remetente_nome })
   }
 
   return res.status(400).json({ error: 'action inválida' })

@@ -65,8 +65,10 @@ export async function processarMensagemGrupo(body) {
   // Ignora mensagens enviadas pelo próprio bot
   if (body.fromMe) return
 
-  // ── Verifica duplicidade ────────────────────────────────────────────────────
-  if (zapiMsgId) {
+  const reprocessado = !!body._reprocessado
+
+  // ── Verifica duplicidade (ignora se for reprocessamento) ───────────────────
+  if (zapiMsgId && !reprocessado) {
     const { data: existing } = await supabase
       .from('mensagens_whatsapp_grupos')
       .select('id')
@@ -188,19 +190,33 @@ export async function processarMensagemGrupo(body) {
     return
   }
 
-  // ── Verifica duplicidade de chamado recente (mesmo remetente, mesmo grupo, últimos 30min) ───
+  // ── Verifica duplicidade inteligente (mesmo remetente + mesmo equipamento) ──
+  // Permite múltiplos SATs simultâneos se forem equipamentos diferentes
   const trintaMin = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-  const { data: satRecente } = await supabase
+  const novoEquip = (resultado?.equipamento || resultado?.veiculo_ou_maquina || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+  const { data: satsRecentes } = await supabase
     .from('solicitacoes_atendimento')
-    .select('id, codigo')
+    .select('id, codigo, equipamento')
     .eq('grupo_id', grupo.id)
     .eq('solicitante_whatsapp', remetenteWa)
     .gte('created_at', trintaMin)
     .not('status', 'in', '(descartada,erro_classificacao)')
-    .maybeSingle()
+
+  const satRecente = (satsRecentes || []).find(s => {
+    const existeEquip = (s.equipamento || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    // Ambos identificaram um equipamento → só bloqueia se for o mesmo
+    if (novoEquip && existeEquip) {
+      return novoEquip === existeEquip || novoEquip.includes(existeEquip) || existeEquip.includes(novoEquip)
+    }
+    // Nenhum tem equipamento → mesmo chamado genérico, bloqueia
+    if (!novoEquip && !existeEquip) return true
+    // Um tem equipamento e outro não → chamados diferentes, permite
+    return false
+  })
 
   if (satRecente) {
-    // Chamado já aberto recentemente — evita duplicata
+    console.log(`[_chamados-engine] Duplicata bloqueada: ${satRecente.codigo} (equip: ${satRecente.equipamento || 'genérico'})`)
     await supabase
       .from('mensagens_whatsapp_grupos')
       .update({ processada: true })
