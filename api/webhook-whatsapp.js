@@ -256,6 +256,8 @@ export default async function handler(req, res) {
     const fromPhone = body.phone || body.from
     const msgType   = (body.type || '').toLowerCase()
     const fromMe    = body.fromMe === true
+    // LOG DIAGNÓSTICO — remove quando confirmar funcionamento
+    console.log(`[webhook-wa] RECV phone=${fromPhone} type=${body.type} msgType=${msgType} isGroup=${body.isGroupMsg} fromMe=${fromMe} keys=${Object.keys(body).join(',')}`)
 
     // Mensagens de grupo: redireciona para o motor de chamados
     // Vercel encerra o processo após a resposta, então usamos await antes do retorno.
