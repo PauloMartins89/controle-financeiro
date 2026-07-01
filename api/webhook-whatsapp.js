@@ -252,12 +252,14 @@ export default async function handler(req, res) {
   try {
     const body = req.body || {}
 
-    // Z-API envia mensagens em body.phone e body.type
-    const fromPhone = body.phone || body.from
-    const msgType   = (body.type || '').toLowerCase()
-    const fromMe    = body.fromMe === true
-    // LOG DIAGNÓSTICO — remove quando confirmar funcionamento
-    console.log(`[webhook-wa] RECV phone=${fromPhone} type=${body.type} msgType=${msgType} isGroup=${body.isGroupMsg} fromMe=${fromMe} keys=${Object.keys(body).join(',')}`)
+    // Z-API envia type='ReceivedCallback' para TODAS as mensagens; detectar pelo campo presente
+    const fromPhone    = body.phone || body.from
+    const fromMe       = body.fromMe === true
+    const isImageMsg   = !!(body.image)
+    const isAudioMsg   = !!(body.audio || body.ptt)
+    const isTextMsg    = !!(body.text || body.body) && !isImageMsg && !isAudioMsg
+    const msgType      = (body.type || '').toLowerCase()
+    console.log(`[webhook-wa] RECV phone=${fromPhone} type=${body.type} isImage=${isImageMsg} isAudio=${isAudioMsg} isText=${isTextMsg} isGroup=${body.isGroupMsg} fromMe=${fromMe}`)
 
     // Mensagens de grupo: redireciona para o motor de chamados
     // Vercel encerra o processo após a resposta, então usamos await antes do retorno.
@@ -291,7 +293,7 @@ export default async function handler(req, res) {
     }
 
     // ── Texto "SIM" / "NÃO" do supervisor (fallback p/ quando botões falham) ─
-    if (msgType === 'chat' || msgType === 'text') {
+    if (isTextMsg || msgType === 'chat' || msgType === 'text') {
       const txtRaw = (body.text?.message || body.text || body.body || '').trim().toUpperCase()
       if (txtRaw === 'SIM' || txtRaw === 'NÃO' || txtRaw === 'NAO' || txtRaw === 'N') {
         const supabase = getSupabase()
@@ -340,7 +342,7 @@ export default async function handler(req, res) {
     }
 
     // ── Resposta do restaurante: PREPARANDO / ENTREGUE ──────────────────────
-    if (msgType === 'chat' || msgType === 'text') {
+    if (isTextMsg || msgType === 'chat' || msgType === 'text') {
       const txtRaw2 = (body.text?.message || body.text || body.body || '').trim().toUpperCase()
       if (txtRaw2 === 'PREPARANDO' || txtRaw2 === 'ENTREGUE') {
         const supabase = getSupabase()
@@ -396,8 +398,8 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── Líder de refeição: reenviar link do formulário (somente texto, nunca imagem) ─
-    if (fromPhone && msgType !== 'image') {
+    // ── Líder de refeição: reenviar link do formulário (somente texto/áudio, nunca imagem) ─
+    if (fromPhone && !isImageMsg) {
       const supabaseRef = getSupabase()
       if (supabaseRef) {
         let equipe = null
@@ -451,7 +453,7 @@ export default async function handler(req, res) {
     }
 
     // ── Agenda: roteamento inteligente para áudio/texto de gestores ──────────
-    if (fromPhone && (msgType === 'audio' || msgType === 'ptt' || msgType === 'chat' || msgType === 'text')) {
+    if (fromPhone && (isAudioMsg || isTextMsg || msgType === 'audio' || msgType === 'ptt' || msgType === 'chat' || msgType === 'text')) {
       const supabaseAgenda = getSupabase()
       if (supabaseAgenda) {
         try {
@@ -467,8 +469,8 @@ export default async function handler(req, res) {
     }
 
     // Só processa se for imagem
-    if (msgType !== 'image') {
-      console.log(`[webhook-wa] tipo ignorado: ${msgType} | phone: ${fromPhone}`)
+    if (!isImageMsg) {
+      console.log(`[webhook-wa] tipo ignorado: type=${body.type} isImage=${isImageMsg} | phone: ${fromPhone}`)
       if (fromPhone) {
         await zapiSendText(
           fromPhone,
