@@ -128,6 +128,7 @@ export async function processarMensagemGrupo(body) {
       tipo_mensagem:      msgType,
       data_mensagem:      dataMensagem,
       processada:         false,
+      eh_tecnico:         ehTecnico,
     })
     .select()
     .single()
