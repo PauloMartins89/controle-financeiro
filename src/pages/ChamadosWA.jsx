@@ -717,6 +717,20 @@ function SecaoGrupos({ workspaceId, ownerId }) {
     toast.success('Grupo removido'); load()
   }
 
+  async function enviarPendencias(r) {
+    if (!window.confirm(`Enviar lista de pendências do grupo "${r.nome_grupo}" no próprio grupo WA?`)) return
+    try {
+      const resp = await fetch(`/api/chamados-setup?action=digest-grupo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grupo_id: r.id }),
+      })
+      const d = await resp.json()
+      if (!resp.ok) { toast.error(d.error || 'Erro ao enviar', { duration: 6000 }); return }
+      toast.success(d.mensagem || 'Enviado!', { duration: 5000 })
+    } catch { toast.error('Erro de rede') }
+  }
+
   const [modalConvite, setModalConvite] = useState(null)
   const [formConvite, setFormConvite]   = useState({})
   const [savingConvite, setSavingConvite] = useState(false)
@@ -777,8 +791,9 @@ function SecaoGrupos({ workspaceId, ownerId }) {
                 <td style={{ padding: '9px 12px' }}><span style={{ fontSize: 10, fontWeight: 700, color: r.ativo ? '#10b981' : '#94a3b8' }}>{r.ativo ? '● Ativo' : '○ Pausado'}</span></td>
                 <td style={{ padding: '9px 12px' }}>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <button onClick={() => { setForm({ ...r, tecnico_id: r.tecnico_id || '' }); setModal({ mode: 'edit', id: r.id }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', padding: 3 }}><PencilIcon style={{ width: 13, height: 13 }} /></button>
-                    <button onClick={() => toggleAtivo(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: r.ativo ? '#ef4444' : '#10b981', padding: 3 }}><SignalIcon style={{ width: 13, height: 13 }} /></button>
+                    <button onClick={() => { setForm({ ...r, tecnico_id: r.tecnico_id || '' }); setModal({ mode: 'edit', id: r.id }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', padding: 3 }} title="Editar"><PencilIcon style={{ width: 13, height: 13 }} /></button>
+                    <button onClick={() => toggleAtivo(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: r.ativo ? '#ef4444' : '#10b981', padding: 3 }} title={r.ativo ? 'Pausar' : 'Ativar'}><SignalIcon style={{ width: 13, height: 13 }} /></button>
+                    <button onClick={() => enviarPendencias(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f59e0b', padding: 3 }} title="Enviar lista de pendências no grupo WA"><ClipboardWAIcon style={{ width: 13, height: 13 }} /></button>
                     <button onClick={() => excluir(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 3 }} title="Excluir cadastro"><TrashIcon style={{ width: 13, height: 13 }} /></button>
                   </div>
                 </td>

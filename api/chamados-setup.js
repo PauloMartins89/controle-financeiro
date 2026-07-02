@@ -394,6 +394,70 @@ async function _handler(req, res) {
     return res.json({ ok: true, codigo: sat.codigo, criado: true, sat_id: sat.id })
   }
 
+  // ── Digest de pendências de um grupo (enviar no grupo WA) ───────────────────
+  if (action === 'digest-grupo' && req.method === 'POST') {
+    const { grupo_id } = req.body || {}
+    if (!grupo_id) return res.status(400).json({ error: 'grupo_id obrigatório' })
+
+    const { data: grupo } = await supabase
+      .from('whatsapp_grupos')
+      .select('*, tecnicos!tecnico_id(nome, whatsapp)')
+      .eq('id', grupo_id)
+      .single()
+    if (!grupo) return res.status(404).json({ error: 'Grupo não encontrado' })
+
+    const STATUS_ABERTOS = ['aberta', 'enviada_tecnico', 'em_atendimento', 'triagem', 'aguardando_informacao']
+    const { data: sats } = await supabase
+      .from('solicitacoes_atendimento')
+      .select('codigo, resumo_ia, prioridade, status, equipamento, created_at')
+      .eq('grupo_id', grupo_id)
+      .in('status', STATUS_ABERTOS)
+      .order('created_at', { ascending: true })
+
+    const PRIORIDADE_EMOJI = { critica: '🔴', alta: '🟠', media: '🟡', baixa: '🟢' }
+    const STATUS_LABEL = { aberta: 'Aberta', enviada_tecnico: 'Enviada', em_atendimento: 'Em atendimento', triagem: 'Triagem', aguardando_informacao: 'Aguardando Info' }
+
+    if (!sats?.length) {
+      // Envia mensagem "sem pendências" no grupo
+      const msgVazia = [
+        `✅ *Pendências — ${grupo.nome_grupo}*`,
+        ``,
+        `Nenhum chamado em aberto no momento.`,
+      ].join('\n')
+      const zapiUrl = `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`
+      await fetch(zapiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}) }, body: JSON.stringify({ phone: grupo.zapi_group_id, message: msgVazia }) })
+      return res.json({ ok: true, pendentes: 0, mensagem: 'Sem pendências — mensagem enviada ao grupo' })
+    }
+
+    const dataHoje = new Date().toLocaleDateString('pt-BR')
+    const linhas = [
+      `📋 *Pendências — ${grupo.nome_grupo}*`,
+      `${dataHoje} · *${sats.length}* chamado(s) em aberto`,
+      ``,
+      ...sats.map((s, i) => {
+        const emoji  = PRIORIDADE_EMOJI[s.prioridade] || '⚪'
+        const status = STATUS_LABEL[s.status] || s.status
+        const equip  = s.equipamento ? ` · 🚜 ${s.equipamento}` : ''
+        const resumo = s.resumo_ia ? `\n   _${s.resumo_ia.slice(0, 100)}_` : ''
+        return `${i + 1}. ${emoji} *${s.codigo}* [${status}]${equip}${resumo}`
+      }),
+      ``,
+      `_Responda com "CÓDIGO + corrigido" para fechar o chamado._`,
+    ]
+
+    const mensagem = linhas.join('\n')
+    const zapiUrl  = `https://api.z-api.io/instances/${process.env.ZAPI_INSTANCE_ID}/token/${process.env.ZAPI_TOKEN}/send-text`
+    const zapiResp = await fetch(zapiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(process.env.ZAPI_CLIENT_TOKEN ? { 'Client-Token': process.env.ZAPI_CLIENT_TOKEN } : {}) },
+      body: JSON.stringify({ phone: grupo.zapi_group_id, message: mensagem }),
+    })
+    const zapiData = await zapiResp.json().catch(() => ({}))
+    if (!zapiResp.ok) return res.status(502).json({ error: `Z-API: ${zapiData.error || zapiData.message || zapiResp.status}` })
+
+    return res.json({ ok: true, pendentes: sats.length, mensagem: `Lista enviada ao grupo com ${sats.length} chamado(s)` })
+  }
+
   return res.status(400).json({ error: 'action inválida' })
 }
 
