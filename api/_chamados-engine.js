@@ -196,9 +196,13 @@ export async function processarMensagemGrupo(body) {
     })
   } catch (e) { console.error('[_chamados-engine] log IA:', e?.message) }
 
-  // Nenhum chamado identificado pela IA → mantém mensagens no pool de contexto
-  // (apenas o técnico responsável pode fechar SATs, via processarInteracaoTecnico)
-  if (!temChamado) return
+  // Nenhum chamado identificado pela IA
+  if (!temChamado) {
+    // Tenta fechar SAT existente via detecção de resolução.
+    // Funciona para QUALQUER membro do grupo — não só o técnico.
+    await tentarFecharSatPorResolucao(supabase, msgText, remetenteNome, grupo)
+    return
+  }
 
   // ── Dedup: SATs ABERTOS para o mesmo equipamento no grupo (sem janela de tempo) ─
   // Verifica todo o grupo (não só o remetente) para evitar SAT duplicado quando
@@ -296,6 +300,76 @@ export async function processarMensagemGrupo(body) {
     await supabase.from('mensagens_whatsapp_grupos').update({ processada: true }).in('id', ctxIds)
   }
   await supabase.from('mensagens_whatsapp_grupos').update({ processada: true }).eq('id', msgSalva.id)
+}
+
+/**
+ * Tenta fechar um SAT aberto com base numa mensagem de resolução de QUALQUER membro do grupo.
+ * Chamado quando a classificação principal não identifica novo chamado.
+ */
+async function tentarFecharSatPorResolucao(supabase, msgText, remetenteNome, grupo) {
+  try {
+    const resolucao = await detectarResolucao(msgText, {
+      grupoNome:     grupo.nome_grupo,
+      nomeRemetente: remetenteNome,
+    })
+
+    if (!resolucao?.eh_resolucao || resolucao.confianca < 0.70) return
+
+    // Busca SATs abertos no grupo
+    const { data: abertos } = await supabase
+      .from('solicitacoes_atendimento')
+      .select('id, codigo, status, equipamento, quantidade_interacoes, data_primeira_interacao_tecnico')
+      .eq('grupo_id', grupo.id)
+      .not('status', 'in', '(descartada,erro_classificacao,concluida)')
+      .order('created_at', { ascending: false })
+
+    if (!abertos?.length) return
+
+    let satAlvo = null
+
+    // 1. Menção explícita ao código SAT
+    const satCodeMatch = msgText.match(/SAT-\d+/i)
+    if (satCodeMatch) {
+      satAlvo = abertos.find(s => s.codigo?.toLowerCase() === satCodeMatch[0].toLowerCase())
+    }
+
+    // 2. Equipamento identificado pela IA
+    if (!satAlvo && resolucao.equipamento) {
+      const eqNorm = resolucao.equipamento.toLowerCase().replace(/[^a-z0-9]/g, '')
+      satAlvo = abertos.find(s => {
+        if (!s.equipamento) return false
+        const sNorm = s.equipamento.toLowerCase().replace(/[^a-z0-9]/g, '')
+        return sNorm === eqNorm || sNorm.includes(eqNorm) || eqNorm.includes(sNorm)
+      })
+    }
+
+    // 3. Fallback: único SAT aberto no grupo
+    if (!satAlvo && abertos.length === 1) {
+      satAlvo = abertos[0]
+    }
+
+    if (!satAlvo) return
+
+    const agora = new Date().toISOString()
+    const primInteracao = satAlvo.data_primeira_interacao_tecnico ? {} : { data_primeira_interacao_tecnico: agora }
+
+    const { error } = await supabase
+      .from('solicitacoes_atendimento')
+      .update({
+        status:                'concluida',
+        data_finalizacao:      agora,
+        resolucao_descricao:   resolucao.resolucao_descricao || msgText.slice(0, 300),
+        data_ultima_interacao: agora,
+        quantidade_interacoes: (satAlvo.quantidade_interacoes || 0) + 1,
+        ...primInteracao,
+      })
+      .eq('id', satAlvo.id)
+
+    if (error) console.error('[_chamados-engine] tentarFecharSatPorResolucao update:', error.message)
+    else console.log(`[_chamados-engine] SAT ${satAlvo.codigo} fechado por "${remetenteNome}" via resolucao (confianca: ${resolucao.confianca})`)
+  } catch (e) {
+    console.error('[_chamados-engine] tentarFecharSatPorResolucao exceção:', e?.message)
+  }
 }
 
 /**
