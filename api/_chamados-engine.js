@@ -110,6 +110,11 @@ export async function processarMensagemGrupo(body) {
     return
   }
 
+  // ── Determina se o remetente é o técnico responsável do grupo ───────────────
+  // Compara pelo sufixo numérico (ignora DDI variável) para ser tolerante a formatos
+  const ehTecnico = !!(grupo.tecnicos?.whatsapp &&
+    remetenteWa.replace(/\D/g, '').endsWith(grupo.tecnicos.whatsapp.replace(/\D/g, '').slice(-9)))
+
   // ── Salva a mensagem ────────────────────────────────────────────────────────
   const { data: msgSalva, error: errMsg } = await supabase
     .from('mensagens_whatsapp_grupos')
@@ -123,6 +128,7 @@ export async function processarMensagemGrupo(body) {
       tipo_mensagem:      msgType,
       data_mensagem:      dataMensagem,
       processada:         false,
+      eh_tecnico:         ehTecnico,
     })
     .select()
     .single()
@@ -130,6 +136,12 @@ export async function processarMensagemGrupo(body) {
   if (errMsg) {
     if (errMsg.code === '23505') return // constraint duplicidade, ignorar
     console.error('[_chamados-engine] Erro ao salvar mensagem:', errMsg.message)
+    return
+  }
+
+  // ── Mensagem do técnico responsável → processar como interação, não como novo SAT ─
+  if (ehTecnico) {
+    await processarInteracaoTecnico(supabase, msgSalva, msgText, remetenteNome, grupo)
     return
   }
 
@@ -184,21 +196,18 @@ export async function processarMensagemGrupo(body) {
     })
   } catch (e) { console.error('[_chamados-engine] log IA:', e?.message) }
 
-  // Nenhum chamado → tenta detectar resolução e mantém mensagens no pool de contexto
-  if (!temChamado) {
-    await tentarFecharChamado(supabase, msgText, remetenteNome, grupo)
-    return
-  }
+  // Nenhum chamado identificado pela IA → mantém mensagens no pool de contexto
+  // (apenas o técnico responsável pode fechar SATs, via processarInteracaoTecnico)
+  if (!temChamado) return
 
-  // ── Busca SATs já abertos no período (dedup por equipamento) ─────────────────
-  const trintaMin = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  // ── Dedup: SATs ABERTOS para o mesmo equipamento no grupo (sem janela de tempo) ─
+  // Verifica todo o grupo (não só o remetente) para evitar SAT duplicado quando
+  // duas pessoas diferentes reportam o mesmo equipamento.
   const { data: satsRecentesDb } = await supabase
     .from('solicitacoes_atendimento')
     .select('id, codigo, equipamento')
     .eq('grupo_id', grupo.id)
-    .eq('solicitante_whatsapp', remetenteWa)
-    .gte('created_at', trintaMin)
-    .not('status', 'in', '(descartada,erro_classificacao)')
+    .not('status', 'in', '(descartada,erro_classificacao,concluida)')
 
   // Lista mutável para rastrear SATs criados no loop (dedup entre itens do mesmo período)
   const satsList = Array.isArray(satsRecentesDb) ? [...satsRecentesDb] : []
@@ -254,10 +263,14 @@ export async function processarMensagemGrupo(body) {
         resumo_ia:            item.resumo || null,
         categoria:            item.categoria || 'outros',
         prioridade:           item.prioridade || 'media',
-        status:               virouChamado ? 'aberta' : 'triagem',
+        // Sem equipamento identificado → sempre triagem (revisão humana obrigatória)
+        status:               (virouChamado && (item.equipamento || item.veiculo_ou_maquina)) ? 'aberta' : 'triagem',
         confianca_ia:         item.confianca,
         motivo_classificacao: item.motivo || null,
         equipamento:          item.equipamento || item.veiculo_ou_maquina || null,
+        local:                item.local    || null,
+        cliente:              grupo.cliente  || null,
+        operacao:             grupo.operacao || null,
       })
       .select()
       .single()
@@ -286,57 +299,98 @@ export async function processarMensagemGrupo(body) {
 }
 
 /**
- * Tenta detectar mensagem de resolução e fechar SATs abertos correspondentes.
+ * Processa mensagem do técnico responsável do grupo.
+ * O técnico NÃO abre SATs — ele atualiza, interagem e fecha SATs existentes.
+ *
+ * Gatilho de atualização: mensagem menciona código SAT (ex: SAT-000011)
+ *                         OU equipamento identificável pela IA.
+ * Sem menção de equipamento/SAT: registra somente no log (mensagem salva, nada muda).
  */
-async function tentarFecharChamado(supabase, msgText, remetenteNome, grupo) {
+async function processarInteracaoTecnico(supabase, msgSalva, msgText, remetenteNome, grupo) {
+  // Sempre marca mensagem como processada (técnico não alimenta contexto de solicitantes)
+  await supabase.from('mensagens_whatsapp_grupos').update({ processada: true }).eq('id', msgSalva.id)
+
   try {
+    // 1. Verifica menção direta a código SAT (ex: "SAT-000011 resolvido")
+    const satCodeMatch = msgText.match(/SAT-\d+/i)
+
+    // 2. Detecta resolução e extrai equipamento via IA
     const resolucao = await detectarResolucao(msgText, {
       grupoNome:     grupo.nome_grupo,
       nomeRemetente: remetenteNome,
     })
 
-    if (!resolucao?.eh_resolucao || resolucao.confianca < 0.75) return
-
-    const equipamento = resolucao.equipamento
-    console.log(`[_chamados-engine] Resolução detectada: equipamento="${equipamento}" confianca=${resolucao.confianca}`)
-
-    // Busca SATs abertos no grupo (com ou sem equipamento específico)
-    const query = supabase
-      .from('solicitacoes_atendimento')
-      .select('id, codigo, equipamento, status')
-      .eq('grupo_id', grupo.id)
-      .in('status', ['aberta', 'enviada_tecnico', 'em_atendimento', 'triagem'])
-      .order('created_at', { ascending: false })
-
-    const { data: satsAbertos } = await query
-    if (!satsAbertos?.length) return
-
-    // Encontra o SAT mais compatível pelo equipamento
+    // 3. Localiza o SAT alvo
     let satAlvo = null
-    if (equipamento) {
-      const eqNorm = equipamento.toLowerCase().replace(/[^a-z0-9]/g, '')
-      satAlvo = satsAbertos.find(s => {
+
+    if (satCodeMatch) {
+      // Prioridade: SAT mencionado explicitamente pelo código
+      const { data } = await supabase
+        .from('solicitacoes_atendimento')
+        .select('id, codigo, status, equipamento, data_primeira_interacao_tecnico, quantidade_interacoes')
+        .eq('grupo_id', grupo.id)
+        .ilike('codigo', satCodeMatch[0])
+        .not('status', 'in', '(descartada,erro_classificacao,concluida)')
+        .maybeSingle()
+      satAlvo = data
+    }
+
+    if (!satAlvo && resolucao?.equipamento) {
+      // Fallback: SAT com equipamento correspondente
+      const eqNorm = resolucao.equipamento.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const { data: abertos } = await supabase
+        .from('solicitacoes_atendimento')
+        .select('id, codigo, status, equipamento, data_primeira_interacao_tecnico, quantidade_interacoes')
+        .eq('grupo_id', grupo.id)
+        .not('status', 'in', '(descartada,erro_classificacao,concluida)')
+        .order('created_at', { ascending: false })
+
+      satAlvo = (abertos || []).find(s => {
         if (!s.equipamento) return false
         const sNorm = s.equipamento.toLowerCase().replace(/[^a-z0-9]/g, '')
-        return sNorm.includes(eqNorm) || eqNorm.includes(sNorm)
+        return sNorm === eqNorm || sNorm.includes(eqNorm) || eqNorm.includes(sNorm)
       })
     }
-    // Fallback: fecha o SAT mais recente do grupo
-    if (!satAlvo) satAlvo = satsAbertos[0]
+
+    // Sem SAT alvo identificado → técnico falou algo genérico, nada a atualizar
     if (!satAlvo) return
 
-    await supabase
-      .from('solicitacoes_atendimento')
-      .update({
-        status:               'concluida',
-        data_finalizacao:     new Date().toISOString(),
-        resolucao_descricao:  resolucao.resolucao_descricao || msgText.slice(0, 300),
-        updated_at:           new Date().toISOString(),
-      })
-      .eq('id', satAlvo.id)
+    const agora     = new Date().toISOString()
+    const ehFechamento = resolucao?.eh_resolucao && resolucao?.confianca >= 0.75
+    const primInteracao = satAlvo.data_primeira_interacao_tecnico ? {} : { data_primeira_interacao_tecnico: agora }
 
-    console.log(`[_chamados-engine] SAT ${satAlvo.codigo} fechado por resolução: "${resolucao.resolucao_descricao}"`)
+    if (ehFechamento) {
+      const { error } = await supabase
+        .from('solicitacoes_atendimento')
+        .update({
+          status:               'concluida',
+          data_finalizacao:     agora,
+          resolucao_descricao:  resolucao.resolucao_descricao || msgText.slice(0, 300),
+          data_ultima_interacao: agora,
+          quantidade_interacoes: (satAlvo.quantidade_interacoes || 0) + 1,
+          ...primInteracao,
+        })
+        .eq('id', satAlvo.id)
+      if (error) console.error('[_chamados-engine] processarInteracaoTecnico close:', error.message)
+      else console.log(`[_chamados-engine] SAT ${satAlvo.codigo} fechado pelo técnico: "${resolucao.resolucao_descricao}"`)
+    } else {
+      // Interação técnica: avança status se ainda estava parado na fila inicial
+      const novoStatus = ['aberta', 'enviada_tecnico', 'triagem'].includes(satAlvo.status)
+        ? 'em_atendimento'
+        : satAlvo.status
+      const { error } = await supabase
+        .from('solicitacoes_atendimento')
+        .update({
+          status:                novoStatus,
+          data_ultima_interacao: agora,
+          quantidade_interacoes: (satAlvo.quantidade_interacoes || 0) + 1,
+          ...primInteracao,
+        })
+        .eq('id', satAlvo.id)
+      if (error) console.error('[_chamados-engine] processarInteracaoTecnico update:', error.message)
+      else console.log(`[_chamados-engine] SAT ${satAlvo.codigo} interação técnica (→ ${novoStatus})`)
+    }
   } catch (e) {
-    console.error('[_chamados-engine] tentarFecharChamado:', e?.message)
+    console.error('[_chamados-engine] processarInteracaoTecnico exceção:', e?.message)
   }
 }

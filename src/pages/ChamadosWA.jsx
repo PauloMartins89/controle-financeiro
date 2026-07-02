@@ -320,7 +320,9 @@ function SecaoSolicitacoes({ workspaceId }) {
                   {CAT_EMOJI[row.categoria] || '📋'} {row.grupo?.nome_grupo || '—'} · {row.solicitante_nome || '—'}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>
-                  {row.equipamento ? <span style={{ color: '#8b5cf6', fontWeight: 700, marginRight: 6 }}>⚙ {row.equipamento}</span> : null}{row.resumo_ia || row.mensagem_original || '—'}
+                  {row.equipamento ? <span style={{ color: '#8b5cf6', fontWeight: 700, marginRight: 6 }}>⚙ {row.equipamento}</span> : null}
+                {row.local ? <span style={{ color: '#0ea5e9', fontWeight: 600, marginRight: 6 }}>📍 {row.local}</span> : null}
+                {row.resumo_ia || row.mensagem_original || '—'}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <PriorDot p={row.prioridade} />
@@ -357,8 +359,16 @@ function SecaoSolicitacoes({ workspaceId }) {
                 { label: 'Solicitante', value: `${selected.solicitante_nome || '—'}${selected.solicitante_whatsapp ? ` · ${selected.solicitante_whatsapp}` : ''}` },
                 { label: 'Técnico',     value: selected.tecnico?.nome || '⚠ Não vinculado', vColor: !selected.tecnico ? '#ef4444' : undefined },
                 { label: 'Categoria',   value: `${CAT_EMOJI[selected.categoria] || ''} ${selected.categoria || '—'}` },
+                ...(selected.cliente  ? [{ label: 'Cliente',     value: selected.cliente }] : []),
+                ...(selected.operacao ? [{ label: 'Operação',    value: selected.operacao }] : []),
                 ...(selected.equipamento ? [{ label: 'Equipamento', value: `⚙ ${selected.equipamento}`, vColor: '#8b5cf6' }] : []),
+                ...(selected.local    ? [{ label: 'Local',       value: `📍 ${selected.local}`, vColor: '#0ea5e9' }] : []),
                 ...(selected.data_finalizacao ? [{ label: 'Finalizado em', value: fmtDT(selected.data_finalizacao) }] : []),
+                ...(selected.quantidade_interacoes > 0 ? [{
+                  label: 'Interações técnico',
+                  value: `${selected.quantidade_interacoes}x${selected.data_primeira_interacao_tecnico ? ` · 1ª ${fmtDT(selected.data_primeira_interacao_tecnico)}` : ''}`,
+                  vColor: '#10b981',
+                }] : []),
               ].map(f => (
                 <div key={f.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 11px', border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 3 }}>{f.label}</div>
@@ -880,7 +890,12 @@ function exportCSV(rows) {
     ['Categoria',    r => r.categoria || ''],
     ['Grupo',        r => r.grupo?.nome_grupo || ''],
     ['Equipamento',  r => r.equipamento || ''],
+    ['Local',        r => r.local || ''],
+    ['Cliente',      r => r.cliente || ''],
+    ['Operação',     r => r.operacao || ''],
     ['Solicitante',  r => r.solicitante_nome || ''],
+    ['Interações',   r => r.quantidade_interacoes || 0],
+    ['1ª Interação', r => r.data_primeira_interacao_tecnico ? new Date(r.data_primeira_interacao_tecnico).toLocaleString('pt-BR') : ''],
     ['Técnico',      r => r.tecnico?.nome || ''],
     ['Resumo',       r => (r.resumo_ia || r.mensagem_original || '').replace(/["\n]/g, ' ')],
     ['Abertura',     r => r.created_at ? new Date(r.created_at).toLocaleString('pt-BR') : ''],
@@ -1055,6 +1070,8 @@ function SecaoRelatorio({ workspaceId }) {
               <th style={thStyle('prioridade')}  onClick={thSort('prioridade')}  >Prior.{thArrow('prioridade')}</th>
               <th style={thStyle('grupo_id')}    onClick={thSort('grupo_id')}    >Grupo{thArrow('grupo_id')}</th>
               <th style={thStyle('equipamento')} onClick={thSort('equipamento')} >Equip.{thArrow('equipamento')}</th>
+              <th style={thStyle('local')}       onClick={thSort('local')}       >Local{thArrow('local')}</th>
+              <th style={thStyle('cliente')}     onClick={thSort('cliente')}     >Cliente{thArrow('cliente')}</th>
               <th style={thStyle('solicitante_nome')} onClick={thSort('solicitante_nome')}>Solicitante{thArrow('solicitante_nome')}</th>
               <th style={thStyle('tecnico_id')}  onClick={thSort('tecnico_id')}  >Técnico{thArrow('tecnico_id')}</th>
               <th style={thStyle('resumo_ia')}                                   >Resumo</th>
@@ -1084,6 +1101,8 @@ function SecaoRelatorio({ workspaceId }) {
                   <td style={tdStyle}>{pc ? <span style={{ fontSize: 11, fontWeight: 700, color: pc.color }}>{pc.emoji}</span> : '—'}</td>
                   <td style={{ ...tdStyle, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.grupo?.nome_grupo || '—'}</td>
                   <td style={{ ...tdStyle, color: '#8b5cf6', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.equipamento || <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>—</span>}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: '#0ea5e9', fontSize: 11 }}>{r.local || <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>
+                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', fontSize: 11 }}>{r.cliente || <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>
                   <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.solicitante_nome || '—'}</td>
                   <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.tecnico?.nome || <span style={{ color: '#ef4444', fontSize: 11 }}>⚠ N/A</span>}</td>
                   <td style={{ ...tdStyle, color: 'var(--text-secondary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.resumo_ia || r.mensagem_original}>
