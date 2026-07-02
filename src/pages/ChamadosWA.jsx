@@ -66,7 +66,7 @@ function ClipboardWAIcon(p) {
 }
 
 // ── ERP Header ────────────────────────────────────────────────────────────────
-function ERPHeader({ kpis, loading, onRefresh, navigate }) {
+function ERPHeader({ kpis, loading, onRefresh, navigate, secao }) {
 
   const chips = [
     { label: 'Abertos hoje',  value: kpis?.abertasHoje     ?? '—', color: '#6366f1', path: '/chamados-wa/solicitacoes' },
@@ -79,7 +79,7 @@ function ERPHeader({ kpis, loading, onRefresh, navigate }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', height: 52, flexShrink: 0, paddingRight: 12 }}>
       {/* Brand block */}
-      <div style={{ width: 200, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', borderRight: '1px solid var(--border)', height: '100%', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderRight: '1px solid var(--border)', height: '100%', flexShrink: 0 }}>
         <div style={{ width: 32, height: 32, borderRadius: 4, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <ChatBubbleLeftRightIcon style={{ width: 16, height: 16, color: '#fff' }} />
         </div>
@@ -114,7 +114,7 @@ function ERPHeader({ kpis, loading, onRefresh, navigate }) {
   )
 }
 
-// ── ERP Sidebar ───────────────────────────────────────────────────────────────
+// ── ERP Nav bar (tabs sob o header) ─────────────────────────────────────────
 const NAV_ITEMS = [
   { key: 'dashboard',    icon: ChartBarIcon,            label: 'Dashboard',    path: '/chamados-wa' },
   { key: 'solicitacoes', icon: ClipboardWAIcon,         label: 'Solicitações', path: '/chamados-wa/solicitacoes' },
@@ -125,26 +125,23 @@ const NAV_ITEMS = [
   { key: 'logs',         icon: CpuChipIcon,             label: 'Logs IA',      path: '/chamados-wa/logs' },
 ]
 
-function ERPSidebar({ secao, kpis, onNavigate }) {
+function ERPNavBar({ secao, kpis, onNavigate }) {
   return (
-    <div style={{ width: 200, background: 'var(--bg-card)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-      <div style={{ padding: '10px 8px', flex: 1 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .8, padding: '4px 8px 10px' }}>Módulo</div>
-        {NAV_ITEMS.map(item => {
-          const ativo = secao === item.key
-          const badge = item.badgeKey && (kpis?.[item.badgeKey] ?? 0) > 0 ? kpis[item.badgeKey] : null
-          return (
-            <button key={item.key} onClick={() => onNavigate(item.path)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', borderRadius: 4, border: 'none', cursor: 'pointer', background: ativo ? 'var(--bg-secondary)' : 'transparent', color: ativo ? '#6366f1' : 'var(--text-secondary)', fontWeight: ativo ? 700 : 500, fontSize: 13, marginBottom: 2, textAlign: 'left', borderLeft: ativo ? '3px solid #6366f1' : '3px solid transparent', transition: 'background .1s' }}
-              onMouseEnter={e => { if (!ativo) e.currentTarget.style.background = 'var(--bg-secondary)' }}
-              onMouseLeave={e => { if (!ativo) e.currentTarget.style.background = 'transparent' }}>
-              <item.icon style={{ width: 15, height: 15, flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {badge && <span style={{ background: item.key === 'triagem' ? '#f59e0b' : '#6366f1', color: '#fff', borderRadius: 4, fontSize: 10, fontWeight: 800, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>{badge}</span>}
-            </button>
-          )
-        })}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', paddingLeft: 10, overflowX: 'auto', flexShrink: 0 }}>
+      {NAV_ITEMS.map(item => {
+        const ativo = secao === item.key
+        const badge = item.badgeKey && (kpis?.[item.badgeKey] ?? 0) > 0 ? kpis[item.badgeKey] : null
+        return (
+          <button key={item.key} onClick={() => onNavigate(item.path)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: 'none', borderBottom: ativo ? '2px solid #6366f1' : '2px solid transparent', background: 'transparent', cursor: 'pointer', color: ativo ? '#6366f1' : 'var(--text-secondary)', fontWeight: ativo ? 700 : 500, fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0, transition: 'color .1s' }}
+            onMouseEnter={e => { if (!ativo) e.currentTarget.style.color = 'var(--text-primary)' }}
+            onMouseLeave={e => { if (!ativo) e.currentTarget.style.color = 'var(--text-secondary)' }}>
+            <item.icon style={{ width: 13, height: 13, flexShrink: 0 }} />
+            {item.label}
+            {badge && <span style={{ background: item.key === 'triagem' ? '#f59e0b' : '#6366f1', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 800, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>{badge}</span>}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -1162,22 +1159,12 @@ export default function ChamadosWA() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* ERP Header */}
-      <ERPHeader kpis={kpis} loading={kpisLoading} onRefresh={loadKpis} navigate={navigate} />
+      <ERPHeader kpis={kpis} loading={kpisLoading} onRefresh={loadKpis} navigate={navigate} secao={secao} />
+      <ERPNavBar secao={secao} kpis={kpis} onNavigate={navigate} />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* ERP Sidebar */}
-        <ERPSidebar secao={secao} kpis={kpis} onNavigate={navigate} />
-
         {/* Content */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {/* Breadcrumb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)', fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0 }}>
-            <ChatBubbleLeftRightIcon style={{ width: 11, height: 11 }} />
-            <span>Chamados WA</span>
-            <ChevronRightIcon style={{ width: 10, height: 10 }} />
-            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{secaoLabel}</span>
-          </div>
-
           {/* Section */}
           <div style={{ flex: 1, overflow: ['solicitacoes','triagem','tecnicos','grupos','logs','relatorio'].includes(secao) ? 'hidden' : 'auto', padding: ['solicitacoes','relatorio'].includes(secao) ? 0 : '14px 18px' }}>
             {secao === 'dashboard'    && <SecaoDashboard workspaceId={workspaceId} kpis={kpis} navigate={navigate} />}
