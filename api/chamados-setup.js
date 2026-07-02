@@ -33,7 +33,15 @@ async function zapiGet(path) {
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   if (req.method === 'OPTIONS') return res.status(200).end()
+  try {
+  return await _handler(req, res)
+  } catch (e) {
+    console.error('[chamados-setup] crash não tratado:', e)
+    return res.status(500).json({ error: 'Erro interno do servidor', detalhe: e.message })
+  }
+}
 
+async function _handler(req, res) {
   const action = req.query.action
   const supabase = getSupabase()
   if (!supabase) return res.status(500).json({ error: 'Supabase não configurado' })
@@ -106,7 +114,13 @@ export default async function handler(req, res) {
       const meta = await fetch(`${zapiBase}/group-invitation-metadata?url=${encodeURIComponent(fullUrl)}`, {
         headers: zapiHeaders,
       })
-      const metaData = await meta.json()
+      const metaRaw = await meta.text()
+      console.log('[entrar-grupo] metadata status:', meta.status, 'body:', metaRaw.slice(0, 300))
+      let metaData
+      try { metaData = JSON.parse(metaRaw) } catch { metaData = { raw: metaRaw } }
+      if (!meta.ok) {
+        return res.status(502).json({ error: `Z-API metadata HTTP ${meta.status}`, detalhe: metaData })
+      }
       zapi_group_id = metaData.phone || null
       if (!zapi_group_id) {
         return res.status(502).json({ error: 'Z-API não retornou o JID do grupo', detalhe: metaData })
@@ -121,9 +135,12 @@ export default async function handler(req, res) {
         method: 'POST',
         headers: zapiHeaders,
       })
-      const joinData = await join.json()
-      if (!join.ok && !joinData.success) {
-        return res.status(502).json({ error: 'Z-API não conseguiu entrar no grupo', detalhe: joinData })
+      const joinRaw = await join.text()
+      console.log('[entrar-grupo] accept status:', join.status, 'body:', joinRaw.slice(0, 300))
+      let joinData
+      try { joinData = JSON.parse(joinRaw) } catch { joinData = { raw: joinRaw } }
+      if (!join.ok) {
+        return res.status(502).json({ error: `Z-API accept HTTP ${join.status}`, detalhe: joinData })
       }
     } catch (e) {
       return res.status(502).json({ error: 'Falha ao entrar no grupo via Z-API', detalhe: e.message })
