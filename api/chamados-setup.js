@@ -84,6 +84,60 @@ export default async function handler(req, res) {
     return res.json({ webhookUrl, atual: atual?.value, configurou })
   }
 
+  // ── Bot entra no grupo via link de convite do WhatsApp ───────────────────
+  if (action === 'entrar-grupo' && req.method === 'POST') {
+    const { invite_link, nome_grupo, workspace_id, owner_id, cliente, operacao, tecnico_id } = req.body || {}
+    if (!invite_link || !nome_grupo || !workspace_id) {
+      return res.status(400).json({ error: 'invite_link, nome_grupo e workspace_id são obrigatórios' })
+    }
+
+    // Extrai o código do link  https://chat.whatsapp.com/ABC123XYZ
+    const match = invite_link.trim().match(/chat\.whatsapp\.com\/([A-Za-z0-9_-]+)/)
+    if (!match) return res.status(400).json({ error: 'Link de convite inválido. Use o formato https://chat.whatsapp.com/XXXXX' })
+    const inviteCode = match[1]
+
+    // Faz o bot entrar no grupo via Z-API
+    let zapiResp
+    try {
+      const r = await fetch(
+        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/join-group-by-invite`,
+        {
+          method: 'POST',
+          headers: { 'Client-Token': zapiClientToken || '', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inviteCode }),
+        }
+      )
+      zapiResp = await r.json()
+      if (!r.ok) return res.status(502).json({ error: 'Z-API recusou o convite', detalhe: zapiResp })
+    } catch (e) {
+      return res.status(502).json({ error: 'Falha ao contatar Z-API', detalhe: e.message })
+    }
+
+    // JID do grupo retornado pela Z-API (campo "phone" ou "groupId")
+    const zapi_group_id = zapiResp.phone || zapiResp.groupId || zapiResp.id || null
+    if (!zapi_group_id) {
+      return res.status(502).json({ error: 'Z-API não retornou o JID do grupo', zapiResp })
+    }
+
+    // Registra/atualiza o grupo no Supabase
+    const { data, error } = await supabase.from('whatsapp_grupos').upsert(
+      {
+        zapi_group_id,
+        nome_grupo: nome_grupo.trim(),
+        workspace_id,
+        owner_id:   owner_id   || null,
+        tecnico_id: tecnico_id || null,
+        cliente:    cliente    || null,
+        operacao:   operacao   || null,
+        ativo:      true,
+      },
+      { onConflict: 'workspace_id,zapi_group_id' }
+    ).select().single()
+
+    if (error) return res.status(500).json({ error: error.message })
+    return res.json({ ok: true, grupo: data, zapi_group_id })
+  }
+
   // ── Registrar grupo descoberto ────────────────────────────────────────────
   if (action === 'registrar-grupo' && req.method === 'POST') {
     const { zapi_group_id, nome_grupo, workspace_id, owner_id, tecnico_id } = req.body || {}

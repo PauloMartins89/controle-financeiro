@@ -704,12 +704,40 @@ function SecaoGrupos({ workspaceId, ownerId }) {
     toast.success(r.ativo ? 'Suspenso' : 'Ativado'); load()
   }
 
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }))
-  const NC = { baixo: '#10b981', medio: '#f59e0b', alto: '#ef4444' }
+  const [modalConvite, setModalConvite] = useState(null)
+  const [formConvite, setFormConvite]   = useState({})
+  const [savingConvite, setSavingConvite] = useState(false)
+
+  async function entrarViaLink() {
+    const { invite_link, nome_grupo } = formConvite
+    if (!invite_link?.trim() || !nome_grupo?.trim()) { toast.error('Link de convite e nome são obrigatórios'); return }
+    if (!invite_link.includes('chat.whatsapp.com/')) { toast.error('Link inválido — use o link gerado pelo WhatsApp'); return }
+    setSavingConvite(true)
+    try {
+      const r = await fetch(`/api/chamados-setup?action=entrar-grupo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formConvite, workspace_id: workspaceId, owner_id: ownerId }),
+      })
+      const d = await r.json()
+      if (!r.ok) { toast.error(d.error || 'Erro ao entrar no grupo'); return }
+      toast.success(`Bot entrou no grupo "${d.grupo.nome_grupo}" e já está registrado!`)
+      setModalConvite(null); setFormConvite({}); load()
+    } catch (e) {
+      toast.error('Erro de rede')
+    } finally {
+      setSavingConvite(false)
+    }
+  }
+
+  const fc = (k, v) => setFormConvite(p => ({ ...p, [k]: v }))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12, flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 12, flexShrink: 0 }}>
+        <button onClick={() => { setFormConvite({}); setModalConvite(true) }} className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, padding: '7px 13px' }}>
+          🔗 Entrar via Link de Convite
+        </button>
         <button onClick={() => { setForm({ ativo: true, nivel_monitoramento: 'medio' }); setModal({ mode: 'new' }) }} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, padding: '7px 13px' }}>
           <PlusIcon style={{ width: 14, height: 14 }} /> Novo Grupo
         </button>
@@ -744,6 +772,32 @@ function SecaoGrupos({ workspaceId, ownerId }) {
           </tbody>
         </table>
       </div>
+      {modalConvite && (
+        <Modal title="Entrar no Grupo via Link de Convite" onClose={() => setModalConvite(null)} maxWidth={520}>
+          <div style={{ marginBottom: 14, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <b style={{ color: 'var(--text-primary)' }}>Como gerar o link no WhatsApp:</b><br />
+            Abra o grupo → toque nos 3 pontinhos → <i>Convidar via link</i> → copie e cole abaixo.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div>
+              <label style={lbl}>Link de Convite *</label>
+              <input style={inp} value={formConvite.invite_link || ''} onChange={e => fc('invite_link', e.target.value)} placeholder="https://chat.whatsapp.com/ABC123XYZ" />
+            </div>
+            <div>
+              <label style={lbl}>Nome do Grupo *</label>
+              <input style={inp} value={formConvite.nome_grupo || ''} onChange={e => fc('nome_grupo', e.target.value)} placeholder="Suporte Unidade Suzano" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div><label style={lbl}>Cliente</label><input style={inp} value={formConvite.cliente || ''} onChange={e => fc('cliente', e.target.value)} /></div>
+              <div><label style={lbl}>Operação</label><input style={inp} value={formConvite.operacao || ''} onChange={e => fc('operacao', e.target.value)} /></div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+            <button onClick={() => setModalConvite(null)} className="btn-ghost" style={{ fontSize: 13, padding: '8px 16px' }}>Cancelar</button>
+            <button onClick={entrarViaLink} disabled={savingConvite} className="btn-primary" style={{ fontSize: 13, padding: '8px 16px' }}>{savingConvite ? 'Entrando…' : '🔗 Entrar no Grupo'}</button>
+          </div>
+        </Modal>
+      )}
       {modal && (
         <Modal title={modal.mode === 'new' ? 'Novo Grupo Monitorado' : 'Editar Grupo'} onClose={() => setModal(null)} maxWidth={580}>
           {/* Banner de JIDs descobertos */}
