@@ -91,35 +91,45 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'invite_link, nome_grupo e workspace_id são obrigatórios' })
     }
 
-    // Extrai o código do link  https://chat.whatsapp.com/ABC123XYZ
-    const match = invite_link.trim().match(/chat\.whatsapp\.com\/([A-Za-z0-9_-]+)/)
-    if (!match) return res.status(400).json({ error: 'Link de convite inválido. Use o formato https://chat.whatsapp.com/XXXXX' })
-    const inviteCode = match[1]
+    // Valida que é um link de convite WA
+    if (!invite_link.includes('chat.whatsapp.com/')) {
+      return res.status(400).json({ error: 'Link de convite inválido. Use o formato https://chat.whatsapp.com/XXXXX' })
+    }
+    const fullUrl = invite_link.trim()
 
-    // Faz o bot entrar no grupo via Z-API
-    let zapiResp
+    const zapiBase = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}`
+    const zapiHeaders = { 'Client-Token': zapiClientToken || '', 'Content-Type': 'application/json' }
+
+    // 1. Busca metadata do grupo pelo link → obtém o JID (phone)
+    let zapi_group_id = null
     try {
-      const r = await fetch(
-        `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/join-group-by-invite`,
-        {
-          method: 'POST',
-          headers: { 'Client-Token': zapiClientToken || '', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ inviteCode }),
-        }
-      )
-      zapiResp = await r.json()
-      if (!r.ok) return res.status(502).json({ error: 'Z-API recusou o convite', detalhe: zapiResp })
+      const meta = await fetch(`${zapiBase}/group-invitation-metadata?url=${encodeURIComponent(fullUrl)}`, {
+        headers: zapiHeaders,
+      })
+      const metaData = await meta.json()
+      zapi_group_id = metaData.phone || null
+      if (!zapi_group_id) {
+        return res.status(502).json({ error: 'Z-API não retornou o JID do grupo', detalhe: metaData })
+      }
     } catch (e) {
-      return res.status(502).json({ error: 'Falha ao contatar Z-API', detalhe: e.message })
+      return res.status(502).json({ error: 'Falha ao buscar metadata do grupo', detalhe: e.message })
     }
 
-    // JID do grupo retornado pela Z-API (campo "phone" ou "groupId")
-    const zapi_group_id = zapiResp.phone || zapiResp.groupId || zapiResp.id || null
-    if (!zapi_group_id) {
-      return res.status(502).json({ error: 'Z-API não retornou o JID do grupo', zapiResp })
+    // 2. Bot aceita o convite e entra no grupo
+    try {
+      const join = await fetch(`${zapiBase}/accept-group-invite?url=${encodeURIComponent(fullUrl)}`, {
+        method: 'POST',
+        headers: zapiHeaders,
+      })
+      const joinData = await join.json()
+      if (!join.ok && !joinData.success) {
+        return res.status(502).json({ error: 'Z-API não conseguiu entrar no grupo', detalhe: joinData })
+      }
+    } catch (e) {
+      return res.status(502).json({ error: 'Falha ao entrar no grupo via Z-API', detalhe: e.message })
     }
 
-    // Registra/atualiza o grupo no Supabase
+    // 3. Registra/atualiza o grupo no Supabase
     const { data, error } = await supabase.from('whatsapp_grupos').upsert(
       {
         zapi_group_id,
