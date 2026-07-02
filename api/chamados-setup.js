@@ -105,13 +105,17 @@ async function _handler(req, res) {
     }
     const fullUrl = invite_link.trim()
 
+    // Remove query params do link de convite — WhatsApp às vezes adiciona ?mode=gi_t etc.
+    // Ex: https://chat.whatsapp.com/ABC123?mode=gi_t → https://chat.whatsapp.com/ABC123
+    const cleanUrl = fullUrl.split('?')[0]
+
     const zapiBase = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}`
     const zapiHeaders = { 'Client-Token': zapiClientToken || '', 'Content-Type': 'application/json' }
 
     // 1. Busca metadata do grupo pelo link → obtém o JID (phone)
     let zapi_group_id = null
     try {
-      const meta = await fetch(`${zapiBase}/group-invitation-metadata?url=${encodeURIComponent(fullUrl)}`, {
+      const meta = await fetch(`${zapiBase}/group-invitation-metadata?url=${encodeURIComponent(cleanUrl)}`, {
         headers: zapiHeaders,
       })
       const metaRaw = await meta.text()
@@ -134,7 +138,7 @@ async function _handler(req, res) {
 
     // 2. Bot aceita o convite e entra no grupo
     try {
-      const join = await fetch(`${zapiBase}/accept-group-invite?url=${encodeURIComponent(fullUrl)}`, {
+      const join = await fetch(`${zapiBase}/accept-group-invite?url=${encodeURIComponent(cleanUrl)}`, {
         method: 'POST',
         headers: zapiHeaders,
       })
