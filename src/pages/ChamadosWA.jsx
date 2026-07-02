@@ -5,6 +5,7 @@ import useStore from '../store/useStore'
 import { toast } from 'react-hot-toast'
 import {
   PlusIcon, MagnifyingGlassIcon, PencilIcon, XMarkIcon,
+  TrashIcon,
   ArrowPathIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon,
   ChatBubbleLeftRightIcon, UserGroupIcon, UserIcon, ChartBarIcon,
   BellAlertIcon, CpuChipIcon, SignalIcon, PaperAirplaneIcon,
@@ -704,6 +705,13 @@ function SecaoGrupos({ workspaceId, ownerId }) {
     toast.success(r.ativo ? 'Suspenso' : 'Ativado'); load()
   }
 
+  async function excluir(r) {
+    if (!window.confirm(`Excluir o grupo "${r.nome_grupo}"?\nIsso não remove o bot do grupo, apenas o cadastro.`)) return
+    const { error } = await supabase.from('whatsapp_grupos').delete().eq('id', r.id)
+    if (error) { toast.error(error.message); return }
+    toast.success('Grupo removido'); load()
+  }
+
   const [modalConvite, setModalConvite] = useState(null)
   const [formConvite, setFormConvite]   = useState({})
   const [savingConvite, setSavingConvite] = useState(false)
@@ -766,6 +774,7 @@ function SecaoGrupos({ workspaceId, ownerId }) {
                   <div style={{ display: 'flex', gap: 4 }}>
                     <button onClick={() => { setForm({ ...r, tecnico_id: r.tecnico_id || '' }); setModal({ mode: 'edit', id: r.id }) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', padding: 3 }}><PencilIcon style={{ width: 13, height: 13 }} /></button>
                     <button onClick={() => toggleAtivo(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: r.ativo ? '#ef4444' : '#10b981', padding: 3 }}><SignalIcon style={{ width: 13, height: 13 }} /></button>
+                    <button onClick={() => excluir(r)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: 3 }} title="Excluir cadastro"><TrashIcon style={{ width: 13, height: 13 }} /></button>
                   </div>
                 </td>
               </tr>
