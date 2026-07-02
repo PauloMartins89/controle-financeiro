@@ -472,7 +472,7 @@ function SecaoTriagem({ workspaceId, onKpisInvalidate }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div style={{ background: 'var(--bg-secondary)', border: '1px solid #f59e0b44', borderLeft: '3px solid #f59e0b', borderRadius: 4, padding: '10px 14px', marginBottom: 12, fontSize: 12, flexShrink: 0 }}>
-        ⚠️ <strong>Triagem manual</strong> — IA com confiança 65–84%. Revise e decida.
+        ⚠️ <strong>Triagem manual</strong> — IA com confiança 72–89%. Revise e decida.
       </div>
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {loading
@@ -642,11 +642,11 @@ function JidsDescobertos({ onSelect }) {
   }
 
   return (
-    <div style={{ background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.2)', borderRadius: 8, padding: '10px 12px', marginBottom: 14 }}>
+    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderLeft: '3px solid #6366f1', borderRadius: 6, padding: '10px 12px', marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', flex: 1 }}>📡 Capturar JID automaticamente</span>
         <button onClick={buscar} disabled={loading}
-          style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer' }}>
+          style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 4, background: '#6366f1', color: '#fff', border: 'none', cursor: 'pointer' }}>
           {loading ? '…' : '🔍 Buscar'}
         </button>
       </div>
@@ -655,13 +655,13 @@ function JidsDescobertos({ onSelect }) {
       </div>
       {erro && <div style={{ fontSize: 11, color: '#f59e0b', marginTop: 4 }}>{erro}</div>}
       {jids.map(j => (
-        <div key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, background: 'var(--bg-card)', borderRadius: 7, padding: '6px 10px', border: '1px solid var(--border)' }}>
+        <div key={j.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, background: 'var(--bg-card)', borderRadius: 4, padding: '6px 10px', border: '1px solid var(--border)' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{j.jid}</div>
             <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{j.remetente} · {j.msg?.slice(0, 50)}</div>
           </div>
           <button onClick={() => onSelect(j.jid)}
-            style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: 'rgba(16,185,129,.12)', color: '#10b981', border: '1px solid rgba(16,185,129,.25)', cursor: 'pointer', flexShrink: 0 }}>
+            style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 4, background: 'transparent', color: '#10b981', border: '1px solid #10b98144', cursor: 'pointer', flexShrink: 0 }}>
             Usar
           </button>
         </div>
