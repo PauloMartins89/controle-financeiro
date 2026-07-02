@@ -38,7 +38,7 @@ const CAT_EMOJI = { telemetria:'📡', rastreador:'🛰️', aplicativo:'📱', 
 // ── Atoms ─────────────────────────────────────────────────────────────────────
 function Badge({ s }) {
   const c = STATUS_CFG[s] || { label: s, color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' }
-  return <span style={{ padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: c.bg, color: c.color, whiteSpace: 'nowrap' }}>{c.label}</span>
+  return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, border: `1px solid ${c.color}66`, color: c.color, whiteSpace: 'nowrap' }}>{c.label}</span>
 }
 function PriorDot({ p }) {
   const c = PRIOR_CFG[p] || { emoji: '⚪', label: p || '—', color: '#94a3b8' }
@@ -67,12 +67,6 @@ function ClipboardWAIcon(p) {
 
 // ── ERP Header ────────────────────────────────────────────────────────────────
 function ERPHeader({ kpis, loading, onRefresh, navigate }) {
-  const [pulse, setPulse] = useState(false)
-  useEffect(() => {
-    setPulse(true)
-    const t = setTimeout(() => setPulse(false), 600)
-    return () => clearTimeout(t)
-  }, [kpis])
 
   const chips = [
     { label: 'Abertos hoje',  value: kpis?.abertasHoje     ?? '—', color: '#6366f1', path: '/chamados-wa/solicitacoes' },
@@ -86,7 +80,7 @@ function ERPHeader({ kpis, loading, onRefresh, navigate }) {
     <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', height: 52, flexShrink: 0, paddingRight: 12 }}>
       {/* Brand block */}
       <div style={{ width: 200, display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', borderRight: '1px solid var(--border)', height: '100%', flexShrink: 0 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 4, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <ChatBubbleLeftRightIcon style={{ width: 16, height: 16, color: '#fff' }} />
         </div>
         <div>
@@ -99,7 +93,7 @@ function ERPHeader({ kpis, loading, onRefresh, navigate }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px', flex: 1, overflowX: 'auto' }}>
         {chips.map(c => (
           <button key={c.label} onClick={() => c.path && navigate(c.path)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: `${c.color}11`, border: `1px solid ${c.color}28`, borderRadius: 8, padding: '4px 12px', cursor: c.path ? 'pointer' : 'default', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', border: 'none', borderBottom: `2px solid ${c.color}`, borderRadius: 0, padding: '4px 12px', cursor: c.path ? 'pointer' : 'default', whiteSpace: 'nowrap', flexShrink: 0 }}>
             <span style={{ fontSize: 15, fontWeight: 900, color: c.color, lineHeight: 1 }}>{loading ? '…' : c.value}</span>
             <span style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: .3 }}>{c.label}</span>
           </button>
@@ -109,14 +103,13 @@ function ERPHeader({ kpis, loading, onRefresh, navigate }) {
       {/* Status + Refresh */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#10b981', fontWeight: 600 }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', animation: pulse ? 'wa-pulse .6s' : 'none' }} />
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} />
           Monitorando
         </div>
-        <button onClick={onRefresh} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600 }}>
+        <button onClick={onRefresh} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--border)', borderRadius: 4, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600 }}>
           <ArrowPathIcon style={{ width: 13, height: 13 }} /> Atualizar
         </button>
       </div>
-      <style>{`@keyframes wa-pulse{0%{transform:scale(1)}50%{transform:scale(2.2);opacity:.4}100%{transform:scale(1)}}`}</style>
     </div>
   )
 }
@@ -142,12 +135,12 @@ function ERPSidebar({ secao, kpis, onNavigate }) {
           const badge = item.badgeKey && (kpis?.[item.badgeKey] ?? 0) > 0 ? kpis[item.badgeKey] : null
           return (
             <button key={item.key} onClick={() => onNavigate(item.path)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: ativo ? 'rgba(99,102,241,0.1)' : 'transparent', color: ativo ? '#6366f1' : 'var(--text-secondary)', fontWeight: ativo ? 700 : 500, fontSize: 13, marginBottom: 2, textAlign: 'left', borderLeft: ativo ? '3px solid #6366f1' : '3px solid transparent', transition: 'all .12s' }}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', borderRadius: 4, border: 'none', cursor: 'pointer', background: ativo ? 'var(--bg-secondary)' : 'transparent', color: ativo ? '#6366f1' : 'var(--text-secondary)', fontWeight: ativo ? 700 : 500, fontSize: 13, marginBottom: 2, textAlign: 'left', borderLeft: ativo ? '3px solid #6366f1' : '3px solid transparent', transition: 'background .1s' }}
               onMouseEnter={e => { if (!ativo) e.currentTarget.style.background = 'var(--bg-secondary)' }}
               onMouseLeave={e => { if (!ativo) e.currentTarget.style.background = 'transparent' }}>
               <item.icon style={{ width: 15, height: 15, flexShrink: 0 }} />
               <span style={{ flex: 1 }}>{item.label}</span>
-              {badge && <span style={{ background: item.key === 'triagem' ? '#f59e0b' : '#6366f1', color: '#fff', borderRadius: 10, fontSize: 10, fontWeight: 800, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>{badge}</span>}
+              {badge && <span style={{ background: item.key === 'triagem' ? '#f59e0b' : '#6366f1', color: '#fff', borderRadius: 4, fontSize: 10, fontWeight: 800, padding: '1px 6px', minWidth: 18, textAlign: 'center' }}>{badge}</span>}
             </button>
           )
         })}
@@ -161,7 +154,7 @@ function Modal({ title, onClose, children, maxWidth = 560 }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--bg-card)', borderRadius: 16, width: '100%', maxWidth, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,.4)', border: '1px solid var(--border)' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 8, width: '100%', maxWidth, maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
           <span style={{ fontWeight: 700, fontSize: 15 }}>{title}</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><XMarkIcon style={{ width: 18, height: 18 }} /></button>
@@ -173,7 +166,7 @@ function Modal({ title, onClose, children, maxWidth = 560 }) {
 }
 
 const lbl = { fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .5, display: 'block', marginBottom: 4 }
-const inp = { width: '100%', padding: '8px 11px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg-secondary)', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
+const inp = { width: '100%', padding: '8px 11px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-secondary)', fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SEÇÕES
@@ -192,7 +185,7 @@ function SecaoDashboard({ workspaceId, kpis, navigate }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 10 }}>
         {cards.map(c => (
-          <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 10, padding: '12px 14px', border: `1px solid ${c.color}22`, borderTop: `3px solid ${c.color}`, boxShadow: 'var(--shadow-card)' }}>
+          <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '12px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${c.color}`, boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4 }}>{c.label}</span>
               <c.Icon style={{ width: 13, height: 13, color: c.color }} />
@@ -202,7 +195,7 @@ function SecaoDashboard({ workspaceId, kpis, navigate }) {
         ))}
       </div>
 
-      <div style={{ background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+      <div style={{ background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
           <span style={{ fontWeight: 700, fontSize: 13 }}>Últimos chamados identificados</span>
           <button onClick={() => navigate('/chamados-wa/solicitacoes')} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#6366f1', fontSize: 12, fontWeight: 600 }}>
@@ -214,7 +207,7 @@ function SecaoDashboard({ workspaceId, kpis, navigate }) {
           : kpis.ultimos.map((row, i) => (
               <div key={row.id} onClick={() => navigate('/chamados-wa/solicitacoes')}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: i < kpis.ultimos.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer' }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: `${STATUS_CFG[row.status]?.color || '#94a3b8'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 4, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span style={{ fontSize: 13 }}>{CAT_EMOJI[row.categoria] || '📋'}</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -310,10 +303,10 @@ function SecaoSolicitacoes({ workspaceId }) {
             const sc    = STATUS_CFG[row.status] || { color: '#94a3b8', bg: 'rgba(148,163,184,.12)', label: row.status }
             return (
               <div key={row.id} onClick={() => setSelected(row)}
-                style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer', background: ativo ? 'rgba(99,102,241,0.07)' : 'var(--bg-card)', borderLeft: ativo ? '3px solid #6366f1' : '3px solid transparent', transition: 'background .1s' }}>
+                style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer', background: ativo ? 'var(--bg-secondary)' : 'var(--bg-card)', borderLeft: ativo ? '3px solid #6366f1' : '3px solid transparent', transition: 'background .1s' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
                   <span style={{ fontSize: 11, fontWeight: 800, color: '#6366f1' }}>{row.codigo}</span>
-                  <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 10, fontWeight: 700, background: sc.bg, color: sc.color }}>{sc.label}</span>
+                  <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 4, fontWeight: 700, border: `1px solid ${sc.color}55`, color: sc.color }}>{sc.label}</span>
                   <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtDT(row.created_at)}</span>
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
@@ -370,7 +363,7 @@ function SecaoSolicitacoes({ workspaceId }) {
                   vColor: '#10b981',
                 }] : []),
               ].map(f => (
-                <div key={f.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 11px', border: '1px solid var(--border)' }}>
+                <div key={f.label} style={{ background: 'var(--bg-secondary)', borderRadius: 4, padding: '9px 11px', border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 3 }}>{f.label}</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: f.vColor || 'var(--text-primary)' }}>{f.value}</div>
                 </div>
@@ -382,13 +375,13 @@ function SecaoSolicitacoes({ workspaceId }) {
             </div>
 
             {/* Resumo IA */}
-            <div style={{ background: 'rgba(99,102,241,.06)', border: '1px solid rgba(99,102,241,.18)', borderRadius: 10, padding: '11px 14px' }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '11px 14px' }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>🤖 Resumo gerado pela IA</div>
               <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6 }}>{selected.resumo_ia || '—'}</div>
             </div>
 
             {/* Mensagem original */}
-            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '11px 14px' }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '11px 14px' }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>💬 Mensagem original</div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', fontFamily: 'monospace', lineHeight: 1.6 }}>{selected.mensagem_original || '—'}</div>
             </div>
@@ -401,7 +394,7 @@ function SecaoSolicitacoes({ workspaceId }) {
 
             {/* Resolução (SATs concluídos) */}
             {selected.status === 'concluida' && selected.resolucao_descricao && (
-              <div style={{ background: 'rgba(16,185,129,.07)', border: '1px solid rgba(16,185,129,.2)', borderRadius: 10, padding: '11px 14px' }}>
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderLeft: '3px solid #10b981', borderRadius: 6, padding: '11px 14px' }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>✅ Resolução registrada</div>
                 <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6 }}>{selected.resolucao_descricao}</div>
                 {selected.data_finalizacao && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 6 }}>Finalizado em {fmtDT2(selected.data_finalizacao)}</div>}
@@ -409,7 +402,7 @@ function SecaoSolicitacoes({ workspaceId }) {
             )}
 
             {/* Mudar status */}
-            <div style={{ background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)', padding: '11px 14px' }}>
+            <div style={{ background: 'var(--bg-secondary)', borderRadius: 6, border: '1px solid var(--border)', padding: '11px 14px' }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 8 }}>Alterar status</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {['aberta','em_atendimento','aguardando_informacao','enviada_tecnico','concluida','descartada'].map(s => {
@@ -417,7 +410,7 @@ function SecaoSolicitacoes({ workspaceId }) {
                   const cur  = selected.status === s
                   return (
                     <button key={s} onClick={() => mudarStatus(selected.id, s)} disabled={updating || cur}
-                      style={{ padding: '5px 11px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: cur ? 'default' : 'pointer', border: `1px solid ${sc.color}`, background: cur ? sc.bg : 'transparent', color: sc.color }}>
+                      style={{ padding: '5px 11px', borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: cur ? 'default' : 'pointer', border: `1px solid ${sc.color}`, background: cur ? `${sc.color}18` : 'transparent', color: sc.color }}>
                       {sc.label}
                     </button>
                   )
@@ -479,7 +472,7 @@ function SecaoTriagem({ workspaceId, onKpisInvalidate }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 12, flexShrink: 0 }}>
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid #f59e0b44', borderLeft: '3px solid #f59e0b', borderRadius: 4, padding: '10px 14px', marginBottom: 12, fontSize: 12, flexShrink: 0 }}>
         ⚠️ <strong>Triagem manual</strong> — IA com confiança 65–84%. Revise e decida.
       </div>
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -488,7 +481,7 @@ function SecaoTriagem({ workspaceId, onKpisInvalidate }) {
           : rows.length === 0
             ? <div style={{ padding: 40, textAlign: 'center', color: '#10b981', fontSize: 14, fontWeight: 700 }}>✓ Sem itens em triagem</div>
             : rows.map(r => (
-                <div key={r.id} style={{ background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)', padding: '12px 14px' }}>
+                <div key={r.id} style={{ background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)', padding: '12px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: '#6366f1' }}>{r.codigo}</span>
                     <ConfBar v={r.confianca_ia} />
@@ -499,11 +492,11 @@ function SecaoTriagem({ workspaceId, onKpisInvalidate }) {
                   <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 8 }}>{r.resumo_ia || r.mensagem_original}</div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={() => { setForm({ tecnico_id: r.tecnico_id || '', prioridade: r.prioridade || 'media', resumo_ia: r.resumo_ia || '' }); setSelected(r) }}
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.25)', color: '#10b981', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 4, background: 'transparent', border: '1px solid #10b981', color: '#10b981', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                       <CheckCircleIcon style={{ width: 13, height: 13 }} /> Aprovar
                     </button>
                     <button onClick={() => descartar(r.id)}
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 8, background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.2)', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 0', borderRadius: 4, background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                       <XMarkIcon style={{ width: 13, height: 13 }} /> Descartar
                     </button>
                   </div>
@@ -590,22 +583,22 @@ function SecaoTecnicos({ workspaceId, ownerId }) {
       </div>
       <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))', gap: 10, alignContent: 'start' }}>
         {filtrados.map(r => (
-          <div key={r.id} style={{ background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)', padding: '12px 14px', opacity: r.ativo ? 1 : .55 }}>
+          <div key={r.id} style={{ background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)', padding: '12px 14px', opacity: r.ativo ? 1 : .55 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(99,102,241,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 4, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <UserIcon style={{ width: 15, height: 15, color: '#6366f1' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>{r.nome}</div>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>📱 {r.whatsapp || '—'}</div>
               </div>
-              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 10, background: r.ativo ? 'rgba(16,185,129,.12)' : 'rgba(148,163,184,.12)', color: r.ativo ? '#10b981' : '#94a3b8' }}>{r.ativo ? 'Ativo' : 'Inativo'}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: 'var(--bg-secondary)', border: `1px solid ${r.ativo ? '#10b98144' : '#94a3b844'}`, color: r.ativo ? '#10b981' : '#94a3b8' }}>{r.ativo ? 'Ativo' : 'Inativo'}</span>
             </div>
             {r.regiao && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>📍 {r.regiao}{r.equipe ? ` · ${r.equipe}` : ''}</div>}
             {r._grupos?.length > 0 && <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>Grupos: {r._grupos.map(g => g.nome_grupo).join(', ')}</div>}
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => { setForm({ ...r }); setModal({ mode: 'edit', id: r.id }) }} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--bg-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', color: 'var(--text-primary)' }}>✏ Editar</button>
-              <button onClick={() => toggleAtivo(r)} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: `1px solid ${r.ativo ? 'rgba(239,68,68,.25)' : 'rgba(16,185,129,.25)'}`, background: r.ativo ? 'rgba(239,68,68,.07)' : 'rgba(16,185,129,.07)', fontSize: 11, fontWeight: 600, cursor: 'pointer', color: r.ativo ? '#ef4444' : '#10b981' }}>{r.ativo ? '⊗ Inativar' : '✓ Ativar'}</button>
+              <button onClick={() => { setForm({ ...r }); setModal({ mode: 'edit', id: r.id }) }} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', color: 'var(--text-primary)' }}>✏ Editar</button>
+              <button onClick={() => toggleAtivo(r)} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: `1px solid ${r.ativo ? '#ef444444' : '#10b98144'}`, background: 'transparent', fontSize: 11, fontWeight: 600, cursor: 'pointer', color: r.ativo ? '#ef4444' : '#10b981' }}>{r.ativo ? '⊗ Inativar' : '✓ Ativar'}</button>
             </div>
           </div>
         ))}
@@ -878,7 +871,7 @@ function slaBadge(horas, aberto, texto) {
   const cor = slaCor(horas, aberto)
   const bg  = cor + '18'
   const label = aberto ? `⏳ ${texto}` : `✓ ${texto}`
-  return <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700, color: cor, background: bg, whiteSpace: 'nowrap' }}>{label}</span>
+  return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: cor, border: `1px solid ${cor}55`, whiteSpace: 'nowrap' }}>{label}</span>
 }
 
 // ── Exportação CSV ────────────────────────────────────────────────────────────
@@ -1012,7 +1005,7 @@ function SecaoRelatorio({ workspaceId }) {
           { label: 'Em aberto',        value: emAberto.length,             color: '#f59e0b' },
           { label: '> 24h em aberto',  value: vencidos.length,             color: vencidos.length > 0 ? '#ef4444' : '#94a3b8' },
         ].map(k => (
-          <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 10, padding: '9px 14px', border: `1px solid ${k.color}22`, borderTop: `3px solid ${k.color}`, flexShrink: 0 }}>
+          <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}`, flexShrink: 0 }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 2 }}>{k.label}{k.sub ? <span style={{ color: k.color, marginLeft: 4 }}>{k.sub}</span> : null}</div>
             <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{loading ? '…' : k.value}</div>
           </div>
@@ -1020,7 +1013,7 @@ function SecaoRelatorio({ workspaceId }) {
       </div>
 
       {/* Filtros */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '9px 12px', alignItems: 'center' }}>
         <FunnelIcon style={{ width: 13, height: 13, color: 'var(--text-secondary)', flexShrink: 0 }} />
         <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 120 }}>
           <MagnifyingGlassIcon style={{ width: 11, height: 11, position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
@@ -1061,7 +1054,7 @@ function SecaoRelatorio({ workspaceId }) {
       </div>
 
       {/* Tabela */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 900 }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
             <tr>
@@ -1097,7 +1090,7 @@ function SecaoRelatorio({ workspaceId }) {
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,.05)'}
                   onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)'}>
                   <td style={tdStyle}><span style={{ fontWeight: 800, color: '#6366f1', fontSize: 11 }}>{r.codigo}</span></td>
-                  <td style={tdStyle}><span style={{ padding: '2px 7px', borderRadius: 12, fontSize: 10, fontWeight: 700, background: sc.bg, color: sc.color, whiteSpace: 'nowrap' }}>{sc.label}</span></td>
+                  <td style={tdStyle}><span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 700, border: `1px solid ${sc.color}55`, color: sc.color, whiteSpace: 'nowrap' }}>{sc.label}</span></td>
                   <td style={tdStyle}>{pc ? <span style={{ fontSize: 11, fontWeight: 700, color: pc.color }}>{pc.emoji}</span> : '—'}</td>
                   <td style={{ ...tdStyle, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.grupo?.nome_grupo || '—'}</td>
                   <td style={{ ...tdStyle, color: '#8b5cf6', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.equipamento || <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>—</span>}</td>
