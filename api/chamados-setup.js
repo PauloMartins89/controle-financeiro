@@ -139,10 +139,35 @@ export default async function handler(req, res) {
     if (remetente)    msgsQuery = msgsQuery.ilike('remetente_nome', `%${remetente}%`)
     const { data: msgs } = await msgsQuery
 
+    // Verifica plano Groq via rate-limit headers
+    let groqInfo = null
+    const groqKey = process.env.GROQ_API_KEY
+    if (groqKey) {
+      try {
+        const gr = await fetch('https://api.groq.com/openai/v1/models', {
+          headers: { 'Authorization': `Bearer ${groqKey}` },
+        })
+        groqInfo = {
+          status: gr.status,
+          req_limit:       gr.headers.get('x-ratelimit-limit-requests'),
+          req_remaining:   gr.headers.get('x-ratelimit-remaining-requests'),
+          tokens_limit:    gr.headers.get('x-ratelimit-limit-tokens'),
+          tokens_remaining:gr.headers.get('x-ratelimit-remaining-tokens'),
+          reset_req:       gr.headers.get('x-ratelimit-reset-requests'),
+          key_prefix:      groqKey.slice(0, 8) + '…',
+        }
+      } catch (e) {
+        groqInfo = { erro: e.message }
+      }
+    } else {
+      groqInfo = { erro: 'GROQ_API_KEY não configurada' }
+    }
+
     return res.json({
       ok: true,
       colunas_novas_ok: !colErr,
       colunas_erro: colErr?.message || null,
+      groq: groqInfo,
       logs_recentes: (logs || []).map(l => ({
         id:            l.id.slice(0, 8),
         workspace_id:  l.workspace_id?.slice(0, 8),
