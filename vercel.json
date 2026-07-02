@@ -2,6 +2,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
+    "api/webhook-whatsapp.js": {
+      "maxDuration": 30
+    },
     "api/extrair-gps-pdf.js": {
       "maxDuration": 30
     },
