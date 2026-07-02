@@ -720,7 +720,7 @@ function SecaoGrupos({ workspaceId, ownerId }) {
         body: JSON.stringify({ ...formConvite, workspace_id: workspaceId, owner_id: ownerId }),
       })
       const d = await r.json()
-      if (!r.ok) { toast.error(d.error || 'Erro ao entrar no grupo'); return }
+      if (!r.ok) { toast.error(d.error || 'Erro ao entrar no grupo', { duration: 6000 }); return }
       toast.success(`Bot entrou no grupo "${d.grupo.nome_grupo}" e já está registrado!`)
       setModalConvite(null); setFormConvite({}); load()
     } catch (e) {

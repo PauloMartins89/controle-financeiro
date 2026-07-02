@@ -121,9 +121,12 @@ async function _handler(req, res) {
       if (!meta.ok) {
         return res.status(502).json({ error: `Z-API metadata HTTP ${meta.status}`, detalhe: metaData })
       }
-      zapi_group_id = metaData.phone || null
+      zapi_group_id = metaData.phone || metaData.groupId || metaData.id || null
       if (!zapi_group_id) {
-        return res.status(502).json({ error: 'Z-API não retornou o JID do grupo', detalhe: metaData })
+        return res.status(502).json({
+          error: `Z-API: ${metaData.error || metaData.message || JSON.stringify(metaData).slice(0, 150)}`,
+          detalhe: metaData,
+        })
       }
     } catch (e) {
       return res.status(502).json({ error: 'Falha ao buscar metadata do grupo', detalhe: e.message })
