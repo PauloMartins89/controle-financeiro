@@ -250,15 +250,17 @@ function SecaoSolicitacoes({ workspaceId }) {
 
   async function mudarStatus(id, status) {
     setUpdating(true)
-    await supabase.from('solicitacoes_atendimento').update({ status }).eq('id', id)
+    const update = { status }
+    if (status === 'concluida') update.data_finalizacao = new Date().toISOString()
+    await supabase.from('solicitacoes_atendimento').update(update).eq('id', id)
     setUpdating(false)
     toast.success('Status atualizado')
-    if (selected?.id === id) setSelected(s => ({ ...s, status }))
+    if (selected?.id === id) setSelected(s => ({ ...s, ...update }))
     load()
   }
 
   async function notificarTecnico(id) {
-    const r = await fetch(`/api/chamados?id=${id}&action=notificar`, { method: 'POST' })
+    const r = await fetch(`/api/chamados?id=${id}&action=notificar&workspace_id=${workspaceId}`, { method: 'POST' })
     const d = await r.json()
     d.ok ? toast.success('Técnico notificado!') : toast.error(d.motivo || 'Erro')
   }
@@ -418,7 +420,7 @@ function SecaoSolicitacoes({ workspaceId }) {
             {selected.tecnico && (
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <button onClick={() => notificarTecnico(selected.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 4, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                   <PaperAirplaneIcon style={{ width: 14, height: 14 }} /> Renotificar {selected.tecnico.nome}
                 </button>
               </div>
@@ -451,7 +453,7 @@ function SecaoTriagem({ workspaceId, onKpisInvalidate }) {
 
   async function aprovar() {
     setSalvando(true)
-    const r = await fetch(`/api/chamados?id=${selected.id}&action=aprovar-triagem`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+    const r = await fetch(`/api/chamados?id=${selected.id}&action=aprovar-triagem&workspace_id=${workspaceId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
     const d = await r.json()
     setSalvando(false)
     if (d.error) { toast.error(d.error); return }
@@ -712,7 +714,7 @@ function SecaoGrupos({ workspaceId, ownerId }) {
           <PlusIcon style={{ width: 14, height: 14 }} /> Novo Grupo
         </button>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
             <tr style={{ background: 'var(--bg-secondary)' }}>
@@ -797,11 +799,11 @@ function SecaoLogs({ workspaceId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10, flexShrink: 0 }}>
-        <button onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '6px 10px', fontSize: 12, cursor: 'pointer', color: 'var(--text-secondary)' }}>
+        <button onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid var(--border)', borderRadius: 4, padding: '6px 10px', fontSize: 12, cursor: 'pointer', color: 'var(--text-secondary)' }}>
           <ArrowPathIcon style={{ width: 12, height: 12 }} /> Atualizar
         </button>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-card)', borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
             <tr style={{ background: 'var(--bg-secondary)' }}>
@@ -937,7 +939,7 @@ function SecaoRelatorio({ workspaceId }) {
 
   async function load() {
     setLoading(true)
-    const [{ data: sats }, { data: tecs }, { data: grps }] = await Promise.all([
+    const [{ data: sats, error }, { data: tecs }, { data: grps }] = await Promise.all([
       supabase
         .from('solicitacoes_atendimento')
         .select('*, grupo:whatsapp_grupos(id,nome_grupo), tecnico:tecnicos(id,nome)')
@@ -947,6 +949,7 @@ function SecaoRelatorio({ workspaceId }) {
       supabase.from('tecnicos').select('id,nome').eq('workspace_id', workspaceId).eq('ativo', true),
       supabase.from('whatsapp_grupos').select('id,nome_grupo').eq('workspace_id', workspaceId).eq('ativo', true),
     ])
+    if (error) toast.error('Erro ao carregar relatório')
     setRows(sats || []); setTecnicos(tecs || []); setGrupos(grps || [])
     setLoading(false)
   }
@@ -1444,7 +1447,7 @@ export default function ChamadosWA() {
     </div>
   )
 
-  const secaoLabel = NAV_ITEMS.find(n => n.key === secao)?.label || 'Dashboard'
+  const secaoLabel = NAV_ITEMS.find(n => n.key === secao)?.label || 'Dashboard' // eslint-disable-line no-unused-vars
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>

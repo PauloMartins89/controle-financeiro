@@ -99,6 +99,7 @@ export default async function handler(req, res) {
           notificacoes:notificacoes_tecnicos(*)
         `)
         .eq('id', id)
+        .eq('workspace_id', workspaceId)
         .single()
       if (error) return res.status(404).json({ error: error.message })
       return res.json(data)
@@ -109,10 +110,13 @@ export default async function handler(req, res) {
       const { status } = req.body
       const VALID = ['aberta','enviada_tecnico','em_atendimento','aguardando_informacao','concluida','descartada','erro_classificacao','triagem']
       if (!VALID.includes(status)) return res.status(400).json({ error: `Status inválido: ${status}` })
+      const updateFields = { status }
+      if (status === 'concluida') updateFields.data_finalizacao = new Date().toISOString()
       const { data, error } = await supabase
         .from('solicitacoes_atendimento')
-        .update({ status })
+        .update(updateFields)
         .eq('id', id)
+        .eq('workspace_id', workspaceId)
         .select()
         .single()
       if (error) return res.status(500).json({ error: error.message })
@@ -129,10 +133,13 @@ export default async function handler(req, res) {
       for (const k of allowed) {
         if (req.body[k] !== undefined) update[k] = req.body[k]
       }
+      if (update.status === 'concluida' && !update.data_finalizacao) update.data_finalizacao = new Date().toISOString()
+      if (!workspaceId) return res.status(400).json({ error: 'workspace_id obrigatório' })
       const { data, error } = await supabase
         .from('solicitacoes_atendimento')
         .update(update)
         .eq('id', id)
+        .eq('workspace_id', workspaceId)
         .select()
         .single()
       if (error) return res.status(500).json({ error: error.message })
@@ -141,10 +148,12 @@ export default async function handler(req, res) {
 
     // ── POST /api/chamados?id=xxx&action=notificar  – renotifica técnico ─────
     if (req.method === 'POST' && id && action === 'notificar') {
+      if (!workspaceId) return res.status(400).json({ error: 'workspace_id obrigatório' })
       const { data: sat } = await supabase
         .from('solicitacoes_atendimento')
         .select('*, grupo:whatsapp_grupos(nome_grupo), tecnico:tecnicos(*)')
         .eq('id', id)
+        .eq('workspace_id', workspaceId)
         .single()
       if (!sat) return res.status(404).json({ error: 'Chamado não encontrado' })
       if (!sat.tecnico) return res.status(400).json({ error: 'Técnico não vinculado ao chamado' })
@@ -154,6 +163,7 @@ export default async function handler(req, res) {
 
     // ── POST /api/chamados?id=xxx&action=aprovar-triagem  – aprova pré-sol ───
     if (req.method === 'POST' && id && action === 'aprovar-triagem') {
+      if (!workspaceId) return res.status(400).json({ error: 'workspace_id obrigatório' })
       const { tecnico_id, prioridade, resumo_ia } = req.body
 
       const update = {
@@ -167,6 +177,7 @@ export default async function handler(req, res) {
         .from('solicitacoes_atendimento')
         .update(update)
         .eq('id', id)
+        .eq('workspace_id', workspaceId)
         .select('*, grupo:whatsapp_grupos(nome_grupo), tecnico:tecnicos(*)')
         .single()
 
