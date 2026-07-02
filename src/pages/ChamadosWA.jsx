@@ -731,6 +731,8 @@ function SecaoGrupos({ workspaceId, ownerId }) {
   }
 
   const fc = (k, v) => setFormConvite(p => ({ ...p, [k]: v }))
+  const f  = (k, v) => setForm(p => ({ ...p, [k]: v }))
+  const NC = { baixo: '#10b981', medio: '#f59e0b', alto: '#ef4444' }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
