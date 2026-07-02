@@ -903,15 +903,36 @@ function exportCSV(rows) {
 }
 
 // ── Seção Relatório ───────────────────────────────────────────────────────────
+const REL_TABS = [
+  { key: 'listagem', label: 'Listagem Geral' },
+  { key: 'eps',      label: 'Por EPS / Cliente' },
+  { key: 'sla',      label: 'SLA' },
+  { key: 'ranking',  label: 'Ranking Técnicos' },
+]
+
+function BarH({ pct, color }) {
+  return (
+    <div style={{ height: 6, background: 'var(--bg-secondary)', borderRadius: 3, width: '100%', overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: 3, transition: 'width .4s' }} />
+    </div>
+  )
+}
+
 function SecaoRelatorio({ workspaceId }) {
-  const [rows, setRows]       = useState([])
-  const [loading, setLoading] = useState(true)
+  const [rows, setRows]         = useState([])
+  const [loading, setLoading]   = useState(true)
   const [tecnicos, setTecnicos] = useState([])
-  const [grupos, setGrupos]   = useState([])
+  const [grupos, setGrupos]     = useState([])
+  const [subRel, setSubRel]     = useState('listagem')
+
+  // Filtro de período compartilhado entre todas as sub-abas
+  const [de, setDe]   = useState('')
+  const [ate, setAte] = useState('')
+
+  // Listagem — filtros específicos
   const [sort, setSort]       = useState({ col: 'created_at', dir: 'desc' })
   const [filtros, setFiltros] = useState({
     busca: '', status: '', tecnico_id: '', grupo_id: '', prioridade: '',
-    de: '', ate: '',
   })
 
   async function load() {
@@ -939,8 +960,8 @@ function SecaoRelatorio({ workspaceId }) {
     if (filtros.tecnico_id && r.tecnico_id  !== filtros.tecnico_id) return false
     if (filtros.grupo_id   && r.grupo_id    !== filtros.grupo_id)   return false
     if (filtros.prioridade && r.prioridade  !== filtros.prioridade) return false
-    if (filtros.de  && new Date(r.created_at) < new Date(filtros.de))  return false
-    if (filtros.ate && new Date(r.created_at) > new Date(filtros.ate + 'T23:59:59')) return false
+    if (de  && new Date(r.created_at) < new Date(de))  return false
+    if (ate && new Date(r.created_at) > new Date(ate + 'T23:59:59')) return false
     if (filtros.busca) {
       const b = filtros.busca.toLowerCase()
       return r.codigo?.toLowerCase().includes(b)
@@ -952,6 +973,60 @@ function SecaoRelatorio({ workspaceId }) {
     return true
   })
 
+  // Período compartilhado (para sub-abas EPS / SLA / Ranking)
+  const rowsPeriodo = rows.filter(r => {
+    if (de  && new Date(r.created_at) < new Date(de))  return false
+    if (ate && new Date(r.created_at) > new Date(ate + 'T23:59:59')) return false
+    return true
+  })
+
+  function satsStats(sats) {
+    const concluidas   = sats.filter(s => s.status === 'concluida')
+    const emAberto     = sats.filter(s => !['concluida','descartada'].includes(s.status))
+    const comTempo     = concluidas.filter(s => s.data_finalizacao)
+    const tempos       = comTempo.map(s => calcSLA(s.created_at, s.data_finalizacao).horas)
+    const mediaH       = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : null
+    const dentroPrazo  = comTempo.filter(s => calcSLA(s.created_at, s.data_finalizacao).horas <= 4).length
+    const vencidos     = emAberto.filter(s => calcSLA(s.created_at, null).horas > 24).length
+    const pctSLA       = comTempo.length ? Math.round(dentroPrazo / comTempo.length * 100) : null
+    const pctResolvido = sats.length ? Math.round(concluidas.length / sats.length * 100) : 0
+    return { total: sats.length, abertos: emAberto.length, concluidas: concluidas.length,
+             vencidos, mediaH, pctSLA, pctResolvido, comTempo: comTempo.length }
+  }
+
+  // --- Por EPS ---
+  const epsMap = {}
+  rowsPeriodo.forEach(r => {
+    const k = r.cliente || '(Sem EPS / Interno)'
+    if (!epsMap[k]) epsMap[k] = []
+    epsMap[k].push(r)
+  })
+  const epsStats = Object.entries(epsMap).map(([nome, sats]) => ({ nome, ...satsStats(sats) }))
+    .sort((a, b) => b.total - a.total)
+
+  // --- Por SLA (breakdowns) ---
+  const slaGlobal = satsStats(rowsPeriodo)
+  const slaByGrupo = grupos.map(g => {
+    const sats = rowsPeriodo.filter(r => r.grupo_id === g.id)
+    if (!sats.length) return null
+    return { nome: g.nome_grupo, ...satsStats(sats) }
+  }).filter(Boolean).sort((a, b) => b.total - a.total)
+  const slaByPrior = Object.entries(PRIOR_CFG).map(([k, v]) => {
+    const sats = rowsPeriodo.filter(r => r.prioridade === k)
+    if (!sats.length) return null
+    return { nome: `${v.emoji} ${v.label}`, color: v.color, ...satsStats(sats) }
+  }).filter(Boolean)
+
+  // --- Ranking Técnicos ---
+  const tecMap = {}
+  rowsPeriodo.filter(r => r.tecnico_id).forEach(r => {
+    const k = r.tecnico_id
+    if (!tecMap[k]) tecMap[k] = { nome: r.tecnico?.nome || r.tecnico_id, sats: [] }
+    tecMap[k].sats.push(r)
+  })
+  const rankingTecs = Object.values(tecMap).map(({ nome, sats }) => ({ nome, ...satsStats(sats) }))
+    .sort((a, b) => (b.pctSLA ?? -1) - (a.pctSLA ?? -1))
+
   // Ordenar
   const ordenados = [...filtrados].sort((a, b) => {
     const mult = sort.dir === 'asc' ? 1 : -1
@@ -960,7 +1035,7 @@ function SecaoRelatorio({ workspaceId }) {
     return va < vb ? -mult : va > vb ? mult : 0
   })
 
-  // KPIs derivados
+  // KPIs derivados (listagem)
   const concluidas  = filtrados.filter(r => r.status === 'concluida')
   const comTempo    = concluidas.filter(r => r.data_finalizacao)
   const tempos      = comTempo.map(r => calcSLA(r.created_at, r.data_finalizacao).horas)
@@ -988,125 +1063,340 @@ function SecaoRelatorio({ workspaceId }) {
     background: 'var(--bg-secondary)',
   })
   const tdStyle = { padding: '8px 10px', fontSize: 12, borderBottom: '1px solid var(--border)', verticalAlign: 'middle' }
+  const thPlain = { padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap', background: 'var(--bg-secondary)' }
+
+  function fmtH(h) { if (h === null) return '—'; return h < 1 ? `${Math.round(h*60)}m` : `${h.toFixed(1)}h` }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', gap: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
-      {/* KPI summary bar */}
-      <div style={{ display: 'flex', gap: 8, padding: '10px 0 12px', flexShrink: 0, flexWrap: 'wrap' }}>
-        {[
-          { label: 'Total no período', value: filtrados.length,            color: '#6366f1' },
-          { label: '% Resolvidos',     value: `${pctResolvidos}%`,         color: '#10b981' },
-          { label: 'Tempo médio',      value: mediaHoras > 0 ? (mediaHoras < 1 ? `${Math.round(mediaHoras*60)}m` : `${mediaHoras.toFixed(1)}h`) : '—', color: '#8b5cf6' },
-          { label: 'Dentro do SLA',   value: comTempo.length ? `${pctSLA}%` : '—', color: '#0ea5e9', sub: '< 4h' },
-          { label: 'Em aberto',        value: emAberto.length,             color: '#f59e0b' },
-          { label: '> 24h em aberto',  value: vencidos.length,             color: vencidos.length > 0 ? '#ef4444' : '#94a3b8' },
-        ].map(k => (
-          <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}`, flexShrink: 0 }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 2 }}>{k.label}{k.sub ? <span style={{ color: k.color, marginLeft: 4 }}>{k.sub}</span> : null}</div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{loading ? '…' : k.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filtros */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '9px 12px', alignItems: 'center' }}>
-        <FunnelIcon style={{ width: 13, height: 13, color: 'var(--text-secondary)', flexShrink: 0 }} />
-        <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 120 }}>
-          <MagnifyingGlassIcon style={{ width: 11, height: 11, position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-          <input style={{ ...inp, paddingLeft: 24, fontSize: 12, width: '100%' }} placeholder="Buscar…" value={filtros.busca} onChange={e => setF('busca', e.target.value)} />
+      {/* Sub-abas + filtro de período */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', flexShrink: 0, paddingRight: 10 }}>
+        <div style={{ display: 'flex', flex: 1, overflowX: 'auto' }}>
+          {REL_TABS.map(t => (
+            <button key={t.key} onClick={() => setSubRel(t.key)}
+              style={{ padding: '9px 14px', border: 'none', borderBottom: subRel === t.key ? '2px solid #6366f1' : '2px solid transparent', background: 'transparent', cursor: 'pointer', color: subRel === t.key ? '#6366f1' : 'var(--text-secondary)', fontWeight: subRel === t.key ? 700 : 500, fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {t.label}
+            </button>
+          ))}
         </div>
-        <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.status} onChange={e => setF('status', e.target.value)}>
-          <option value="">Todos status</option>
-          {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
-        <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.tecnico_id} onChange={e => setF('tecnico_id', e.target.value)}>
-          <option value="">Todos técnicos</option>
-          {tecnicos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
-        </select>
-        <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.grupo_id} onChange={e => setF('grupo_id', e.target.value)}>
-          <option value="">Todos grupos</option>
-          {grupos.map(g => <option key={g.id} value={g.id}>{g.nome_grupo}</option>)}
-        </select>
-        <select style={{ ...inp, fontSize: 12, flex: '0 0 100px' }} value={filtros.prioridade} onChange={e => setF('prioridade', e.target.value)}>
-          <option value="">Prioridade</option>
-          {Object.entries(PRIOR_CFG).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
-        </select>
-        <input type="date" style={{ ...inp, fontSize: 12, flex: '0 0 126px' }} value={filtros.de}  onChange={e => setF('de',  e.target.value)} title="De" />
-        <input type="date" style={{ ...inp, fontSize: 12, flex: '0 0 126px' }} value={filtros.ate} onChange={e => setF('ate', e.target.value)} title="Até" />
-        <button onClick={() => setFiltros({ busca:'', status:'', tecnico_id:'', grupo_id:'', prioridade:'', de:'', ate:'' })}
-          style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>Limpar</button>
-        <button onClick={() => exportCSV(ordenados)}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, border: 'none', background: '#10b981', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-          <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> CSV
-        </button>
-        <button onClick={load} style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', flexShrink: 0 }}>
-          <ArrowPathIcon style={{ width: 13, height: 13 }} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 600 }}>Período:</span>
+          <input type="date" style={{ ...inp, fontSize: 11, width: 126 }} value={de}  onChange={e => setDe(e.target.value)}  title="De" />
+          <input type="date" style={{ ...inp, fontSize: 11, width: 126 }} value={ate} onChange={e => setAte(e.target.value)} title="Até" />
+          {(de || ate) && <button onClick={() => { setDe(''); setAte('') }} style={{ padding: '5px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>✕</button>}
+          <button onClick={load} style={{ padding: '5px 7px', borderRadius: 4, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex' }}>
+            <ArrowPathIcon style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
       </div>
 
-      {/* Contador */}
-      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 6, flexShrink: 0 }}>
-        {loading ? 'Carregando…' : `${ordenados.length} registro(s)`}
-      </div>
-
-      {/* Tabela */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 900 }}>
-          <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
-            <tr>
-              <th style={thStyle('codigo')}      onClick={thSort('codigo')}      >Código{thArrow('codigo')}</th>
-              <th style={thStyle('status')}      onClick={thSort('status')}      >Status{thArrow('status')}</th>
-              <th style={thStyle('prioridade')}  onClick={thSort('prioridade')}  >Prior.{thArrow('prioridade')}</th>
-              <th style={thStyle('grupo_id')}    onClick={thSort('grupo_id')}    >Grupo{thArrow('grupo_id')}</th>
-              <th style={thStyle('equipamento')} onClick={thSort('equipamento')} >Equip.{thArrow('equipamento')}</th>
-              <th style={thStyle('local')}       onClick={thSort('local')}       >Local{thArrow('local')}</th>
-              <th style={thStyle('cliente')}     onClick={thSort('cliente')}     >Cliente{thArrow('cliente')}</th>
-              <th style={thStyle('solicitante_nome')} onClick={thSort('solicitante_nome')}>Solicitante{thArrow('solicitante_nome')}</th>
-              <th style={thStyle('tecnico_id')}  onClick={thSort('tecnico_id')}  >Técnico{thArrow('tecnico_id')}</th>
-              <th style={thStyle('resumo_ia')}                                   >Resumo</th>
-              <th style={thStyle('created_at')}  onClick={thSort('created_at')}  >Abertura{thArrow('created_at')}</th>
-              <th style={thStyle('data_finalizacao')} onClick={thSort('data_finalizacao')}>Fechamento{thArrow('data_finalizacao')}</th>
-              <th style={{ ...thStyle('_sla'), textAlign: 'center' }}            >SLA</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Carregando…</td></tr>
-            )}
-            {!loading && ordenados.length === 0 && (
-              <tr><td colSpan={11} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum chamado no período.</td></tr>
-            )}
-            {ordenados.map((r, i) => {
-              const sla  = calcSLA(r.created_at, r.data_finalizacao)
-              const cor  = slaCor(sla.horas, sla.aberto)
-              const sc   = STATUS_CFG[r.status] || { label: r.status, color: '#94a3b8', bg: 'rgba(148,163,184,.12)' }
-              const pc   = PRIOR_CFG[r.prioridade]
-              return (
-                <tr key={r.id} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)', transition: 'background .1s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)'}>
-                  <td style={tdStyle}><span style={{ fontWeight: 800, color: '#6366f1', fontSize: 11 }}>{r.codigo}</span></td>
-                  <td style={tdStyle}><span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 700, border: `1px solid ${sc.color}55`, color: sc.color, whiteSpace: 'nowrap' }}>{sc.label}</span></td>
-                  <td style={tdStyle}>{pc ? <span style={{ fontSize: 11, fontWeight: 700, color: pc.color }}>{pc.emoji}</span> : '—'}</td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.grupo?.nome_grupo || '—'}</td>
-                  <td style={{ ...tdStyle, color: '#8b5cf6', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.equipamento || <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>—</span>}</td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: '#0ea5e9', fontSize: 11 }}>{r.local || <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', fontSize: 11 }}>{r.cliente || <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.solicitante_nome || '—'}</td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.tecnico?.nome || <span style={{ color: '#ef4444', fontSize: 11 }}>⚠ N/A</span>}</td>
-                  <td style={{ ...tdStyle, color: 'var(--text-secondary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.resumo_ia || r.mensagem_original}>
-                    {r.resumo_ia || r.mensagem_original || '—'}
-                  </td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{fmtDT(r.created_at)}</td>
-                  <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{r.data_finalizacao ? fmtDT(r.data_finalizacao) : <span style={{ color: '#f59e0b' }}>Em aberto</span>}</td>
-                  <td style={{ ...tdStyle, textAlign: 'center' }}>{slaBadge(sla.horas, sla.aberto, sla.texto)}</td>
+      {/* ── LISTAGEM GERAL ── */}
+      {subRel === 'listagem' && (
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', padding: '10px 0 0' }}>
+          {/* KPI bar */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Total no período', value: filtrados.length,            color: '#6366f1' },
+              { label: '% Resolvidos',     value: `${pctResolvidos}%`,         color: '#10b981' },
+              { label: 'Tempo médio',      value: mediaHoras > 0 ? fmtH(mediaHoras) : '—', color: '#8b5cf6' },
+              { label: 'Dentro SLA',       value: comTempo.length ? `${pctSLA}%` : '—', color: '#0ea5e9', sub: '< 4h' },
+              { label: 'Em aberto',        value: emAberto.length,             color: '#f59e0b' },
+              { label: '> 24h aberto',     value: vencidos.length,             color: vencidos.length > 0 ? '#ef4444' : '#94a3b8' },
+            ].map(k => (
+              <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}`, flexShrink: 0 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 2 }}>{k.label}{k.sub ? <span style={{ color: k.color, marginLeft: 4 }}>{k.sub}</span> : null}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{loading ? '…' : k.value}</div>
+              </div>
+            ))}
+          </div>
+          {/* Filtros */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8, flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, padding: '9px 12px', alignItems: 'center' }}>
+            <FunnelIcon style={{ width: 13, height: 13, color: 'var(--text-secondary)', flexShrink: 0 }} />
+            <div style={{ position: 'relative', flex: '1 1 160px', minWidth: 120 }}>
+              <MagnifyingGlassIcon style={{ width: 11, height: 11, position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <input style={{ ...inp, paddingLeft: 24, fontSize: 12, width: '100%' }} placeholder="Buscar…" value={filtros.busca} onChange={e => setF('busca', e.target.value)} />
+            </div>
+            <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.status} onChange={e => setF('status', e.target.value)}>
+              <option value="">Todos status</option>
+              {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.tecnico_id} onChange={e => setF('tecnico_id', e.target.value)}>
+              <option value="">Todos técnicos</option>
+              {tecnicos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+            </select>
+            <select style={{ ...inp, fontSize: 12, flex: '1 1 110px', minWidth: 90 }} value={filtros.grupo_id} onChange={e => setF('grupo_id', e.target.value)}>
+              <option value="">Todos grupos</option>
+              {grupos.map(g => <option key={g.id} value={g.id}>{g.nome_grupo}</option>)}
+            </select>
+            <select style={{ ...inp, fontSize: 12, flex: '0 0 100px' }} value={filtros.prioridade} onChange={e => setF('prioridade', e.target.value)}>
+              <option value="">Prioridade</option>
+              {Object.entries(PRIOR_CFG).map(([k, v]) => <option key={k} value={k}>{v.emoji} {v.label}</option>)}
+            </select>
+            <button onClick={() => setFiltros({ busca:'', status:'', tecnico_id:'', grupo_id:'', prioridade:'' })}
+              style={{ padding: '6px 10px', borderRadius: 4, border: '1px solid var(--border)', background: 'none', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>Limpar</button>
+            <button onClick={() => exportCSV(ordenados)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 4, border: 'none', background: '#10b981', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+              <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> CSV
+            </button>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 6, flexShrink: 0 }}>{loading ? 'Carregando…' : `${ordenados.length} registro(s)`}</div>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto', background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 900 }}>
+              <thead style={{ position: 'sticky', top: 0, zIndex: 2 }}>
+                <tr>
+                  <th style={thStyle('codigo')}           onClick={thSort('codigo')}           >Código{thArrow('codigo')}</th>
+                  <th style={thStyle('status')}           onClick={thSort('status')}           >Status{thArrow('status')}</th>
+                  <th style={thStyle('prioridade')}       onClick={thSort('prioridade')}       >Prior.{thArrow('prioridade')}</th>
+                  <th style={thStyle('grupo_id')}         onClick={thSort('grupo_id')}         >Grupo{thArrow('grupo_id')}</th>
+                  <th style={thStyle('equipamento')}      onClick={thSort('equipamento')}      >Equip.{thArrow('equipamento')}</th>
+                  <th style={thStyle('local')}            onClick={thSort('local')}            >Local{thArrow('local')}</th>
+                  <th style={thStyle('cliente')}          onClick={thSort('cliente')}          >Cliente{thArrow('cliente')}</th>
+                  <th style={thStyle('solicitante_nome')} onClick={thSort('solicitante_nome')} >Solicitante{thArrow('solicitante_nome')}</th>
+                  <th style={thStyle('tecnico_id')}       onClick={thSort('tecnico_id')}       >Técnico{thArrow('tecnico_id')}</th>
+                  <th style={thStyle('resumo_ia')}                                             >Resumo</th>
+                  <th style={thStyle('created_at')}       onClick={thSort('created_at')}       >Abertura{thArrow('created_at')}</th>
+                  <th style={thStyle('data_finalizacao')} onClick={thSort('data_finalizacao')} >Fechamento{thArrow('data_finalizacao')}</th>
+                  <th style={{ ...thStyle('_sla'), textAlign: 'center' }}                      >SLA</th>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {loading && <tr><td colSpan={13} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Carregando…</td></tr>}
+                {!loading && ordenados.length === 0 && <tr><td colSpan={13} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum chamado no período.</td></tr>}
+                {ordenados.map((r, i) => {
+                  const sla = calcSLA(r.created_at, r.data_finalizacao)
+                  const sc  = STATUS_CFG[r.status] || { label: r.status, color: '#94a3b8' }
+                  const pc  = PRIOR_CFG[r.prioridade]
+                  return (
+                    <tr key={r.id} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)', transition: 'background .1s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,.05)'}
+                      onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)'}>
+                      <td style={tdStyle}><span style={{ fontWeight: 800, color: '#6366f1', fontSize: 11 }}>{r.codigo}</span></td>
+                      <td style={tdStyle}><span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 700, border: `1px solid ${sc.color}55`, color: sc.color, whiteSpace: 'nowrap' }}>{sc.label}</span></td>
+                      <td style={tdStyle}>{pc ? <span style={{ fontSize: 11, fontWeight: 700, color: pc.color }}>{pc.emoji}</span> : '—'}</td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.grupo?.nome_grupo || '—'}</td>
+                      <td style={{ ...tdStyle, color: '#8b5cf6', fontWeight: 700, whiteSpace: 'nowrap' }}>{r.equipamento || <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>—</span>}</td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: '#0ea5e9', fontSize: 11 }}>{r.local || <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap', fontSize: 11 }}>{r.cliente || <span style={{ color: 'var(--text-secondary)' }}>—</span>}</td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.solicitante_nome || '—'}</td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>{r.tecnico?.nome || <span style={{ color: '#ef4444', fontSize: 11 }}>⚠ N/A</span>}</td>
+                      <td style={{ ...tdStyle, color: 'var(--text-secondary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.resumo_ia || r.mensagem_original}>{r.resumo_ia || r.mensagem_original || '—'}</td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{fmtDT(r.created_at)}</td>
+                      <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{r.data_finalizacao ? fmtDT(r.data_finalizacao) : <span style={{ color: '#f59e0b' }}>Em aberto</span>}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>{slaBadge(sla.horas, sla.aberto, sla.texto)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── POR EPS / CLIENTE ── */}
+      {subRel === 'eps' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 0 0' }}>
+          <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
+            {loading ? 'Carregando…' : `${epsStats.length} EPS/clientes · ${rowsPeriodo.length} SATs no período`}
+          </div>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thPlain, width: 40, textAlign: 'center' }}>#</th>
+                  <th style={thPlain}>EPS / Cliente</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Total</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Abertos</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Concluídos</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>% Resolvido</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Tempo médio</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>% SLA &lt; 4h</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Vencidos &gt; 24h</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>Carregando…</td></tr>}
+                {!loading && epsStats.length === 0 && <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum dado no período.</td></tr>}
+                {epsStats.map((e, i) => (
+                  <tr key={e.nome} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
+                    <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-secondary)', fontWeight: 700 }}>{i + 1}</td>
+                    <td style={{ ...tdStyle, fontWeight: 700 }}>{e.nome}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 800, color: '#6366f1' }}>{e.total}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center', color: e.abertos > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{e.abertos}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center', color: '#10b981' }}>{e.concluidas}</td>
+                    <td style={{ ...tdStyle, minWidth: 110 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontWeight: 700, color: e.pctResolvido >= 80 ? '#10b981' : e.pctResolvido >= 50 ? '#f59e0b' : '#ef4444', minWidth: 34, textAlign: 'right' }}>{e.pctResolvido}%</span>
+                        <BarH pct={e.pctResolvido} color={e.pctResolvido >= 80 ? '#10b981' : e.pctResolvido >= 50 ? '#f59e0b' : '#ef4444'} />
+                      </div>
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-secondary)' }}>{fmtH(e.mediaH)}</td>
+                    <td style={{ ...tdStyle, minWidth: 110 }}>
+                      {e.pctSLA !== null
+                        ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontWeight: 700, color: e.pctSLA >= 80 ? '#10b981' : e.pctSLA >= 50 ? '#f59e0b' : '#ef4444', minWidth: 34, textAlign: 'right' }}>{e.pctSLA}%</span>
+                            <BarH pct={e.pctSLA} color={e.pctSLA >= 80 ? '#10b981' : e.pctSLA >= 50 ? '#f59e0b' : '#ef4444'} />
+                          </div>
+                        : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700, color: e.vencidos > 0 ? '#ef4444' : 'var(--text-secondary)' }}>{e.vencidos || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── SLA ── */}
+      {subRel === 'sla' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Cards globais */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
+            {[
+              { label: 'Total SATs',       value: slaGlobal.total,                color: '#6366f1' },
+              { label: '% Resolvidos',     value: `${slaGlobal.pctResolvido}%`,   color: '#10b981' },
+              { label: 'Dentro SLA (<4h)', value: slaGlobal.pctSLA !== null ? `${slaGlobal.pctSLA}%` : '—', color: '#0ea5e9' },
+              { label: 'Tempo médio',      value: fmtH(slaGlobal.mediaH),         color: '#8b5cf6' },
+              { label: 'Em aberto',        value: slaGlobal.abertos,              color: '#f59e0b' },
+              { label: 'Vencidos >24h',    value: slaGlobal.vencidos,             color: slaGlobal.vencidos > 0 ? '#ef4444' : '#94a3b8' },
+            ].map(k => (
+              <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}`, flexShrink: 0 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 2 }}>{k.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{loading ? '…' : k.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            {/* Por grupo */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 8 }}>SLA por Grupo WA</div>
+              <div style={{ background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead><tr>
+                    <th style={thPlain}>Grupo</th>
+                    <th style={{ ...thPlain, textAlign: 'center' }}>Total</th>
+                    <th style={{ ...thPlain, textAlign: 'center' }}>% SLA</th>
+                    <th style={{ ...thPlain, textAlign: 'center' }}>T. médio</th>
+                  </tr></thead>
+                  <tbody>
+                    {loading && <tr><td colSpan={4} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>…</td></tr>}
+                    {slaByGrupo.map((g, i) => (
+                      <tr key={g.nome} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
+                        <td style={{ ...tdStyle, fontWeight: 600 }}>{g.nome}</td>
+                        <td style={{ ...tdStyle, textAlign: 'center', color: '#6366f1', fontWeight: 700 }}>{g.total}</td>
+                        <td style={{ ...tdStyle, minWidth: 100 }}>
+                          {g.pctSLA !== null
+                            ? <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ fontWeight: 700, color: g.pctSLA >= 80 ? '#10b981' : g.pctSLA >= 50 ? '#f59e0b' : '#ef4444', minWidth: 30, textAlign: 'right' }}>{g.pctSLA}%</span>
+                                <BarH pct={g.pctSLA} color={g.pctSLA >= 80 ? '#10b981' : g.pctSLA >= 50 ? '#f59e0b' : '#ef4444'} />
+                              </div>
+                            : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-secondary)' }}>{fmtH(g.mediaH)}</td>
+                      </tr>
+                    ))}
+                    {!loading && slaByGrupo.length === 0 && <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>Sem dados</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Por prioridade */}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 8 }}>SLA por Prioridade</div>
+              <div style={{ background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead><tr>
+                    <th style={thPlain}>Prioridade</th>
+                    <th style={{ ...thPlain, textAlign: 'center' }}>Total</th>
+                    <th style={{ ...thPlain, textAlign: 'center' }}>% SLA</th>
+                    <th style={{ ...thPlain, textAlign: 'center' }}>T. médio</th>
+                  </tr></thead>
+                  <tbody>
+                    {loading && <tr><td colSpan={4} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>…</td></tr>}
+                    {slaByPrior.map((p, i) => (
+                      <tr key={p.nome} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
+                        <td style={{ ...tdStyle, fontWeight: 600, color: p.color }}>{p.nome}</td>
+                        <td style={{ ...tdStyle, textAlign: 'center', color: '#6366f1', fontWeight: 700 }}>{p.total}</td>
+                        <td style={{ ...tdStyle, minWidth: 100 }}>
+                          {p.pctSLA !== null
+                            ? <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <span style={{ fontWeight: 700, color: p.pctSLA >= 80 ? '#10b981' : p.pctSLA >= 50 ? '#f59e0b' : '#ef4444', minWidth: 30, textAlign: 'right' }}>{p.pctSLA}%</span>
+                                <BarH pct={p.pctSLA} color={p.pctSLA >= 80 ? '#10b981' : p.pctSLA >= 50 ? '#f59e0b' : '#ef4444'} />
+                              </div>
+                            : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-secondary)' }}>{fmtH(p.mediaH)}</td>
+                      </tr>
+                    ))}
+                    {!loading && slaByPrior.length === 0 && <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>Sem dados</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── RANKING TÉCNICOS ── */}
+      {subRel === 'ranking' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 0 0' }}>
+          <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
+            Ordenado por % cumprimento de SLA (melhor → pior). {loading ? '' : `${rankingTecs.length} técnico(s) com SATs no período.`}
+          </div>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thPlain, width: 40, textAlign: 'center' }}>Rank</th>
+                  <th style={thPlain}>Técnico</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Total SATs</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Concluídos</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>% Resolvido</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>% SLA &lt; 4h</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Tempo médio</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Em aberto</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>Vencidos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading && <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>Carregando…</td></tr>}
+                {!loading && rankingTecs.length === 0 && <tr><td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum técnico com SATs no período.</td></tr>}
+                {rankingTecs.map((t, i) => {
+                  const medalha = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}º`
+                  return (
+                    <tr key={t.nome} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
+                      <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700, fontSize: i < 3 ? 16 : 12 }}>{medalha}</td>
+                      <td style={{ ...tdStyle, fontWeight: 700 }}>{t.nome}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center', color: '#6366f1', fontWeight: 800 }}>{t.total}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center', color: '#10b981' }}>{t.concluidas}</td>
+                      <td style={{ ...tdStyle, minWidth: 120 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontWeight: 700, color: t.pctResolvido >= 80 ? '#10b981' : t.pctResolvido >= 50 ? '#f59e0b' : '#ef4444', minWidth: 34, textAlign: 'right' }}>{t.pctResolvido}%</span>
+                          <BarH pct={t.pctResolvido} color={t.pctResolvido >= 80 ? '#10b981' : t.pctResolvido >= 50 ? '#f59e0b' : '#ef4444'} />
+                        </div>
+                      </td>
+                      <td style={{ ...tdStyle, minWidth: 120 }}>
+                        {t.pctSLA !== null
+                          ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontWeight: 800, color: t.pctSLA >= 80 ? '#10b981' : t.pctSLA >= 50 ? '#f59e0b' : '#ef4444', minWidth: 34, textAlign: 'right' }}>{t.pctSLA}%</span>
+                              <BarH pct={t.pctSLA} color={t.pctSLA >= 80 ? '#10b981' : t.pctSLA >= 50 ? '#f59e0b' : '#ef4444'} />
+                            </div>
+                          : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-secondary)' }}>{fmtH(t.mediaH)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center', color: t.abertos > 0 ? '#f59e0b' : 'var(--text-secondary)' }}>{t.abertos || '—'}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700, color: t.vencidos > 0 ? '#ef4444' : 'var(--text-secondary)' }}>{t.vencidos || '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
