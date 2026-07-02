@@ -691,7 +691,7 @@ function SecaoGrupos({ workspaceId, ownerId }) {
   async function save() {
     if (!form.zapi_group_id?.trim() || !form.nome_grupo?.trim()) { toast.error('ID e nome obrigatórios'); return }
     setSaving(true)
-    const pl = { zapi_group_id: form.zapi_group_id.trim(), nome_grupo: form.nome_grupo.trim(), cliente: form.cliente || null, operacao: form.operacao || null, regiao: form.regiao || null, tecnico_id: form.tecnico_id || null, nivel_monitoramento: form.nivel_monitoramento || 'medio', ativo: form.ativo !== false, observacoes: form.observacoes || null, workspace_id: workspaceId, owner_id: ownerId }
+    const pl = { zapi_group_id: form.zapi_group_id.trim(), nome_grupo: form.nome_grupo.trim(), cliente: form.cliente || null, operacao: form.operacao || null, regiao: form.regiao || null, tecnico_id: form.tecnico_id || null, nivel_monitoramento: form.nivel_monitoramento || 'medio', ativo: form.ativo !== false, observacoes: form.observacoes || null, sla_resolucao_h: form.sla_resolucao_h ? parseInt(form.sla_resolucao_h) : 4, sla_vencido_h: form.sla_vencido_h ? parseInt(form.sla_vencido_h) : 24, workspace_id: workspaceId, owner_id: ownerId }
     let error
     if (modal.mode === 'new') { ;({ error } = await supabase.from('whatsapp_grupos').insert(pl)) }
     else { ;({ error } = await supabase.from('whatsapp_grupos').update(pl).eq('id', modal.id)) }
@@ -834,6 +834,22 @@ function SecaoGrupos({ workspaceId, ownerId }) {
               </select>
             </div>
             <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Observações</label><textarea style={{ ...inp, minHeight: 50, resize: 'vertical' }} value={form.observacoes || ''} onChange={e => f('observacoes', e.target.value)} /></div>
+            {/* SLA */}
+            <div style={{ gridColumn: '1/-1', borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 8 }}>⏱ SLA — Parâmetros do Grupo</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={lbl}>Meta de Resolução (horas)</label>
+                  <input type="number" min="1" style={inp} value={form.sla_resolucao_h ?? 4} onChange={e => f('sla_resolucao_h', e.target.value)} />
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>Chamado dentro do SLA se resolvido em até Xh</div>
+                </div>
+                <div>
+                  <label style={lbl}>Vencido após (horas)</label>
+                  <input type="number" min="1" style={inp} value={form.sla_vencido_h ?? 24} onChange={e => f('sla_vencido_h', e.target.value)} />
+                  <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 3 }}>Chamado em aberto marcado como vencido após Xh</div>
+                </div>
+              </div>
+            </div>
             <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" id="grp-ativo" checked={form.ativo !== false} onChange={e => f('ativo', e.target.checked)} /><label htmlFor="grp-ativo" style={{ fontSize: 13 }}>Monitoramento ativo</label></div>
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
@@ -1012,7 +1028,7 @@ function SecaoRelatorio({ workspaceId }) {
         .order('created_at', { ascending: false })
         .limit(2000),
       supabase.from('tecnicos').select('id,nome').eq('workspace_id', workspaceId).eq('ativo', true),
-      supabase.from('whatsapp_grupos').select('id,nome_grupo').eq('workspace_id', workspaceId).eq('ativo', true),
+      supabase.from('whatsapp_grupos').select('id,nome_grupo,sla_resolucao_h,sla_vencido_h').eq('workspace_id', workspaceId).eq('ativo', true),
     ])
     if (error) toast.error('Erro ao carregar relatório')
     setRows(sats || []); setTecnicos(tecs || []); setGrupos(grps || [])
@@ -1048,18 +1064,18 @@ function SecaoRelatorio({ workspaceId }) {
     return true
   })
 
-  function satsStats(sats) {
+  function satsStats(sats, slaH = 4, vencidoH = 24) {
     const concluidas   = sats.filter(s => s.status === 'concluida')
     const emAberto     = sats.filter(s => !['concluida','descartada'].includes(s.status))
     const comTempo     = concluidas.filter(s => s.data_finalizacao)
     const tempos       = comTempo.map(s => calcSLA(s.created_at, s.data_finalizacao).horas)
     const mediaH       = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : null
-    const dentroPrazo  = comTempo.filter(s => calcSLA(s.created_at, s.data_finalizacao).horas <= 4).length
-    const vencidos     = emAberto.filter(s => calcSLA(s.created_at, null).horas > 24).length
+    const dentroPrazo  = comTempo.filter(s => calcSLA(s.created_at, s.data_finalizacao).horas <= slaH).length
+    const vencidos     = emAberto.filter(s => calcSLA(s.created_at, null).horas > vencidoH).length
     const pctSLA       = comTempo.length ? Math.round(dentroPrazo / comTempo.length * 100) : null
     const pctResolvido = sats.length ? Math.round(concluidas.length / sats.length * 100) : 0
     return { total: sats.length, abertos: emAberto.length, concluidas: concluidas.length,
-             vencidos, mediaH, pctSLA, pctResolvido, comTempo: comTempo.length }
+             vencidos, mediaH, pctSLA, pctResolvido, comTempo: comTempo.length, slaH, vencidoH }
   }
 
   // --- Por EPS ---
@@ -1077,7 +1093,9 @@ function SecaoRelatorio({ workspaceId }) {
   const slaByGrupo = grupos.map(g => {
     const sats = rowsPeriodo.filter(r => r.grupo_id === g.id)
     if (!sats.length) return null
-    return { nome: g.nome_grupo, ...satsStats(sats) }
+    const slaH    = g.sla_resolucao_h || 4
+    const vencH   = g.sla_vencido_h   || 24
+    return { nome: g.nome_grupo, ...satsStats(sats, slaH, vencH) }
   }).filter(Boolean).sort((a, b) => b.total - a.total)
   const slaByPrior = Object.entries(PRIOR_CFG).map(([k, v]) => {
     const sats = rowsPeriodo.filter(r => r.prioridade === k)
@@ -1344,15 +1362,17 @@ function SecaoRelatorio({ workspaceId }) {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead><tr>
                     <th style={thPlain}>Grupo</th>
+                    <th style={{ ...thPlain, textAlign: 'center' }}>Meta SLA</th>
                     <th style={{ ...thPlain, textAlign: 'center' }}>Total</th>
                     <th style={{ ...thPlain, textAlign: 'center' }}>% SLA</th>
                     <th style={{ ...thPlain, textAlign: 'center' }}>T. médio</th>
                   </tr></thead>
                   <tbody>
-                    {loading && <tr><td colSpan={4} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>…</td></tr>}
+                    {loading && <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>…</td></tr>}
                     {slaByGrupo.map((g, i) => (
                       <tr key={g.nome} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)' }}>
                         <td style={{ ...tdStyle, fontWeight: 600 }}>{g.nome}</td>
+                        <td style={{ ...tdStyle, textAlign: 'center', fontSize: 11, color: '#f59e0b', fontWeight: 700 }}>{g.slaH}h</td>
                         <td style={{ ...tdStyle, textAlign: 'center', color: '#6366f1', fontWeight: 700 }}>{g.total}</td>
                         <td style={{ ...tdStyle, minWidth: 100 }}>
                           {g.pctSLA !== null
@@ -1365,7 +1385,7 @@ function SecaoRelatorio({ workspaceId }) {
                         <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-secondary)' }}>{fmtH(g.mediaH)}</td>
                       </tr>
                     ))}
-                    {!loading && slaByGrupo.length === 0 && <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>Sem dados</td></tr>}
+                    {!loading && slaByGrupo.length === 0 && <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>Sem dados</td></tr>}
                   </tbody>
                 </table>
               </div>
