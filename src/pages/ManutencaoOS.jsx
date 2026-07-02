@@ -335,7 +335,7 @@ export default function ManutencaoOS() {
                                 <PlayIcon style={{ width: 14, height: 14 }} />
                               </button>
                             )}
-                            {os.status === 'em_andamento' && (
+                            {['aberta', 'em_andamento', 'aguardando_peca'].includes(os.status) && (
                               <button title="Concluir" onClick={() => mudarStatus(os, 'concluida')} style={iconBtn('#10b981')}>
                                 <CheckCircleIcon style={{ width: 14, height: 14 }} />
                               </button>
