@@ -139,22 +139,28 @@ export default async function handler(req, res) {
     if (remetente)    msgsQuery = msgsQuery.ilike('remetente_nome', `%${remetente}%`)
     const { data: msgs } = await msgsQuery
 
-    // Verifica plano Groq via rate-limit headers
+    // Verifica plano Groq via rate-limit headers (chamada real de 1 token)
     let groqInfo = null
     const groqKey = process.env.GROQ_API_KEY
     if (groqKey) {
       try {
-        const gr = await fetch('https://api.groq.com/openai/v1/models', {
-          headers: { 'Authorization': `Bearer ${groqKey}` },
+        const gr = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+            messages: [{ role: 'user', content: 'ok' }],
+            max_tokens: 1,
+          }),
         })
         groqInfo = {
-          status: gr.status,
-          req_limit:       gr.headers.get('x-ratelimit-limit-requests'),
-          req_remaining:   gr.headers.get('x-ratelimit-remaining-requests'),
-          tokens_limit:    gr.headers.get('x-ratelimit-limit-tokens'),
-          tokens_remaining:gr.headers.get('x-ratelimit-remaining-tokens'),
-          reset_req:       gr.headers.get('x-ratelimit-reset-requests'),
-          key_prefix:      groqKey.slice(0, 8) + '…',
+          status:           gr.status,
+          req_limit:        gr.headers.get('x-ratelimit-limit-requests'),
+          req_remaining:    gr.headers.get('x-ratelimit-remaining-requests'),
+          tokens_limit_min: gr.headers.get('x-ratelimit-limit-tokens'),
+          tokens_remaining: gr.headers.get('x-ratelimit-remaining-tokens'),
+          reset_requests:   gr.headers.get('x-ratelimit-reset-requests'),
+          key_prefix:       groqKey.slice(0, 8) + '…',
         }
       } catch (e) {
         groqInfo = { erro: e.message }
