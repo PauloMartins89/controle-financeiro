@@ -153,12 +153,16 @@ export default async function handler(req, res) {
             max_tokens: 1,
           }),
         })
-        const allHeaders = {}
-        gr.headers.forEach((v, k) => { allHeaders[k] = v })
+        const h = (name) => gr.headers.get(name)
         groqInfo = {
-          status:     gr.status,
-          key_prefix: groqKey.slice(0, 8) + '…',
-          headers:    allHeaders,
+          status:          gr.status,
+          key_prefix:      groqKey.slice(0, 8) + '…',
+          req_limit:       h('x-ratelimit-limit-requests'),
+          req_remaining:   h('x-ratelimit-remaining-requests'),
+          tokens_limit:    h('x-ratelimit-limit-tokens'),
+          tokens_remaining:h('x-ratelimit-remaining-tokens'),
+          reset_requests:  h('x-ratelimit-reset-requests'),
+          plano:           Number(h('x-ratelimit-limit-requests')) >= 500 ? 'pago' : 'free',
         }
       } catch (e) {
         groqInfo = { erro: e.message }
