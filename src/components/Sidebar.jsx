@@ -164,6 +164,7 @@ const navGroups = [
       { to: '/chamados-wa/tecnicos',     icon: UsersIcon,                 label: 'Técnicos',       moduleKey: 'chamados-wa' },
       { to: '/chamados-wa/grupos',       icon: ChatBubbleLeftRightIcon,   label: 'Grupos WA',      moduleKey: 'chamados-wa' },
       { to: '/chamados-wa/logs',         icon: BoltIcon,                  label: 'Logs IA',        moduleKey: 'chamados-wa' },
+      { to: '/chamados-wa/relatorio',    icon: TableCellsIcon,            label: 'Relatório',      moduleKey: 'chamados-wa' },
     ],
   },
   {

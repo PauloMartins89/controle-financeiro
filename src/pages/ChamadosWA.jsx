@@ -943,12 +943,12 @@ function calcSLA(abertura, fechamento) {
   if (horas > 0)      return { texto: `${horas}h ${mins % 60}m`, horas, aberto: !fechamento }
   return { texto: `${mins}m`, horas: mins / 60, aberto: !fechamento }
 }
-function slaCor(horas, aberto) {
-  if (aberto) return horas > 24 ? '#ef4444' : horas > 4 ? '#f59e0b' : '#6366f1'
-  return horas <= 4 ? '#10b981' : horas <= 24 ? '#f59e0b' : '#ef4444'
+function slaCor(horas, aberto, slaH = 4, vencH = 24) {
+  if (aberto) return horas > vencH ? '#ef4444' : horas > slaH ? '#f59e0b' : '#6366f1'
+  return horas <= slaH ? '#10b981' : horas <= vencH ? '#f59e0b' : '#ef4444'
 }
-function slaBadge(horas, aberto, texto) {
-  const cor = slaCor(horas, aberto)
+function slaBadge(horas, aberto, texto, slaH = 4, vencH = 24) {
+  const cor = slaCor(horas, aberto, slaH, vencH)
   const bg  = cor + '18'
   const label = aberto ? `⏳ ${texto}` : `✓ ${texto}`
   return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, color: cor, border: `1px solid ${cor}55`, whiteSpace: 'nowrap' }}>{label}</span>
@@ -1269,7 +1269,7 @@ function SecaoRelatorio({ workspaceId }) {
                       <td style={{ ...tdStyle, color: 'var(--text-secondary)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.resumo_ia || r.mensagem_original}>{r.resumo_ia || r.mensagem_original || '—'}</td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{fmtDT(r.created_at)}</td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>{r.data_finalizacao ? fmtDT(r.data_finalizacao) : <span style={{ color: '#f59e0b' }}>Em aberto</span>}</td>
-                      <td style={{ ...tdStyle, textAlign: 'center' }}>{slaBadge(sla.horas, sla.aberto, sla.texto)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>{slaBadge(sla.horas, sla.aberto, sla.texto, grupos.find(g => g.id === r.grupo_id)?.sla_resolucao_h || 4, grupos.find(g => g.id === r.grupo_id)?.sla_vencido_h || 24)}</td>
                     </tr>
                   )
                 })}
@@ -1443,7 +1443,7 @@ function SecaoRelatorio({ workspaceId }) {
                   <th style={{ ...thPlain, textAlign: 'center' }}>Total SATs</th>
                   <th style={{ ...thPlain, textAlign: 'center' }}>Concluídos</th>
                   <th style={{ ...thPlain, textAlign: 'center' }}>% Resolvido</th>
-                  <th style={{ ...thPlain, textAlign: 'center' }}>% SLA &lt; 4h</th>
+                  <th style={{ ...thPlain, textAlign: 'center' }}>% SLA</th>
                   <th style={{ ...thPlain, textAlign: 'center' }}>Tempo médio</th>
                   <th style={{ ...thPlain, textAlign: 'center' }}>Em aberto</th>
                   <th style={{ ...thPlain, textAlign: 'center' }}>Vencidos</th>
