@@ -718,7 +718,7 @@ function SecaoGrupos({ workspaceId, ownerId }) {
   }
 
   async function enviarPendencias(r) {
-    if (!window.confirm(`Enviar lista de pendências do grupo "${r.nome_grupo}" no próprio grupo WA?`)) return
+    if (!window.confirm(`Enviar lista de pendências do grupo "${r.nome_grupo}" para o técnico responsável via WhatsApp?`)) return
     try {
       const resp = await fetch(`/api/chamados-setup?action=digest-grupo`, {
         method: 'POST',
