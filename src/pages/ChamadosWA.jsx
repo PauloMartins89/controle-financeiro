@@ -254,6 +254,10 @@ function SecaoSolicitacoes({ workspaceId }) {
     const update = { status }
     if (status === 'concluida') update.data_finalizacao = new Date().toISOString()
     await supabase.from('solicitacoes_atendimento').update(update).eq('id', id)
+    // Garante data_finalizacao mesmo se já estava concluida (ex: migração aplicada depois)
+    if (status === 'concluida' && selected?.id === id && !selected?.data_finalizacao) {
+      await supabase.from('solicitacoes_atendimento').update({ data_finalizacao: update.data_finalizacao }).eq('id', id)
+    }
     setUpdating(false)
     toast.success('Status atualizado')
     if (selected?.id === id) setSelected(s => ({ ...s, ...update }))
@@ -407,7 +411,8 @@ function SecaoSolicitacoes({ workspaceId }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {['aberta','em_atendimento','aguardando_informacao','enviada_tecnico','concluida','descartada'].map(s => {
                   const sc   = STATUS_CFG[s]
-                  const cur  = selected.status === s
+                  // permite re-clicar 'concluida' se data_finalizacao estiver ausente
+                  const cur  = selected.status === s && !(s === 'concluida' && !selected.data_finalizacao)
                   return (
                     <button key={s} onClick={() => mudarStatus(selected.id, s)} disabled={updating || cur}
                       style={{ padding: '5px 11px', borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: cur ? 'default' : 'pointer', border: `1px solid ${sc.color}`, background: cur ? `${sc.color}18` : 'transparent', color: sc.color }}>
@@ -1250,7 +1255,9 @@ function SecaoRelatorio({ workspaceId }) {
                 {loading && <tr><td colSpan={13} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Carregando…</td></tr>}
                 {!loading && ordenados.length === 0 && <tr><td colSpan={13} style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Nenhum chamado no período.</td></tr>}
                 {ordenados.map((r, i) => {
-                  const sla = calcSLA(r.created_at, r.data_finalizacao)
+                  // SAT concluída sem data_finalizacao: trata como fechada (sem "Em aberto")
+                  const dataFim = r.data_finalizacao || (r.status === 'concluida' ? r.updated_at : null)
+                  const sla = calcSLA(r.created_at, dataFim)
                   const sc  = STATUS_CFG[r.status] || { label: r.status, color: '#94a3b8' }
                   const pc  = PRIOR_CFG[r.prioridade]
                   return (
