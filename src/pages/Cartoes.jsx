@@ -231,6 +231,7 @@ function CartaoImportModal({ card, people, owner, vehicles, expenses, onClose, o
       }
     } catch (e) {
       setError(e.message)
+      toast.error(e.message?.slice(0, 120) || 'Erro ao processar o arquivo')
     } finally {
       setLoading(false)
     }

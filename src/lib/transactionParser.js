@@ -138,8 +138,53 @@ function parseCsv(text) {
   const colConta = findCol('conta', 'cartao', 'account', 'card')
 
   if (colDesc < 0 || colValor < 0) {
-    // Fallback: guess from first 3 numeric-ish columns
-    // Try positional: date, description, amount
+    // Fallback: busca posicionalmente a coluna de valor (primeira que contém número > 0
+    // em pelo menos 50% das linhas de dados) e de descrição (coluna de texto mais longa).
+    const dataRows = rows.slice(1).filter(r => r.length > 1)
+    if (dataRows.length === 0) throw new Error('CSV sem linhas de dados')
+    const numCols = rows[0].length
+    // Detecta coluna de valor: maioria das células parseiam como número > 0
+    let bestValCol = -1, bestValScore = 0
+    for (let c = 0; c < numCols; c++) {
+      const hits = dataRows.filter(r => parseSignedAmount(r[c] || '') > 0).length
+      if (hits > bestValScore) { bestValScore = hits; bestValCol = c }
+    }
+    // Detecta coluna de descrição: coluna não-numérica com texto mais longo
+    let bestDescCol = -1, bestDescLen = 0
+    for (let c = 0; c < numCols; c++) {
+      if (c === bestValCol) continue
+      const avgLen = dataRows.reduce((s, r) => s + (r[c] || '').length, 0) / (dataRows.length || 1)
+      if (avgLen > bestDescLen && parseSignedAmount(dataRows[0]?.[c] || '') === 0) {
+        bestDescLen = avgLen; bestDescCol = c
+      }
+    }
+    if (bestValCol < 0) throw new Error(
+      'Formato de CSV não reconhecido: não foi possível identificar a coluna de valor. ' +
+      'Verifique se o arquivo usa ponto-e-vírgula, vírgula ou tabulação como separador.'
+    )
+    // Usa coluna de data se colData já foi detectada, senão procura outra
+    const effData = colData >= 0 ? colData : (() => {
+      for (let c = 0; c < numCols; c++) {
+        if (c === bestValCol || c === bestDescCol) continue
+        if (dataRows.filter(r => parseDate(r[c] || '') !== null).length > dataRows.length * 0.5) return c
+      }
+      return -1
+    })()
+    return dataRows.map((r, i) => {
+      const signed = parseSignedAmount(r[bestValCol] || '')
+      if (signed <= 0) return null
+      const desc = bestDescCol >= 0 ? r[bestDescCol] : r.filter((_, c) => c !== bestValCol).join(' ')
+      if (isNonExpense(desc)) return null
+      return {
+        id: `imp_${Date.now()}_${i}`,
+        data: parseDate(effData >= 0 ? r[effData] : null) || new Date().toISOString().slice(0, 10),
+        descricao: desc || 'Sem descrição',
+        valor: signed,
+        conta: '',
+        parcela: '',
+        tipo: 'debito',
+      }
+    }).filter(Boolean)
   }
 
   return rows.slice(1)
