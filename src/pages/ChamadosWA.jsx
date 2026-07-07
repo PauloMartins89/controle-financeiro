@@ -1386,7 +1386,7 @@ function SecaoPainelAnalitico({ workspaceId }) {
       ) : (
         <>
           {/* ── KPI Cards ── */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
             <KpiCard label="Novos"               value={kpis.novos       || 0} delta={kpis.delta}               pct={kpis.pct}                color="#6366f1" />
             <KpiCard label="Em Andamento"        value={kpis.emAndamento || 0} delta={kpis.em_andamento_delta}  pct={kpis.em_andamento_pct}   color="#f59e0b" />
             <KpiCard label="Atrasados"           value={kpis.atrasados   || 0} delta={kpis.atrasados_delta}     pct={kpis.atrasados_pct}      color="#ef4444" />
@@ -1699,7 +1699,7 @@ function SecaoRelatorio({ workspaceId }) {
       {subRel === 'listagem' && (
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', padding: '10px 0 0' }}>
           {/* KPI bar */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexShrink: 0, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexShrink: 0 }}>
             {[
               { label: 'Total no período', value: filtrados.length,            color: '#6366f1' },
               { label: '% Resolvidos',     value: `${pctResolvidos}%`,         color: '#10b981' },
@@ -1708,7 +1708,7 @@ function SecaoRelatorio({ workspaceId }) {
               { label: 'Em aberto',        value: emAberto.length,             color: '#f59e0b' },
               { label: '> 24h aberto',     value: vencidos.length,             color: vencidos.length > 0 ? '#ef4444' : '#94a3b8' },
             ].map(k => (
-              <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}`, flexShrink: 0 }}>
+              <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}`, flex: 1, minWidth: 0, textAlign: 'center' }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 2 }}>{k.label}{k.sub ? <span style={{ color: k.color, marginLeft: 4 }}>{k.sub}</span> : null}</div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{loading ? '…' : k.value}</div>
               </div>
@@ -1858,7 +1858,7 @@ function SecaoRelatorio({ workspaceId }) {
       {subRel === 'sla' && (
         <div style={{ flex: 1, overflowY: 'auto', padding: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Cards globais */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {[
               { label: 'Total SATs',       value: slaGlobal.total,                color: '#6366f1' },
               { label: '% Resolvidos',     value: `${slaGlobal.pctResolvido}%`,   color: '#10b981' },
@@ -1867,7 +1867,7 @@ function SecaoRelatorio({ workspaceId }) {
               { label: 'Em aberto',        value: slaGlobal.abertos,              color: '#f59e0b' },
               { label: 'Vencidos >24h',    value: slaGlobal.vencidos,             color: slaGlobal.vencidos > 0 ? '#ef4444' : '#94a3b8' },
             ].map(k => (
-              <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}`, flexShrink: 0 }}>
+              <div key={k.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${k.color}`, flex: 1, minWidth: 0, textAlign: 'center' }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 2 }}>{k.label}</div>
                 <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1 }}>{loading ? '…' : k.value}</div>
               </div>
