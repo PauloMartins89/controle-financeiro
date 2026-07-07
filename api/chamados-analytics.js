@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     // ── Busca registros do período principal ───────────────────────────────
     let q = supabase
       .from('solicitacoes_atendimento')
-      .select('id, status, prioridade, confianca_ia, created_at, data_finalizacao, updated_at, tecnico_id, grupo_id, sla_resolucao_h, resumo_ia, solicitante_nome, equipamento, local, grupo:whatsapp_grupos(nome_grupo, sla_resolucao_h), tecnico:tecnicos(nome)')
+      .select('id, status, prioridade, confianca_ia, created_at, data_finalizacao, updated_at, tecnico_id, grupo_id, resumo_ia, solicitante_nome, equipamento, local, grupo:whatsapp_grupos(nome_grupo, sla_resolucao_h), tecnico:tecnicos(nome)')
       .eq('workspace_id', workspace_id)
       .gte('created_at', dataInicio.toISOString())
       .lte('created_at', dataFim.toISOString())
@@ -83,7 +83,7 @@ export default async function handler(req, res) {
     // ── Busca período anterior (sem filtros de grupo/tecnico/status) ──────
     const { data: rowsAnt = [] } = await supabase
       .from('solicitacoes_atendimento')
-      .select('id, status, data_finalizacao, created_at, sla_resolucao_h, grupo:whatsapp_grupos(sla_resolucao_h)')
+      .select('id, status, data_finalizacao, created_at, grupo:whatsapp_grupos(sla_resolucao_h)')
       .eq('workspace_id', workspace_id)
       .gte('created_at', dataInicioAnt.toISOString())
       .lte('created_at', dataFimAnt.toISOString())
@@ -110,7 +110,7 @@ export default async function handler(req, res) {
     const STATUS_RESOLVIDO = 'concluida'
 
     function isSlaVencida(row) {
-      const slaH = row.grupo?.sla_resolucao_h || row.sla_resolucao_h || 24
+      const slaH = row.grupo?.sla_resolucao_h || 24
       const slaMs = slaH * 60 * 60 * 1000
       const abertoEm = new Date(row.created_at)
       const referenciaFim = row.data_finalizacao ? new Date(row.data_finalizacao) : new Date()
