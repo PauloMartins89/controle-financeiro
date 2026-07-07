@@ -1163,7 +1163,7 @@ function DonutChart({ segs, size = 110, hole = 62 }) {
   )
 }
 function LineChart({ series, days }) {
-  const W = 340, H = 90, PAD = { t: 8, b: 20, l: 28, r: 8 }
+  const W = 560, H = 160, PAD = { t: 14, b: 28, l: 34, r: 12 }
   const iW = W - PAD.l - PAD.r, iH = H - PAD.t - PAD.b
   if (!days?.length) return null
   const allVals = series.flatMap(s => s.values)
@@ -1171,42 +1171,66 @@ function LineChart({ series, days }) {
   const scX = i => PAD.l + (i / Math.max(days.length - 1, 1)) * iW
   const scY = v => PAD.t + iH - (v / maxV) * iH
   const linePath = vals => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${scX(i).toFixed(1)},${scY(v).toFixed(1)}`).join(' ')
-  // Tick labels: show every ~5 days
+  const areaPath = vals => {
+    const line = vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${scX(i).toFixed(1)},${scY(v).toFixed(1)}`).join(' ')
+    return `${line} L${scX(vals.length - 1).toFixed(1)},${(PAD.t + iH).toFixed(1)} L${PAD.l.toFixed(1)},${(PAD.t + iH).toFixed(1)} Z`
+  }
   const ticks = days.filter((_, i) => i === 0 || i === days.length - 1 || i % Math.ceil(days.length / 6) === 0)
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => ({ f, v: Math.round(maxV * f) }))
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: '100%' }}>
-      {/* Grid lines */}
-      {[0, 0.25, 0.5, 0.75, 1].map(f => (
-        <line key={f} x1={PAD.l} x2={W - PAD.r} y1={PAD.t + iH * (1 - f)} y2={PAD.t + iH * (1 - f)} stroke="var(--border)" strokeWidth=".5" />
+      <defs>
+        {series.map(s => (
+          <linearGradient key={s.key} id={`grad_${s.key}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={s.color} stopOpacity="0.22" />
+            <stop offset="100%" stopColor={s.color} stopOpacity="0.01" />
+          </linearGradient>
+        ))}
+      </defs>
+      {/* Grid horizontal */}
+      {yTicks.map(({ f, v }) => (
+        <g key={f}>
+          <line x1={PAD.l} x2={W - PAD.r} y1={PAD.t + iH * (1 - f)} y2={PAD.t + iH * (1 - f)}
+            stroke="var(--border)" strokeWidth={f === 0 ? 1 : 0.7} strokeDasharray={f > 0 ? '4 3' : undefined} />
+          {v > 0 && <text x={PAD.l - 5} y={PAD.t + iH * (1 - f) + 3} textAnchor="end" fontSize="8" fill="var(--text-secondary)">{v}</text>}
+        </g>
       ))}
-      {/* Lines */}
+      {/* Área preenchida */}
       {series.map(s => (
-        <path key={s.key} d={linePath(s.values)} fill="none" stroke={s.color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+        <path key={s.key + '_area'} d={areaPath(s.values)} fill={`url(#grad_${s.key})`} />
       ))}
-      {/* Dots at last point */}
+      {/* Linhas */}
+      {series.map(s => (
+        <path key={s.key} d={linePath(s.values)} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      ))}
+      {/* Ponto de pico + último ponto */}
       {series.map(s => {
-        const i = s.values.length - 1
-        return <circle key={s.key} cx={scX(i)} cy={scY(s.values[i])} r="3" fill={s.color} />
+        const maxIdx = s.values.indexOf(Math.max(...s.values))
+        const lastIdx = s.values.length - 1
+        return (
+          <g key={s.key}>
+            <circle cx={scX(maxIdx)} cy={scY(s.values[maxIdx])} r="4.5" fill="var(--bg-card)" stroke={s.color} strokeWidth="2.5" />
+            {lastIdx !== maxIdx && <circle cx={scX(lastIdx)} cy={scY(s.values[lastIdx])} r="3" fill={s.color} />}
+          </g>
+        )
       })}
-      {/* X labels */}
+      {/* Rótulos X */}
       {ticks.map(d => {
         const i = days.indexOf(d)
-        return <text key={d} x={scX(i)} y={H - 2} textAnchor="middle" fontSize="7" fill="var(--text-secondary)">{d.slice(5)}</text>
+        return <text key={d} x={scX(i)} y={H - 4} textAnchor="middle" fontSize="9" fill="var(--text-secondary)">{d.slice(5)}</text>
       })}
-      {/* Y label max */}
-      <text x={PAD.l - 2} y={PAD.t + 4} textAnchor="end" fontSize="7" fill="var(--text-secondary)">{maxV}</text>
     </svg>
   )
 }
 function HBar({ label, value, max, color, suffix = '' }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
       <div style={{ width: 110, fontSize: 11, color: 'var(--text-secondary)', textAlign: 'right', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
-      <div style={{ flex: 1, height: 14, borderRadius: 3, background: 'var(--bg-secondary)', overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width .6s' }} />
+      <div style={{ flex: 1, height: 20, borderRadius: 4, background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: `linear-gradient(90deg, ${color}bb, ${color})`, borderRadius: '0 4px 4px 0', transition: 'width .6s ease' }} />
       </div>
-      <div style={{ width: 36, fontSize: 11, fontWeight: 700, color, flexShrink: 0 }}>{value}{suffix}</div>
+      <div style={{ width: 36, fontSize: 12, fontWeight: 800, color, flexShrink: 0 }}>{value}{suffix}</div>
     </div>
   )
 }
@@ -1214,11 +1238,11 @@ function VBar({ label, value, max, color }) {
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
-      <div style={{ fontSize: 12, fontWeight: 800, color }}>{value}</div>
-      <div style={{ width: 28, flex: 1, borderRadius: '4px 4px 0 0', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'flex-end' }}>
-        <div style={{ width: '100%', height: `${pct}%`, background: color, borderRadius: '4px 4px 0 0', minHeight: value > 0 ? 4 : 0 }} />
+      <div style={{ fontSize: 14, fontWeight: 900, color }}>{value}</div>
+      <div style={{ width: 38, flex: 1, borderRadius: '6px 6px 0 0', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
+        <div style={{ width: '100%', height: `${pct}%`, background: color, borderRadius: '6px 6px 0 0', minHeight: value > 0 ? 6 : 0, transition: 'height .6s ease' }} />
       </div>
-      <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'center' }}>{label}</div>
+      <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.2 }}>{label}</div>
     </div>
   )
 }
@@ -1294,7 +1318,7 @@ function SecaoPainelAnalitico({ workspaceId }) {
   const f  = filtros
   const sf = (k, v) => setFiltros(prev => ({ ...prev, [k]: v }))
 
-  const card  = { background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)', padding: '14px 16px', boxShadow: 'var(--shadow-card)' }
+  const card  = { background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)', padding: '16px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04)' }
   const title = { fontSize: 12, fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }
   const selSt = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }
 
@@ -1376,7 +1400,7 @@ function SecaoPainelAnalitico({ workspaceId }) {
             {/* Evolução por dia */}
             <div style={{ ...card }}>
               <div style={title}>📈 Evolução por dia</div>
-              <div style={{ height: 90 }}>
+              <div style={{ height: 160 }}>
                 <LineChart series={series} days={dias} />
               </div>
               <div style={{ display: 'flex', gap: 16, marginTop: 8, justifyContent: 'center' }}>
@@ -1434,7 +1458,7 @@ function SecaoPainelAnalitico({ workspaceId }) {
                 <div style={{ fontSize: 28, fontWeight: 900, color: '#0ea5e9' }}>{sla.pct || 0}%</div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>cumprido</div>
               </div>
-              <div style={{ display: 'flex', height: 100, gap: 10, alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', height: 130, gap: 16, alignItems: 'flex-end' }}>
                 <VBar label="Cumprido" value={sla.cumprido || 0} max={Math.max(sla.cumprido || 0, sla.vencido || 0, 1)} color="#10b981" />
                 <VBar label="Vencido"  value={sla.vencido  || 0} max={Math.max(sla.cumprido || 0, sla.vencido || 0, 1)} color="#ef4444" />
               </div>
@@ -1443,7 +1467,7 @@ function SecaoPainelAnalitico({ workspaceId }) {
             {/* Atrasos por prioridade */}
             <div style={{ ...card }}>
               <div style={title}>🔴 Atrasos / prioridade</div>
-              <div style={{ display: 'flex', height: 90, gap: 8, alignItems: 'flex-end', marginBottom: 4 }}>
+              <div style={{ display: 'flex', height: 120, gap: 10, alignItems: 'flex-end', marginBottom: 4 }}>
                 <VBar label="Crítica" value={atrasos.critica || 0} max={maxAtraso} color="#dc2626" />
                 <VBar label="Alta"   value={atrasos.alta    || 0} max={maxAtraso} color="#f97316" />
                 <VBar label="Média"  value={atrasos.media   || 0} max={maxAtraso} color="#f59e0b" />
