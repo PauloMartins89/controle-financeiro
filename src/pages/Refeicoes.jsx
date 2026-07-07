@@ -318,14 +318,15 @@ function CrudRestaurantes({ workspaceId, ownerId }) {
 }
 
 // --- CRUD Equipes -------------------------------------------------------------
+// Colunas alinhadas ao template CONTATOS CORPORATIVOS.xlsx
 const COLS_EQUIPES = [
-  { key: 'nome',                  exemplo: 'Equipe Alpha' },
-  { key: 'cdc',                   exemplo: 'CDC-07' },
-  { key: 'lider_nome',            exemplo: 'João Silva' },
-  { key: 'lider_telefone',        exemplo: '5567999998888' },
-  { key: 'supervisor_nome',       exemplo: 'Carlos Lima' },
-  { key: 'supervisor_telefone',   exemplo: '5567999997777' },
-  { key: 'ativo',                 exemplo: 'SIM' },
+  { key: 'EQUIPE',             exemplo: 'EQUIPE 1 - COMBATE FORMIGA' },
+  { key: 'C.CUSTO',            exemplo: 'JLE MS PARANAIBA' },
+  { key: 'NOME LIDER',         exemplo: 'JOSE GARCIA SILVA' },
+  { key: 'CELULAR_CORP LIDER', exemplo: '5583999442554' },
+  { key: 'NOME SUPERVISOR',    exemplo: 'PEDRO GOMES DOS SANTOS' },
+  { key: 'CELULAR_SUPERVISOR', exemplo: '5583999441788' },
+  { key: 'ATIVO',              exemplo: 'SIM' },
 ]
 
 function CrudEquipes({ workspaceId, ownerId }) {
@@ -372,7 +373,7 @@ function CrudEquipes({ workspaceId, ownerId }) {
   async function save() {
     if (!form.nome?.trim()) { toast.error('Nome obrigatório'); return }
     setSaving(true)
-    const payload = { nome: form.nome, cdc: form.cdc || null, lider_nome: form.lider_nome || null, lider_telefone: form.lider_telefone || null, supervisor_nome: form.supervisor_nome || null, supervisor_telefone: form.supervisor_telefone || null, ativo: form.ativo !== false, workspace_id: workspaceId, owner_id: ownerId }
+    const payload = { nome: form.nome, codigo: form.codigo || null, cdc: form.cdc || null, lider_nome: form.lider_nome || null, lider_telefone: form.lider_telefone || null, supervisor_nome: form.supervisor_nome || null, supervisor_telefone: form.supervisor_telefone || null, ativo: form.ativo !== false, workspace_id: workspaceId, owner_id: ownerId }
     if (modal.mode === 'new') {
       const { error } = await supabase.from('refei_equipes').insert(payload)
       if (error) toast.error(error.message); else { toast.success('Criada'); setModal(null); load() }
@@ -396,9 +397,28 @@ function CrudEquipes({ workspaceId, ownerId }) {
 
   async function onImport(rows) {
     const erros = []
+    // Normaliza telefone: inteiro ou "SEMNUMERO" → string ou null
+    const normFone = (v) => {
+      if (!v) return null
+      const s = String(v).trim()
+      if (!s || s.toUpperCase().includes('SEM')) return null
+      return s
+    }
     const payloads = rows.map((r, i) => {
-      if (!r.nome?.trim()) { erros.push({ linha: i + 2, msg: 'Nome obrigatório' }); return null }
-      return { nome: r.nome.trim(), cdc: r.cdc || null, lider_nome: r.lider_nome || null, lider_telefone: r.lider_telefone || null, supervisor_nome: r.supervisor_nome || null, supervisor_telefone: r.supervisor_telefone || null, ativo: (r.ativo || 'SIM').toUpperCase() !== 'NAO', workspace_id: workspaceId, owner_id: ownerId }
+      // Aceita tanto nomes xlsx (EQUIPE, NOME LIDER…) quanto chaves internas (nome, lider_nome…)
+      const nome = (r['EQUIPE'] || r.nome || '').trim()
+      if (!nome) { erros.push({ linha: i + 2, msg: 'Coluna EQUIPE obrigatória' }); return null }
+      return {
+        nome,
+        cdc:                r['C.CUSTO']            || r.cdc                || null,
+        lider_nome:         r['NOME LIDER']          || r.lider_nome         || null,
+        lider_telefone:     normFone(r['CELULAR_CORP LIDER']  || r.lider_telefone),
+        supervisor_nome:    r['NOME SUPERVISOR']     || r.supervisor_nome    || null,
+        supervisor_telefone:normFone(r['CELULAR_SUPERVISOR']  || r.supervisor_telefone),
+        ativo: (r['ATIVO'] || r.ativo || 'SIM').toUpperCase() !== 'NAO',
+        workspace_id: workspaceId,
+        owner_id: ownerId,
+      }
     }).filter(Boolean)
     if (erros.length) return erros
     const { error } = await supabase.from('refei_equipes').insert(payloads)
@@ -424,9 +444,10 @@ function CrudEquipes({ workspaceId, ownerId }) {
         <div key={r.id} className="card" style={{ padding: '12px 16px', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)' }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                {r.codigo && <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 11, background: 'rgba(99,102,241,0.15)', color: '#818cf8', borderRadius: 5, padding: '1px 6px', letterSpacing: '0.03em' }}>{r.codigo}</span>}
                 {r.nome}
-                {r.cdc && <span className="badge badge-accent" style={{ fontSize: 10, marginLeft: 8 }}>CDC {r.cdc}</span>}
+                {r.cdc && <span className="badge badge-accent" style={{ fontSize: 10 }}>CDC {r.cdc}</span>}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
                 {r.lider_nome && <span>👤 {r.lider_nome}</span>}
@@ -456,8 +477,11 @@ function CrudEquipes({ workspaceId, ownerId }) {
         <Modal title={modal.mode === 'new' ? 'Nova Equipe' : 'Editar Equipe'} onClose={() => setModal(null)}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div style={{ gridColumn: '1/-1' }}><label style={lbl}>Nome *</label><input className="input" value={form.nome || ''} onChange={e => f('nome', e.target.value)} /></div>
-            <div><label style={lbl}>CDC</label><input className="input" value={form.cdc || ''} onChange={e => f('cdc', e.target.value)} placeholder="Ex: CDC-07" /></div>
-            <div />
+            <div>
+              <label style={lbl}>Código (Operador)</label>
+              <input className="input" value={form.codigo || ''} onChange={e => f('codigo', e.target.value)} placeholder="Auto: EQ-01" style={{ fontFamily: 'monospace' }} />
+            </div>
+            <div><label style={lbl}>CDC</label><input className="input" value={form.cdc || ''} onChange={e => f('cdc', e.target.value)} placeholder="Ex: JLE MS PARANAIBA" /></div>
             <div><label style={lbl}>Nome do Líder</label><input className="input" value={form.lider_nome || ''} onChange={e => f('lider_nome', e.target.value)} /></div>
             <div><label style={lbl}>Telefone WA Líder</label><input className="input" value={form.lider_telefone || ''} onChange={e => f('lider_telefone', e.target.value)} placeholder="5511..." /></div>
             <div><label style={lbl}>Nome do Supervisor</label><input className="input" value={form.supervisor_nome || ''} onChange={e => f('supervisor_nome', e.target.value)} /></div>

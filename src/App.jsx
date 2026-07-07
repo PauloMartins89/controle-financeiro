@@ -257,7 +257,7 @@ function ModuloGuard() {
   const plataformaModulos = useStore(s => s.plataformaModulos)
 
   useEffect(() => {
-    if (isPlatformAdmin || plataformaModulos === null) return
+    if (isPlatformAdmin || !Array.isArray(plataformaModulos)) return
     // Rotas sempre acessíveis independente de módulo
     const ALWAYS = ['/', '/acessos', '/perfil', '/plataforma']
     const path = location.pathname
@@ -688,6 +688,7 @@ export default function App() {
                   <Route path="/chamados-wa/grupos" element={<ChamadosWA />} />
                   <Route path="/chamados-wa/logs" element={<ChamadosWA />} />
                   <Route path="/chamados-wa/relatorio" element={<ChamadosWA />} />
+                  <Route path="/chamados-wa/analitico" element={<ChamadosWA />} />
                   <Route path="/agenda-servicos" element={<AgendaServicos />} />
                   <Route path="/agenda-servicos/erp" element={<AgendaServicosERP />} />
                   <Route path="/mapa-maquina" element={<MapaApontamentoMaquina />} />

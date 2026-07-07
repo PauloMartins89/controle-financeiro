@@ -11,6 +11,8 @@ import {
   BellAlertIcon, CpuChipIcon, SignalIcon, PaperAirplaneIcon,
   ChevronRightIcon, EyeIcon, ArrowLeftIcon, TableCellsIcon,
   ArrowDownTrayIcon, FunnelIcon,
+  SunIcon, MoonIcon,
+  PresentationChartBarIcon,
 } from '@heroicons/react/24/outline'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -38,22 +40,26 @@ const CAT_EMOJI = { telemetria:'📡', rastreador:'🛰️', aplicativo:'📱', 
 
 // ── Atoms ─────────────────────────────────────────────────────────────────────
 function Badge({ s }) {
-  const c = STATUS_CFG[s] || { label: s, color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' }
-  return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, border: `1px solid ${c.color}66`, color: c.color, whiteSpace: 'nowrap' }}>{c.label}</span>
+  const c = STATUS_CFG[s] || { label: s, color: '#94a3b8' }
+  return <span style={{ padding: '3px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: `${c.color}18`, color: c.color, whiteSpace: 'nowrap', border: `1px solid ${c.color}30` }}>{c.label}</span>
 }
 function PriorDot({ p }) {
   const c = PRIOR_CFG[p] || { emoji: '⚪', label: p || '—', color: '#94a3b8' }
-  return <span style={{ fontSize: 11, fontWeight: 700, color: c.color }}>{c.emoji} {c.label}</span>
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: c.color, background: `${c.color}14`, border: `1px solid ${c.color}30`, borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+      {c.emoji} {c.label}
+    </span>
+  )
 }
 function ConfBar({ v }) {
   const pct   = Math.round((v || 0) * 100)
   const color = pct >= 85 ? '#10b981' : pct >= 65 ? '#f59e0b' : '#94a3b8'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <div style={{ width: 48, height: 5, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3 }} />
+      <div style={{ width: 56, height: 5, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width .3s ease' }} />
       </div>
-      <span style={{ fontSize: 11, fontWeight: 700, color }}>{pct}%</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color, minWidth: 28 }}>{pct}%</span>
     </div>
   )
 }
@@ -66,48 +72,110 @@ function ClipboardWAIcon(p) {
   )
 }
 
-// ── ERP Header ────────────────────────────────────────────────────────────────
-function ERPHeader({ kpis, loading, onRefresh, navigate, secao }) {
+// ── WhatsApp official logo ───────────────────────────────────────────────────
+function WhatsAppLogoIcon(p) {
+  return (
+    <svg {...p} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+    </svg>
+  )
+}
 
+// ── Keyframes injetados no DOM (sem arquivo CSS externo) ─────────────────────
+function ChamadosStyle() {
+  return (
+    <style>{`
+      @keyframes satPulseRing {
+        0%   { transform: scale(1);   opacity: .7; }
+        100% { transform: scale(2.6); opacity: 0;  }
+      }
+      @keyframes satFadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .sat-row-hover:hover { background: rgba(99,102,241,.06) !important; }
+      .sat-row-hover:hover td { border-left-color: #6366f1 !important; }
+      .sat-card:hover { border-color: rgba(99,102,241,0.4) !important; box-shadow: 0 2px 12px rgba(99,102,241,0.12) !important; }
+    `}</style>
+  )
+}
+
+// ── ERP Header ────────────────────────────────────────────────────────────────
+function ERPHeader({ kpis, loading, onRefresh, navigate, secao, darkMode, onToggleDark }) {
   const chips = [
-    { label: 'Abertos hoje',  value: kpis?.abertasHoje     ?? '—', color: '#6366f1', path: '/chamados-wa/solicitacoes' },
+    { label: 'Abertos hoje',  value: kpis?.abertasHoje     ?? '—', color: '#818cf8', path: '/chamados-wa/solicitacoes' },
     { label: 'Triagem',       value: kpis?.emTriagem        ?? '—', color: '#f59e0b', path: '/chamados-wa/triagem' },
     { label: 'Env. técnico',  value: kpis?.enviadasTecnico  ?? '—', color: '#0ea5e9' },
-    { label: 'Conf. média IA',value: `${kpis?.mediaConfianca ?? 0}%`, color: '#10b981' },
-    { label: 'Grupos ativos', value: kpis?.totalGrupos      ?? '—', color: '#8b5cf6', path: '/chamados-wa/grupos' },
+    { label: 'Confiança IA',  value: `${kpis?.mediaConfianca ?? 0}%`, color: '#10b981' },
+    { label: 'Grupos ativos', value: kpis?.totalGrupos      ?? '—', color: '#a78bfa', path: '/chamados-wa/grupos' },
   ]
 
+  const dk = darkMode
+  const hdr = {
+    bg:          dk ? 'linear-gradient(90deg, #06090f 0%, #080d18 50%, #0a0e1a 100%)' : 'linear-gradient(90deg, #f8faff 0%, #f0f4ff 50%, #f4f6ff 100%)',
+    border:      dk ? '1px solid rgba(99,102,241,0.18)' : '1px solid #e0e4ff',
+    shadow:      dk ? '0 4px 24px rgba(0,0,0,0.5)'      : '0 1px 8px rgba(99,102,241,0.1)',
+    divider:     dk ? 'rgba(255,255,255,0.06)'           : '#e5e7f4',
+    brandBorder: dk ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e5e7f4',
+    title:       dk ? '#fff'                             : '#1a2332',
+    subtitle:    dk ? 'rgba(255,255,255,0.35)'           : '#6366f1',
+    chipLabel:   dk ? 'rgba(255,255,255,0.3)'            : '#6b7a99',
+    chipHover:   dk ? 'rgba(255,255,255,0.05)'           : 'rgba(99,102,241,0.06)',
+    btnBg:       dk ? 'rgba(255,255,255,0.05)'           : 'rgba(99,102,241,0.06)',
+    btnBorder:   dk ? 'rgba(255,255,255,0.1)'            : '#c7d0f8',
+    btnColor:    dk ? 'rgba(255,255,255,0.55)'           : '#6366f1',
+    btnHoverBg:  dk ? 'rgba(255,255,255,0.09)'           : 'rgba(99,102,241,0.12)',
+    btnHoverClr: dk ? '#fff'                             : '#4f46e5',
+  }
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', height: 52, flexShrink: 0, paddingRight: 12 }}>
-      {/* Brand block */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', borderRight: '1px solid var(--border)', height: '100%', flexShrink: 0 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 4, background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <ChatBubbleLeftRightIcon style={{ width: 16, height: 16, color: '#fff' }} />
+    <div style={{ display: 'flex', alignItems: 'center', background: hdr.bg, borderBottom: hdr.border, height: 64, flexShrink: 0, paddingRight: 16, boxShadow: hdr.shadow }}>
+      {/* Brand */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 20px', borderRight: hdr.brandBorder, height: '100%', flexShrink: 0 }}>
+        <div style={{ position: 'relative', width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #128C7E 0%, #25D366 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: dk ? '0 0 20px rgba(37,211,102,0.5)' : '0 2px 10px rgba(18,140,126,0.35)' }}>
+          <WhatsAppLogoIcon style={{ width: 22, height: 22, color: '#fff' }} />
         </div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>Chamados WA</div>
-          <div style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: .5 }}>Bot silencioso · IA</div>
+          <div style={{ fontSize: 13, fontWeight: 900, color: hdr.title, lineHeight: 1.2, letterSpacing: .8 }}>CHAMADOS WA</div>
+          <div style={{ fontSize: 9, color: hdr.subtitle, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2 }}>AI · TEMPO REAL</div>
         </div>
       </div>
 
+      {/* Separador */}
+      <div style={{ width: 1, height: 32, background: hdr.divider, margin: '0 4px' }} />
+
       {/* KPI chips */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px', flex: 1, overflowX: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: '0 8px', flex: 1, overflowX: 'auto' }}>
         {chips.map(c => (
           <button key={c.label} onClick={() => c.path && navigate(c.path)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', border: 'none', borderBottom: `2px solid ${c.color}`, borderRadius: 0, padding: '4px 12px', cursor: c.path ? 'pointer' : 'default', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            <span style={{ fontSize: 15, fontWeight: 900, color: c.color, lineHeight: 1 }}>{loading ? '…' : c.value}</span>
-            <span style={{ fontSize: 9, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: .3 }}>{c.label}</span>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'transparent', border: 'none', borderRadius: 8, padding: '7px 18px', cursor: c.path ? 'pointer' : 'default', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background .15s' }}
+            onMouseEnter={e => { if (c.path) e.currentTarget.style.background = hdr.chipHover }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+            <span style={{ fontSize: 22, fontWeight: 900, color: c.color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{loading ? '—' : c.value}</span>
+            <span style={{ fontSize: 9, color: hdr.chipLabel, fontWeight: 700, textTransform: 'uppercase', letterSpacing: .6, marginTop: 3 }}>{c.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Status + Refresh */}
+      {/* LIVE + Refresh */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#10b981', fontWeight: 600 }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} />
-          Monitorando
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div style={{ position: 'relative', width: 10, height: 10, flexShrink: 0 }}>
+            <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#10b981', animation: 'satPulseRing 1.8s ease-out infinite' }} />
+            <div style={{ position: 'absolute', inset: '2px', borderRadius: '50%', background: '#10b981' }} />
+          </div>
+          <span style={{ fontSize: 10, color: '#10b981', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5 }}>Live</span>
         </div>
-        <button onClick={onRefresh} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--border)', borderRadius: 4, padding: '5px 9px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 11, fontWeight: 600 }}>
+        <button onClick={onToggleDark} title={dk ? 'Mudar para claro' : 'Mudar para escuro'}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: hdr.btnBg, border: `1px solid ${hdr.btnBorder}`, borderRadius: 6, cursor: 'pointer', color: hdr.btnColor, transition: 'all .15s', flexShrink: 0 }}
+          onMouseEnter={e => { e.currentTarget.style.background = hdr.btnHoverBg; e.currentTarget.style.color = hdr.btnHoverClr }}
+          onMouseLeave={e => { e.currentTarget.style.background = hdr.btnBg; e.currentTarget.style.color = hdr.btnColor }}>
+          {dk ? <SunIcon style={{ width: 15, height: 15 }} /> : <MoonIcon style={{ width: 15, height: 15 }} />}
+        </button>
+        <button onClick={onRefresh}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: hdr.btnBg, border: `1px solid ${hdr.btnBorder}`, borderRadius: 6, padding: '7px 13px', cursor: 'pointer', color: hdr.btnColor, fontSize: 11, fontWeight: 600, transition: 'all .15s' }}
+          onMouseEnter={e => { e.currentTarget.style.background = hdr.btnHoverBg; e.currentTarget.style.color = hdr.btnHoverClr }}
+          onMouseLeave={e => { e.currentTarget.style.background = hdr.btnBg; e.currentTarget.style.color = hdr.btnColor }}>
           <ArrowPathIcon style={{ width: 13, height: 13 }} /> Atualizar
         </button>
       </div>
@@ -124,22 +192,29 @@ const NAV_ITEMS = [
   { key: 'tecnicos',     icon: UserIcon,                label: 'Técnicos',     path: '/chamados-wa/tecnicos' },
   { key: 'grupos',       icon: UserGroupIcon,           label: 'Grupos WA',    path: '/chamados-wa/grupos' },
   { key: 'logs',         icon: CpuChipIcon,             label: 'Logs IA',      path: '/chamados-wa/logs' },
+  { key: 'analitico',    icon: PresentationChartBarIcon, label: 'Painel BI',     path: '/chamados-wa/analitico', highlight: true },
 ]
 
-function ERPNavBar({ secao, kpis, onNavigate }) {
+function ERPNavBar({ secao, kpis, onNavigate, darkMode }) {
+  const dk = darkMode
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', paddingLeft: 10, overflowX: 'auto', flexShrink: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, background: dk ? '#07090e' : '#ffffff', borderBottom: dk ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e8ecf4', paddingLeft: 8, paddingRight: 8, overflowX: 'auto', flexShrink: 0 }}>
       {NAV_ITEMS.map(item => {
         const ativo = secao === item.key
         const badge = item.badgeKey && (kpis?.[item.badgeKey] ?? 0) > 0 ? kpis[item.badgeKey] : null
+        const baseColor    = dk ? 'rgba(255,255,255,0.38)' : '#6b7a99'
+        const activeColor  = '#818cf8'
+        const hoverColor   = dk ? 'rgba(255,255,255,0.7)' : '#1a2332'
+        const hoverBg      = dk ? 'rgba(255,255,255,0.04)' : 'rgba(99,102,241,0.06)'
         return (
           <button key={item.key} onClick={() => onNavigate(item.path)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: 'none', borderBottom: ativo ? '2px solid #6366f1' : '2px solid transparent', background: 'transparent', cursor: 'pointer', color: ativo ? '#6366f1' : 'var(--text-secondary)', fontWeight: ativo ? 700 : 500, fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0, transition: 'color .1s' }}
-            onMouseEnter={e => { if (!ativo) e.currentTarget.style.color = 'var(--text-primary)' }}
-            onMouseLeave={e => { if (!ativo) e.currentTarget.style.color = 'var(--text-secondary)' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', border: 'none', borderBottom: ativo ? '2px solid #6366f1' : '2px solid transparent', borderRadius: ativo ? '4px 4px 0 0' : 0, background: item.highlight && !ativo ? (dk ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.07)') : ativo ? (dk ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)') : 'transparent', cursor: 'pointer', color: item.highlight && !ativo ? '#10b981' : ativo ? activeColor : baseColor, fontWeight: ativo || item.highlight ? 700 : 500, fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s' }}
+            onMouseEnter={e => { if (!ativo) { e.currentTarget.style.color = item.highlight ? '#059669' : hoverColor; e.currentTarget.style.background = item.highlight ? 'rgba(16,185,129,0.12)' : hoverBg } }}
+            onMouseLeave={e => { if (!ativo) { e.currentTarget.style.color = item.highlight ? '#10b981' : baseColor; e.currentTarget.style.background = item.highlight ? (dk ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.07)') : 'transparent' } }}>
             <item.icon style={{ width: 13, height: 13, flexShrink: 0 }} />
             {item.label}
-            {badge && <span style={{ background: item.key === 'triagem' ? '#f59e0b' : '#6366f1', color: '#fff', borderRadius: 4, fontSize: 9, fontWeight: 800, padding: '1px 5px', minWidth: 16, textAlign: 'center' }}>{badge}</span>}
+            {item.highlight && !ativo && <span style={{ background: '#10b981', color: '#fff', borderRadius: 4, fontSize: 8, fontWeight: 900, padding: '1px 5px', letterSpacing: .3 }}>BI</span>}
+            {badge && <span style={{ background: '#f59e0b', color: '#000', borderRadius: 4, fontSize: 9, fontWeight: 900, padding: '1px 6px', minWidth: 16, textAlign: 'center' }}>{badge}</span>}
           </button>
         )
       })}
@@ -181,14 +256,16 @@ function SecaoDashboard({ workspaceId, kpis, navigate }) {
   ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
         {cards.map(c => (
-          <div key={c.label} style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '12px 14px', border: '1px solid var(--border)', borderTop: `3px solid ${c.color}`, boxShadow: 'var(--shadow-card)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4 }}>{c.label}</span>
-              <c.Icon style={{ width: 13, height: 13, color: c.color }} />
+          <div key={c.label} style={{ background: `linear-gradient(135deg, ${c.color}16 0%, var(--bg-card) 65%)`, borderRadius: 10, padding: '14px 16px', border: `1px solid ${c.color}28`, borderTop: `2px solid ${c.color}`, boxShadow: `0 0 0 1px ${c.color}0a, var(--shadow-card)`, animation: 'satFadeIn .3s ease' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: .6 }}>{c.label}</span>
+              <div style={{ width: 26, height: 26, borderRadius: 6, background: `${c.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <c.Icon style={{ width: 13, height: 13, color: c.color }} />
+              </div>
             </div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: c.color }}>{c.value}</div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: c.color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{c.value}</div>
           </div>
         ))}
       </div>
@@ -204,13 +281,15 @@ function SecaoDashboard({ workspaceId, kpis, navigate }) {
           ? <div style={{ padding: 28, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>Nenhum chamado ainda.</div>
           : kpis.ultimos.map((row, i) => (
               <div key={row.id} onClick={() => navigate('/chamados-wa/solicitacoes')}
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: i < kpis.ultimos.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer' }}>
-                <div style={{ width: 30, height: 30, borderRadius: 4, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 13 }}>{CAT_EMOJI[row.categoria] || '📋'}</span>
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: i < kpis.ultimos.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background .15s', borderLeft: '2px solid transparent' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.05)'; e.currentTarget.style.borderLeftColor = '#6366f1' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderLeftColor = 'transparent' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 14 }}>{CAT_EMOJI[row.categoria] || '📋'}</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1' }}>{row.codigo}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#22d3ee', fontFamily: 'monospace', letterSpacing: .6 }}>{row.codigo}</span>
                     <Badge s={row.status} />
                     <PriorDot p={row.prioridade} />
                   </div>
@@ -284,52 +363,81 @@ function SecaoSolicitacoes({ workspaceId }) {
       {/* Master list */}
       <div style={{ display: 'flex', flexDirection: 'column', width: detailOpen ? 320 : '100%', minWidth: detailOpen ? 260 : undefined, flexShrink: 0, borderRight: detailOpen ? '1px solid var(--border)' : 'none', transition: 'width .2s', overflow: 'hidden' }}>
         {/* Toolbar */}
-        <div style={{ padding: '10px 10px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 6, flexShrink: 0, background: 'var(--bg-card)' }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <MagnifyingGlassIcon style={{ width: 12, height: 12, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-            <input style={{ ...inp, paddingLeft: 26, fontSize: 12 }} placeholder="Buscar..." value={busca} onChange={e => setBusca(e.target.value)} />
+        <div style={{ padding: '10px 10px 0', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--bg-card)' }}>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <MagnifyingGlassIcon style={{ width: 12, height: 12, position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+              <input style={{ ...inp, paddingLeft: 26, fontSize: 12 }} placeholder="Buscar SAT, grupo, técnico…" value={busca} onChange={e => setBusca(e.target.value)} />
+            </div>
+            <button onClick={load} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '5px 8px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
+              <ArrowPathIcon style={{ width: 12, height: 12 }} />
+            </button>
           </div>
-          <select style={{ ...inp, width: 120, fontSize: 12 }} value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
-            <option value="">Todos</option>
-            {Object.entries(STATUS_CFG).filter(([k]) => k !== 'triagem').map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
-          <button onClick={load} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 7, padding: '5px 7px', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-            <ArrowPathIcon style={{ width: 12, height: 12 }} />
-          </button>
+          <div style={{ display: 'flex', gap: 4, paddingBottom: 8, overflowX: 'auto' }}>
+            <button onClick={() => setFiltroStatus('')}
+              style={{ padding: '3px 11px', borderRadius: 20, fontSize: 10, fontWeight: 700, border: '1px solid', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', background: !filtroStatus ? '#6366f1' : 'transparent', color: !filtroStatus ? '#fff' : 'var(--text-secondary)', borderColor: !filtroStatus ? '#6366f1' : 'var(--border)' }}>
+              Todos · {rows.length}
+            </button>
+            {Object.entries(STATUS_CFG).filter(([k]) => k !== 'triagem').map(([k, v]) => {
+              const count = rows.filter(r => r.status === k).length
+              if (!count && filtroStatus !== k) return null
+              return (
+                <button key={k} onClick={() => setFiltroStatus(filtroStatus === k ? '' : k)}
+                  style={{ padding: '3px 11px', borderRadius: 20, fontSize: 10, fontWeight: 700, border: `1px solid ${v.color}${filtroStatus === k ? '' : '66'}`, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', background: filtroStatus === k ? v.color : 'transparent', color: filtroStatus === k ? '#fff' : v.color }}>
+                  {v.label} · {count}
+                </button>
+              )
+            })}
+          </div>
         </div>
-        <div style={{ padding: '5px 10px', fontSize: 10, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
-          {loading ? 'Carregando…' : `${filtrados.length} registro(s)`}
+        <div style={{ padding: '5px 12px', fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+          {loading ? 'Carregando…' : <><strong style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>{filtrados.length}</strong> {filtrados.length === 1 ? 'registro' : 'registros'}{filtroStatus ? ` · ${STATUS_CFG[filtroStatus]?.label}` : ''}</>}
         </div>
         {/* List */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-secondary)' }}>
           {filtrados.map(row => {
             const ativo = selected?.id === row.id
-            const sc    = STATUS_CFG[row.status] || { color: '#94a3b8', bg: 'rgba(148,163,184,.12)', label: row.status }
+            const sc    = STATUS_CFG[row.status] || { color: '#94a3b8', label: row.status }
             return (
               <div key={row.id} onClick={() => setSelected(row)}
-                style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer', background: ativo ? 'var(--bg-secondary)' : 'var(--bg-card)', borderLeft: ativo ? '3px solid #6366f1' : '3px solid transparent', transition: 'background .1s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#6366f1' }}>{row.codigo}</span>
-                  <span style={{ fontSize: 9, padding: '2px 7px', borderRadius: 4, fontWeight: 700, border: `1px solid ${sc.color}55`, color: sc.color }}>{sc.label}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtDT(row.created_at)}</span>
+                className="sat-card"
+                style={{ margin: '6px 8px', borderRadius: 10, padding: '12px 14px', cursor: 'pointer', border: `1px solid ${ativo ? sc.color + '44' : 'var(--border)'}`, borderLeft: `4px solid ${sc.color}`, background: ativo ? `${sc.color}0d` : 'var(--bg-card)', boxShadow: ativo ? `0 2px 12px ${sc.color}20` : '0 1px 3px rgba(0,0,0,0.04)', transition: 'all .15s', animation: 'satFadeIn .2s ease' }}
+                onMouseEnter={e => { if (!ativo) { e.currentTarget.style.background = 'rgba(99,102,241,0.04)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(99,102,241,0.1)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.35)' } }}
+                onMouseLeave={e => { if (!ativo) { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = 'var(--border)' } }}>
+                {/* Header: código + status badge + data */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#22d3ee', fontFamily: 'monospace', letterSpacing: .5, flexShrink: 0 }}>{row.codigo}</span>
+                  <Badge s={row.status} />
+                  <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap', flexShrink: 0 }}>{fmtDT(row.created_at)}</span>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2 }}>
-                  {CAT_EMOJI[row.categoria] || '📋'} {row.grupo?.nome_grupo || '—'} · {row.solicitante_nome || '—'}
+                {/* Grupo + solicitante */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5, overflow: 'hidden' }}>
+                  <span style={{ fontSize: 13, flexShrink: 0 }}>{CAT_EMOJI[row.categoria] || '📋'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.grupo?.nome_grupo || '—'}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', flexShrink: 0 }}>· {row.solicitante_nome || '—'}</span>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>
-                  {row.equipamento ? <span style={{ color: '#8b5cf6', fontWeight: 700, marginRight: 6 }}>⚙ {row.equipamento}</span> : null}
-                {row.local ? <span style={{ color: '#0ea5e9', fontWeight: 600, marginRight: 6 }}>📍 {row.local}</span> : null}
-                {row.resumo_ia || row.mensagem_original || '—'}
+                {/* Chips de equipamento + local */}
+                {(row.equipamento || row.local) && (
+                  <div style={{ display: 'flex', gap: 5, marginBottom: 6, flexWrap: 'wrap' }}>
+                    {row.equipamento && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.10)', border: '1px solid rgba(139,92,246,0.22)', borderRadius: 5, padding: '2px 8px', fontFamily: 'monospace', flexShrink: 0 }}>⚙ {row.equipamento}</span>}
+                    {row.local && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 600, color: '#0ea5e9', background: 'rgba(14,165,233,0.08)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 5, padding: '2px 8px', flexShrink: 0 }}>📍 {row.local}</span>}
+                  </div>
+                )}
+                {/* Resumo IA */}
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 8, lineHeight: 1.4 }}>
+                  {row.resumo_ia || row.mensagem_original || '—'}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* Footer: prioridade + confiança + técnico */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <PriorDot p={row.prioridade} />
                   <ConfBar v={row.confianca_ia} />
+                  {row.tecnico && <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-secondary)', flexShrink: 0 }}><UserIcon style={{ width: 10, height: 10 }} /> {row.tecnico.nome}</span>}
                 </div>
               </div>
             )
           })}
           {!loading && filtrados.length === 0 && (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>Nenhuma solicitação.</div>
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>Nenhuma solicitação encontrada.</div>
           )}
         </div>
       </div>
@@ -338,11 +446,11 @@ function SecaoSolicitacoes({ workspaceId }) {
       {selected && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-primary)', minWidth: 0 }}>
           {/* Detail header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', background: 'var(--bg-card)', borderBottom: `1px solid ${(STATUS_CFG[selected.status] || { color: 'var(--border)' }).color}30`, borderLeft: `4px solid ${(STATUS_CFG[selected.status] || { color: '#94a3b8' }).color}`, flexShrink: 0 }}>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4, display: 'flex', borderRadius: 5 }}>
               <ArrowLeftIcon style={{ width: 15, height: 15 }} />
             </button>
-            <span style={{ fontSize: 14, fontWeight: 800, color: '#6366f1' }}>{selected.codigo}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#22d3ee', fontFamily: 'monospace', letterSpacing: .6 }}>{selected.codigo}</span>
             <Badge s={selected.status} />
             <PriorDot p={selected.prioridade} />
             <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{fmtDT2(selected.created_at)}</span>
@@ -367,25 +475,25 @@ function SecaoSolicitacoes({ workspaceId }) {
                   vColor: '#10b981',
                 }] : []),
               ].map(f => (
-                <div key={f.label} style={{ background: 'var(--bg-secondary)', borderRadius: 4, padding: '9px 11px', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 3 }}>{f.label}</div>
+                <div key={f.label} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 4 }}>{f.label}</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: f.vColor || 'var(--text-primary)' }}>{f.value}</div>
                 </div>
               ))}
-              <div style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '9px 11px', border: '1px solid var(--border)' }}>
+              <div style={{ background: 'var(--bg-card)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .4, marginBottom: 5 }}>Confiança IA</div>
                 <ConfBar v={selected.confianca_ia} />
               </div>
             </div>
 
             {/* Resumo IA */}
-            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '11px 14px' }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid rgba(99,102,241,0.25)', borderLeft: '3px solid #6366f1', borderRadius: 10, padding: '12px 16px' }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>🤖 Resumo gerado pela IA</div>
               <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6 }}>{selected.resumo_ia || '—'}</div>
             </div>
 
             {/* Mensagem original */}
-            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '11px 14px' }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>💬 Mensagem original</div>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', fontFamily: 'monospace', lineHeight: 1.6 }}>{selected.mensagem_original || '—'}</div>
             </div>
@@ -488,7 +596,7 @@ function SecaoTriagem({ workspaceId, onKpisInvalidate }) {
             : rows.map(r => (
                 <div key={r.id} style={{ background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)', padding: '12px 14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, color: '#6366f1' }}>{r.codigo}</span>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: '#22d3ee', fontFamily: 'monospace', letterSpacing: .5 }}>{r.codigo}</span>
                     <ConfBar v={r.confianca_ia} />
                     <PriorDot p={r.prioridade} />
                     <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-secondary)' }}>{fmtDT(r.created_at)}</span>
@@ -1021,6 +1129,372 @@ function BarH({ pct, color }) {
   )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// PAINEL ANALÍTICO
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Helpers de gráfico ────────────────────────────────────────────────────────
+function polarToXY(cx, cy, r, angleDeg) {
+  const rad = (angleDeg - 90) * Math.PI / 180
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+function donutPath(cx, cy, r, startDeg, endDeg) {
+  if (endDeg - startDeg >= 360) endDeg = startDeg + 359.9
+  const s = polarToXY(cx, cy, r, startDeg)
+  const e = polarToXY(cx, cy, r, endDeg)
+  const large = endDeg - startDeg > 180 ? 1 : 0
+  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`
+}
+function DonutChart({ segs, size = 110, hole = 62 }) {
+  const total = segs.reduce((s, x) => s + x.total, 0) || 1
+  let angle = 0
+  return (
+    <svg width={size} height={size} viewBox="0 0 110 110">
+      <circle cx="55" cy="55" r="33" fill="none" stroke="var(--bg-secondary)" strokeWidth="14" />
+      {segs.map((seg, i) => {
+        const sweep = (seg.total / total) * 360
+        const path  = donutPath(55, 55, 33, angle, angle + sweep)
+        angle += sweep
+        return <path key={i} d={path} fill="none" stroke={seg.color} strokeWidth="14" strokeLinecap="butt" />
+      })}
+      <text x="55" y="52" textAnchor="middle" fontSize="11" fontWeight="900" fill="var(--text-primary)">{total}</text>
+      <text x="55" y="63" textAnchor="middle" fontSize="7" fill="var(--text-secondary)">total</text>
+    </svg>
+  )
+}
+function LineChart({ series, days }) {
+  const W = 340, H = 90, PAD = { t: 8, b: 20, l: 28, r: 8 }
+  const iW = W - PAD.l - PAD.r, iH = H - PAD.t - PAD.b
+  if (!days?.length) return null
+  const allVals = series.flatMap(s => s.values)
+  const maxV = Math.max(...allVals, 1)
+  const scX = i => PAD.l + (i / Math.max(days.length - 1, 1)) * iW
+  const scY = v => PAD.t + iH - (v / maxV) * iH
+  const linePath = vals => vals.map((v, i) => `${i === 0 ? 'M' : 'L'}${scX(i).toFixed(1)},${scY(v).toFixed(1)}`).join(' ')
+  // Tick labels: show every ~5 days
+  const ticks = days.filter((_, i) => i === 0 || i === days.length - 1 || i % Math.ceil(days.length / 6) === 0)
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: '100%' }}>
+      {/* Grid lines */}
+      {[0, 0.25, 0.5, 0.75, 1].map(f => (
+        <line key={f} x1={PAD.l} x2={W - PAD.r} y1={PAD.t + iH * (1 - f)} y2={PAD.t + iH * (1 - f)} stroke="var(--border)" strokeWidth=".5" />
+      ))}
+      {/* Lines */}
+      {series.map(s => (
+        <path key={s.key} d={linePath(s.values)} fill="none" stroke={s.color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+      ))}
+      {/* Dots at last point */}
+      {series.map(s => {
+        const i = s.values.length - 1
+        return <circle key={s.key} cx={scX(i)} cy={scY(s.values[i])} r="3" fill={s.color} />
+      })}
+      {/* X labels */}
+      {ticks.map(d => {
+        const i = days.indexOf(d)
+        return <text key={d} x={scX(i)} y={H - 2} textAnchor="middle" fontSize="7" fill="var(--text-secondary)">{d.slice(5)}</text>
+      })}
+      {/* Y label max */}
+      <text x={PAD.l - 2} y={PAD.t + 4} textAnchor="end" fontSize="7" fill="var(--text-secondary)">{maxV}</text>
+    </svg>
+  )
+}
+function HBar({ label, value, max, color, suffix = '' }) {
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+      <div style={{ width: 110, fontSize: 11, color: 'var(--text-secondary)', textAlign: 'right', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
+      <div style={{ flex: 1, height: 14, borderRadius: 3, background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width .6s' }} />
+      </div>
+      <div style={{ width: 36, fontSize: 11, fontWeight: 700, color, flexShrink: 0 }}>{value}{suffix}</div>
+    </div>
+  )
+}
+function VBar({ label, value, max, color }) {
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color }}>{value}</div>
+      <div style={{ width: 28, flex: 1, borderRadius: '4px 4px 0 0', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'flex-end' }}>
+        <div style={{ width: '100%', height: `${pct}%`, background: color, borderRadius: '4px 4px 0 0', minHeight: value > 0 ? 4 : 0 }} />
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--text-secondary)', textAlign: 'center' }}>{label}</div>
+    </div>
+  )
+}
+
+function KpiCard({ label, value, delta, pct, color, suffix = '' }) {
+  const pos = delta >= 0
+  return (
+    <div style={{ background: `linear-gradient(135deg, ${color}14 0%, var(--bg-card) 65%)`, borderRadius: 10, padding: '14px 16px', border: `1px solid ${color}28`, borderTop: `2px solid ${color}`, flex: 1, minWidth: 120 }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: .6, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 900, color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{value}{suffix}</div>
+      {delta !== undefined && (
+        <div style={{ fontSize: 10, marginTop: 5, color: pos ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+          {pos ? '+' : ''}{delta} ({pos ? '+' : ''}{pct}%) <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>vs anterior</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Exportar CSV (analytics) ─────────────────────────────────────────────────
+function exportAnalyticsCSV(data) {
+  if (!data?.evolucaoDia?.length) return
+  const rows = [
+    ['Data', 'Novos', 'Resolvidos', 'Atrasados'],
+    ...data.evolucaoDia.map(d => [d.data, d.novos, d.resolvidos, d.atrasados]),
+  ]
+  const csv = rows.map(r => r.join(',')).join('\n')
+  const a = document.createElement('a')
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+  a.download = `chamados-analytics-${data.periodo?.inicio?.slice(0,10)}.csv`
+  a.click()
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
+function SecaoPainelAnalitico({ workspaceId }) {
+  const [data,    setData]    = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const hoje     = new Date()
+  const trintaAgo = new Date(hoje); trintaAgo.setDate(hoje.getDate() - 29)
+  const fmt = d => d.toISOString().slice(0, 10)
+
+  const [filtros, setFiltros] = useState({
+    dataInicio: fmt(trintaAgo),
+    dataFim:    fmt(hoje),
+    grupoId:    '',
+    tecnicoId:  '',
+    status:     '',
+  })
+
+  const load = useCallback(async () => {
+    if (!workspaceId) return
+    setLoading(true)
+    try {
+      const p = new URLSearchParams({ workspace_id: workspaceId, data_inicio: filtros.dataInicio, data_fim: filtros.dataFim })
+      if (filtros.grupoId)   p.set('grupo_id', filtros.grupoId)
+      if (filtros.tecnicoId) p.set('tecnico_id', filtros.tecnicoId)
+      if (filtros.status)    p.set('status', filtros.status)
+      const res = await fetch(`/api/chamados-analytics?${p}`)
+      if (!res.ok) throw new Error('Erro na API')
+      setData(await res.json())
+    } catch (e) { console.error(e) }
+    setLoading(false)
+  }, [workspaceId, filtros])
+
+  useEffect(() => { load() }, [load])
+  // Auto-refresh 15 min
+  useEffect(() => {
+    const t = setInterval(load, 15 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [load])
+
+  const f  = filtros
+  const sf = (k, v) => setFiltros(prev => ({ ...prev, [k]: v }))
+
+  const card  = { background: 'var(--bg-card)', borderRadius: 10, border: '1px solid var(--border)', padding: '14px 16px', boxShadow: 'var(--shadow-card)' }
+  const title = { fontSize: 12, fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }
+  const selSt = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', color: 'var(--text-primary)', fontSize: 12, cursor: 'pointer' }
+
+  const kpis   = data?.kpis || {}
+  const dias   = (data?.evolucaoDia || []).map(d => d.data)
+  const series = [
+    { key: 'novos',     color: '#6366f1', values: (data?.evolucaoDia || []).map(d => d.novos) },
+    { key: 'resolvidos',color: '#10b981', values: (data?.evolucaoDia || []).map(d => d.resolvidos) },
+    { key: 'atrasados', color: '#ef4444', values: (data?.evolucaoDia || []).map(d => d.atrasados) },
+  ]
+
+  const maxGrupo  = Math.max(...(data?.porGrupo || []).map(g => g.total), 1)
+  const maxTec    = Math.max(...(data?.rankingTecnicos || []).map(t => t.resolvidos), 1)
+  const maxConf   = Math.max(...(data?.confiancaIA || []).map(c => c.total), 1)
+
+  const sla       = data?.slaStats || {}
+  const atrasos   = data?.atrasosPrioridade || {}
+  const autoMan   = data?.automaticosVsManuais || {}
+  const maxAtraso = Math.max(atrasos.critica || 0, atrasos.alta || 0, atrasos.media || 0, atrasos.baixa || 0, 1)
+
+  const grupos    = data?.filtros?.grupos || []
+  const tecnicos  = data?.filtros?.tecnicos || []
+
+  return (
+    <div style={{ height: '100%', overflowY: 'auto', padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* ── Filtros ── */}
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, background: 'var(--bg-card)', borderRadius: 10, padding: '12px 16px', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <label style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Período</label>
+          <input type="date" value={f.dataInicio} onChange={e => sf('dataInicio', e.target.value)} style={{ ...selSt, width: 130 }} />
+          <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>–</span>
+          <input type="date" value={f.dataFim} onChange={e => sf('dataFim', e.target.value)} style={{ ...selSt, width: 130 }} />
+        </div>
+        <select value={f.grupoId} onChange={e => sf('grupoId', e.target.value)} style={{ ...selSt, minWidth: 140 }}>
+          <option value="">Todos os grupos</option>
+          {grupos.map(g => <option key={g.id} value={g.id}>{g.nome_grupo}</option>)}
+        </select>
+        <select value={f.tecnicoId} onChange={e => sf('tecnicoId', e.target.value)} style={{ ...selSt, minWidth: 130 }}>
+          <option value="">Todos os técnicos</option>
+          {tecnicos.map(t => <option key={t.id} value={t.id}>{t.nome}</option>)}
+        </select>
+        <select value={f.status} onChange={e => sf('status', e.target.value)} style={{ ...selSt, minWidth: 130 }}>
+          <option value="">Todos os status</option>
+          <option value="aberta">Aberta</option>
+          <option value="triagem">Triagem</option>
+          <option value="enviada_tecnico">Enviada ao Técnico</option>
+          <option value="em_atendimento">Em Atendimento</option>
+          <option value="concluida">Concluída</option>
+          <option value="descartada">Descartada</option>
+        </select>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#6366f1', border: 'none', borderRadius: 6, padding: '7px 14px', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+            <ArrowPathIcon style={{ width: 13, height: 13 }} /> Atualizar
+          </button>
+          <button onClick={() => exportAnalyticsCSV(data)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 6, padding: '7px 14px', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            <ArrowDownTrayIcon style={{ width: 13, height: 13 }} /> CSV
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: 14 }}>
+          Carregando análise...
+        </div>
+      ) : (
+        <>
+          {/* ── KPI Cards ── */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <KpiCard label="Novos"               value={kpis.novos       || 0} delta={kpis.delta}               pct={kpis.pct}                color="#6366f1" />
+            <KpiCard label="Em Andamento"        value={kpis.emAndamento || 0} delta={kpis.em_andamento_delta}  pct={kpis.em_andamento_pct}   color="#f59e0b" />
+            <KpiCard label="Atrasados"           value={kpis.atrasados   || 0} delta={kpis.atrasados_delta}     pct={kpis.atrasados_pct}      color="#ef4444" />
+            <KpiCard label="Resolvidos"          value={kpis.resolvidos  || 0} delta={kpis.resolvidos_delta}    pct={kpis.resolvidos_pct}     color="#10b981" />
+            <KpiCard label="SLA Cumprido"        value={kpis.slaPct      || 0} delta={kpis.slaDelta}            pct={kpis.slaDelta}           color="#0ea5e9" suffix="%" />
+            <KpiCard label="Tempo Médio"         value={kpis.tempoMedioH ? `${kpis.tempoMedioH.toFixed(1)}h` : '—'} color="#8b5cf6" />
+          </div>
+
+          {/* ── Row 1: Linha + Donut Status + Grupos ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr', gap: 12 }}>
+            {/* Evolução por dia */}
+            <div style={{ ...card }}>
+              <div style={title}>📈 Evolução por dia</div>
+              <div style={{ height: 90 }}>
+                <LineChart series={series} days={dias} />
+              </div>
+              <div style={{ display: 'flex', gap: 16, marginTop: 8, justifyContent: 'center' }}>
+                {series.map(s => (
+                  <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--text-secondary)' }}>
+                    <div style={{ width: 12, height: 3, borderRadius: 2, background: s.color }} />
+                    {s.key.charAt(0).toUpperCase() + s.key.slice(1)}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Distribuição por status */}
+            <div style={{ ...card, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ ...title, alignSelf: 'flex-start' }}>🔵 Por status</div>
+              <DonutChart segs={data?.porStatus || []} size={100} />
+              <div style={{ marginTop: 8, width: '100%' }}>
+                {(data?.porStatus || []).slice(0, 5).map(s => (
+                  <div key={s.status} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 10, marginBottom: 3 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
+                      <span style={{ color: 'var(--text-secondary)' }}>{s.label}</span>
+                    </div>
+                    <span style={{ fontWeight: 700, color: s.color }}>{s.total}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Por grupo WA */}
+            <div style={{ ...card }}>
+              <div style={title}>💬 Por grupo WA</div>
+              {(data?.porGrupo || []).slice(0, 7).map(g => (
+                <HBar key={g.nome} label={g.nome} value={g.total} max={maxGrupo} color="#6366f1" />
+              ))}
+              {!data?.porGrupo?.length && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Sem dados</div>}
+            </div>
+          </div>
+
+          {/* ── Row 2: Ranking + SLA + Prioridade + Auto/Manual + Confiança ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 0.9fr 0.8fr 1fr', gap: 12 }}>
+            {/* Ranking técnicos */}
+            <div style={{ ...card }}>
+              <div style={title}>🏆 Ranking técnicos</div>
+              {(data?.rankingTecnicos || []).slice(0, 7).map(t => (
+                <HBar key={t.nome} label={t.nome} value={t.resolvidos} max={maxTec} color="#10b981" />
+              ))}
+              {!data?.rankingTecnicos?.length && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Sem dados</div>}
+            </div>
+
+            {/* SLA */}
+            <div style={{ ...card }}>
+              <div style={title}>⏱ SLA</div>
+              <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#0ea5e9' }}>{sla.pct || 0}%</div>
+                <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>cumprido</div>
+              </div>
+              <div style={{ display: 'flex', height: 100, gap: 10, alignItems: 'flex-end' }}>
+                <VBar label="Cumprido" value={sla.cumprido || 0} max={Math.max(sla.cumprido || 0, sla.vencido || 0, 1)} color="#10b981" />
+                <VBar label="Vencido"  value={sla.vencido  || 0} max={Math.max(sla.cumprido || 0, sla.vencido || 0, 1)} color="#ef4444" />
+              </div>
+            </div>
+
+            {/* Atrasos por prioridade */}
+            <div style={{ ...card }}>
+              <div style={title}>🔴 Atrasos / prioridade</div>
+              <div style={{ display: 'flex', height: 90, gap: 8, alignItems: 'flex-end', marginBottom: 4 }}>
+                <VBar label="Crítica" value={atrasos.critica || 0} max={maxAtraso} color="#dc2626" />
+                <VBar label="Alta"   value={atrasos.alta    || 0} max={maxAtraso} color="#f97316" />
+                <VBar label="Média"  value={atrasos.media   || 0} max={maxAtraso} color="#f59e0b" />
+                <VBar label="Baixa"  value={atrasos.baixa   || 0} max={maxAtraso} color="#10b981" />
+              </div>
+            </div>
+
+            {/* Automático x Manual */}
+            <div style={{ ...card, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ ...title, alignSelf: 'flex-start' }}>🤖 Auto x Manual</div>
+              <DonutChart size={85}
+                segs={[
+                  { total: autoMan.automaticos || 0, color: '#6366f1' },
+                  { total: autoMan.manuais     || 0, color: '#94a3b8' },
+                ]}
+              />
+              <div style={{ marginTop: 6, width: '100%' }}>
+                {[
+                  { label: 'Automáticos', v: autoMan.automaticos || 0, color: '#6366f1' },
+                  { label: 'Manuais',     v: autoMan.manuais     || 0, color: '#94a3b8' },
+                ].map(i => (
+                  <div key={i.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 3 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-secondary)' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: 2, background: i.color }} /> {i.label}
+                    </span>
+                    <span style={{ fontWeight: 700, color: i.color }}>{i.v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Confiança IA */}
+            <div style={{ ...card }}>
+              <div style={title}>🧠 Confiança da IA</div>
+              {(data?.confiancaIA || []).map(c => (
+                <HBar key={c.label} label={c.label} value={c.total} max={maxConf} color={c.color} />
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', paddingBottom: 8 }}>
+            ℹ️ Dados atualizados automaticamente a cada 15 minutos · {data?.kpis?.total || 0} chamados no período
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 function SecaoRelatorio({ workspaceId }) {
   const [rows, setRows]         = useState([])
   const [loading, setLoading]   = useState(true)
@@ -1279,7 +1753,7 @@ function SecaoRelatorio({ workspaceId }) {
                     <tr key={r.id} style={{ background: i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)', transition: 'background .1s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,.05)'}
                       onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-secondary)'}>
-                      <td style={tdStyle}><span style={{ fontWeight: 800, color: '#6366f1', fontSize: 11 }}>{r.codigo}</span></td>
+                      <td style={tdStyle}><span style={{ fontWeight: 800, color: '#22d3ee', fontSize: 11, fontFamily: 'monospace', letterSpacing: .4 }}>{r.codigo}</span></td>
                       <td style={tdStyle}><span style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, fontWeight: 700, border: `1px solid ${sc.color}55`, color: sc.color, whiteSpace: 'nowrap' }}>{sc.label}</span></td>
                       <td style={tdStyle}>{pc ? <span style={{ fontSize: 11, fontWeight: 700, color: pc.color }}>{pc.emoji}</span> : '—'}</td>
                       <td style={{ ...tdStyle, whiteSpace: 'nowrap', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.grupo?.nome_grupo || '—'}</td>
@@ -1520,7 +1994,22 @@ export default function ChamadosWA() {
   const { workspaceId, ownerId } = useStore()
   const [kpis, setKpis]          = useState({})
   const [kpisLoading, setKpisLoading] = useState(true)
+  const [darkMode, setDarkMode]  = useState(true) // dark por padrão
   const timer                    = useRef(null)
+
+  // Sincroniza com localStorage ao montar (garante que HMR não causa desync)
+  useEffect(() => {
+    const saved = localStorage.getItem('chamados-dark-mode')
+    if (saved !== null) setDarkMode(saved === 'true')
+  }, [])
+
+  const toggleDark = useCallback(() => {
+    setDarkMode(v => {
+      const next = !v
+      localStorage.setItem('chamados-dark-mode', String(next))
+      return next
+    })
+  }, [])
 
   const path  = location.pathname
   let secao   = 'dashboard'
@@ -1530,6 +2019,7 @@ export default function ChamadosWA() {
   else if (path.includes('/logs'))         secao = 'logs'
   else if (path.includes('/relatorio'))    secao = 'relatorio'
   else if (path.includes('/solicitacoes')) secao = 'solicitacoes'
+  else if (path.includes('/analitico'))    secao = 'analitico'
 
   const loadKpis = useCallback(async () => {
     if (!workspaceId) return
@@ -1556,17 +2046,31 @@ export default function ChamadosWA() {
 
   const secaoLabel = NAV_ITEMS.find(n => n.key === secao)?.label || 'Dashboard' // eslint-disable-line no-unused-vars
 
+  const DARK_VARS = {
+    '--bg-primary':    '#07090e',
+    '--bg-secondary':  '#0d1320',
+    '--bg-card':       '#0d1320',
+    '--bg-card-hover': '#141e2d',
+    '--bg-muted':      '#0d1320',
+    '--input-bg':      '#141e2d',
+    '--border':        'rgba(255,255,255,0.07)',
+    '--text-primary':  '#e2e8f0',
+    '--text-secondary':'#4b6284',
+    '--shadow-card':   '0 1px 4px rgba(0,0,0,0.4), 0 4px 20px rgba(0,0,0,0.3)',
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', ...(darkMode ? { background: '#07090e', color: '#e2e8f0', ...DARK_VARS } : {}) }}>
       {/* ERP Header */}
-      <ERPHeader kpis={kpis} loading={kpisLoading} onRefresh={loadKpis} navigate={navigate} secao={secao} />
-      <ERPNavBar secao={secao} kpis={kpis} onNavigate={navigate} />
+      <ChamadosStyle />
+      <ERPHeader kpis={kpis} loading={kpisLoading} onRefresh={loadKpis} navigate={navigate} secao={secao} darkMode={darkMode} onToggleDark={toggleDark} />
+      <ERPNavBar secao={secao} kpis={kpis} onNavigate={navigate} darkMode={darkMode} />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Content */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {/* Section */}
-          <div style={{ flex: 1, overflow: ['solicitacoes','triagem','tecnicos','grupos','logs','relatorio'].includes(secao) ? 'hidden' : 'auto', padding: ['solicitacoes','relatorio'].includes(secao) ? 0 : '14px 18px' }}>
+          <div style={{ flex: 1, overflow: ['solicitacoes','triagem','tecnicos','grupos','logs','relatorio'].includes(secao) ? 'hidden' : 'auto', padding: ['solicitacoes','relatorio','analitico'].includes(secao) ? 0 : '14px 18px' }}>
             {secao === 'dashboard'    && <SecaoDashboard workspaceId={workspaceId} kpis={kpis} navigate={navigate} />}
             {secao === 'solicitacoes' && <SecaoSolicitacoes workspaceId={workspaceId} />}
             {secao === 'triagem'      && <SecaoTriagem workspaceId={workspaceId} onKpisInvalidate={loadKpis} />}
@@ -1574,6 +2078,7 @@ export default function ChamadosWA() {
             {secao === 'tecnicos'     && <SecaoTecnicos workspaceId={workspaceId} ownerId={ownerId} />}
             {secao === 'grupos'       && <SecaoGrupos workspaceId={workspaceId} ownerId={ownerId} />}
             {secao === 'logs'         && <SecaoLogs workspaceId={workspaceId} />}
+            {secao === 'analitico'    && <SecaoPainelAnalitico workspaceId={workspaceId} />}
           </div>
         </div>
       </div>

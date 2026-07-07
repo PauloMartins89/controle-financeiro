@@ -322,7 +322,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       return enabledModules.includes(item.moduleKey)
     }
     // Guard por plataforma_modulos (restrição por usuário — whitelist de rotas)
-    if (!isPlatformAdmin && plataformaModulos !== null) {
+    if (!isPlatformAdmin && Array.isArray(plataformaModulos)) {
       const allowed = plataformaModulos.some(r => item.to === r || item.to.startsWith(r))
       if (!allowed) return false
     }
