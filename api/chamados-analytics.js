@@ -3,15 +3,13 @@
 // GET ?workspace_id=&data_inicio=&data_fim=&grupo_id=&tecnico_id=&status=
 
 import { createClient } from '@supabase/supabase-js'
-import ws from 'ws'
 
 const supabaseUrl        = process.env.SUPABASE_URL       || process.env.VITE_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
 
 function getSupabase() {
   return createClient(supabaseUrl, supabaseServiceKey, {
-    realtime: { params: { log_level: 'disabled' }, transport: ws },
-    global: {},
+    auth: { persistSession: false },
   })
 }
 
